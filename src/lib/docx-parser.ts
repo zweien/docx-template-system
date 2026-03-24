@@ -53,7 +53,7 @@ function extractTextFromXml(xml: string): string {
 }
 
 function matchPlaceholders(text: string): string[] {
-  const regex = /\{\{(\w+)\}\}/g;
+  const regex = /\{\{\s*(\w+)\s*\}\}/g;
   const keys = new Set<string>();
   let match;
 

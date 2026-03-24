@@ -41,3 +41,9 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# uploads (keep .gitkeep files)
+public/uploads/templates/*
+public/uploads/documents/*
+!public/uploads/templates/.gitkeep
+!public/uploads/documents/.gitkeep

@@ -10,6 +10,7 @@ import {
   History,
   PenLine,
   ShieldCheck,
+  Database,
 } from "lucide-react";
 
 interface NavItem {
@@ -33,6 +34,11 @@ const navItems: NavItem[] = [
     title: "模板管理",
     href: "/templates",
     icon: <FileText className="h-4 w-4" />,
+  },
+  {
+    title: "主数据",
+    href: "/data",
+    icon: <Database className="h-4 w-4" />,
   },
   {
     title: "生成记录",

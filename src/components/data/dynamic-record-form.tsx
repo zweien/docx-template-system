@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
+import { RelationSelect } from "./relation-select";
 
 interface DynamicRecordFormProps {
   tableId: string;
@@ -204,12 +205,13 @@ export function DynamicRecordForm({
         );
 
       case FieldType.RELATION:
-        // For now, just a text input for record ID
-        // TODO: Replace with RelationSelect component
         return (
-          <Input
-            {...register(field.key)}
-            placeholder="关联记录ID"
+          <RelationSelect
+            value={watch(field.key)}
+            onChange={(v) => setValue(field.key, v)}
+            relationTableId={field.relationTo ?? ""}
+            displayField={field.displayField ?? "id"}
+            placeholder={`选择${field.label}`}
           />
         );
 

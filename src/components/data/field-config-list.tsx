@@ -65,9 +65,10 @@ export function FieldConfigList({
   };
 
   const handleEditField = (data: DataFieldInput) => {
+    if (!editingField) return;
     setFields(
       fields.map((f) =>
-        f.id === editingField?.id ? { ...data, id: editingField.id } : f
+        f.id === editingField.id ? { ...data, id: editingField.id } : f
       )
     );
     setEditingField(null);

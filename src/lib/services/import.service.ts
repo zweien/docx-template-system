@@ -29,9 +29,9 @@ export async function parseExcel(
     }
 
     const sheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
+    const jsonData = XLSX.utils.sheet_to_json(sheet, {
       header: 1,
-    });
+    }) as unknown as unknown[][];
 
     if (jsonData.length < 2) {
       return {
@@ -41,11 +41,11 @@ export async function parseExcel(
     }
 
     // First row is headers
-    const columns = (jsonData[0] as unknown[]).map(String);
+    const columns = jsonData[0].map(String);
     const rows = jsonData.slice(1, 6).map((row) => {
       const record: Record<string, unknown> = {};
       columns.forEach((col, index) => {
-        record[col] = (row as unknown[])[index];
+        record[col] = row[index];
       });
       return record;
     });

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { FieldType } from "@/generated/prisma/enums";
+import { Prisma } from "@/generated/prisma/client";
 import type {
   DataRecordItem,
   PaginatedRecords,
@@ -7,6 +8,11 @@ import type {
   DataFieldItem,
 } from "@/types/data-table";
 import { getTable } from "./data-table.service";
+
+// Helper to convert Record<string, unknown> to Prisma JSON input
+function toJsonInput(data: Record<string, unknown>): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(data));
+}
 
 // ── Helpers ──
 
@@ -128,7 +134,7 @@ export async function createRecord(
     const record = await db.dataRecord.create({
       data: {
         tableId,
-        data,
+        data: toJsonInput(data),
         createdById: userId,
       },
       include: {
@@ -173,7 +179,7 @@ export async function updateRecord(
 
     const record = await db.dataRecord.update({
       where: { id },
-      data: { data },
+      data: { data: toJsonInput(data) },
       include: {
         createdBy: { select: { name: true } },
       },
@@ -233,9 +239,9 @@ export async function batchCreate(
 
     if (validRecords.length > 0) {
       await db.dataRecord.createMany({
-        data: validRecords.map((data) => ({
+        data: validRecords.map((recordData) => ({
           tableId,
-          data,
+          data: toJsonInput(recordData),
           createdById: userId,
         })),
       });
@@ -266,7 +272,7 @@ export async function findByUniqueField(
         tableId,
         data: {
           path: [fieldKey],
-          equals: value,
+          equals: JSON.parse(JSON.stringify(value)),
         },
       },
       include: {

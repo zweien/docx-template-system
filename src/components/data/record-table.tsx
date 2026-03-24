@@ -94,13 +94,13 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
 
     switch (field.type) {
       case FieldType.NUMBER:
-        return typeof value === "number" ? value.toLocaleString() : value;
+        return typeof value === "number" ? value.toLocaleString() : String(value);
       case FieldType.DATE:
         try {
           const date = new Date(value as string);
           return date.toLocaleDateString("zh-CN");
         } catch {
-          return value;
+          return String(value);
         }
       case FieldType.SELECT:
         return <Badge variant="secondary">{String(value)}</Badge>;
@@ -116,7 +116,7 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
             </div>
           );
         }
-        return value;
+        return String(value);
       case FieldType.EMAIL:
         return (
           <a

@@ -36,7 +36,12 @@ export default async function NewRecordPage({ params }: PageProps) {
   async function handleCreate(data: Record<string, unknown>) {
     "use server";
 
-    const result = await createRecord(session!.user.id, tableId, data);
+    const session = await auth();
+    if (!session?.user?.id) {
+      throw new Error("未授权");
+    }
+
+    const result = await createRecord(session.user.id, tableId, data);
 
     if (!result.success) {
       throw new Error(result.error.message);

@@ -252,7 +252,7 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
       <div className="space-y-4">
         <div className="space-y-2">
           <Label>唯一标识字段</Label>
-          <Select value={uniqueField} onValueChange={setUniqueField}>
+          <Select value={uniqueField} onValueChange={(v) => setUniqueField(v ?? "")}>
             <SelectTrigger>
               <SelectValue placeholder="选择用于判断重复的字段" />
             </SelectTrigger>

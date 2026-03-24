@@ -67,35 +67,31 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
           </div>
           {isAdmin && (
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <circle cx="12" cy="12" r="1" />
-                    <circle cx="12" cy="5" r="1" />
-                    <circle cx="12" cy="19" r="1" />
-                  </svg>
-                </Button>
-              </DropdownMenuTrigger>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="16"
+                      height="16"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="12" cy="12" r="1" />
+                      <circle cx="12" cy="5" r="1" />
+                      <circle cx="12" cy="19" r="1" />
+                    </svg>
+                  </Button>
+                }
+              />
               <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href={`/data/${table.id}`}>查看数据</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={`/data/${table.id}/fields`}>配置字段</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href={`/data/${table.id}/import`}>导入数据</Link>
-                </DropdownMenuItem>
+                <DropdownMenuItem render={<Link href={`/data/${table.id}`}>查看数据</Link>} />
+                <DropdownMenuItem render={<Link href={`/data/${table.id}/fields`}>配置字段</Link>} />
+                <DropdownMenuItem render={<Link href={`/data/${table.id}/import`}>导入数据</Link>} />
                 <DropdownMenuItem
                   className="text-red-600"
                   onClick={handleDelete}

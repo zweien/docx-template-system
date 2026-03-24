@@ -36,7 +36,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
   const filename = `${table.name}_${new Date().toISOString().split("T")[0]}.xlsx`;
 
-  return new NextResponse(result.data, {
+  return new NextResponse(new Uint8Array(result.data), {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

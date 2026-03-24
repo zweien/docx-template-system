@@ -77,7 +77,7 @@ export function RelationSelect({
     >
       <SelectTrigger>
         <SelectValue placeholder={placeholder}>
-          {selectedDisplay ?? placeholder}
+          {selectedDisplay != null ? String(selectedDisplay) : placeholder}
         </SelectValue>
       </SelectTrigger>
       <SelectContent>

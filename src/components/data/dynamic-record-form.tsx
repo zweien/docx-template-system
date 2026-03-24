@@ -76,11 +76,11 @@ export function DynamicRecordForm({
 
         if (field.required) {
           if (field.type === FieldType.NUMBER) {
-            fieldSchema = z.coerce.number({ invalid_type_error: `${field.label}必须是数字` });
+            fieldSchema = z.coerce.number({ message: `${field.label}必须是数字` });
           } else if (field.type === FieldType.MULTISELECT) {
-            fieldSchema = z.array(z.string()).min(1, `${field.label}至少选择一项`);
+            fieldSchema = z.array(z.string()).min(1, { message: `${field.label}至少选择一项` });
           } else {
-            fieldSchema = z.string().min(1, `${field.label}不能为空`);
+            fieldSchema = z.string().min(1, { message: `${field.label}不能为空` });
           }
         }
 
@@ -207,20 +207,11 @@ export function DynamicRecordForm({
       case FieldType.RELATION:
         return (
           <RelationSelect
-            value={watch(field.key)}
+            value={String(watch(field.key) ?? "")}
             onChange={(v) => setValue(field.key, v)}
             relationTableId={field.relationTo ?? ""}
             displayField={field.displayField ?? "id"}
             placeholder={`选择${field.label}`}
-          />
-        );
-
-      case FieldType.TEXTAREA:
-        return (
-          <Textarea
-            {...register(field.key)}
-            placeholder={`输入${field.label}`}
-            rows={3}
           />
         );
 

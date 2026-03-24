@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Sheet,
   SheetContent,
@@ -25,7 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { FieldType } from "@/generated/prisma/enums";
 import type { DataFieldItem } from "@/types/data-table";
-import { dataFieldItemSchema, type DataFieldInput } from "@/validators/data-table";
+import type { DataFieldInput } from "@/validators/data-table";
 
 interface FieldConfigFormProps {
   open: boolean;
@@ -54,7 +52,11 @@ export function FieldConfigForm({
   availableTables,
   onSubmit,
 }: FieldConfigFormProps) {
+  const [key, setKey] = useState(field?.key ?? "");
+  const [label, setLabel] = useState(field?.label ?? "");
   const [fieldType, setFieldType] = useState<FieldType>(field?.type ?? FieldType.TEXT);
+  const [required, setRequired] = useState(field?.required ?? false);
+  const [defaultValue, setDefaultValue] = useState(field?.defaultValue ?? "");
   const [optionsText, setOptionsText] = useState(
     field?.options?.join("\n") ?? ""
   );
@@ -64,28 +66,36 @@ export function FieldConfigForm({
   const [selectedDisplayField, setSelectedDisplayField] = useState(
     field?.displayField ?? ""
   );
+  const [error, setError] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<DataFieldInput>({
-    resolver: zodResolver(dataFieldItemSchema),
-    defaultValues: {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (!key.trim()) {
+      setError("字段标识不能为空");
+      return;
+    }
+
+    if (!label.trim()) {
+      setError("显示名称不能为空");
+      return;
+    }
+
+    // Validate key format
+    if (!/^[a-z][a-z0-9_]*$/.test(key)) {
+      setError("字段标识必须以小写字母开头，只能包含小写字母、数字和下划线");
+      return;
+    }
+
+    const data: DataFieldInput = {
       id: field?.id,
-      key: field?.key ?? "",
-      label: field?.label ?? "",
-      type: field?.type ?? FieldType.TEXT,
-      required: field?.required ?? false,
-      sortOrder: field?.sortOrder ?? 0,
-    },
-  });
-
-  const handleFormSubmit = (data: DataFieldInput) => {
-    const finalData: DataFieldInput = {
-      ...data,
+      key: key.trim(),
+      label: label.trim(),
       type: fieldType,
+      required,
+      defaultValue: defaultValue.trim() || undefined,
+      sortOrder: field?.sortOrder ?? 0,
       options:
         fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT
           ? optionsText
@@ -99,7 +109,7 @@ export function FieldConfigForm({
         fieldType === FieldType.RELATION ? selectedDisplayField : undefined,
     };
 
-    onSubmit(finalData);
+    onSubmit(data);
     onOpenChange(false);
   };
 
@@ -108,7 +118,7 @@ export function FieldConfigForm({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[500px]">
-        <form onSubmit={handleSubmit(handleFormSubmit)}>
+        <form onSubmit={handleSubmit}>
           <SheetHeader>
             <SheetTitle>
               {field ? "编辑字段" : "添加字段"}
@@ -127,12 +137,10 @@ export function FieldConfigForm({
               <Input
                 id="key"
                 placeholder="例如：project_name"
-                {...register("key")}
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
                 disabled={!!field}
               />
-              {errors.key && (
-                <p className="text-sm text-red-500">{errors.key.message}</p>
-              )}
               <p className="text-xs text-zinc-500">
                 英文字母开头，仅支持小写字母、数字、下划线
               </p>
@@ -146,11 +154,9 @@ export function FieldConfigForm({
               <Input
                 id="label"
                 placeholder="例如：项目名称"
-                {...register("label")}
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
               />
-              {errors.label && (
-                <p className="text-sm text-red-500">{errors.label.message}</p>
-              )}
             </div>
 
             {/* Type */}
@@ -176,7 +182,10 @@ export function FieldConfigForm({
             {/* Required */}
             <div className="flex items-center justify-between">
               <Label htmlFor="required">是否必填</Label>
-              <Switch {...register("required")} />
+              <Switch
+                checked={required}
+                onCheckedChange={setRequired}
+              />
             </div>
 
             {/* Options for SELECT/MULTISELECT */}
@@ -204,7 +213,7 @@ export function FieldConfigForm({
                   <Select
                     value={selectedTableId}
                     onValueChange={(v) => {
-                      setSelectedTableId(v);
+                      setSelectedTableId(v ?? "");
                       setSelectedDisplayField("");
                     }}
                   >
@@ -226,7 +235,7 @@ export function FieldConfigForm({
                     <Label>显示字段</Label>
                     <Select
                       value={selectedDisplayField}
-                      onValueChange={setSelectedDisplayField}
+                      onValueChange={(v) => setSelectedDisplayField(v ?? "")}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="选择显示字段" />
@@ -250,9 +259,14 @@ export function FieldConfigForm({
               <Input
                 id="defaultValue"
                 placeholder="可选"
-                {...register("defaultValue")}
+                value={defaultValue}
+                onChange={(e) => setDefaultValue(e.target.value)}
               />
             </div>
+
+            {error && (
+              <p className="text-sm text-red-500">{error}</p>
+            )}
           </div>
 
           <SheetFooter>
@@ -263,8 +277,8 @@ export function FieldConfigForm({
             >
               取消
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "保存中..." : "保存"}
+            <Button type="submit">
+              保存
             </Button>
           </SheetFooter>
         </form>

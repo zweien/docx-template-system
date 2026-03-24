@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { FieldType } from "@/generated/prisma/enums";
+import { Prisma } from "@/generated/prisma/client";
 import type {
   DataTableListItem,
   DataTableDetail,
@@ -7,6 +8,12 @@ import type {
   ServiceResult,
 } from "@/types/data-table";
 import type { CreateTableInput, UpdateTableInput, DataFieldInput } from "@/validators/data-table";
+
+// Helper to convert to Prisma JSON input
+function toJsonInput(value: unknown): Prisma.InputJsonValue | undefined {
+  if (value === null || value === undefined) return undefined;
+  return JSON.parse(JSON.stringify(value));
+}
 
 // ── Helpers ──
 
@@ -260,7 +267,7 @@ export async function updateFields(
           label: f.label,
           type: f.type as FieldType,
           required: f.required ?? false,
-          options: f.options ?? null,
+          options: toJsonInput(f.options),
           relationTo: f.relationTo ?? null,
           displayField: f.displayField ?? null,
           defaultValue: f.defaultValue ?? null,

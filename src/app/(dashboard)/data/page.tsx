@@ -3,6 +3,7 @@ import { listTables } from "@/lib/services/data-table.service";
 import { deleteTable } from "@/lib/services/data-table.service";
 import { TableCard } from "@/components/data/table-card";
 import { CreateTableDialog } from "@/components/data/create-table-dialog";
+import { Button } from "@/components/ui/button";
 
 export default async function DataPage() {
   const session = await auth();
@@ -71,5 +72,3 @@ export default async function DataPage() {
     </div>
   );
 }
-
-import { Button } from "@/components/ui/button";

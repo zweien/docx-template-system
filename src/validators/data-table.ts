@@ -50,7 +50,7 @@ export const recordQuerySchema = z.object({
 });
 
 export const createRecordSchema = z.object({
-  data: z.record(z.unknown()),
+  data: z.record(z.string(), z.unknown()),
 });
 
 export const updateRecordSchema = createRecordSchema;

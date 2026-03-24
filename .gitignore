@@ -47,3 +47,6 @@ public/uploads/templates/*
 public/uploads/documents/*
 !public/uploads/templates/.gitkeep
 !public/uploads/documents/.gitkeep
+
+# git worktrees
+.worktrees/

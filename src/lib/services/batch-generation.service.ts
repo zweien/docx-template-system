@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { BatchStatus, OutputMethod, RecordStatus } from "@/generated/prisma/enums";
+import { Prisma } from "@/generated/prisma/client";
 import { PYTHON_SERVICE_URL } from "@/lib/constants";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -329,8 +330,18 @@ export async function generateBatch(
 
     const generatedFiles: GeneratedFileInfo[] = [];
     const errors: Array<{ recordId: string; error: string }> = [];
-    let successCount = 0;
-    let failedCount = 0;
+
+    // 收集待创建的 Record 数据
+    const recordsToCreate: Array<{
+      templateId: string;
+      userId: string;
+      formData: Record<string, unknown>;
+      status: RecordStatus;
+      fileName?: string;
+      filePath?: string;
+      errorMessage?: string;
+      dataRecordId: string;
+    }> = [];
 
     // 确保输出目录存在
     const documentsDir = join(process.cwd(), UPLOAD_DIR, "documents");
@@ -393,17 +404,15 @@ export async function generateBatch(
           const filePath = join(documentsDir, fileName);
           await writeFile(filePath, buffer);
 
-          // 创建 Record 记录
-          await db.record.create({
-            data: {
-              templateId: input.templateId,
-              userId,
-              formData,
-              status: RecordStatus.COMPLETED,
-              fileName,
-              filePath,
-              dataRecordId: dataRecord.id,
-            },
+          // 收集成功的 Record 数据
+          recordsToCreate.push({
+            templateId: input.templateId,
+            userId,
+            formData,
+            status: RecordStatus.COMPLETED,
+            fileName,
+            filePath,
+            dataRecordId: dataRecord.id,
           });
 
           generatedFiles.push({
@@ -411,8 +420,6 @@ export async function generateBatch(
             filePath,
             dataRecordId: dataRecord.id,
           });
-
-          successCount++;
         } catch (fetchError) {
           clearTimeout(timeoutId);
 
@@ -428,21 +435,27 @@ export async function generateBatch(
           error: errorMessage,
         });
 
-        // 创建失败的 Record 记录
-        await db.record.create({
-          data: {
-            templateId: input.templateId,
-            userId,
-            formData: buildFormData(input.fieldMapping, dataRecord.data as Record<string, unknown>),
-            status: RecordStatus.FAILED,
-            errorMessage,
-            dataRecordId: dataRecord.id,
-          },
+        // 收集失败的 Record 数据
+        recordsToCreate.push({
+          templateId: input.templateId,
+          userId,
+          formData: buildFormData(input.fieldMapping, dataRecord.data as Record<string, unknown>),
+          status: RecordStatus.FAILED,
+          errorMessage,
+          dataRecordId: dataRecord.id,
         });
-
-        failedCount++;
       }
     }
+
+    // 批量创建所有 Record 记录
+    if (recordsToCreate.length > 0) {
+      await db.record.createMany({
+        data: recordsToCreate as Prisma.RecordCreateManyInput[],
+      });
+    }
+
+    const successCount = recordsToCreate.filter((r) => r.status === RecordStatus.COMPLETED).length;
+    const failedCount = recordsToCreate.filter((r) => r.status === RecordStatus.FAILED).length;
 
     // 5. 更新批量生成记录
     let downloadUrl: string | undefined;
@@ -493,18 +506,18 @@ async function createZipArchive(
   batchId: string,
   files: GeneratedFileInfo[]
 ): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const batchesDir = join(process.cwd(), UPLOAD_DIR, "batches");
+  const batchesDir = join(process.cwd(), UPLOAD_DIR, "batches");
 
-    // 确保目录存在（同步方式，因为 archiver 是流式的）
+  // 确保目录存在
+  async function ensureDir() {
     if (!existsSync(batchesDir)) {
-      mkdir(batchesDir, { recursive: true })
-        .then(() => createZip())
-        .catch(reject);
-    } else {
-      createZip();
+      await mkdir(batchesDir, { recursive: true });
     }
+  }
 
+  await ensureDir();
+
+  return new Promise((resolve, reject) => {
     function createZip() {
       const zipPath = join(batchesDir, `batch-${batchId}.zip`);
       const output = createWriteStream(zipPath);

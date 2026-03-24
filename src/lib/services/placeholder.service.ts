@@ -1,0 +1,167 @@
+import { db } from "@/lib/db";
+import { PlaceholderType } from "@/generated/prisma/enums";
+import { extractPlaceholders } from "@/lib/docx-parser";
+import { changeStatus } from "@/lib/services/template.service";
+import type { PlaceholderItem } from "@/types/placeholder";
+
+// ── Unified return type ──
+
+type ServiceResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: { code: string; message: string } };
+
+// ── Helper ──
+
+function mapPlaceholderItem(row: {
+  id: string;
+  key: string;
+  label: string;
+  inputType: string;
+  required: boolean;
+  defaultValue: string | null;
+  sortOrder: number;
+}): PlaceholderItem {
+  return {
+    id: row.id,
+    key: row.key,
+    label: row.label,
+    inputType: row.inputType,
+    required: row.required,
+    defaultValue: row.defaultValue,
+    sortOrder: row.sortOrder,
+  };
+}
+
+// ── Public API ──
+
+export async function parsePlaceholders(
+  templateId: string
+): Promise<ServiceResult<PlaceholderItem[]>> {
+  try {
+    const template = await db.template.findUnique({
+      where: { id: templateId },
+    });
+
+    if (!template) {
+      return {
+        success: false,
+        error: { code: "NOT_FOUND", message: "模板不存在" },
+      };
+    }
+
+    const keys = await extractPlaceholders(template.filePath);
+
+    // Replace all existing placeholders with freshly parsed ones
+    await db.placeholder.deleteMany({ where: { templateId } });
+
+    await db.placeholder.createMany({
+      data: keys.map((key, index) => ({
+        key,
+        label: key, // default label = key; user will configure later
+        inputType: PlaceholderType.TEXT,
+        required: false,
+        sortOrder: index,
+        templateId,
+      })),
+    });
+
+    // Retrieve the created placeholders to return full objects
+    const placeholders = await db.placeholder.findMany({
+      where: { templateId },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    return { success: true, data: placeholders.map(mapPlaceholderItem) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "解析占位符失败";
+    return { success: false, error: { code: "PARSE_FAILED", message } };
+  }
+}
+
+export interface UpdatePlaceholderInput {
+  key: string;
+  label: string;
+  inputType: string;
+  required: boolean;
+  defaultValue: string | null;
+  sortOrder: number;
+}
+
+export async function updatePlaceholders(
+  templateId: string,
+  items: UpdatePlaceholderInput[]
+): Promise<ServiceResult<PlaceholderItem[]>> {
+  try {
+    // Validate all labels are non-empty
+    const errors: string[] = [];
+    for (const item of items) {
+      if (!item.label.trim()) {
+        errors.push(`占位符 "${item.key}" 的标签不能为空`);
+      }
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: errors.join("; ") },
+      };
+    }
+
+    // Delete all existing placeholders
+    await db.placeholder.deleteMany({ where: { templateId } });
+
+    // Create new placeholders from the items array
+    await db.placeholder.createMany({
+      data: items.map((item) => ({
+        key: item.key,
+        label: item.label.trim(),
+        inputType: item.inputType as "TEXT" | "TEXTAREA",
+        required: item.required,
+        defaultValue: item.defaultValue,
+        sortOrder: item.sortOrder,
+        templateId,
+      })),
+    });
+
+    // If valid, also change template status to READY
+    await changeStatus(templateId, "READY");
+
+    // Retrieve the created placeholders
+    const placeholders = await db.placeholder.findMany({
+      where: { templateId },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    return { success: true, data: placeholders.map(mapPlaceholderItem) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新占位符失败";
+    return { success: false, error: { code: "UPDATE_FAILED", message } };
+  }
+}
+
+export async function validatePlaceholders(
+  templateId: string
+): Promise<ServiceResult<{ valid: boolean; errors: string[] }>> {
+  try {
+    const placeholders = await db.placeholder.findMany({
+      where: { templateId },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    const errors: string[] = [];
+
+    for (const p of placeholders) {
+      if (!p.label.trim()) {
+        errors.push(`占位符 "${p.key}" 的标签不能为空`);
+      }
+    }
+
+    return {
+      success: true,
+      data: { valid: errors.length === 0, errors },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "验证占位符失败";
+    return { success: false, error: { code: "VALIDATE_FAILED", message } };
+  }
+}

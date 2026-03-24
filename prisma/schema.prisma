@@ -11,3 +11,101 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          Role      @default(USER)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  drafts        Draft[]
+  records       Record[]
+  templates     Template[]
+}
+
+enum TemplateStatus {
+  DRAFT
+  READY
+  ARCHIVED
+}
+
+model Template {
+  id            String          @id @default(cuid())
+  name          String
+  description   String?
+  fileName      String
+  filePath      String
+  fileSize      Int
+  status        TemplateStatus  @default(DRAFT)
+  createdById   String
+  createdBy     User            @relation(fields: [createdById], references: [id])
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  placeholders  Placeholder[]
+  drafts        Draft[]
+  records       Record[]
+}
+
+enum PlaceholderType {
+  TEXT
+  TEXTAREA
+}
+
+model Placeholder {
+  id           String          @id @default(cuid())
+  key          String
+  label        String
+  inputType    PlaceholderType @default(TEXT)
+  required     Boolean         @default(false)
+  defaultValue String?
+  sortOrder    Int             @default(0)
+  templateId   String
+  template     Template        @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  @@unique([templateId, key])
+}
+
+model Draft {
+  id         String   @id @default(cuid())
+  templateId String
+  template   Template @relation(fields: [templateId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  formData   Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@index([userId])
+  @@index([templateId])
+}
+
+enum RecordStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model Record {
+  id           String       @id @default(cuid())
+  templateId   String
+  template     Template     @relation(fields: [templateId], references: [id])
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
+  formData     Json
+  status       RecordStatus @default(PENDING)
+  fileName     String?
+  filePath     String?
+  errorMessage String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  @@index([userId])
+  @@index([templateId])
+  @@index([status])
+}

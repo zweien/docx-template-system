@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ export function Step3Settings({
   onNext,
 }: Step3SettingsProps) {
   const [patternError, setPatternError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const validatePattern = (pattern: string): boolean => {
     if (!pattern.trim()) {
@@ -55,7 +56,7 @@ export function Step3Settings({
   };
 
   const insertVariable = (variable: string) => {
-    const input = document.getElementById("fileNamePattern") as HTMLInputElement;
+    const input = inputRef.current;
     if (input) {
       const start = input.selectionStart || 0;
       const end = input.selectionEnd || 0;
@@ -90,6 +91,7 @@ export function Step3Settings({
           <Label htmlFor="fileNamePattern">文件名格式</Label>
           <Input
             id="fileNamePattern"
+            ref={inputRef}
             value={settings.fileNamePattern}
             onChange={(e) => handlePatternChange(e.target.value)}
             placeholder="例如: 合同_{{name}}_{{date}}"

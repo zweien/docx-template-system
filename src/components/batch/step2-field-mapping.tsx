@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Select,
   SelectContent,
@@ -53,6 +53,7 @@ export function Step2FieldMapping({
   const [dataFields, setDataFields] = useState<DataFieldInfo[]>([]);
   const [autoMapping, setAutoMapping] = useState<FieldMapping>({});
   const [isLoading, setIsLoading] = useState(true);
+  const hasInitializedMapping = useRef(false);
 
   // 加载字段映射信息
   useEffect(() => {
@@ -67,8 +68,9 @@ export function Step2FieldMapping({
           setPlaceholders(result.placeholders);
           setDataFields(result.dataFields);
           setAutoMapping(result.autoMapping);
-          // 如果没有手动映射过，使用自动映射
-          if (Object.keys(fieldMapping).length === 0) {
+          // 仅在首次加载时且没有手动映射时，使用自动映射
+          if (!hasInitializedMapping.current && Object.keys(fieldMapping).length === 0) {
+            hasInitializedMapping.current = true;
             onMappingChange(result.autoMapping);
           }
         }
@@ -79,6 +81,9 @@ export function Step2FieldMapping({
       }
     };
     fetchMappingInfo();
+    // 注意: fieldMapping 和 onMappingChange 故意不添加到依赖中
+    // 我们只需要在 templateId/dataTableId 变化时获取数据
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateId, dataTableId]);
 
   const handleMappingUpdate = (placeholderKey: string, dataFieldKey: string | null) => {

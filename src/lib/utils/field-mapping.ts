@@ -20,6 +20,8 @@ export function autoMatchFields(
   placeholders: Placeholder[],
   dataFields: DataField[]
 ): FieldMapping {
+  if (!placeholders || !dataFields) return {};
+
   const mapping: FieldMapping = {};
 
   for (const placeholder of placeholders) {
@@ -71,7 +73,7 @@ export function validateFieldMapping(
   requiredPlaceholders: string[]
 ): { valid: boolean; missingFields: string[] } {
   const missingFields = requiredPlaceholders.filter(
-    (key) => !mapping[key] || mapping[key] === null
+    (key) => mapping[key] === null || mapping[key] === undefined
   );
 
   return {

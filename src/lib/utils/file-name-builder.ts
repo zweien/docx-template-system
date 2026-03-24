@@ -22,6 +22,13 @@ export function getFieldVariables(
 }
 
 /**
+ * 转义正则表达式特殊字符
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
  * 根据模式构建文件名
  * @param pattern 文件名模式，如 "{project_name}_合同_{date}"
  * @param recordData 数据记录
@@ -32,6 +39,11 @@ export function buildFileName(
   recordData: Record<string, unknown>,
   index: number = 1
 ): string {
+  // 空模式检查
+  if (!pattern || !pattern.trim()) {
+    return `document_${index}.docx`;
+  }
+
   const now = new Date();
   const yyyy = now.getFullYear().toString().padStart(4, "0");
   const MM = (now.getMonth() + 1).toString().padStart(2, "0");
@@ -47,13 +59,21 @@ export function buildFileName(
   fileName = fileName.replace(/{time}/g, `${HH}${mm}${ss}`);
   fileName = fileName.replace(/{序号}/g, String(index));
 
-  // 替换字段变量
+  // 替换字段变量（使用转义后的key防止正则注入）
   for (const [key, value] of Object.entries(recordData)) {
-    fileName = fileName.replace(new RegExp(`{${key}}`, "g"), String(value ?? ""));
+    fileName = fileName.replace(
+      new RegExp(`\\{${escapeRegex(key)}\\}`, "g"),
+      String(value ?? "")
+    );
   }
 
   // 清理文件名中的非法字符
   fileName = fileName.replace(/[<>:"/\\|?*]/g, "_");
+
+  // 限制文件名长度（保留扩展名空间）
+  if (fileName.length > 200) {
+    fileName = fileName.substring(0, 200);
+  }
 
   return fileName;
 }

@@ -174,7 +174,7 @@ model Record {
   filePath     String?
   errorMessage String?
   dataRecordId String?
-  dataRecord   DataRecord?  @relation(fields: [dataRecordId], references: [id])
+  dataRecord   DataRecord?  @relation(fields: [dataRecordId], references: [id], onDelete: SetNull)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   @@index([userId])
@@ -191,23 +191,29 @@ enum BatchStatus {
   FAILED
 }
 
+enum OutputMethod {
+  DOWNLOAD
+  SAVE_TO_RECORDS
+}
+
 model BatchGeneration {
-  id              String      @id @default(cuid())
+  id              String       @id @default(cuid())
   templateId      String
-  template        Template    @relation(fields: [templateId], references: [id])
+  template        Template     @relation(fields: [templateId], references: [id], onDelete: Cascade)
   dataTableId     String
-  dataTable       DataTable   @relation(fields: [dataTableId], references: [id])
+  dataTable       DataTable    @relation(fields: [dataTableId], references: [id], onDelete: Cascade)
   totalCount      Int
-  successCount    Int         @default(0)
-  failedCount     Int         @default(0)
-  status          BatchStatus @default(PENDING)
+  successCount    Int          @default(0)
+  failedCount     Int          @default(0)
+  status          BatchStatus  @default(PENDING)
   fileNamePattern String?
-  outputMethod    String      // DOWNLOAD / SAVE_TO_RECORDS
+  outputMethod    OutputMethod
   createdById     String
-  createdBy       User        @relation(fields: [createdById], references: [id])
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdBy       User         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   @@index([templateId])
   @@index([status])
+  @@index([createdById])
 }

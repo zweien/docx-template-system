@@ -27,6 +27,7 @@ import {
   Pencil,
   Trash2,
   FileText,
+  Files,
   PenLine,
   CalendarDays,
   User,
@@ -125,13 +126,22 @@ export default async function TemplateDetailPage({
               配置占位符
             </Button>
           )}
-          {(isAdmin || template.status === "READY") && (
-            <Button
-              render={<Link href={`/templates/${template.id}/fill`} />}
-            >
-              <PenLine className="h-4 w-4" />
-              填写表单
-            </Button>
+          {template.status === "READY" && (
+            <>
+              <Button
+                variant="outline"
+                render={<Link href={`/templates/${template.id}/batch`} />}
+              >
+                <Files className="h-4 w-4" />
+                批量生成
+              </Button>
+              <Button
+                render={<Link href={`/templates/${template.id}/fill`} />}
+              >
+                <PenLine className="h-4 w-4" />
+                填写表单
+              </Button>
+            </>
           )}
         </div>
       </div>

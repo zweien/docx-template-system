@@ -146,7 +146,7 @@ export default async function TemplateDetailPage({
             <CardTitle className="text-sm font-medium">文件信息</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium">{template.fileName}</p>
+            <p className="text-sm font-medium">{template.originalFileName || template.fileName}</p>
             <p className="text-xs text-muted-foreground">
               {formatFileSize(template.fileSize)}
             </p>

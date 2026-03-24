@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, ScanSearch } from "lucide-react";
+import { ArrowLeft, Loader2, ScanSearch, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -43,6 +43,8 @@ export function PlaceholderConfigTable({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [parsing, setParsing] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const fetchPlaceholders = useCallback(async () => {
@@ -126,6 +128,51 @@ export function PlaceholderConfigTable({
     }
   };
 
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch(`/api/templates/${templateId}/placeholders/import`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error?.message || "导入失败");
+        return;
+      }
+
+      const result = await res.json();
+      if (result.data) {
+        setPlaceholders(
+          result.data.map(
+            (row: Record<string, unknown>, index: number) =>
+              ({
+                key: row.key,
+                label: row.label,
+                inputType: (row.inputType as "TEXT" | "TEXTAREA") ?? "TEXT",
+                required: row.required === "true" || row.required === true,
+                defaultValue: row.defaultValue ?? "",
+                sortOrder: index,
+              }) as PlaceholderRow
+          )
+        );
+        toast.success(`成功导入 ${result.data.length} 个占位符`);
+      }
+    } catch {
+      toast.error("导入失败，请重试");
+    } finally {
+      setImporting(false);
+      // Reset file input
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   const handleSave = async () => {
     // Validate
     if (placeholders.length === 0) {
@@ -181,21 +228,43 @@ export function PlaceholderConfigTable({
         返回模板详情
       </Button>
 
-      {/* Parse button */}
+      {/* Parse & Import buttons */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
             从 DOCX 文件中重新解析占位符，将覆盖当前配置。
           </p>
         </div>
-        <Button variant="secondary" size="sm" onClick={handleParse} disabled={parsing}>
-          {parsing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <ScanSearch className="h-4 w-4" />
-          )}
-          解析占位符
-        </Button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleImportExcel}
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+          >
+            {importing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="h-4 w-4" />
+            )}
+            从 Excel 导入
+          </Button>
+          <Button variant="secondary" size="sm" onClick={handleParse} disabled={parsing}>
+            {parsing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <ScanSearch className="h-4 w-4" />
+            )}
+            解析占位符
+          </Button>
+        </div>
       </div>
 
       {/* Editable table */}

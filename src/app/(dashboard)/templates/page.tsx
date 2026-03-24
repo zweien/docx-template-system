@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, ChevronLeft, ChevronRight, Settings, Trash2, Eye } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, Settings, Trash2, Eye, FileText } from "lucide-react";
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
@@ -61,6 +61,7 @@ export default async function TemplatesPage({
         id: true,
         name: true,
         fileName: true,
+        originalFileName: true,
         status: true,
         createdAt: true,
         createdBy: {
@@ -137,17 +138,29 @@ export default async function TemplatesPage({
               <TableRow>
                 <TableCell
                   colSpan={6}
-                  className="h-24 text-center text-muted-foreground"
+                  className="h-32"
                 >
-                  暂无模板数据
+                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <FileText className="h-8 w-8 mb-2" />
+                    <p className="text-sm">暂无模板数据</p>
+                    {isAdmin && (
+                      <Button
+                        variant="link"
+                        size="sm"
+                        render={<Link href="/templates/new" />}
+                      >
+                        上传第一个模板
+                      </Button>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
               templates.map((template) => (
                 <TableRow key={template.id}>
                   <TableCell className="font-medium">{template.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {template.fileName}
+                  <TableCell className="text-muted-foreground max-w-[200px] truncate" title={template.originalFileName}>
+                    {template.originalFileName || template.fileName}
                   </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANTS[template.status]}>

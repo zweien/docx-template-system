@@ -4,6 +4,7 @@ export interface TemplateListItem {
   id: string;
   name: string;
   fileName: string;
+  originalFileName: string;
   fileSize: number;
   status: string; // TemplateStatus enum value
   createdAt: string; // ISO date string

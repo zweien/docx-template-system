@@ -15,8 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Copy,
-  FileText,
+  Download,
+  History,
 } from "lucide-react";
 import type { Role, RecordStatus } from "@/generated/prisma/enums";
 
@@ -130,9 +130,19 @@ export default async function RecordsPage({
               <TableRow>
                 <TableCell
                   colSpan={5}
-                  className="h-24 text-center text-muted-foreground"
+                  className="h-32"
                 >
-                  暂无生成记录
+                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                    <History className="h-8 w-8 mb-2" />
+                    <p className="text-sm">暂无生成记录</p>
+                    <Button
+                      variant="link"
+                      size="sm"
+                      render={<Link href="/templates" />}
+                    >
+                      前往模板列表填写表单
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (
@@ -158,6 +168,15 @@ export default async function RecordsPage({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      {record.status === "COMPLETED" && record.fileName && (
+                        <a
+                          href={`/uploads/documents/${record.fileName}`}
+                          download={record.fileName}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                        </a>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"

@@ -40,8 +40,9 @@ model Template {
   id            String          @id @default(cuid())
   name          String
   description   String?
-  fileName      String
-  filePath      String
+  fileName          String
+  originalFileName  String          @default("")
+  filePath          String
   fileSize      Int
   status        TemplateStatus  @default(DRAFT)
   createdById   String

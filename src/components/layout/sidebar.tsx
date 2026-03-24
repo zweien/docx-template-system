@@ -5,19 +5,17 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
+  FileOutput,
   FileText,
   History,
   PenLine,
-  Upload,
   ShieldCheck,
 } from "lucide-react";
-import type { Role } from "@/generated/prisma/enums";
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ReactNode;
-  adminOnly?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -25,6 +23,11 @@ const navItems: NavItem[] = [
     title: "仪表盘",
     href: "/",
     icon: <LayoutDashboard className="h-4 w-4" />,
+  },
+  {
+    title: "生成文档",
+    href: "/generate",
+    icon: <FileOutput className="h-4 w-4" />,
   },
   {
     title: "模板管理",
@@ -41,24 +44,11 @@ const navItems: NavItem[] = [
     href: "/drafts",
     icon: <PenLine className="h-4 w-4" />,
   },
-  {
-    title: "上传模板",
-    href: "/templates/new",
-    icon: <Upload className="h-4 w-4" />,
-    adminOnly: true,
-  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-
-  const role = session?.user?.role as Role | undefined;
-  const isAdmin = role === "ADMIN";
-
-  const filteredItems = navItems.filter(
-    (item) => !item.adminOnly || isAdmin
-  );
 
   return (
     <aside className="hidden md:flex h-screen w-60 flex-col border-r bg-zinc-950">
@@ -74,7 +64,7 @@ export function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {filteredItems.map((item) => {
+        {navItems.map((item) => {
           const isActive =
             item.href === "/"
               ? pathname === "/"

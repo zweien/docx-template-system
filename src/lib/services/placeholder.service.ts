@@ -3,6 +3,7 @@ import { PlaceholderType } from "@/generated/prisma/enums";
 import { extractPlaceholders } from "@/lib/docx-parser";
 import { changeStatus } from "@/lib/services/template.service";
 import type { PlaceholderItem } from "@/types/placeholder";
+import * as XLSX from "xlsx";
 
 // ── Unified return type ──
 
@@ -33,6 +34,61 @@ function mapPlaceholderItem(row: {
 }
 
 // ── Public API ──
+
+export interface ExcelPlaceholderRow {
+  key: string;
+  label: string;
+  inputType?: string;
+  required?: string;
+  defaultValue?: string | null;
+}
+
+export function importPlaceholdersFromExcel(
+  buffer: ArrayBuffer
+): { success: true; data: ExcelPlaceholderRow[] } | { success: false; error: { code: string; message: string } } {
+  try {
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      return { success: false, error: { code: "PARSE_FAILED", message: "Excel 文件中没有工作表" } };
+    }
+
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: "" });
+
+    if (rows.length === 0) {
+      return { success: false, error: { code: "PARSE_FAILED", message: "Excel 文件中没有数据行" } };
+    }
+
+    const validInputTypes = new Set(["TEXT", "TEXTAREA"]);
+    const errors: string[] = [];
+
+    const result: ExcelPlaceholderRow[] = rows.map((row, index) => {
+      const key = String(row["key"] ?? "").trim();
+      const label = String(row["label"] ?? "").trim();
+
+      if (!key) errors.push(`第 ${index + 2} 行: key 不能为空`);
+      if (!label) errors.push(`第 ${index + 2} 行: label 不能为空`);
+
+      let inputType = String(row["inputType"] ?? "TEXT").trim().toUpperCase();
+      if (!validInputTypes.has(inputType)) inputType = "TEXT";
+
+      const required = String(row["required"] ?? "").trim();
+      const defaultValue = String(row["defaultValue"] ?? "").trim() || null;
+
+      return { key, label, inputType, required, defaultValue };
+    });
+
+    if (errors.length > 0) {
+      return { success: false, error: { code: "VALIDATION_ERROR", message: errors.join("; ") } };
+    }
+
+    return { success: true, data: result };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "解析 Excel 文件失败";
+    return { success: false, error: { code: "PARSE_FAILED", message } };
+  }
+}
 
 export async function parsePlaceholders(
   templateId: string

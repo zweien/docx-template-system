@@ -9,6 +9,8 @@ import {
   History,
   PenLine,
   Upload,
+  Users,
+  FileOutput,
 } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 
@@ -19,7 +21,12 @@ export default async function DashboardPage() {
   startOfMonth.setDate(1);
   startOfMonth.setHours(0, 0, 0, 0);
 
-  const [totalTemplates, readyTemplates, monthlyRecords, drafts] =
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const isAdmin = (session?.user?.role as Role) === "ADMIN";
+
+  const [totalTemplates, readyTemplates, monthlyRecords, drafts, totalUsers, todayRecords] =
     await Promise.all([
       db.template.count(),
       db.template.count({ where: { status: "READY" } }),
@@ -34,36 +41,23 @@ export default async function DashboardPage() {
       session?.user?.id
         ? db.draft.count({ where: { userId: session.user.id } })
         : Promise.resolve(0),
+      isAdmin ? db.user.count() : Promise.resolve(0),
+      isAdmin ? db.record.count({ where: { createdAt: { gte: startOfDay } } }) : Promise.resolve(0),
     ]);
 
-  const isAdmin = (session?.user?.role as Role) === "ADMIN";
-
-  const stats = [
-    {
-      label: "模板总数",
-      value: totalTemplates,
-      icon: FileText,
-      iconColor: "text-blue-500",
-    },
-    {
-      label: "可用模板",
-      value: readyTemplates,
-      icon: CheckCircle,
-      iconColor: "text-green-500",
-    },
-    {
-      label: "本月生成",
-      value: monthlyRecords,
-      icon: History,
-      iconColor: "text-orange-500",
-    },
-    {
-      label: "我的草稿",
-      value: drafts,
-      icon: PenLine,
-      iconColor: "text-purple-500",
-    },
-  ];
+  const stats = isAdmin
+    ? [
+        { label: "模板总数", value: totalTemplates, icon: FileText, iconColor: "text-blue-500" },
+        { label: "可用模板", value: readyTemplates, icon: CheckCircle, iconColor: "text-green-500" },
+        { label: "总用户数", value: totalUsers, icon: Users, iconColor: "text-indigo-500" },
+        { label: "今日生成", value: todayRecords, icon: History, iconColor: "text-orange-500" },
+      ]
+    : [
+        { label: "模板总数", value: totalTemplates, icon: FileText, iconColor: "text-blue-500" },
+        { label: "可用模板", value: readyTemplates, icon: CheckCircle, iconColor: "text-green-500" },
+        { label: "本月生成", value: monthlyRecords, icon: History, iconColor: "text-orange-500" },
+        { label: "我的草稿", value: drafts, icon: PenLine, iconColor: "text-purple-500" },
+      ];
 
   return (
     <div className="space-y-6">
@@ -96,6 +90,10 @@ export default async function DashboardPage() {
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
+        <Button render={<Link href="/generate" />}>
+          <FileOutput className="h-4 w-4" />
+          生成文档
+        </Button>
         {isAdmin && (
           <Button render={<Link href="/templates/new" />}>
             <Upload className="h-4 w-4" />

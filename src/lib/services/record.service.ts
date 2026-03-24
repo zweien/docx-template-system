@@ -1,6 +1,11 @@
 import { db } from "@/lib/db";
 import { RecordStatus } from "@/generated/prisma/enums";
-import { copyTemplateToDocument } from "@/lib/file.service";
+import { PYTHON_SERVICE_URL } from "@/lib/constants";
+import { writeFile, mkdir } from "fs/promises";
+import { join } from "path";
+import { existsSync } from "fs";
+
+const UPLOAD_DIR = process.env.UPLOAD_DIR || "public/uploads";
 
 // ── Unified return type ──
 
@@ -140,7 +145,7 @@ export async function generateDocument(
   }>
 > {
   try {
-    // a. Get the record with template (include filePath from template)
+    // a. Get the record with template
     const record = await db.record.findUnique({
       where: { id: recordId },
       include: { template: { select: { name: true, filePath: true } } },
@@ -153,16 +158,13 @@ export async function generateDocument(
       };
     }
 
-    // b. Update record status to PENDING (if not already)
+    // b. Update record status to PENDING
     await db.record.update({
       where: { id: recordId },
       data: { status: RecordStatus.PENDING },
     });
 
-    // c. Simulate processing delay
-    await new Promise((r) => setTimeout(r, 1000));
-
-    // d. Generate output filename
+    // c. Generate output filename
     const now = new Date();
     const yyyy = now.getFullYear().toString().padStart(4, "0");
     const MM = (now.getMonth() + 1).toString().padStart(2, "0");
@@ -172,37 +174,79 @@ export async function generateDocument(
     const ss = now.getSeconds().toString().padStart(2, "0");
     const newFileName = `${record.template.name}_${yyyy}${MM}${dd}_${HH}${mm}${ss}.docx`;
 
-    // e. Copy template file to document output
-    const fileMeta = await copyTemplateToDocument(
-      record.template.filePath,
-      newFileName,
-      record.id
-    );
+    // d. Call Python service
+    const formData = record.formData as Record<string, string>;
 
-    // f. Update record: status = COMPLETED, fileName, filePath, errorMessage = null
-    const updated = await db.record.update({
-      where: { id: recordId },
-      data: {
-        status: RecordStatus.COMPLETED,
-        fileName: fileMeta.fileName,
-        filePath: fileMeta.filePath,
-        errorMessage: null,
-      },
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
-    // g. Return the updated record
-    return {
-      success: true,
-      data: {
-        id: updated.id,
-        status: updated.status,
-        fileName: updated.fileName,
-        filePath: updated.filePath,
-        errorMessage: updated.errorMessage,
-      },
-    };
+    try {
+      const response = await fetch(`${PYTHON_SERVICE_URL}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          template_path: record.template.filePath,
+          output_filename: newFileName,
+          form_data: formData,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const message = (errorData as { detail?: string })?.detail || `Python 服务返回错误: ${response.status}`;
+        await db.record.update({
+          where: { id: recordId },
+          data: { status: RecordStatus.FAILED, errorMessage: message },
+        });
+        return { success: false, error: { code: "GENERATE_FAILED", message } };
+      }
+
+      // e. Save generated file from response
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      const targetDir = join(process.cwd(), UPLOAD_DIR, "documents");
+      if (!existsSync(targetDir)) await mkdir(targetDir, { recursive: true });
+      const filePath = join(targetDir, newFileName);
+      await writeFile(filePath, buffer);
+
+      // f. Update record as COMPLETED
+      const updated = await db.record.update({
+        where: { id: recordId },
+        data: {
+          status: RecordStatus.COMPLETED,
+          fileName: newFileName,
+          filePath,
+          errorMessage: null,
+        },
+      });
+
+      return {
+        success: true,
+        data: {
+          id: updated.id,
+          status: updated.status,
+          fileName: updated.fileName,
+          filePath: updated.filePath,
+          errorMessage: updated.errorMessage,
+        },
+      };
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof DOMException && fetchError.name === "AbortError") {
+        const message = "文档生成超时（30秒）";
+        await db.record.update({
+          where: { id: recordId },
+          data: { status: RecordStatus.FAILED, errorMessage: message },
+        });
+        return { success: false, error: { code: "GENERATE_TIMEOUT", message } };
+      }
+      throw fetchError;
+    }
   } catch (error) {
-    // Wrap in try/catch: if error, update record status to FAILED with errorMessage
     const message = error instanceof Error ? error.message : "文档生成失败";
     try {
       await db.record.update({

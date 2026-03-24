@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Download, RotateCcw, Copy } from "lucide-react";
+import { ArrowLeft, Download, RotateCcw, Copy, FileSpreadsheet } from "lucide-react";
 import type { Role, RecordStatus } from "@/generated/prisma/enums";
 import { RetryButton } from "./retry-button";
 import { CopyToDraftButton } from "./copy-to-draft-button";
@@ -41,7 +41,14 @@ export default async function RecordDetailPage({
 
   const record = await db.record.findUnique({
     where: { id },
-    include: { template: { select: { name: true } } },
+    include: {
+      template: {
+        select: {
+          name: true,
+          placeholders: { select: { key: true, label: true }, orderBy: { sortOrder: "asc" } },
+        },
+      },
+    },
   });
 
   if (!record) {
@@ -55,6 +62,12 @@ export default async function RecordDetailPage({
   }
 
   const formData = record.formData as Record<string, unknown>;
+
+  // Build key → label mapping from template placeholders
+  const labelMap = new Map<string, string>();
+  for (const ph of record.template.placeholders) {
+    labelMap.set(ph.key, ph.label);
+  }
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -130,7 +143,7 @@ export default async function RecordDetailPage({
               {Object.entries(formData).map(([key, value]) => (
                 <div key={key} className="space-y-1">
                   <p className="text-xs font-medium text-muted-foreground">
-                    {key}
+                    {labelMap.get(key) || key}
                   </p>
                   <p className="text-sm bg-muted rounded-md px-3 py-2 break-all">
                     {String(value || "")}
@@ -171,6 +184,14 @@ export default async function RecordDetailPage({
           )}
 
           <CopyToDraftButton recordId={record.id} />
+
+          <a
+            href={`/api/records/${record.id}/export`}
+            className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            导出 Excel
+          </a>
         </CardContent>
       </Card>
     </div>

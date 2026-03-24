@@ -16,6 +16,7 @@ function mapTemplateToListItem(row: {
   id: string;
   name: string;
   fileName: string;
+  originalFileName: string;
   fileSize: number;
   status: string;
   createdAt: Date;
@@ -24,6 +25,7 @@ function mapTemplateToListItem(row: {
     id: row.id,
     name: row.name,
     fileName: row.fileName,
+    originalFileName: row.originalFileName,
     fileSize: row.fileSize,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
@@ -151,6 +153,7 @@ export async function createTemplate(
         name: data.name,
         description: data.description ?? null,
         fileName: fileMeta.fileName,
+        originalFileName: originalName,
         filePath: fileMeta.filePath,
         fileSize: fileBuffer.length,
         status: "DRAFT",

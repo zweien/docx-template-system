@@ -13,8 +13,7 @@ import { createWriteStream } from "fs";
 import type { FieldMapping, BatchGenerationInput, BatchGenerationResult } from "@/types/batch-generation";
 import { autoMatchFields, buildFormData } from "@/lib/utils/field-mapping";
 import { buildFileName, generateUniqueFileName } from "@/lib/utils/file-name-builder";
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || "public/uploads";
+import { UPLOAD_DIR } from "@/lib/constants/upload";
 
 // ── Unified return type ──
 
@@ -563,6 +562,7 @@ export async function getBatch(
     status: string;
     fileNamePattern: string | null;
     outputMethod: string;
+    createdById: string;
     createdAt: Date;
     updatedAt: Date;
     template: { name: string };
@@ -599,6 +599,7 @@ export async function getBatch(
         status: batch.status,
         fileNamePattern: batch.fileNamePattern,
         outputMethod: batch.outputMethod,
+        createdById: batch.createdById,
         createdAt: batch.createdAt,
         updatedAt: batch.updatedAt,
         template: batch.template,

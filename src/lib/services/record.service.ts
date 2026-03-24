@@ -1,11 +1,10 @@
 import { db } from "@/lib/db";
 import { RecordStatus } from "@/generated/prisma/enums";
 import { PYTHON_SERVICE_URL } from "@/lib/constants";
+import { UPLOAD_DIR } from "@/lib/constants/upload";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || "public/uploads";
 
 // ── Unified return type ──
 

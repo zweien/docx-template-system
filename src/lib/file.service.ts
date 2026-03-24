@@ -1,8 +1,7 @@
 import { writeFile, mkdir, copyFile, unlink } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
-
-const UPLOAD_DIR = process.env.UPLOAD_DIR || "public/uploads";
+import { UPLOAD_DIR } from "@/lib/constants/upload";
 
 export interface FilePathMeta {
   fileName: string; // stored filename: {id}.docx

@@ -1,4 +1,5 @@
-import type { DefaultSession, DefaultJWT } from "next-auth";
+import type { DefaultSession } from "next-auth";
+import type { DefaultJWT } from "next-auth/jwt";
 import type { Role } from "@/generated/prisma/enums";
 
 declare module "next-auth" {

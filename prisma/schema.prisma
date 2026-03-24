@@ -28,6 +28,8 @@ model User {
   drafts        Draft[]
   records       Record[]
   templates     Template[]
+  dataTables    DataTable[]
+  dataRecords   DataRecord[]
 }
 
 enum TemplateStatus {
@@ -91,6 +93,65 @@ enum RecordStatus {
   PENDING
   COMPLETED
   FAILED
+}
+
+// ========== Master Data (Phase 2a) ==========
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  SELECT        // 单选
+  MULTISELECT   // 多选
+  EMAIL
+  PHONE
+  FILE          // 附件
+  RELATION      // 关联字段
+}
+
+model DataTable {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String?
+  icon        String?
+  fields      DataField[]
+  records     DataRecord[]
+  createdBy   User         @relation(fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  @@index([createdById])
+}
+
+model DataField {
+  id           String       @id @default(cuid())
+  tableId      String
+  table        DataTable    @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  key          String
+  label        String
+  type         FieldType    @default(TEXT)
+  required     Boolean      @default(false)
+  options      Json?
+  relationTo   String?
+  displayField String?
+  defaultValue String?
+  sortOrder    Int          @default(0)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  @@unique([tableId, key])
+}
+
+model DataRecord {
+  id          String   @id @default(cuid())
+  tableId     String
+  table       DataTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  data        Json
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([tableId])
+  @@index([createdById])
 }
 
 model Record {

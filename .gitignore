@@ -50,3 +50,8 @@ public/uploads/documents/*
 
 # git worktrees
 .worktrees/
+
+# Python
+python-service/.venv/
+__pycache__/
+*.pyc

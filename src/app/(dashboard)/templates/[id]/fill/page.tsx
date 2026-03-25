@@ -61,12 +61,16 @@ export default async function FillPage({
       <DynamicForm
         templateId={id}
         placeholders={template.placeholders.map((p) => ({
+          id: p.id,
           key: p.key,
           label: p.label,
           inputType: p.inputType as "TEXT" | "TEXTAREA",
           required: p.required,
           defaultValue: p.defaultValue,
           sortOrder: p.sortOrder,
+          sourceTableId: p.sourceTableId,
+          sourceField: p.sourceField,
+          enablePicker: p.enablePicker,
         }))}
         initialData={initialData}
         draftId={draftId}

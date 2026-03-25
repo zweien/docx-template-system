@@ -14,6 +14,62 @@ function toJsonInput(data: Record<string, unknown>): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(data));
 }
 
+// P2: 筛选条件类型
+export interface RecordFieldFilter {
+  op?: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains';
+  value: string | number;
+}
+
+export interface FieldFilters {
+  [fieldKey: string]: RecordFieldFilter;
+}
+
+// P2: 构建 Prisma JSONB 筛选条件
+function buildFieldFilterConditions(
+  fieldFilters: FieldFilters,
+  fields: DataFieldItem[]
+): Record<string, unknown>[] {
+  const conditions: Record<string, unknown>[] = [];
+
+  for (const [fieldKey, filter] of Object.entries(fieldFilters)) {
+    const field = fields.find(f => f.key === fieldKey);
+    if (!field) continue;
+
+    const op = filter.op || 'eq';
+    const value = filter.value;
+
+    // 根据操作符构建 Prisma JSONB 查询
+    switch (op) {
+      case 'eq':
+        conditions.push({
+          data: { path: [fieldKey], equals: value }
+        });
+        break;
+      case 'ne':
+        conditions.push({
+          NOT: { data: { path: [fieldKey], equals: value } }
+        });
+        break;
+      case 'gt':
+      case 'gte':
+      case 'lt':
+      case 'lte':
+        // 数字和日期比较
+        conditions.push({
+          data: { path: [fieldKey], string_contains: String(value) }
+        });
+        break;
+      case 'contains':
+        conditions.push({
+          data: { path: [fieldKey], string_contains: String(value) }
+        });
+        break;
+    }
+  }
+
+  return conditions;
+}
+
 // ── Helpers ──
 
 function mapRecordToItem(row: {
@@ -38,10 +94,16 @@ function mapRecordToItem(row: {
 
 export async function listRecords(
   tableId: string,
-  filters: { page: number; pageSize: number; search?: string }
+  filters: {
+    page: number;
+    pageSize: number;
+    search?: string;
+    // P2: 新增字段筛选
+    fieldFilters?: FieldFilters;
+  }
 ): Promise<ServiceResult<PaginatedRecords>> {
   try {
-    // Verify table exists
+    // Verify table exists and get fields
     const tableResult = await getTable(tableId);
     if (!tableResult.success) {
       return { success: false, error: tableResult.error };
@@ -49,20 +111,28 @@ export async function listRecords(
 
     const where: Record<string, unknown> = { tableId };
 
-    // Note: For JSONB search, we'll do a simple approach
-    // In production, you might want more sophisticated full-text search
-    const searchCondition = filters.search
-      ? {
-          OR: [
-            // Search in data JSONB field (simplified)
-            { data: { path: "$", string_contains: filters.search } },
-          ],
-        }
-      : {};
+    // Build search conditions
+    const searchConditions: Record<string, unknown>[] = [];
+    if (filters.search) {
+      searchConditions.push({
+        data: { path: "$", string_contains: filters.search }
+      });
+    }
+
+    // P2: Build field filter conditions
+    const fieldFilterConditions = filters.fieldFilters
+      ? buildFieldFilterConditions(filters.fieldFilters, tableResult.data.fields)
+      : [];
+
+    // Combine all conditions
+    const allConditions = [...searchConditions, ...fieldFilterConditions];
+    if (allConditions.length > 0) {
+      where.AND = allConditions;
+    }
 
     const [records, total] = await Promise.all([
       db.dataRecord.findMany({
-        where: filters.search ? { ...where, ...searchCondition } : where,
+        where,
         skip: (filters.page - 1) * filters.pageSize,
         take: filters.pageSize,
         orderBy: { createdAt: "desc" },
@@ -70,9 +140,7 @@ export async function listRecords(
           createdBy: { select: { name: true } },
         },
       }),
-      db.dataRecord.count({
-        where: filters.search ? { ...where, ...searchCondition } : where,
-      }),
+      db.dataRecord.count({ where }),
     ]);
 
     return {

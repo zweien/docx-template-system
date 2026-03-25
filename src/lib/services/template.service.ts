@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { TemplateStatus } from "@/generated/prisma/enums";
 import { saveUploadedFile, deleteFile, type FilePathMeta } from "@/lib/file.service";
-import type { TemplateListItem, TemplateDetail } from "@/types/template";
+import type { TemplateListItem, TemplateDetail, TemplateWithRelation } from "@/types/template";
 import type { PlaceholderItem } from "@/types/placeholder";
 
 // ── Unified return type ──
@@ -100,13 +100,15 @@ export async function listTemplates(filters: {
 
 export async function getTemplate(
   id: string
-): Promise<ServiceResult<TemplateDetail>> {
+): Promise<ServiceResult<TemplateWithRelation>> {
   try {
     const template = await db.template.findUnique({
       where: { id },
       include: {
         placeholders: { orderBy: { sortOrder: "asc" } },
         createdBy: { select: { name: true } },
+        // P2: 包含关联的数据表信息
+        dataTable: { select: { id: true, name: true } },
       },
     });
 
@@ -124,6 +126,10 @@ export async function getTemplate(
         description: template.description,
         createdById: template.createdById,
         placeholders: template.placeholders.map(mapPlaceholderItem),
+        // P2: 返回关联信息
+        dataTableId: template.dataTableId,
+        dataTable: template.dataTable ?? undefined,
+        fieldMapping: template.fieldMapping as Record<string, string | null> | null,
       },
     };
   } catch (error) {
@@ -170,12 +176,23 @@ export async function createTemplate(
 
 export async function updateTemplate(
   id: string,
-  data: { name?: string; description?: string }
+  data: {
+    name?: string;
+    description?: string;
+    // P2: 新增字段
+    dataTableId?: string | null;
+    fieldMapping?: Record<string, string | null>;
+  }
 ): Promise<ServiceResult<TemplateListItem>> {
   try {
     const updateData: Record<string, unknown> = {};
     if (data.name !== undefined) updateData.name = data.name;
     if (data.description !== undefined) updateData.description = data.description;
+    // P2: 处理关联字段
+    if (data.dataTableId !== undefined) updateData.dataTableId = data.dataTableId;
+    if (data.fieldMapping !== undefined) {
+      updateData.fieldMapping = data.fieldMapping;
+    }
 
     const template = await db.template.update({
       where: { id },

@@ -6,6 +6,10 @@ export interface PlaceholderItem {
   required: boolean;
   defaultValue: string | null;
   sortOrder: number;
+  // 数据源绑定
+  sourceTableId: string | null;
+  sourceField: string | null;
+  enablePicker: boolean;
 }
 
 export interface PlaceholderWithSource {

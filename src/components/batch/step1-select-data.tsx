@@ -18,16 +18,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import type { DataTableListItem, DataFieldItem, DataRecordItem, PaginatedRecords } from "@/types/data-table";
+import { ArrowRight, Link2 } from "lucide-react";
+import { RecordFilter, type ActiveFilter } from "@/components/data/record-filter";
+import type { DataTableListItem, DataFieldItem, PaginatedRecords } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
 
 interface Step1SelectDataProps {
   templateId: string;
   selectedTableId: string | null;
   selectedRecordIds: string[];
+  linkedDataTableId?: string | null;
   onTableSelect: (tableId: string) => void;
   onRecordsSelect: (recordIds: string[]) => void;
   onNext: () => void;
@@ -37,6 +38,7 @@ export function Step1SelectData({
   templateId,
   selectedTableId,
   selectedRecordIds,
+  linkedDataTableId,
   onTableSelect,
   onRecordsSelect,
   onNext,
@@ -50,6 +52,8 @@ export function Step1SelectData({
 
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
   const pageSize = 10;
 
   // 加载数据表列表
@@ -69,6 +73,17 @@ export function Step1SelectData({
     };
     fetchTables();
   }, []);
+
+  // 自动选择关联的数据表
+  useEffect(() => {
+    if (tables.length > 0 && linkedDataTableId && !selectedTableId && !hasAutoSelected) {
+      const linkedTable = tables.find((t) => t.id === linkedDataTableId);
+      if (linkedTable) {
+        onTableSelect(linkedDataTableId);
+        setHasAutoSelected(true);
+      }
+    }
+  }, [tables, linkedDataTableId, selectedTableId, hasAutoSelected, onTableSelect]);
 
   // 加载字段
   useEffect(() => {
@@ -106,6 +121,15 @@ export function Step1SelectData({
       });
       if (search) params.set("search", search);
 
+      // P2: 添加字段筛选参数
+      activeFilters.forEach((filter) => {
+        if (filter.operator === 'eq') {
+          params.set(`filters[${filter.fieldKey}]`, filter.value);
+        } else {
+          params.set(`filters[${filter.fieldKey}][${filter.operator}]`, filter.value);
+        }
+      });
+
       const response = await fetch(`/api/data-tables/${selectedTableId}/records?${params}`);
       const result = await response.json();
       if (response.ok) {
@@ -116,7 +140,7 @@ export function Step1SelectData({
     } finally {
       setRecordsLoading(false);
     }
-  }, [selectedTableId, page, search]);
+  }, [selectedTableId, page, search, activeFilters]);
 
   useEffect(() => {
     fetchRecords();
@@ -127,6 +151,7 @@ export function Step1SelectData({
     onRecordsSelect([]);
     setPage(1);
     setSearch("");
+    setActiveFilters([]);
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -147,10 +172,9 @@ export function Step1SelectData({
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleFiltersChange = (filters: ActiveFilter[]) => {
+    setActiveFilters(filters);
     setPage(1);
-    fetchRecords();
   };
 
   const formatCellValue = (field: DataFieldItem, value: unknown): React.ReactNode => {
@@ -228,16 +252,28 @@ export function Step1SelectData({
       {/* 记录表格 */}
       {selectedTableId && (
         <div className="space-y-4">
+          {/* 自动选择提示 */}
+          {hasAutoSelected && linkedDataTableId && (
+            <div className="flex items-center gap-2 px-3 py-2 text-sm bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              <Link2 className="h-4 w-4 shrink-0" />
+              <span>已自动选择模板关联的数据表</span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-4">
-            <form onSubmit={handleSearch} className="flex-1 max-w-sm">
-              <Input
-                placeholder="搜索记录..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-9"
+            <div className="flex-1">
+              <RecordFilter
+                fields={fields}
+                filters={activeFilters}
+                onFiltersChange={handleFiltersChange}
+                searchValue={search}
+                onSearchChange={(value) => {
+                  setSearch(value);
+                  setPage(1);
+                }}
               />
-            </form>
-            <div className="text-sm text-zinc-500">
+            </div>
+            <div className="text-sm text-zinc-500 shrink-0">
               已选择 <span className="font-medium text-foreground">{selectedRecordIds.length}</span> 条记录
             </div>
           </div>

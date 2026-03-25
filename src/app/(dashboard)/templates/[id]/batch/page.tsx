@@ -14,7 +14,7 @@ export default async function BatchGenerationPage({ params }: PageProps) {
 
   const template = await db.template.findUnique({
     where: { id },
-    select: { id: true, name: true, status: true },
+    select: { id: true, name: true, status: true, dataTableId: true },
   });
 
   if (!template || template.status !== "READY") {
@@ -37,7 +37,7 @@ export default async function BatchGenerationPage({ params }: PageProps) {
         </p>
       </div>
 
-      <BatchGenerationWizard templateId={id} />
+      <BatchGenerationWizard templateId={id} linkedDataTableId={template.dataTableId} />
     </div>
   );
 }

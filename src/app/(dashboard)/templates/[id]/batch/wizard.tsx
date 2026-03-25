@@ -18,6 +18,7 @@ import type {
 
 interface BatchGenerationWizardProps {
   templateId: string;
+  linkedDataTableId?: string | null;
 }
 
 const STEPS = {
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS: Settings = {
 
 export function BatchGenerationWizard({
   templateId,
+  linkedDataTableId,
 }: BatchGenerationWizardProps) {
   const router = useRouter();
 
@@ -128,6 +130,7 @@ export function BatchGenerationWizard({
             templateId={templateId}
             selectedTableId={dataTableId}
             selectedRecordIds={selectedRecordIds}
+            linkedDataTableId={linkedDataTableId}
             onTableSelect={setDataTableId}
             onRecordsSelect={setSelectedRecordIds}
             onNext={handleNext}

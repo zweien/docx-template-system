@@ -54,15 +54,17 @@ export function buildFileName(
 
   let fileName = pattern;
 
-  // 替换内置变量
-  fileName = fileName.replace(/{date}/g, `${yyyy}-${MM}-${dd}`);
-  fileName = fileName.replace(/{time}/g, `${HH}${mm}${ss}`);
-  fileName = fileName.replace(/{序号}/g, String(index));
+  // 替换内置变量（支持单括号和双括号格式）
+  fileName = fileName.replace(/\{\{?date\}\}?/g, `${yyyy}-${MM}-${dd}`);
+  fileName = fileName.replace(/\{\{?time\}\}?/g, `${HH}${mm}${ss}`);
+  fileName = fileName.replace(/\{\{?序号\}\}?/g, String(index));
+  fileName = fileName.replace(/\{\{?_index\}\}?/g, String(index));
 
-  // 替换字段变量（使用转义后的key防止正则注入）
+  // 替换字段变量（使用转义后的key防止正则注入，支持双括号格式）
   for (const [key, value] of Object.entries(recordData)) {
+    // 支持 {key} 和 {{key}} 两种格式
     fileName = fileName.replace(
-      new RegExp(`\\{${escapeRegex(key)}\\}`, "g"),
+      new RegExp(`\\{\\{?${escapeRegex(key)}\\}\\}?`, "g"),
       String(value ?? "")
     );
   }

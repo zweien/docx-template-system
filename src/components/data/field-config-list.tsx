@@ -151,7 +151,7 @@ export function FieldConfigList({
 
       {fields.length === 0 ? (
         <div className="text-center py-8 text-zinc-500">
-          暂无字段，点击"添加字段"开始配置
+          暂无字段，点击「添加字段」开始配置
         </div>
       ) : (
         <div className="rounded-md border">

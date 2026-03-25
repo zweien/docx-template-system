@@ -1,10 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { updateFields } from "@/lib/services/data-table.service";
+import { updateFields, getTable } from "@/lib/services/data-table.service";
 import { updateFieldsSchema } from "@/validators/data-table";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
+}
+
+// GET: Get fields for a data table
+export async function GET(_request: Request, { params }: RouteParams) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "未授权" }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  const result = await getTable(id);
+
+  if (!result.success) {
+    if (result.error.code === "NOT_FOUND") {
+      return NextResponse.json({ error: result.error.message }, { status: 404 });
+    }
+    return NextResponse.json(
+      { error: result.error.message },
+      { status: 400 }
+    );
+  }
+
+  // Return only the fields array
+  return NextResponse.json(result.data.fields);
 }
 
 // PUT: Batch update fields (full replace)

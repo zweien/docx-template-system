@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { updateFields, getTable } from "@/lib/services/data-table.service";
 import { updateFieldsSchema } from "@/validators/data-table";
+import { ZodError } from "zod";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -61,12 +62,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json(result.data);
   } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
+    if (error instanceof ZodError) {
+      const errorMessages = error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
       return NextResponse.json(
-        { error: "数据验证失败", details: error },
+        { error: `数据验证失败: ${errorMessages}` },
         { status: 400 }
       );
     }
+    console.error("更新字段配置失败:", error);
     return NextResponse.json(
       { error: "更新字段配置失败" },
       { status: 500 }

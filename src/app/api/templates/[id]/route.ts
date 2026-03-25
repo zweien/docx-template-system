@@ -59,12 +59,22 @@ export async function PUT(
       }
     }
 
-    // Handle name/description update
-    if (parsed.name !== undefined || parsed.description !== undefined) {
-      const updateData: { name?: string; description?: string } = {};
-      if (parsed.name !== undefined) updateData.name = parsed.name;
-      if (parsed.description !== undefined) updateData.description = parsed.description;
+    // Build update data including P2 fields
+    const updateData: {
+      name?: string;
+      description?: string;
+      dataTableId?: string | null;
+      fieldMapping?: Record<string, string | null>;
+    } = {};
 
+    if (parsed.name !== undefined) updateData.name = parsed.name;
+    if (parsed.description !== undefined) updateData.description = parsed.description;
+    // P2: 处理关联字段
+    if (parsed.dataTableId !== undefined) updateData.dataTableId = parsed.dataTableId;
+    if (parsed.fieldMapping !== undefined) updateData.fieldMapping = parsed.fieldMapping;
+
+    // Only call updateTemplate if there's something to update
+    if (Object.keys(updateData).length > 0) {
       const updateResult = await templateService.updateTemplate(id, updateData);
       if (!updateResult.success) {
         return NextResponse.json(
@@ -72,7 +82,6 @@ export async function PUT(
           { status: 400 }
         );
       }
-
       return NextResponse.json({ success: true, data: updateResult.data });
     }
 

@@ -4,10 +4,11 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, ScanSearch, Upload } from "lucide-react";
+import { ArrowLeft, Loader2, ScanSearch, Upload, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -23,6 +24,13 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface PlaceholderRow {
   id?: string;
@@ -32,6 +40,15 @@ interface PlaceholderRow {
   required: boolean;
   defaultValue: string;
   sortOrder: number;
+  enablePicker?: boolean;
+  sourceTableId?: string | null;
+  sourceField?: string | null;
+}
+
+interface DataTableWithFields {
+  id: string;
+  name: string;
+  fields: Array<{ id: string; key: string; label: string }>;
 }
 
 export function PlaceholderConfigTable({
@@ -46,6 +63,16 @@ export function PlaceholderConfigTable({
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // Source binding dialog state
+  const [isSourceDialogOpen, setIsSourceDialogOpen] = useState(false);
+  const [editingPlaceholder, setEditingPlaceholder] = useState<PlaceholderRow | null>(null);
+  const [enablePicker, setEnablePicker] = useState(false);
+  const [sourceTableId, setSourceTableId] = useState<string | null>(null);
+  const [sourceField, setSourceField] = useState<string | null>(null);
+  const [availableTables, setAvailableTables] = useState<DataTableWithFields[]>([]);
+  const [loadingTables, setLoadingTables] = useState(false);
+  const [savingSource, setSavingSource] = useState(false);
 
   const fetchPlaceholders = useCallback(async () => {
     try {
@@ -67,6 +94,9 @@ export function PlaceholderConfigTable({
                 required: ph.required ?? false,
                 defaultValue: ph.defaultValue ?? "",
                 sortOrder: ph.sortOrder ?? 0,
+                enablePicker: ph.enablePicker ?? false,
+                sourceTableId: ph.sourceTableId ?? null,
+                sourceField: ph.sourceField ?? null,
               }) as PlaceholderRow
           )
         );
@@ -82,10 +112,106 @@ export function PlaceholderConfigTable({
     fetchPlaceholders();
   }, [fetchPlaceholders]);
 
+  // Load available tables when dialog opens and enablePicker is true
+  useEffect(() => {
+    if (!isSourceDialogOpen || !enablePicker) return;
+
+    const fetchTables = async () => {
+      setLoadingTables(true);
+      try {
+        const res = await fetch("/api/data-tables");
+        if (!res.ok) throw new Error("获取数据表失败");
+        const tables = await res.json();
+
+        // Fetch fields for each table
+        const tablesWithFields = await Promise.all(
+          tables.map(async (t: { id: string; name: string }) => {
+            const fieldsRes = await fetch(`/api/data-tables/${t.id}/fields`);
+            const fields = fieldsRes.ok ? await fieldsRes.json() : [];
+            return { id: t.id, name: t.name, fields };
+          })
+        );
+
+        setAvailableTables(tablesWithFields);
+      } catch (error) {
+        console.error("获取数据表失败:", error);
+        toast.error("获取数据表失败");
+      } finally {
+        setLoadingTables(false);
+      }
+    };
+
+    fetchTables();
+  }, [isSourceDialogOpen, enablePicker]);
+
+  // Initialize state when editingPlaceholder changes
+  useEffect(() => {
+    if (editingPlaceholder) {
+      setEnablePicker(editingPlaceholder.enablePicker ?? false);
+      setSourceTableId(editingPlaceholder.sourceTableId ?? null);
+      setSourceField(editingPlaceholder.sourceField ?? null);
+    }
+  }, [editingPlaceholder]);
+
   const updateRow = (index: number, field: keyof PlaceholderRow, value: unknown) => {
     setPlaceholders((prev) =>
       prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
     );
+  };
+
+  const handleOpenSourceDialog = (placeholder: PlaceholderRow) => {
+    setEditingPlaceholder(placeholder);
+    setIsSourceDialogOpen(true);
+  };
+
+  const handleSaveSourceBinding = async () => {
+    if (!editingPlaceholder?.id) {
+      toast.error("占位符 ID 不存在");
+      return;
+    }
+
+    setSavingSource(true);
+    try {
+      const res = await fetch(`/api/placeholders/${editingPlaceholder.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sourceTableId: enablePicker ? sourceTableId : null,
+          sourceField: enablePicker ? sourceField : null,
+          enablePicker,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        toast.error(data?.error || "保存数据源绑定失败");
+        return;
+      }
+
+      toast.success("数据源绑定已保存");
+
+      // Update local state
+      setPlaceholders((prev) =>
+        prev.map((p) =>
+          p.id === editingPlaceholder.id
+            ? {
+                ...p,
+                enablePicker,
+                sourceTableId: enablePicker ? sourceTableId : null,
+                sourceField: enablePicker ? sourceField : null,
+              }
+            : p
+        )
+      );
+
+      setIsSourceDialogOpen(false);
+      setEditingPlaceholder(null);
+    } catch (error) {
+      console.error("保存数据源绑定失败:", error);
+      toast.error("保存数据源绑定失败");
+    } finally {
+      setSavingSource(false);
+    }
   };
 
   const handleParse = async () => {
@@ -116,6 +242,9 @@ export function PlaceholderConfigTable({
                   required: ph.required ?? false,
                   defaultValue: ph.defaultValue ?? "",
                   sortOrder: ph.sortOrder ?? 0,
+                  enablePicker: ph.enablePicker ?? false,
+                  sourceTableId: ph.sourceTableId ?? null,
+                  sourceField: ph.sourceField ?? null,
                 }) as PlaceholderRow
             )
           );
@@ -287,6 +416,7 @@ export function PlaceholderConfigTable({
                 <TableHead className="w-[70px]">必填</TableHead>
                 <TableHead className="w-[140px]">默认值</TableHead>
                 <TableHead className="w-[80px]">排序</TableHead>
+                <TableHead className="w-[100px]">数据源</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -364,6 +494,19 @@ export function PlaceholderConfigTable({
                       className="h-7 w-16 text-sm"
                     />
                   </TableCell>
+
+                  {/* Data Source - config button */}
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOpenSourceDialog(row)}
+                      className={row.enablePicker ? "text-primary" : "text-muted-foreground"}
+                    >
+                      <Settings2 className="h-4 w-4" />
+                      {row.enablePicker ? "已配置" : "配置"}
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -386,6 +529,106 @@ export function PlaceholderConfigTable({
           保存配置
         </Button>
       </div>
+
+      {/* Source Binding Dialog */}
+      <Dialog open={isSourceDialogOpen} onOpenChange={setIsSourceDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              配置数据源 - {editingPlaceholder?.key}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Enable Picker Switch */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={enablePicker}
+                onCheckedChange={setEnablePicker}
+                id="enable-picker"
+              />
+              <Label htmlFor="enable-picker">启用数据选择</Label>
+            </div>
+
+            {/* Data Source Configuration */}
+            {enablePicker && (
+              <div className="space-y-4 border-t pt-4">
+                {loadingTables ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2 text-sm text-muted-foreground">加载数据表...</span>
+                  </div>
+                ) : (
+                  <>
+                    {/* Source Table Select */}
+                    <div className="space-y-2">
+                      <Label htmlFor="source-table">数据来源表</Label>
+                      <Select
+                        value={sourceTableId ?? ""}
+                        onValueChange={(v) => {
+                          setSourceTableId(v);
+                          setSourceField(null);
+                        }}
+                      >
+                        <SelectTrigger id="source-table">
+                          <SelectValue placeholder="选择数据表" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableTables.map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Source Field Select */}
+                    {sourceTableId && (
+                      <div className="space-y-2">
+                        <Label htmlFor="source-field">数据字段</Label>
+                        <Select
+                          value={sourceField ?? ""}
+                          onValueChange={setSourceField}
+                        >
+                          <SelectTrigger id="source-field">
+                            <SelectValue placeholder="选择字段" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {availableTables
+                              .find((t) => t.id === sourceTableId)
+                              ?.fields.map((f) => (
+                                <SelectItem key={f.id} value={f.key}>
+                                  {f.label}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsSourceDialogOpen(false)}
+            >
+              取消
+            </Button>
+            <Button
+              onClick={handleSaveSourceBinding}
+              disabled={savingSource || (enablePicker && (!sourceTableId || !sourceField))}
+            >
+              {savingSource && <Loader2 className="h-4 w-4 animate-spin" />}
+              保存
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

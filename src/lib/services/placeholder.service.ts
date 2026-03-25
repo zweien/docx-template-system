@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { PlaceholderType } from "@/generated/prisma/enums";
 import { extractPlaceholders } from "@/lib/docx-parser";
 import { changeStatus } from "@/lib/services/template.service";
-import type { PlaceholderItem } from "@/types/placeholder";
+import type { PlaceholderItem, PlaceholderWithSource } from "@/types/placeholder";
 import * as XLSX from "xlsx";
 
 // ── Unified return type ──
@@ -220,4 +220,30 @@ export async function validatePlaceholders(
     const message = error instanceof Error ? error.message : "验证占位符失败";
     return { success: false, error: { code: "VALIDATE_FAILED", message } };
   }
+}
+
+export async function updatePlaceholderSource(
+  id: string,
+  data: { sourceTableId?: string | null; sourceField?: string | null; enablePicker?: boolean }
+): Promise<ServiceResult<PlaceholderWithSource>> {
+  try {
+    const placeholder = await db.placeholder.update({
+      where: { id },
+      data: {
+        sourceTableId: data.sourceTableId,
+        sourceField: data.sourceField,
+        enablePicker: data.enablePicker,
+      },
+    });
+    return { success: true, data: placeholder as PlaceholderWithSource };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新占位符数据源失败";
+    return { success: false, error: { code: "UPDATE_FAILED", message } };
+  }
+}
+
+export async function getPlaceholderById(id: string): Promise<PlaceholderWithSource | null> {
+  return db.placeholder.findUnique({
+    where: { id },
+  }) as Promise<PlaceholderWithSource | null>;
 }

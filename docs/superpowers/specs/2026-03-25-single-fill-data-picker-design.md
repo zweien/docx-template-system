@@ -232,12 +232,13 @@ async function resolveCascadeData(
 | `src/types/placeholder.ts` | 添加数据源绑定类型 | 修改 |
 | `src/validators/placeholder.ts` | 添加数据源绑定验证 | 修改 |
 | `src/lib/services/placeholder.service.ts` | 扩展占位符服务 | 修改 |
-| `src/app/api/placeholders/[id]/route.ts` | 支持更新数据源绑定 | 修改 |
-| `src/app/api/placeholders/[id]/picker-data/route.ts` | 数据选择器 API | 新建 |
+| `src/app/api/placeholders/[id]/route.ts` | 占位符更新 API（支持数据源绑定） | 新建 |
+| `src/app/api/placeholders/[id]/source-tables/route.ts` | 获取可绑定数据表 API | 新建 |
+| `src/app/api/placeholders/[id]/picker-data/route.ts` | 数据选择器数据 API | 新建 |
 | `src/app/api/fill/resolve-cascade/route.ts` | 级联解析 API | 新建 |
-| `src/components/fill/data-picker-dialog.tsx` | 数据选择器弹窗 | 新建 |
-| `src/components/fill/dynamic-fill-form.tsx` | 填写表单组件 | 修改 |
-| `src/components/template/placeholder-config-form.tsx` | 占位符配置表单 | 修改 |
+| `src/components/forms/data-picker-dialog.tsx` | 数据选择器弹窗组件 | 新建 |
+| `src/components/forms/dynamic-form.tsx` | 填写表单组件（集成选择器） | 修改 |
+| `src/components/templates/placeholder-config-table.tsx` | 占位符配置表格（添加数据源绑定 UI） | 修改 |
 
 ## 实施优先级
 

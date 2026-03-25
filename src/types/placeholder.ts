@@ -7,3 +7,16 @@ export interface PlaceholderItem {
   defaultValue: string | null;
   sortOrder: number;
 }
+
+export interface PlaceholderWithSource {
+  id: string;
+  key: string;
+  label: string;
+  inputType: string;
+  required: boolean;
+  defaultValue: string | null;
+  sortOrder: number;
+  sourceTableId: string | null;
+  sourceField: string | null;
+  enablePicker: boolean;
+}

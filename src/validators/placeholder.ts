@@ -13,3 +13,11 @@ export const placeholderItemSchema = z.object({
 export const updatePlaceholdersSchema = z.object({
   placeholders: z.array(placeholderItemSchema).min(1, "至少需要一个占位符"),
 });
+
+export const updatePlaceholderSourceSchema = z.object({
+  sourceTableId: z.string().nullable(),
+  sourceField: z.string().nullable(),
+  enablePicker: z.boolean().default(false),
+});
+
+export type UpdatePlaceholderSourceInput = z.infer<typeof updatePlaceholderSourceSchema>;

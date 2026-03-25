@@ -15,3 +15,17 @@ export interface TemplateDetail extends TemplateListItem {
   createdById: string;
   placeholders: PlaceholderItem[];
 }
+
+// 模板字段映射类型（存储为 JSON）
+// Key: 占位符的 key，Value: 数据表字段 key 或 null（表示「不映射」）
+export type TemplateFieldMapping = Record<string, string | null>;
+
+// 扩展 TemplateDetail 包含关联信息
+export interface TemplateWithRelation extends TemplateDetail {
+  dataTableId: string | null;
+  dataTable?: {
+    id: string;
+    name: string;
+  };
+  fieldMapping: TemplateFieldMapping | null;
+}

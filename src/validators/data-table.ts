@@ -20,10 +20,10 @@ export const dataFieldItemSchema = z.object({
   label: z.string().min(1, "显示名称不能为空").max(100, "显示名称最长100字符"),
   type: fieldTypeSchema,
   required: z.boolean().default(false),
-  options: z.array(z.string()).optional(),
-  relationTo: z.string().optional(),
-  displayField: z.string().optional(),
-  defaultValue: z.string().optional(),
+  options: z.array(z.string()).nullable().optional(),
+  relationTo: z.string().nullable().optional(),
+  displayField: z.string().nullable().optional(),
+  defaultValue: z.string().nullable().optional(),
   sortOrder: z.number().int().min(0).default(0),
 });
 

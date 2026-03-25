@@ -34,6 +34,7 @@ import {
   HardDrive,
 } from "lucide-react";
 import { DeleteTemplateButton } from "./delete-button";
+import { DataTableLinkWrapper } from "@/components/template/data-table-link-wrapper";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
@@ -77,6 +78,10 @@ export default async function TemplateDetailPage({
       },
       createdBy: {
         select: { name: true },
+      },
+      // P2: 包含关联的数据表
+      dataTable: {
+        select: { id: true, name: true },
       },
     },
   });
@@ -201,6 +206,31 @@ export default async function TemplateDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* P2: 主数据关联 */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>主数据关联</CardTitle>
+            <CardDescription>
+              关联数据表后，批量生成时可自动选择该表并配置字段映射
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <DataTableLinkWrapper
+              templateId={template.id}
+              dataTableId={template.dataTableId}
+              dataTable={template.dataTable}
+              fieldMapping={template.fieldMapping as Record<string, string | null> | null}
+              placeholders={template.placeholders.map((ph) => ({
+                key: ph.key,
+                label: ph.label,
+                required: ph.required,
+              }))}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Placeholders table */}
       <Card>

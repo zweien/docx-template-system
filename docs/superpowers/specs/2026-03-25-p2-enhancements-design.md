@@ -20,15 +20,23 @@ model Template {
   // ... 现有字段
   dataTableId   String?
   dataTable     DataTable?   @relation(fields: [dataTableId], references: [id])
-  fieldMapping  Json?        // { placeholderKey: dataFieldKey }
+  fieldMapping  Json?        // { placeholderKey: dataFieldKey | null }
 }
 ```
+
+**字段映射数据结构说明：**
+- `fieldMapping` 存储为 JSON 对象
+- Key: 占位符的 key（如 `project_name`）
+- Value: 数据表字段 key（如 `project_name`）或 `null`（表示「不映射」）
+- 示例：`{"project_name": "project_name", "person_name": null}`
 
 ### API 设计
 
 #### PUT /api/templates/[id]
 
 扩展更新接口，支持关联配置：
+
+**权限：** 需要 ADMIN 角色
 
 ```typescript
 // 请求体
@@ -37,10 +45,14 @@ model Template {
   "dataTableId": "cmn4xxx",  // 可选，null 表示取消关联
   "fieldMapping": {          // 可选
     "project_name": "project_name",
-    "person_name": "leader_name"
+    "person_name": null      // null 表示「不映射」
   }
 }
 ```
+
+**边界情况：**
+- 模板无占位符时：字段映射弹窗显示「模板没有占位符，无需配置字段映射」
+- 数据表无字段时：显示提示「数据表没有字段，请先添加字段」
 
 ### UI 组件
 
@@ -50,10 +62,14 @@ model Template {
 
 **Props：**
 ```typescript
+// 模板字段映射类型（存储为 JSON）
+type TemplateFieldMapping = Record<string, string | null>;
+// 示例: { "project_name": "project_name", "person_name": null }
+
 interface DataTableLinkProps {
   templateId: string;
   dataTableId: string | null;
-  fieldMapping: FieldMapping | null;
+  fieldMapping: TemplateFieldMapping | null;
   onUpdate: () => void;
 }
 ```
@@ -117,38 +133,86 @@ interface DataTableLinkProps {
 
 #### GET /api/data-tables/[id]/records
 
-扩展现有接口，支持多字段筛选：
+扩展现有接口，支持多字段筛选。
 
-```
-GET /api/data-tables/[id]/records?page=1&pageSize=20&search=关键词&filters[field_key]=value
-```
+**URL 编码格式说明：**
+- 查询参数使用标准 URL 编码
+- `filters[field_key]` 编码为 `filters%5Bfield_key%5D`
+- `filters[field_key][op]` 编码为 `filters%5Bfield_key%5D%5Bop%5D`
 
 **查询参数：**
-- `search`: 全文搜索（现有）
-- `filters[field_key]`: 按字段精确匹配
-- `filters[field_key][op]`: 操作符（eq, ne, gt, lt, gte, lte, contains）
+| 参数 | 说明 | 示例 |
+|------|------|------|
+| `page` | 页码（默认 1） | `page=1` |
+| `pageSize` | 每页数量（默认 20） | `pageSize=20` |
+| `search` | 全文搜索（现有功能） | `search=关键词` |
+| `filters[field_key]` | 按字段精确匹配（默认 eq 操作符） | `filters[status]=active` |
+| `filters[field_key][op]` | 指定操作符 | `filters[budget][gte]=10000` |
 
-**示例：**
+**完整 URL 示例：**
+
 ```
-GET /api/data-tables/[id]/records?filters[status]=active&filters[budget][gte]=10000
+# 精确匹配状态为 active
+GET /api/data-tables/cm123/records?filters%5Bstatus%5D=active
+
+# 预算大于等于 10000
+GET /api/data-tables/cm123/records?filters%5Bbudget%5D%5Bgte%5D=10000
+
+# 组合筛选：状态为 active 且预算大于 10000
+GET /api/data-tables/cm123/records?filters%5Bstatus%5D=active&filters%5Bbudget%5D%5Bgt%5D=10000
+
+# 带全文搜索
+GET /api/data-tables/cm123/records?search=项目&filters%5Bstatus%5D=active
 ```
+
+**支持的操作符：**
+| 操作符 | 说明 | 适用字段类型 |
+|--------|------|-------------|
+| `eq` | 等于（默认） | 全部 |
+| `ne` | 不等于 | 全部 |
+| `gt` | 大于 | NUMBER, DATE |
+| `lt` | 小于 | NUMBER, DATE |
+| `gte` | 大于等于 | NUMBER, DATE |
+| `lte` | 小于等于 | NUMBER, DATE |
+| `contains` | 包含 | TEXT, EMAIL, PHONE |
 
 ### 服务层扩展
 
 **文件：** `src/lib/services/data-record.service.ts`
 
 ```typescript
-interface RecordFilters {
-  search?: string;
-  fieldFilters?: {
-    [fieldKey: string]: {
-      op?: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains';
-      value: string | number;
-    };
-  };
+// 筛选条件类型
+interface RecordFieldFilter {
+  op?: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains';
+  value: string | number;
 }
 
-function buildFilterWhereClause(filters: RecordFilters, fields: DataField[]): Prisma.WhereInput
+interface RecordFilters {
+  search?: string;
+  fieldFilters?: Record<string, RecordFieldFilter>;
+}
+
+// 返回用于 Prisma JSON 字段查询的条件对象
+// 注意：Prisma 7 不使用 Prisma.WhereInput，而是直接构造查询条件对象
+function buildFilterConditions(
+  filters: RecordFilters,
+  fields: DataField[]
+): Record<string, unknown> {
+  const conditions: Record<string, unknown> = {};
+
+  if (filters.fieldFilters) {
+    for (const [fieldKey, filter] of Object.entries(filters.fieldFilters)) {
+      const field = fields.find(f => f.key === fieldKey);
+      if (!field) continue;
+
+      // JSON 字段查询使用 Prisma 的 JSON 筛选语法
+      const op = filter.op || 'eq';
+      conditions[fieldKey] = { op, value: filter.value };
+    }
+  }
+
+  return conditions;
+}
 ```
 
 ### UI 组件

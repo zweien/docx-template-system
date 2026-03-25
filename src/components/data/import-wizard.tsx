@@ -16,7 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import type { DataFieldItem, ImportPreview, ImportResult } from "@/types/data-table";
 
 interface ImportWizardProps {
-  tableId: string;
+  tableId?: string;
   fields: DataFieldItem[];
 }
 
@@ -74,7 +74,7 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
       });
       setMapping(initialMapping);
       setStep("mapping");
-    } catch (err) {
+    } catch (_err) {
       setError("上传失败，请稍后重试");
     } finally {
       setIsLoading(false);
@@ -116,7 +116,7 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
 
       setResult(data);
       setStep("result");
-    } catch (err) {
+    } catch (_err) {
       setError("导入失败，请稍后重试");
     } finally {
       setIsLoading(false);

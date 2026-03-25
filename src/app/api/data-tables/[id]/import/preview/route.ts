@@ -6,7 +6,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, { params: _params }: RouteParams) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });

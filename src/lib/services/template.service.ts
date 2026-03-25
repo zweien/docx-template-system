@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
-import { TemplateStatus } from "@/generated/prisma/enums";
 import { saveUploadedFile, deleteFile, type FilePathMeta } from "@/lib/file.service";
-import type { TemplateListItem, TemplateDetail, TemplateWithRelation } from "@/types/template";
+import type { TemplateListItem, TemplateWithRelation } from "@/types/template";
 import type { PlaceholderItem } from "@/types/placeholder";
 
 // ── Unified return type ──

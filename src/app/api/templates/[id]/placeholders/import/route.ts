@@ -6,7 +6,7 @@ import { importPlaceholdersFromExcel } from "@/lib/services/placeholder.service"
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _context: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
   if (!session?.user || session.user.role !== "ADMIN") {
@@ -15,8 +15,6 @@ export async function POST(
       { status: 403 }
     );
   }
-
-  const { id } = await params;
 
   try {
     const formData = await request.formData();
@@ -44,7 +42,7 @@ export async function POST(
     }
 
     return NextResponse.json({ success: true, data: result.data });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "导入占位符失败" } },
       { status: 500 }

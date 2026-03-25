@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Download, RotateCcw, Copy, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, Download, FileSpreadsheet } from "lucide-react";
 import type { Role, RecordStatus } from "@/generated/prisma/enums";
 import { RetryButton } from "./retry-button";
 import { CopyToDraftButton } from "./copy-to-draft-button";

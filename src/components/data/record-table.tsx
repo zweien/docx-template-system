@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import type { DataFieldItem, DataRecordItem, PaginatedRecords } from "@/types/data-table";
+import type { DataFieldItem, PaginatedRecords } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
 
 interface RecordTableProps {
@@ -34,7 +34,7 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
   const page = parseInt(searchParams.get("page") ?? "1");
   const pageSize = 20;
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -54,11 +54,11 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tableId, page, search]);
 
   useEffect(() => {
     fetchData();
-  }, [tableId, page, searchParams.get("search")]);
+  }, [fetchData]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

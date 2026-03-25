@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { FieldType } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import type {
   DataRecordItem,

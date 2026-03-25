@@ -260,7 +260,7 @@ export async function updateFields(
       await tx.dataField.deleteMany({ where: { tableId } });
 
       // Create new fields
-      const createdFields = await tx.dataField.createMany({
+      await tx.dataField.createMany({
         data: fields.map((f, index) => ({
           tableId,
           key: f.key,

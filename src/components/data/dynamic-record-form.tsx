@@ -8,7 +8,6 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -29,7 +28,7 @@ interface DynamicRecordFormProps {
 }
 
 export function DynamicRecordForm({
-  tableId,
+  tableId: _tableId,
   fields,
   initialData,
   onSubmit,
@@ -129,8 +128,6 @@ export function DynamicRecordForm({
   };
 
   const renderField = (field: DataFieldItem) => {
-    const fieldError = errors[field.key];
-
     switch (field.type) {
       case FieldType.NUMBER:
         return (

@@ -60,13 +60,6 @@ interface PlaceholderInfo {
   sortOrder: number;
 }
 
-interface TemplateInfo {
-  id: string;
-  name: string;
-  filePath: string;
-  placeholders: PlaceholderInfo[];
-}
-
 interface FieldMappingInfoResult {
   placeholders: PlaceholderInfo[];
   dataFields: DataFieldInfo[];
@@ -517,32 +510,30 @@ async function createZipArchive(
   await ensureDir();
 
   return new Promise((resolve, reject) => {
-    function createZip() {
-      const zipPath = join(batchesDir, `batch-${batchId}.zip`);
-      const output = createWriteStream(zipPath);
-      const archive = archiver("zip", {
-        zlib: { level: 9 }, // 最高压缩级别
-      });
+    const zipPath = join(batchesDir, `batch-${batchId}.zip`);
+    const output = createWriteStream(zipPath);
+    const archive = archiver("zip", {
+      zlib: { level: 9 }, // 最高压缩级别
+    });
 
-      output.on("close", () => {
-        resolve(`/uploads/batches/batch-${batchId}.zip`);
-      });
+    output.on("close", () => {
+      resolve(`/uploads/batches/batch-${batchId}.zip`);
+    });
 
-      archive.on("error", (err) => {
-        reject(err);
-      });
+    archive.on("error", (err) => {
+      reject(err);
+    });
 
-      archive.pipe(output);
+    archive.pipe(output);
 
-      // 添加文件到 ZIP
-      for (const file of files) {
-        if (existsSync(file.filePath)) {
-          archive.file(file.filePath, { name: file.fileName });
-        }
+    // 添加文件到 ZIP
+    for (const file of files) {
+      if (existsSync(file.filePath)) {
+        archive.file(file.filePath, { name: file.fileName });
       }
-
-      archive.finalize();
     }
+
+    archive.finalize();
   });
 }
 

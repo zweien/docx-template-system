@@ -25,7 +25,7 @@ import type { DataTableListItem, DataFieldItem, PaginatedRecords } from "@/types
 import { FieldType } from "@/generated/prisma/enums";
 
 interface Step1SelectDataProps {
-  templateId: string;
+  templateId?: string;
   selectedTableId: string | null;
   selectedRecordIds: string[];
   linkedDataTableId?: string | null;
@@ -35,7 +35,7 @@ interface Step1SelectDataProps {
 }
 
 export function Step1SelectData({
-  templateId,
+  templateId: _templateId,
   selectedTableId,
   selectedRecordIds,
   linkedDataTableId,
@@ -231,7 +231,16 @@ export function Step1SelectData({
         <label className="text-sm font-medium">数据表</label>
         <Select value={selectedTableId || ""} onValueChange={(v) => v && handleTableChange(v)}>
           <SelectTrigger>
-            <SelectValue placeholder="请选择数据表" />
+            <SelectValue placeholder="请选择数据表">
+              {selectedTableId
+                ? (() => {
+                    const selectedTable = tables.find((t) => t.id === selectedTableId);
+                    return selectedTable
+                      ? `${selectedTable.name} (${selectedTable.recordCount} 条记录)`
+                      : "请选择数据表";
+                  })()
+                : "请选择数据表"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             {tablesLoading ? (

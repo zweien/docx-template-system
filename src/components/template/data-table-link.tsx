@@ -170,7 +170,16 @@ export function DataTableLink({
             disabled={tablesLoading || saving}
           >
             <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="请选择数据表" />
+              <SelectValue placeholder="请选择数据表">
+                {selectedTableId
+                  ? (() => {
+                      const selectedTable = tables.find((t) => t.id === selectedTableId);
+                      return selectedTable
+                        ? `${selectedTable.name} (${selectedTable.recordCount} 条记录)`
+                        : "请选择数据表";
+                    })()
+                  : "请选择数据表"}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {tablesLoading ? (

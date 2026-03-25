@@ -67,7 +67,7 @@ export async function parseExcel(
 // ── Validation ──
 
 export async function validateImportData(
-  tableId: string,
+  _tableId: string,
   rows: Record<string, unknown>[],
   mapping: FieldMapping,
   fields: DataFieldItem[]
@@ -158,7 +158,7 @@ export async function importData(
   rows: Record<string, unknown>[],
   mapping: FieldMapping,
   options: ImportOptionsInput,
-  fields: DataFieldItem[]
+  _fields: DataFieldItem[]
 ): Promise<ServiceResult<ImportResult>> {
   try {
     const result: ImportResult = {

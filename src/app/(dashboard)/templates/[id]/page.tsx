@@ -25,7 +25,6 @@ import {
   ArrowLeft,
   Settings,
   Pencil,
-  Trash2,
   FileText,
   Files,
   PenLine,

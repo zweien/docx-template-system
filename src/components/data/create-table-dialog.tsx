@@ -61,7 +61,7 @@ export function CreateTableDialog({ trigger }: CreateTableDialogProps) {
       setDescription("");
       router.push(`/data/${data.id}/fields`);
       router.refresh();
-    } catch (err) {
+    } catch (_err) {
       setError("创建失败，请稍后重试");
     } finally {
       setIsLoading(false);

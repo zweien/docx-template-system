@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
 import { FileText, FileOutput } from "lucide-react";
 
 export default async function GeneratePage() {
-  const session = await auth();
 
   const templates = await db.template.findMany({
     where: { status: "READY" },

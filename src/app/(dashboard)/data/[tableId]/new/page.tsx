@@ -4,7 +4,6 @@ import { auth } from "@/lib/auth";
 import { getTable } from "@/lib/services/data-table.service";
 import { createRecord } from "@/lib/services/data-record.service";
 import { DynamicRecordForm } from "@/components/data/dynamic-record-form";
-import { Button } from "@/components/ui/button";
 
 interface PageProps {
   params: Promise<{ tableId: string }>;

@@ -33,7 +33,7 @@ export async function saveUploadedFile(
 export async function copyTemplateToDocument(
   templateFilePath: string,
   newFileName: string,
-  documentId: string
+  _documentId: string
 ): Promise<FilePathMeta> {
   const targetDir = join(process.cwd(), UPLOAD_DIR, "documents");
   if (!existsSync(targetDir)) await mkdir(targetDir, { recursive: true });

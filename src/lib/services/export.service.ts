@@ -3,7 +3,7 @@ import * as XLSX from "xlsx";
 export function exportRecordToExcel(
   formData: Record<string, unknown>,
   placeholders: { key: string; label: string }[],
-  templateName: string
+  _templateName: string
 ): Buffer {
   const wb = XLSX.utils.book_new();
 

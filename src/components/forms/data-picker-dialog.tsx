@@ -29,6 +29,18 @@ interface DataRecordItem {
   data: Record<string, unknown>;
 }
 
+// Helper to format cell value - handles { id, display } objects for RELATION fields
+function formatCellValue(value: unknown): string {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+  // Handle { id, display } object format for RELATION fields
+  if (typeof value === "object" && value !== null && "display" in value) {
+    return String((value as Record<string, unknown>).display ?? "");
+  }
+  return String(value);
+}
+
 // Note: Uses placeholderId (not tableId) - API resolves to bound table
 interface DataPickerDialogProps {
   open: boolean;
@@ -160,7 +172,7 @@ export function DataPickerDialog({
                       >
                         <TableCell>
                           <RadioGroup
-                            value={selectedId ?? undefined}
+                            value={selectedId ?? ""}
                             onValueChange={setSelectedId}
                           >
                             <RadioGroupItem
@@ -171,7 +183,7 @@ export function DataPickerDialog({
                         </TableCell>
                         {fields.slice(0, 5).map((field) => (
                           <TableCell key={field.id} className="max-w-[200px] truncate">
-                            {String(record.data[field.key] ?? "")}
+                            {formatCellValue(record.data[field.key])}
                           </TableCell>
                         ))}
                       </TableRow>
@@ -210,7 +222,7 @@ export function DataPickerDialog({
                           <div key={field.id} className="flex flex-col">
                             <span className="text-xs text-muted-foreground">{field.label}</span>
                             <span className="text-sm font-medium truncate">
-                              {String(record.data[field.key] ?? "-")}
+                              {formatCellValue(record.data[field.key])}
                             </span>
                           </div>
                         ))}

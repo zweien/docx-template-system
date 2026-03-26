@@ -86,6 +86,8 @@ export function DynamicForm({
       if (!res.ok) throw new Error("解析级联数据失败");
 
       const data = await res.json();
+      console.log("resolve-cascade response:", data);
+
       // Auto-fill all related fields
       setFormData((prev) => {
         const updated = { ...prev };

@@ -45,6 +45,11 @@ const FIELD_TYPES = [
   { value: FieldType.RELATION, label: "关联字段" },
 ];
 
+// Helper function to get field type label
+function getFieldTypeLabel(type: FieldType): string {
+  return FIELD_TYPES.find((t) => t.value === type)?.label ?? type;
+}
+
 export function FieldConfigForm({
   open,
   onOpenChange,
@@ -52,26 +57,42 @@ export function FieldConfigForm({
   availableTables,
   onSubmit,
 }: FieldConfigFormProps) {
-  const [key, setKey] = useState(field?.key ?? "");
-  const [label, setLabel] = useState(field?.label ?? "");
-  const [fieldType, setFieldType] = useState<FieldType>(field?.type ?? FieldType.TEXT);
-  const [required, setRequired] = useState(field?.required ?? false);
-  const [defaultValue, setDefaultValue] = useState(field?.defaultValue ?? "");
-  const [optionsText, setOptionsText] = useState(
-    field?.options?.join("\n") ?? ""
-  );
-  const [selectedTableId, setSelectedTableId] = useState(
-    field?.relationTo ?? ""
-  );
-  const [selectedDisplayField, setSelectedDisplayField] = useState(
-    field?.displayField ?? ""
-  );
-  const [relationFields, setRelationFields] = useState<DataFieldItem[]>(() => {
-    const t = availableTables.find((t) => t.id === (field?.relationTo ?? ""));
-    return t?.fields ?? [];
-  });
+  const [key, setKey] = useState("");
+  const [label, setLabel] = useState("");
+  const [fieldType, setFieldType] = useState<FieldType>(FieldType.TEXT);
+  const [required, setRequired] = useState(false);
+  const [defaultValue, setDefaultValue] = useState("");
+  const [optionsText, setOptionsText] = useState("");
+  const [selectedTableId, setSelectedTableId] = useState("");
+  const [selectedDisplayField, setSelectedDisplayField] = useState("");
+  const [relationFields, setRelationFields] = useState<DataFieldItem[]>([]);
   const [loadingFields, setLoadingFields] = useState(false);
   const [error, setError] = useState("");
+
+  // Sync state when field prop changes (dialog opens with different field)
+  useEffect(() => {
+    if (open) {
+      setKey(field?.key ?? "");
+      setLabel(field?.label ?? "");
+      setFieldType(field?.type ?? FieldType.TEXT);
+      setRequired(field?.required ?? false);
+      setDefaultValue(field?.defaultValue ?? "");
+      setOptionsText(field?.options?.join("\n") ?? "");
+      setSelectedTableId(field?.relationTo ?? "");
+      setSelectedDisplayField(field?.displayField ?? "");
+      setError("");
+
+      // Initialize relationFields if we have a relationTo field
+      if (field?.relationTo) {
+        const t = availableTables.find((t) => t.id === field.relationTo);
+        if (t && t.fields.length > 0) {
+          setRelationFields(t.fields);
+        }
+      } else {
+        setRelationFields([]);
+      }
+    }
+  }, [open, field, availableTables]);
 
   // When selectedTableId changes, load that table's fields
   useEffect(() => {
@@ -91,13 +112,27 @@ export function FieldConfigForm({
     let cancelled = false;
     setLoadingFields(true);
     fetch(`/api/data-tables/${selectedTableId}`)
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
       .then((data) => {
-        if (!cancelled && data.success) {
-          setRelationFields(data.data.fields ?? []);
+        if (!cancelled) {
+          if (data.success && data.data?.fields) {
+            setRelationFields(data.data.fields);
+          } else if (data.fields) {
+            // Handle case where response is directly the table object
+            setRelationFields(data.fields);
+          } else {
+            console.warn("API response missing fields:", data);
+            setRelationFields([]);
+          }
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("Failed to load table fields:", err);
+        if (!cancelled) setRelationFields([]);
+      })
       .finally(() => {
         if (!cancelled) setLoadingFields(false);
       });
@@ -148,8 +183,6 @@ export function FieldConfigForm({
     onSubmit(data);
     onOpenChange(false);
   };
-
-  const selectedTable = availableTables.find((t) => t.id === selectedTableId);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -203,7 +236,9 @@ export function FieldConfigForm({
                 onValueChange={(v) => setFieldType(v as FieldType)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="选择类型" />
+                  <SelectValue placeholder="选择类型">
+                    {getFieldTypeLabel(fieldType)}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {FIELD_TYPES.map((t) => (
@@ -254,7 +289,11 @@ export function FieldConfigForm({
                     }}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="选择关联表" />
+                      <SelectValue placeholder="选择关联表">
+                        {selectedTableId
+                          ? availableTables.find((t) => t.id === selectedTableId)?.name ?? "选择关联表"
+                          : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {availableTables.map((t) => (
@@ -266,7 +305,7 @@ export function FieldConfigForm({
                   </Select>
                 </div>
 
-                {selectedTable && (
+                {selectedTableId && (
                   <div className="grid gap-2">
                     <Label>显示字段</Label>
                     <Select
@@ -274,14 +313,24 @@ export function FieldConfigForm({
                       onValueChange={(v) => setSelectedDisplayField(v ?? "")}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder={loadingFields ? "加载中..." : "选择显示字段"} />
+                        <SelectValue placeholder={loadingFields ? "加载中..." : "选择显示字段"}>
+                          {selectedDisplayField
+                            ? relationFields.find((f) => f.key === selectedDisplayField)?.label ?? selectedDisplayField
+                            : null}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {relationFields.map((f) => (
-                          <SelectItem key={f.id} value={f.key}>
-                            {f.label} ({f.key})
-                          </SelectItem>
-                        ))}
+                        {relationFields.length === 0 ? (
+                          <div className="px-2 py-4 text-sm text-muted-foreground text-center">
+                            {loadingFields ? "加载中..." : "暂无字段"}
+                          </div>
+                        ) : (
+                          relationFields.map((f) => (
+                            <SelectItem key={f.id} value={f.key}>
+                              {f.label} ({f.key})
+                            </SelectItem>
+                          ))
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

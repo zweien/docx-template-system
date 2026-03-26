@@ -76,9 +76,11 @@ export function RelationSelect({
       disabled={disabled}
     >
       <SelectTrigger>
-        <SelectValue placeholder={placeholder}>
-          {selectedDisplay != null ? String(selectedDisplay) : placeholder}
-        </SelectValue>
+        {selectedDisplay != null ? (
+          <span className="flex-1 text-left truncate">{String(selectedDisplay)}</span>
+        ) : (
+          <SelectValue placeholder={placeholder} />
+        )}
       </SelectTrigger>
       <SelectContent>
         {/* Search input */}

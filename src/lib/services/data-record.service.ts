@@ -184,6 +184,59 @@ export async function listRecords(
       }
     }
 
+    // Resolve relation fields - batch fetch related records
+    const relationFields = tableResult.data.fields.filter(
+      f => f.type === "RELATION" && f.relationTo && f.displayField
+    );
+
+    if (relationFields.length > 0) {
+      // Collect all relation IDs for each relation table
+      const relationIdsByTable: Map<string, Set<string>> = new Map();
+      for (const field of relationFields) {
+        const tableId = field.relationTo!;
+        if (!relationIdsByTable.has(tableId)) {
+          relationIdsByTable.set(tableId, new Set());
+        }
+        const ids = relationIdsByTable.get(tableId)!;
+        for (const record of sortedRecords) {
+          const relId = record.data[field.key];
+          if (typeof relId === "string" && relId) {
+            ids.add(relId);
+          }
+        }
+      }
+
+      // Batch fetch related records for each table
+      const relatedRecordsMap: Map<string, Record<string, unknown>> = new Map();
+      for (const [tableId, ids] of relationIdsByTable) {
+        if (ids.size > 0) {
+          const relatedRecords = await db.dataRecord.findMany({
+            where: { id: { in: Array.from(ids) } },
+          });
+          for (const rel of relatedRecords) {
+            relatedRecordsMap.set(rel.id, rel.data as Record<string, unknown>);
+          }
+        }
+      }
+
+      // Update records with display values
+      for (const record of sortedRecords) {
+        for (const field of relationFields) {
+          const relId = record.data[field.key];
+          if (typeof relId === "string" && relId) {
+            const relatedData = relatedRecordsMap.get(relId);
+            if (relatedData && field.displayField) {
+              // Store display value with special structure for frontend
+              record.data[field.key] = {
+                id: relId,
+                display: relatedData[field.displayField] ?? relId,
+              };
+            }
+          }
+        }
+      }
+    }
+
     return {
       success: true,
       data: {

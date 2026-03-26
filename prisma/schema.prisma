@@ -165,6 +165,8 @@ model DataRecord {
   updatedAt   DateTime @updatedAt
   @@index([tableId])
   @@index([createdById])
+  @@index([tableId, createdAt(sort: Desc)])  // 复合索引加速列表查询
+  @@index([tableId, createdById])             // 复合索引加速用户记录查询
 }
 
 model DataView {

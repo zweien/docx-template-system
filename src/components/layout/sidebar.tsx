@@ -11,6 +11,7 @@ import {
   PenLine,
   ShieldCheck,
   Database,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +51,14 @@ const navItems: NavItem[] = [
     title: "我的草稿",
     href: "/drafts",
     icon: <PenLine className="h-4 w-4" />,
+  },
+];
+
+const adminNavItems: NavItem[] = [
+  {
+    title: "用户管理",
+    href: "/admin/users",
+    icon: <Users className="h-4 w-4" />,
   },
 ];
 
@@ -100,6 +109,41 @@ export function Sidebar() {
             );
           })}
         </div>
+
+        {/* Admin Section */}
+        {session?.user?.role === "ADMIN" && (
+          <div className="mt-6 pt-4 border-t border-zinc-800">
+            <p className="px-3 mb-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+              管理员
+            </p>
+            <div className="space-y-1">
+              {adminNavItems.map((item) => {
+                const isActive = pathname.startsWith(item.href);
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "bg-white text-zinc-950 shadow-sm"
+                        : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+                    )}
+                  >
+                    <span className={cn(
+                      "transition-transform duration-200",
+                      isActive && "scale-110"
+                    )}>
+                      {item.icon}
+                    </span>
+                    {item.title}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Footer */}

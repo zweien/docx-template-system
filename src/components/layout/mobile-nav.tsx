@@ -14,6 +14,7 @@ import {
   Database,
   Menu,
   X,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,6 +65,14 @@ const navItems: NavItem[] = [
   },
 ];
 
+const adminNavItems: NavItem[] = [
+  {
+    title: "用户管理",
+    href: "/admin/users",
+    icon: <Users className="h-5 w-5" />,
+  },
+];
+
 export function MobileNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
@@ -71,16 +80,18 @@ export function MobileNav() {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden h-9 w-9 hover:bg-muted"
-        >
-          <Menu className="h-5 w-5" />
-          <span className="sr-only">打开菜单</span>
-        </Button>
-      </SheetTrigger>
+      <SheetTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon"
+            className="md:hidden h-9 w-9 hover:bg-muted"
+          >
+            <Menu className="h-5 w-5" />
+            <span className="sr-only">打开菜单</span>
+          </Button>
+        }
+      />
       <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
         <SheetHeader className="px-4 py-4 border-b shrink-0">
           <SheetTitle className="flex items-center gap-2">
@@ -121,6 +132,42 @@ export function MobileNav() {
               );
             })}
           </div>
+
+          {/* Admin Section */}
+          {session?.user?.role === "ADMIN" && (
+            <div className="mt-6 pt-4 border-t">
+              <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                管理员
+              </p>
+              <div className="space-y-1">
+                {adminNavItems.map((item) => {
+                  const isActive = pathname.startsWith(item.href);
+
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200",
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <span className={cn(
+                        "transition-transform duration-200",
+                        isActive && "scale-110"
+                      )}>
+                        {item.icon}
+                      </span>
+                      {item.title}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* Footer */}

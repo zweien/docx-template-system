@@ -11,6 +11,7 @@ const routeTitles: Record<string, string> = {
   "/templates/new": "上传模板",
   "/records": "生成记录",
   "/drafts": "我的草稿",
+  "/admin/users": "用户管理",
 };
 
 export function Header() {

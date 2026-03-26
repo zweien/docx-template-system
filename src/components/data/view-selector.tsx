@@ -52,7 +52,7 @@ export function ViewSelector({
     return () => {
       cancelled = true;
     };
-  }, [tableId]);
+  }, [tableId, currentViewId]);
 
   const currentView = views.find((v) => v.id === currentViewId);
 

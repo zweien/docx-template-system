@@ -23,6 +23,22 @@ interface RouteParams {
   params: Promise<{ id: string; viewId: string }>;
 }
 
+export async function GET(_request: NextRequest, { params }: RouteParams) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "未授权" }, { status: 401 });
+  }
+
+  const { viewId } = await params;
+  const result = await getView(viewId);
+
+  if (!result.success) {
+    return NextResponse.json({ error: result.error.message }, { status: 404 });
+  }
+
+  return NextResponse.json({ success: true, data: result.data });
+}
+
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   const session = await auth();
   if (!session?.user) {

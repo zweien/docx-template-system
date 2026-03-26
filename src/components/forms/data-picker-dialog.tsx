@@ -16,6 +16,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Search, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { TableSkeleton } from "@/components/ui/skeleton";
 
 interface DataField {
   id: string;
@@ -139,8 +140,8 @@ export function DataPickerDialog({
         {/* Content area - responsive scroll */}
         <ScrollArea className="flex-1 min-h-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <div className="px-4 sm:px-6 py-2">
+              <TableSkeleton rows={5} columns={fields.length} />
             </div>
           ) : records.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">

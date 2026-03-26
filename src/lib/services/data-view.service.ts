@@ -1,5 +1,11 @@
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import type { DataViewItem, FilterCondition, SortConfig, ServiceResult } from "@/types/data-table";
+
+// Helper to convert to Prisma JSON input
+function toJsonValue(value: unknown): Prisma.InputJsonValue {
+  return JSON.parse(JSON.stringify(value));
+}
 
 function mapViewItem(row: {
   id: string;
@@ -70,10 +76,10 @@ export async function createView(
         tableId,
         name: data.name,
         isDefault: data.isDefault ?? false,
-        filters: data.filters ?? [],
-        sortBy: data.sortBy ?? null,
-        visibleFields: data.visibleFields ?? [],
-        fieldOrder: data.fieldOrder ?? [],
+        filters: toJsonValue(data.filters ?? []),
+        sortBy: data.sortBy === null ? Prisma.JsonNull : toJsonValue(data.sortBy ?? null),
+        visibleFields: toJsonValue(data.visibleFields ?? []),
+        fieldOrder: toJsonValue(data.fieldOrder ?? []),
       },
     });
     return { success: true, data: mapViewItem(view) };
@@ -98,9 +104,17 @@ export async function updateView(
   }>
 ): Promise<ServiceResult<DataViewItem>> {
   try {
+    const updateData: Record<string, unknown> = {};
+    if (data.name !== undefined) updateData.name = data.name;
+    if (data.isDefault !== undefined) updateData.isDefault = data.isDefault;
+    if (data.filters !== undefined) updateData.filters = toJsonValue(data.filters);
+    if (data.sortBy !== undefined) updateData.sortBy = data.sortBy === null ? Prisma.JsonNull : toJsonValue(data.sortBy);
+    if (data.visibleFields !== undefined) updateData.visibleFields = toJsonValue(data.visibleFields);
+    if (data.fieldOrder !== undefined) updateData.fieldOrder = toJsonValue(data.fieldOrder);
+
     const view = await db.dataView.update({
       where: { id: viewId },
-      data,
+      data: updateData,
     });
     return { success: true, data: mapViewItem(view) };
   } catch (error) {

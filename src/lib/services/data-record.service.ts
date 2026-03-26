@@ -5,6 +5,8 @@ import type {
   PaginatedRecords,
   ServiceResult,
   DataFieldItem,
+  SortConfig,
+  FilterCondition,
 } from "@/types/data-table";
 import { getTable } from "./data-table.service";
 
@@ -99,6 +101,8 @@ export async function listRecords(
     search?: string;
     // P2: 新增字段筛选
     fieldFilters?: FieldFilters;
+    sortBy?: SortConfig | null;
+    filterConditions?: FilterCondition[];
   }
 ): Promise<ServiceResult<PaginatedRecords>> {
   try {
@@ -134,6 +138,18 @@ export async function listRecords(
       where.AND = fieldFilterConditions;
     }
 
+    // Build view-level filter conditions from FilterCondition[]
+    if (filters.filterConditions && filters.filterConditions.length > 0) {
+      const viewFilterConditions = buildFilterConditionsFromSpec(
+        filters.filterConditions,
+        tableResult.data.fields
+      );
+      if (viewFilterConditions.length > 0) {
+        const existingAnd = Array.isArray(where.AND) ? [...where.AND] : [];
+        where.AND = [...existingAnd, ...viewFilterConditions];
+      }
+    }
+
     const [records, total] = await Promise.all([
       db.dataRecord.findMany({
         where,
@@ -147,10 +163,31 @@ export async function listRecords(
       db.dataRecord.count({ where }),
     ]);
 
+    // In-memory sorting for JSONB fields
+    let sortedRecords = records.map(mapRecordToItem);
+    if (filters.sortBy) {
+      const { fieldKey, order } = filters.sortBy;
+      const fieldDef = tableResult.data.fields.find(f => f.key === fieldKey);
+      if (fieldDef) {
+        sortedRecords.sort((a, b) => {
+          const aVal = a.data[fieldKey];
+          const bVal = b.data[fieldKey];
+          const aNum = Number(aVal);
+          const bNum = Number(bVal);
+          if (!isNaN(aNum) && !isNaN(bNum)) {
+            return order === "asc" ? aNum - bNum : bNum - aNum;
+          }
+          const aStr = String(aVal ?? "");
+          const bStr = String(bVal ?? "");
+          return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+        });
+      }
+    }
+
     return {
       success: true,
       data: {
-        records: records.map(mapRecordToItem),
+        records: sortedRecords,
         total,
         page: filters.page,
         pageSize: filters.pageSize,
@@ -361,6 +398,48 @@ export async function findByUniqueField(
     const message = error instanceof Error ? error.message : "查找记录失败";
     return { success: false, error: { code: "FIND_FAILED", message } };
   }
+}
+
+// ── View Filter Helpers ──
+
+function buildFilterConditionsFromSpec(
+  conditions: FilterCondition[],
+  fields: DataFieldItem[]
+): Record<string, unknown>[] {
+  const result: Record<string, unknown>[] = [];
+
+  for (const cond of conditions) {
+    const field = fields.find(f => f.key === cond.fieldKey);
+    if (!field) continue;
+
+    if (cond.op === "isempty") {
+      result.push({
+        OR: [
+          { data: { path: [cond.fieldKey], equals: null } },
+          { data: { path: [cond.fieldKey], equals: "" } },
+        ],
+      });
+    } else if (cond.op === "isnotempty") {
+      result.push({
+        NOT: {
+          OR: [
+            { data: { path: [cond.fieldKey], equals: null } },
+            { data: { path: [cond.fieldKey], equals: "" } },
+          ],
+        },
+      });
+    } else if (cond.op === "eq") {
+      result.push({ data: { path: [cond.fieldKey], equals: cond.value } });
+    } else if (cond.op === "ne") {
+      result.push({ NOT: { data: { path: [cond.fieldKey], equals: cond.value } } });
+    } else if (cond.op === "contains") {
+      result.push({ data: { path: [cond.fieldKey], string_contains: String(cond.value) } });
+    } else if (["gt", "gte", "lt", "lte"].includes(cond.op)) {
+      result.push({ data: { path: [cond.fieldKey], string_contains: String(cond.value) } });
+    }
+  }
+
+  return result;
 }
 
 // ── Validation ──

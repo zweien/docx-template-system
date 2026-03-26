@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { listRecords, createRecord } from "@/lib/services/data-record.service";
 import { createRecordSchema } from "@/validators/data-table";
 import type { FieldFilters } from "@/lib/services/data-record.service";
+import type { SortConfig, FilterCondition } from "@/types/data-table";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -41,11 +42,42 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
   });
 
+  // View-level parameters
+  const viewId = searchParams.get("viewId") || undefined;
+  let viewFilters: FilterCondition[] | undefined;
+  let viewSortBy: SortConfig | null | undefined;
+
+  if (viewId) {
+    const { getView } = await import("@/lib/services/data-view.service");
+    const viewResult = await getView(viewId);
+    if (viewResult.success) {
+      viewFilters = viewResult.data.filters.length > 0 ? viewResult.data.filters : undefined;
+      viewSortBy = viewResult.data.sortBy;
+    }
+  }
+
+  // Temporary params (override view config)
+  const sortByParam = searchParams.get("sortBy");
+  if (sortByParam) {
+    try {
+      viewSortBy = JSON.parse(sortByParam);
+    } catch { /* ignore */ }
+  }
+
+  const filterConditionsParam = searchParams.get("filterConditions");
+  if (filterConditionsParam) {
+    try {
+      viewFilters = JSON.parse(filterConditionsParam);
+    } catch { /* ignore */ }
+  }
+
   const result = await listRecords(id, {
     page,
     pageSize,
     search,
     fieldFilters: Object.keys(fieldFilters).length > 0 ? fieldFilters : undefined,
+    sortBy: viewSortBy,
+    filterConditions: viewFilters,
   });
 
   if (!result.success) {

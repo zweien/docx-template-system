@@ -27,6 +27,8 @@ import { ColumnHeader } from "@/components/data/column-header";
 import { FieldConfigPopover } from "@/components/data/field-config-popover";
 import { ViewSelector } from "@/components/data/view-selector";
 import { SaveViewDialog } from "@/components/data/save-view-dialog";
+import { TableSkeleton } from "@/components/ui/skeleton";
+import { useDebouncedCallback } from "@/hooks/use-debounce";
 
 interface RecordTableProps {
   tableId: string;
@@ -40,7 +42,19 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
   const [data, setData] = useState<PaginatedRecords | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [searchInput, setSearchInput] = useState(searchParams.get("search") ?? "");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // 防抖搜索 - 300ms 后触发
+  const debouncedSetSearch = useDebouncedCallback(
+    (value: unknown) => setSearch(value as string),
+    300
+  );
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
+  };
 
   // View state
   const [viewId, setViewId] = useState<string | null>(
@@ -319,8 +333,8 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
           <form onSubmit={handleSearch} className="flex-1 sm:flex-none">
             <Input
               placeholder="搜索记录..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              value={searchInput}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="h-9 w-full sm:w-[200px]"
             />
           </form>
@@ -377,9 +391,9 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
               <TableRow>
                 <TableCell
                   colSpan={colCount}
-                  className="text-center py-8"
+                  className="p-0 border-0"
                 >
-                  加载中...
+                  <TableSkeleton rows={5} columns={orderedVisibleFields.length} />
                 </TableCell>
               </TableRow>
             ) : !data || data.records.length === 0 ? (

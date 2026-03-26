@@ -8,6 +8,7 @@ import type {
   ServiceResult,
 } from "@/types/data-table";
 import type { CreateTableInput, UpdateTableInput, DataFieldInput } from "@/validators/data-table";
+import { withCache, invalidateCache, CACHE_TTL } from "@/lib/cache";
 
 // Helper to convert to Prisma JSON input
 function toJsonInput(value: unknown): Prisma.InputJsonValue | undefined {
@@ -75,41 +76,47 @@ export async function listTables(): Promise<ServiceResult<DataTableListItem[]>> 
 }
 
 export async function getTable(id: string): Promise<ServiceResult<DataTableDetail>> {
-  try {
-    const table = await db.dataTable.findUnique({
-      where: { id },
-      include: {
-        fields: { orderBy: { sortOrder: "asc" } },
-        _count: {
-          select: { records: true },
-        },
-      },
-    });
+  return withCache(
+    `table:${id}`,
+    CACHE_TTL.TABLE_DEF,
+    async () => {
+      try {
+        const table = await db.dataTable.findUnique({
+          where: { id },
+          include: {
+            fields: { orderBy: { sortOrder: "asc" } },
+            _count: {
+              select: { records: true },
+            },
+          },
+        });
 
-    if (!table) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "数据表不存在" },
-      };
+        if (!table) {
+          return {
+            success: false,
+            error: { code: "NOT_FOUND", message: "数据表不存在" },
+          };
+        }
+
+        return {
+          success: true,
+          data: {
+            id: table.id,
+            name: table.name,
+            description: table.description,
+            icon: table.icon,
+            fieldCount: table.fields.length,
+            recordCount: table._count.records,
+            createdAt: table.createdAt,
+            fields: table.fields.map(mapFieldToItem),
+          },
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "获取数据表详情失败";
+        return { success: false, error: { code: "GET_FAILED", message } };
+      }
     }
-
-    return {
-      success: true,
-      data: {
-        id: table.id,
-        name: table.name,
-        description: table.description,
-        icon: table.icon,
-        fieldCount: table.fields.length,
-        recordCount: table._count.records,
-        createdAt: table.createdAt,
-        fields: table.fields.map(mapFieldToItem),
-      },
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "获取数据表详情失败";
-    return { success: false, error: { code: "GET_FAILED", message } };
-  }
+  );
 }
 
 export async function createTable(
@@ -167,6 +174,9 @@ export async function updateTable(
   id: string,
   data: UpdateTableInput
 ): Promise<ServiceResult<DataTableDetail>> {
+  // Invalidate cache before update
+  invalidateCache(`table:${id}`);
+
   try {
     // Check if new name conflicts with existing table
     if (data.name) {
@@ -221,6 +231,9 @@ export async function updateTable(
 }
 
 export async function deleteTable(id: string): Promise<ServiceResult<null>> {
+  // Invalidate cache before delete
+  invalidateCache(`table:${id}`);
+
   try {
     const table = await db.dataTable.findUnique({ where: { id } });
 
@@ -247,6 +260,9 @@ export async function updateFields(
   tableId: string,
   fields: DataFieldInput[]
 ): Promise<ServiceResult<DataFieldItem[]>> {
+  // Invalidate cache before update
+  invalidateCache(`table:${tableId}`);
+
   try {
     // Validate fields
     const validationResult = validateFields(fields);

@@ -113,6 +113,12 @@ export function FieldConfigList({
     fields: t.id === tableId ? initialFields : [],
   }));
 
+  // Handle opening the edit form - find field from current fields state
+  const handleOpenEdit = (field: DataFieldInput) => {
+    setEditingField(field as DataFieldItem);
+    setIsFormOpen(true);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -206,10 +212,7 @@ export function FieldConfigList({
                         variant="ghost"
                         size="sm"
                         className="h-8 px-2"
-                        onClick={() => {
-                          setEditingField(initialFields.find(f => f.id === field.id) ?? null);
-                          setIsFormOpen(true);
-                        }}
+                        onClick={() => handleOpenEdit(field)}
                       >
                         编辑
                       </Button>

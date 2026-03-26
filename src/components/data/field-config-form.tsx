@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -66,7 +66,43 @@ export function FieldConfigForm({
   const [selectedDisplayField, setSelectedDisplayField] = useState(
     field?.displayField ?? ""
   );
+  const [relationFields, setRelationFields] = useState<DataFieldItem[]>(() => {
+    const t = availableTables.find((t) => t.id === (field?.relationTo ?? ""));
+    return t?.fields ?? [];
+  });
+  const [loadingFields, setLoadingFields] = useState(false);
   const [error, setError] = useState("");
+
+  // When selectedTableId changes, load that table's fields
+  useEffect(() => {
+    if (!selectedTableId) {
+      setRelationFields([]);
+      return;
+    }
+
+    // Check if fields are already available locally
+    const localTable = availableTables.find((t) => t.id === selectedTableId);
+    if (localTable && localTable.fields.length > 0) {
+      setRelationFields(localTable.fields);
+      return;
+    }
+
+    // Fetch fields from API
+    let cancelled = false;
+    setLoadingFields(true);
+    fetch(`/api/data-tables/${selectedTableId}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.success) {
+          setRelationFields(data.data.fields ?? []);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingFields(false);
+      });
+    return () => { cancelled = true; };
+  }, [selectedTableId, availableTables]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,10 +274,10 @@ export function FieldConfigForm({
                       onValueChange={(v) => setSelectedDisplayField(v ?? "")}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="选择显示字段" />
+                        <SelectValue placeholder={loadingFields ? "加载中..." : "选择显示字段"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {selectedTable.fields.map((f) => (
+                        {relationFields.map((f) => (
                           <SelectItem key={f.id} value={f.key}>
                             {f.label} ({f.key})
                           </SelectItem>

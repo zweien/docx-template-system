@@ -75,3 +75,36 @@ export interface ImportResult {
 export type ServiceResult<T> =
   | { success: true; data: T }
   | { success: false; error: { code: string; message: string } };
+
+// ========== View Types ==========
+
+export interface FilterCondition {
+  fieldKey: string;
+  op: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains' | 'isempty' | 'isnotempty';
+  value: string | number;
+}
+
+export interface SortConfig {
+  fieldKey: string;
+  order: 'asc' | 'desc';
+}
+
+export interface DataViewConfig {
+  filters: FilterCondition[];
+  sortBy: SortConfig | null;
+  visibleFields: string[];
+  fieldOrder: string[];
+}
+
+export interface DataViewItem {
+  id: string;
+  tableId: string;
+  name: string;
+  isDefault: boolean;
+  filters: FilterCondition[];
+  sortBy: SortConfig | null;
+  visibleFields: string[];
+  fieldOrder: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}

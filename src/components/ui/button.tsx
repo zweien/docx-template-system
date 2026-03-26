@@ -3,6 +3,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
+import React from "react"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
@@ -46,12 +47,21 @@ function Button({
   className,
   variant = "default",
   size = "default",
+  render,
+  nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  // When render is a non-button element (e.g. Link), auto-disable nativeButton
+  const isNonButtonRender =
+    render && React.isValidElement(render) && render.type !== "button"
+  const resolvedNativeButton = nativeButton ?? (isNonButtonRender ? false : true)
+
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }))}
+      render={render}
+      nativeButton={resolvedNativeButton}
       {...props}
     />
   )

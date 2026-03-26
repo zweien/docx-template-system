@@ -110,12 +110,18 @@ export async function listRecords(
 
     const where: Record<string, unknown> = { tableId };
 
-    // Build search conditions
-    const searchConditions: Record<string, unknown>[] = [];
+    // Build search conditions - search across all text fields in JSON
     if (filters.search) {
-      searchConditions.push({
-        data: { path: "$", string_contains: filters.search }
-      });
+      const searchFields = tableResult.data.fields
+        .filter(f => f.type === "TEXT" || f.type === "TEXTAREA" || f.type === "EMAIL" || f.type === "SELECT")
+        .map(f => f.key);
+
+      if (searchFields.length > 0) {
+        // Build OR conditions for each searchable field
+        where.OR = searchFields.map(fieldKey => ({
+          data: { path: [fieldKey], string_contains: filters.search }
+        }));
+      }
     }
 
     // P2: Build field filter conditions
@@ -123,10 +129,9 @@ export async function listRecords(
       ? buildFieldFilterConditions(filters.fieldFilters, tableResult.data.fields)
       : [];
 
-    // Combine all conditions
-    const allConditions = [...searchConditions, ...fieldFilterConditions];
-    if (allConditions.length > 0) {
-      where.AND = allConditions;
+    // Combine field filter conditions (not search - that's handled by OR above)
+    if (fieldFilterConditions.length > 0) {
+      where.AND = fieldFilterConditions;
     }
 
     const [records, total] = await Promise.all([

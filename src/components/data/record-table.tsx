@@ -229,20 +229,38 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
   const handleDelete = async (recordId: string) => {
     if (!confirm("确定要删除这条记录吗？")) return;
 
-    setDeletingId(recordId);
+    // 乐观删除：立即从 UI 移除
+    const recordToDelete = data?.records.find(r => r.id === recordId);
+    if (!recordToDelete) return;
+
+    // 保存当前数据以便回滚
+    const previousRecords = data?.records ?? [];
+
+    // 立即更新 UI
+    setData(prev => prev ? {
+      ...prev,
+      records: prev.records.filter(r => r.id !== recordId),
+      total: prev.total - 1,
+    } : null);
+
     try {
       const response = await fetch(
         `/api/data-tables/${tableId}/records/${recordId}`,
         { method: "DELETE" }
       );
 
-      if (response.ok) {
-        fetchData();
+      if (!response.ok) {
+        throw new Error("删除失败");
       }
     } catch (error) {
+      // 回滚：恢复删除的记录
+      setData(prev => prev ? {
+        ...prev,
+        records: previousRecords,
+        total: prev.total + 1,
+      } : null);
       console.error("删除失败:", error);
-    } finally {
-      setDeletingId(null);
+      alert("删除失败，请重试");
     }
   };
 

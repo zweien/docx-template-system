@@ -117,7 +117,7 @@ export async function listRecords(
     // Build search conditions - search across all text fields in JSON
     if (filters.search) {
       const searchFields = tableResult.data.fields
-        .filter(f => f.type === "TEXT" || f.type === "TEXTAREA" || f.type === "EMAIL" || f.type === "SELECT")
+        .filter(f => f.type === "TEXT" || f.type === "EMAIL" || f.type === "SELECT")
         .map(f => f.key);
 
       if (searchFields.length > 0) {

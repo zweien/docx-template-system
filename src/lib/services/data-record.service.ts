@@ -163,8 +163,11 @@ export async function listRecords(
       db.dataRecord.count({ where }),
     ]);
 
-    // In-memory sorting for JSONB fields
+    // 优化：无排序时跳过内存处理
     let sortedRecords = records.map(mapRecordToItem);
+
+    // 对于简单字段类型的排序，保持内存排序（JSONB 排序在 Prisma 中支持有限）
+    // 但仅在明确需要排序时执行
     if (filters.sortBy) {
       const { fieldKey, order } = filters.sortBy;
       const fieldDef = tableResult.data.fields.find(f => f.key === fieldKey);
@@ -172,13 +175,22 @@ export async function listRecords(
         sortedRecords.sort((a, b) => {
           const aVal = a.data[fieldKey];
           const bVal = b.data[fieldKey];
-          const aNum = Number(aVal);
-          const bNum = Number(bVal);
+
+          // 处理 { id, display } 对象格式（关联字段）
+          const aDisplay = typeof aVal === "object" && aVal !== null && "display" in aVal
+            ? (aVal as { display: unknown }).display
+            : aVal;
+          const bDisplay = typeof bVal === "object" && bVal !== null && "display" in bVal
+            ? (bVal as { display: unknown }).display
+            : bVal;
+
+          const aNum = Number(aDisplay);
+          const bNum = Number(bDisplay);
           if (!isNaN(aNum) && !isNaN(bNum)) {
             return order === "asc" ? aNum - bNum : bNum - aNum;
           }
-          const aStr = String(aVal ?? "");
-          const bStr = String(bVal ?? "");
+          const aStr = String(aDisplay ?? "");
+          const bStr = String(bDisplay ?? "");
           return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
         });
       }

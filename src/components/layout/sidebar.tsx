@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Database,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface NavItem {
   title: string;
@@ -57,45 +58,53 @@ export function Sidebar() {
   const { data: session } = useSession();
 
   return (
-    <aside className="hidden md:flex h-screen w-60 flex-col border-r bg-zinc-950">
+    <aside className="hidden md:flex h-screen w-60 flex-col border-r bg-zinc-950 shrink-0">
       {/* Logo / Brand */}
-      <div className="flex h-14 items-center border-b border-zinc-800 px-4">
-        <Link href="/" className="flex items-center gap-2">
-          <ShieldCheck className="h-6 w-6 text-white" />
-          <span className="text-lg font-semibold text-white">
+      <div className="flex h-14 items-center border-b border-zinc-800 px-4 shrink-0">
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <ShieldCheck className="h-6 w-6 text-white transition-transform group-hover:scale-110" />
+          <span className="text-base font-semibold text-white tracking-tight">
             DOCX 模板系统
           </span>
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map((item) => {
-          const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <div className="space-y-1">
+          {navItems.map((item) => {
+            const isActive =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? "bg-zinc-800 text-white"
-                  : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
-              }`}
-            >
-              {item.icon}
-              {item.title}
-            </Link>
-          );
-        })}
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-white text-zinc-950 shadow-sm"
+                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
+                )}
+              >
+                <span className={cn(
+                  "transition-transform duration-200",
+                  isActive && "scale-110"
+                )}>
+                  {item.icon}
+                </span>
+                {item.title}
+              </Link>
+            );
+          })}
+        </div>
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-zinc-800 p-4">
-        <p className="text-xs text-zinc-500">
+      <div className="border-t border-zinc-800 p-4 shrink-0">
+        <p className="text-xs text-zinc-500 truncate">
           {session?.user?.name
             ? `已登录: ${session.user.name}`
             : "未登录"}

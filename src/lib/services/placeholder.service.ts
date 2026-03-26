@@ -21,6 +21,9 @@ function mapPlaceholderItem(row: {
   required: boolean;
   defaultValue: string | null;
   sortOrder: number;
+  sourceTableId: string | null;
+  sourceField: string | null;
+  enablePicker: boolean;
 }): PlaceholderItem {
   return {
     id: row.id,
@@ -30,6 +33,9 @@ function mapPlaceholderItem(row: {
     required: row.required,
     defaultValue: row.defaultValue,
     sortOrder: row.sortOrder,
+    sourceTableId: row.sourceTableId,
+    sourceField: row.sourceField,
+    enablePicker: row.enablePicker,
   };
 }
 

@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { DataPickerDialog } from "./data-picker-dialog";
 
 interface Placeholder {
@@ -227,13 +228,16 @@ export function DynamicForm({
           <div className="space-y-4">
             {sorted.map((ph) => (
               <div key={ph.key} className="space-y-2">
-                <Label htmlFor={ph.key}>
+                <Label htmlFor={ph.key} className="text-sm font-medium">
                   {ph.label}
                   {ph.required && (
                     <span className="text-destructive ml-1">*</span>
                   )}
                 </Label>
-                <div className={ph.enablePicker ? "flex gap-2" : ""}>
+                <div className={cn(
+                  "gap-2",
+                  ph.enablePicker ? "flex flex-col sm:flex-row" : ""
+                )}>
                   {ph.inputType === "TEXT" ? (
                     <Input
                       id={ph.key}
@@ -242,7 +246,10 @@ export function DynamicForm({
                       placeholder={`请输入${ph.label}`}
                       aria-invalid={!!errors[ph.key]}
                       disabled={saving || generating}
-                      className={ph.enablePicker ? "flex-1" : "w-full"}
+                      className={cn(
+                        "transition-colors",
+                        ph.enablePicker ? "flex-1" : "w-full"
+                      )}
                     />
                   ) : (
                     <Textarea
@@ -253,7 +260,10 @@ export function DynamicForm({
                       rows={3}
                       aria-invalid={!!errors[ph.key]}
                       disabled={saving || generating}
-                      className={ph.enablePicker ? "flex-1" : "w-full"}
+                      className={cn(
+                        "transition-colors resize-none",
+                        ph.enablePicker ? "flex-1" : "w-full"
+                      )}
                     />
                   )}
                   {ph.enablePicker && (
@@ -262,13 +272,16 @@ export function DynamicForm({
                       variant="outline"
                       onClick={() => handleOpenPicker(ph)}
                       disabled={saving || generating}
+                      className="shrink-0 w-full sm:w-auto"
                     >
                       选择数据
                     </Button>
                   )}
                 </div>
                 {errors[ph.key] && (
-                  <p className="text-sm text-destructive">{errors[ph.key]}</p>
+                  <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-200">
+                    {errors[ph.key]}
+                  </p>
                 )}
               </div>
             ))}
@@ -276,12 +289,13 @@ export function DynamicForm({
         </CardContent>
       </Card>
 
-      {/* Action buttons */}
-      <div className="flex items-center gap-3">
+      {/* Action buttons - responsive layout */}
+      <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 sm:justify-end pt-2">
         <Button
-          variant="secondary"
+          variant="outline"
           onClick={handleSaveDraft}
           disabled={saving || generating}
+          className="w-full sm:w-auto"
         >
           {saving ? (
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -293,6 +307,7 @@ export function DynamicForm({
         <Button
           onClick={handleGenerate}
           disabled={saving || generating}
+          className="w-full sm:w-auto"
         >
           {generating ? (
             <Loader2 className="h-4 w-4 animate-spin" />

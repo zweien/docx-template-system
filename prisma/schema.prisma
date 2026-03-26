@@ -127,6 +127,7 @@ model DataTable {
   records     DataRecord[]
   templates        Template[]
   batchGenerations BatchGeneration[]
+  views        DataView[]
   createdBy   User         @relation(fields: [createdById], references: [id])
   createdById String
   createdAt   DateTime     @default(now())
@@ -164,6 +165,22 @@ model DataRecord {
   updatedAt   DateTime @updatedAt
   @@index([tableId])
   @@index([createdById])
+}
+
+model DataView {
+  id            String   @id @default(cuid())
+  tableId       String
+  name          String
+  isDefault     Boolean  @default(false)
+  filters       Json?    // FilterCondition[]
+  sortBy        Json?    // SortConfig | null
+  visibleFields Json?    // string[]
+  fieldOrder    Json?    // string[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  table         DataTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+
+  @@unique([tableId, name])
 }
 
 model Record {

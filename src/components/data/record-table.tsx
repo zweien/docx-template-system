@@ -43,11 +43,23 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [searchInput, setSearchInput] = useState(searchParams.get("search") ?? "");
-  const [deletingId] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
-  // 防抖搜索 - 300ms 后触发
+  // 防抖搜索 - 300ms 后触发，同时重置页码
   const debouncedSetSearch = useDebouncedCallback(
-    (value: unknown) => setSearch(value as string),
+    (value: unknown) => {
+      const v = value as string;
+      setSearch(v);
+      // 搜索时重置页码到第 1 页
+      const params = new URLSearchParams(searchParams.toString());
+      if (v) {
+        params.set("search", v);
+      } else {
+        params.delete("search");
+      }
+      params.delete("page");
+      router.replace(`/data/${tableId}?${params.toString()}`, { scroll: false });
+    },
     300
   );
 
@@ -228,13 +240,14 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
 
   const handleDelete = async (recordId: string) => {
     if (!confirm("确定要删除这条记录吗？")) return;
+    if (deletingIds.has(recordId)) return;
 
     // 乐观删除：立即从 UI 移除
     const recordToDelete = data?.records.find(r => r.id === recordId);
     if (!recordToDelete) return;
 
-    // 保存当前数据以便回滚
-    const previousRecords = data?.records ?? [];
+    // 标记正在删除
+    setDeletingIds(prev => new Set(prev).add(recordId));
 
     // 立即更新 UI
     setData(prev => prev ? {
@@ -253,14 +266,20 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
         throw new Error("删除失败");
       }
     } catch (error) {
-      // 回滚：恢复删除的记录
+      // 回滚：将被删除的记录恢复到当前位置
       setData(prev => prev ? {
         ...prev,
-        records: previousRecords,
+        records: [...prev.records, recordToDelete],
         total: prev.total + 1,
       } : null);
       console.error("删除失败:", error);
       alert("删除失败，请重试");
+    } finally {
+      setDeletingIds(prev => {
+        const next = new Set(prev);
+        next.delete(recordId);
+        return next;
+      });
     }
   };
 
@@ -461,9 +480,9 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
                             size="sm"
                             className="h-8 px-2 text-red-600"
                             onClick={() => handleDelete(record.id)}
-                            disabled={deletingId === record.id}
+                            disabled={deletingIds.has(record.id)}
                           >
-                            {deletingId === record.id
+                            {deletingIds.has(record.id)
                               ? "删除中..."
                               : "删除"}
                           </Button>

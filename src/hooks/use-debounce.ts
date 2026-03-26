@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 
 export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
   callback: T,
@@ -21,18 +21,22 @@ export function useDebouncedCallback<T extends (...args: unknown[]) => void>(
     };
   }, []);
 
-  // Return debounced function directly (not using useCallback due to lint rule)
-  const debounced = (...args: Parameters<T>) => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+  // 使用 useMemo 保持稳定引用（仅依赖 delay）
+  const debounced = useMemo(
+    () =>
+      ((...args: Parameters<T>) => {
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
 
-    timeoutRef.current = setTimeout(() => {
-      callbackRef.current(...args);
-    }, delay);
-  };
+        timeoutRef.current = setTimeout(() => {
+          callbackRef.current(...args);
+        }, delay);
+      }) as T,
+    [delay]
+  );
 
-  return debounced as T;
+  return debounced;
 }
 
 export function useDebouncedValue<T>(value: T, delay: number): T {

@@ -1,0 +1,7 @@
+[GET] http://localhost:8060/api/auth/session => [200] OK
+[GET] http://localhost:8060/api/auth/providers => [200] OK
+[GET] http://localhost:8060/api/auth/csrf => [200] OK
+[POST] http://localhost:8060/api/auth/callback/credentials => [200] OK
+[GET] http://localhost:8060/api/auth/session => [200] OK
+[GET] http://localhost:8060/?_rsc=yz0bd => [200] OK
+[GET] http://localhost:8060/?_rsc=qbihd => [200] OK

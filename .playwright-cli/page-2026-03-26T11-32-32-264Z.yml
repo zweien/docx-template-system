@@ -1,0 +1,176 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link [ref=e326] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e9]: DOCX 模板系统
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - link [ref=e327] [cursor=pointer]:
+            - /url: /
+            - img [ref=e14]
+            - text: 仪表盘
+          - link [ref=e328] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e21]
+            - text: 生成文档
+          - link [ref=e329] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - text: 模板管理
+          - link [ref=e330] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e33]
+            - text: 主数据
+          - link [ref=e331] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e39]
+            - text: 生成记录
+          - link [ref=e332] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e45]
+            - text: 我的草稿
+        - generic [ref=e108]:
+          - paragraph [ref=e109]: 管理员
+          - link [ref=e333] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e113]
+            - text: 用户管理
+      - paragraph [ref=e48]: "已登录: Admin"
+    - generic [ref=e49]:
+      - banner [ref=e50]:
+        - heading [level=1] [ref=e334]: DOCX 模板系统
+        - separator [ref=e53]
+        - button [ref=e335]:
+          - generic [ref=e119]: A
+      - main [ref=e54]:
+        - generic [ref=e260]:
+          - generic [ref=e261]:
+            - generic [ref=e262]:
+              - generic [ref=e263]:
+                - link [ref=e336] [cursor=pointer]:
+                  - /url: /data
+                  - text: 主数据
+                - generic [ref=e265]: /
+                - link [ref=e337] [cursor=pointer]:
+                  - /url: /data/cmn4pes9k0001fhbmioud7pz5
+                  - text: 员工表
+                - generic [ref=e267]: /
+                - generic [ref=e268]: 字段配置
+              - heading [level=1] [ref=e338]: 配置字段 - 员工表
+              - paragraph [ref=e270]: 定义数据表的字段结构，支持多种字段类型
+            - link [ref=e339] [cursor=pointer]:
+              - /url: /data/cmn4pes9k0001fhbmioud7pz5
+              - button [ref=e340]:
+                - img
+                - text: 返回
+          - separator [ref=e273]
+          - generic [ref=e274]:
+            - generic [ref=e275]:
+              - heading [level=2] [ref=e341]: 字段配置
+              - generic [ref=e277]:
+                - button [ref=e342]:
+                  - img
+                  - text: 添加字段
+                - button [ref=e343]: 保存全部
+            - table [ref=e282]:
+              - rowgroup [ref=e283]:
+                - row [ref=e344]:
+                  - columnheader [ref=e345]: 字段标识
+                  - columnheader [ref=e346]: 显示名称
+                  - columnheader [ref=e347]: 类型
+                  - columnheader [ref=e348]: 必填
+                  - columnheader [ref=e349]: 选项/关联
+                  - columnheader [ref=e350]: 操作
+              - rowgroup [ref=e291]:
+                - row [ref=e351]:
+                  - cell [ref=e352]: employee_name
+                  - cell [ref=e353]: 员工姓名
+                  - cell [ref=e354]:
+                    - generic [ref=e296]: 文本
+                  - cell [ref=e355]: 可选
+                  - cell [ref=e356]: "-"
+                  - cell [ref=e357]:
+                    - generic [ref=e300]:
+                      - button [ref=e358]: 编辑
+                      - button [ref=e359]: 删除
+                - row [ref=e360]:
+                  - cell [ref=e361]: department
+                  - cell [ref=e362]: 部门
+                  - cell [ref=e363]:
+                    - generic [ref=e307]: 单选
+                  - cell [ref=e364]: 可选
+                  - cell [ref=e365]:
+                    - generic [ref=e310]: 研发部, 市场部, 销售部...
+                  - cell [ref=e366]:
+                    - generic [ref=e312]:
+                      - button [ref=e367]: 编辑
+                      - button [ref=e368]: 删除
+                - row [ref=e369]:
+                  - cell [ref=e370]: birth
+                  - cell [ref=e371]: 出生日期
+                  - cell [ref=e372]:
+                    - generic [ref=e319]: 日期
+                  - cell [ref=e373]: 可选
+                  - cell [ref=e374]: "-"
+                  - cell [ref=e375]:
+                    - generic [ref=e323]:
+                      - button [ref=e376]: 编辑
+                      - button [ref=e377]: 删除
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e252] [cursor=pointer]:
+    - generic [ref=e255]:
+      - text: Compiling
+      - generic [ref=e256]:
+        - generic [ref=e257]: .
+        - generic [ref=e258]: .
+        - generic [ref=e259]: .
+  - alert [ref=e120]
+  - dialog "编辑字段" [ref=e381]:
+    - generic [ref=e382]:
+      - generic [ref=e383]:
+        - heading "编辑字段" [level=2] [ref=e384]
+        - paragraph [ref=e385]: 配置字段属性，不同类型有不同的配置选项
+      - generic [ref=e386]:
+        - generic [ref=e387]:
+          - generic [ref=e388]:
+            - text: 字段标识
+            - generic [ref=e389]: "*"
+          - textbox "字段标识 *" [disabled]:
+            - /placeholder: 例如：project_name
+            - text: department
+          - paragraph [ref=e390]: 英文字母开头，仅支持小写字母、数字、下划线
+        - generic [ref=e391]:
+          - generic [ref=e392]:
+            - text: 显示名称
+            - generic [ref=e393]: "*"
+          - textbox "显示名称 *" [active] [ref=e394]:
+            - /placeholder: 例如：项目名称
+            - text: 部门
+        - generic [ref=e395]:
+          - generic [ref=e396]: 字段类型
+          - combobox [ref=e397]:
+            - generic [ref=e398]: SELECT
+            - img: ▼
+          - textbox [ref=e399]: SELECT
+        - generic [ref=e400]:
+          - generic [ref=e401]: 是否必填
+          - switch [ref=e402]
+          - checkbox [ref=e403]
+        - generic [ref=e404]:
+          - generic [ref=e405]: 选项列表
+          - textbox "选项列表" [ref=e406]:
+            - /placeholder: 每行一个选项，例如： 进行中 已完成 已取消
+            - text: 研发部 市场部 销售部 人力资源部
+          - paragraph [ref=e407]: 每行一个选项值
+        - generic [ref=e408]:
+          - generic [ref=e409]: 默认值
+          - textbox "默认值" [ref=e410]:
+            - /placeholder: 可选
+      - generic [ref=e411]:
+        - button "取消" [ref=e412]
+        - button "保存" [ref=e413]
+    - button "Close" [ref=e414]:
+      - img
+      - generic [ref=e415]: Close

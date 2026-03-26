@@ -1,0 +1,137 @@
+- generic [ref=e1]:
+  - generic [ref=e26]:
+    - complementary [ref=e27]:
+      - link [ref=e655] [cursor=pointer]:
+        - /url: /
+        - img [ref=e30]
+        - generic [ref=e33]: DOCX 模板系统
+      - navigation [ref=e34]:
+        - generic [ref=e35]:
+          - link [ref=e656] [cursor=pointer]:
+            - /url: /
+            - img [ref=e38]
+            - text: 仪表盘
+          - link [ref=e657] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e45]
+            - text: 生成文档
+          - link [ref=e658] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e52]
+            - text: 模板管理
+          - link [ref=e659] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e57]
+            - text: 主数据
+          - link [ref=e660] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e63]
+            - text: 生成记录
+          - link [ref=e661] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e69]
+            - text: 我的草稿
+        - generic [ref=e71]:
+          - paragraph [ref=e72]: 管理员
+          - link [ref=e662] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e76]
+            - text: 用户管理
+      - paragraph [ref=e82]: "已登录: Admin"
+    - generic [ref=e83]:
+      - banner [ref=e84]:
+        - heading [level=1] [ref=e663]: DOCX 模板系统
+        - separator [ref=e87]
+        - button [ref=e664]:
+          - generic [ref=e89]: A
+      - main [ref=e90]:
+        - generic [ref=e623]:
+          - button [ref=e665] [cursor=pointer]:
+            - img
+            - text: 返回模板详情
+          - generic [ref=e625]:
+            - heading [level=1] [ref=e666]: 填写表单 — 项目模板1
+            - paragraph [ref=e627]: 请填写以下字段，完成后点击「确认生成」来生成文档
+          - generic [ref=e628]:
+            - generic [ref=e629]:
+              - generic [ref=e631]: 表单字段
+              - generic [ref=e633]:
+                - generic [ref=e634]:
+                  - generic [ref=e635]: 项目名称
+                  - generic [ref=e636]:
+                    - textbox [ref=e667]:
+                      - /placeholder: 请输入项目名称
+                    - button [ref=e668]: 选择数据
+                - generic [ref=e639]:
+                  - generic [ref=e640]: 姓名
+                  - generic [ref=e641]:
+                    - textbox [ref=e669]:
+                      - /placeholder: 请输入姓名
+                    - button [ref=e670]: 选择数据
+            - generic [ref=e644]:
+              - button [ref=e671]:
+                - img
+                - text: 保存草稿
+              - button [ref=e672]:
+                - img
+                - text: 确认生成
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e647] [cursor=pointer]:
+    - generic [ref=e650]:
+      - text: Compiling
+      - generic [ref=e651]:
+        - generic [ref=e652]: .
+        - generic [ref=e653]: .
+        - generic [ref=e654]: .
+  - alert [ref=e25]
+  - dialog "选择数据" [ref=e676]:
+    - heading "选择数据" [level=2] [ref=e678]
+    - generic [ref=e680]:
+      - img [ref=e681]
+      - textbox "搜索..." [active] [ref=e684]
+    - table [ref=e689]:
+      - rowgroup [ref=e690]:
+        - row "项目名称 出生日期 姓名" [ref=e691]:
+          - columnheader [ref=e692]
+          - columnheader "项目名称" [ref=e693]
+          - columnheader "出生日期" [ref=e694]
+          - columnheader "姓名" [ref=e695]
+      - rowgroup [ref=e696]:
+        - row "探索项目 2026-03-07 李四" [ref=e697] [cursor=pointer]:
+          - cell [ref=e698]:
+            - radiogroup [ref=e699]:
+              - radio "选择 探索项目" [ref=e700]
+              - radio [ref=e701]
+          - cell "探索项目" [ref=e702]
+          - cell "2026-03-07" [ref=e703]
+          - cell "李四" [ref=e704]
+        - row "机器学习 2026-03-14 李四" [ref=e705] [cursor=pointer]:
+          - cell [ref=e706]:
+            - radiogroup [ref=e707]:
+              - radio "选择 机器学习" [ref=e708]
+              - radio [ref=e709]
+          - cell "机器学习" [ref=e710]
+          - cell "2026-03-14" [ref=e711]
+          - cell "李四" [ref=e712]
+        - row "项目测试项目 2026-03-28 李四" [ref=e713] [cursor=pointer]:
+          - cell [ref=e714]:
+            - radiogroup [ref=e715]:
+              - radio "选择 项目测试项目" [ref=e716]
+              - radio [ref=e717]
+          - cell "项目测试项目" [ref=e718]
+          - cell "2026-03-28" [ref=e719]
+          - cell "李四" [ref=e720]
+        - row "智慧城市项目 - 张三" [ref=e721] [cursor=pointer]:
+          - cell [ref=e722]:
+            - radiogroup [ref=e723]:
+              - radio "选择 智慧城市项目" [ref=e724]
+              - radio [ref=e725]
+          - cell "智慧城市项目" [ref=e726]
+          - cell "-" [ref=e727]
+          - cell "张三" [ref=e728]
+    - generic [ref=e729]:
+      - button "取消" [ref=e730]
+      - button "确认选择" [disabled]
+    - button "Close" [ref=e731]:
+      - img
+      - generic [ref=e732]: Close

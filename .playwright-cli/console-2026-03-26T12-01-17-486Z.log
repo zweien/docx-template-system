@@ -1,0 +1,4 @@
+[   36893ms] [ERROR] Failed to load resource: net::ERR_CONTENT_LENGTH_MISMATCH @ http://localhost:8060/_next/static/chunks/src_app_(dashboard)_layout_tsx_08lq7-m._.js:0
+[   36910ms] [ERROR] Encountered a script tag while rendering React component. Scripts inside React components are never executed when rendering on the client. Consider using template tag instead (https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template). @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[   36923ms] ChunkLoadError: Failed to load chunk /_next/static/chunks/src_app_(dashboard)_layout_tsx_08lq7-m._.js from module [project]/node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-client.browser.development.js [app-client] (ecmascript)
+    at http://localhost:8060/_next/static/chunks/turbopack-_0p44nws._.js:698:25

@@ -1,0 +1,79 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "DOCX 模板系统" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e9]: DOCX 模板系统
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - link "仪表盘" [ref=e12] [cursor=pointer]:
+            - /url: /
+            - img [ref=e14]
+            - text: 仪表盘
+          - link "生成文档" [ref=e19] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e21]
+            - text: 生成文档
+          - link "模板管理" [ref=e26] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - text: 模板管理
+          - link "主数据" [ref=e31] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e33]
+            - text: 主数据
+          - link "生成记录" [ref=e37] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e39]
+            - text: 生成记录
+          - link "我的草稿" [ref=e43] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e45]
+            - text: 我的草稿
+        - generic [ref=e91]:
+          - paragraph [ref=e92]: 管理员
+          - link "用户管理" [ref=e94] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e96]
+            - text: 用户管理
+      - paragraph [ref=e48]: "已登录: Admin"
+    - generic [ref=e49]:
+      - banner [ref=e50]:
+        - heading "DOCX 模板系统" [level=1] [ref=e52]
+        - separator [ref=e53]
+        - button "A" [ref=e101]:
+          - generic [ref=e102]: A
+      - main [ref=e54]:
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - generic [ref=e57]:
+              - link "主数据" [ref=e58] [cursor=pointer]:
+                - /url: /data
+              - generic [ref=e59]: /
+              - link "项目表" [ref=e60] [cursor=pointer]:
+                - /url: /data/cmn4o0lun0000dcbmavbo2pjq
+              - generic [ref=e61]: /
+              - generic [ref=e62]: 新建记录
+            - heading "新建记录" [level=1] [ref=e63]
+            - paragraph [ref=e64]: 填写以下信息创建新的项目表记录
+          - generic [ref=e66]:
+            - generic [ref=e67]:
+              - generic [ref=e68]: 项目名称
+              - textbox "输入项目名称" [ref=e69]
+            - generic [ref=e70]:
+              - generic [ref=e71]: 出生日期
+              - textbox [ref=e72]
+            - generic [ref=e73]:
+              - generic [ref=e74]: 姓名
+              - combobox [active] [ref=e75]:
+                - generic [ref=e116]: 张三
+                - img: ▼
+              - textbox [ref=e77]: cmn4pi65n0004fhbmb3pq31j7
+            - generic [ref=e78]:
+              - button "取消" [ref=e79]
+              - button "创建" [ref=e80]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e86] [cursor=pointer]:
+    - img [ref=e87]
+  - alert [ref=e90]

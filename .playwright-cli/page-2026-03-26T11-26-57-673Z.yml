@@ -1,0 +1,104 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e4]:
+      - generic [ref=e5]:
+        - link "Team Hub" [ref=e7] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e8]: Team Hub
+        - navigation [ref=e9]:
+          - heading "管理端" [level=2] [ref=e11]
+          - link "模板管理" [ref=e12] [cursor=pointer]:
+            - /url: /admin/templates
+            - img [ref=e13]
+            - text: 模板管理
+          - link "数据管理" [ref=e17] [cursor=pointer]:
+            - /url: /admin/data
+            - img [ref=e18]
+            - text: 数据管理
+          - link "用户管理" [ref=e22] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e23]
+            - text: 用户管理
+          - link "系统设置" [ref=e28] [cursor=pointer]:
+            - /url: /admin/settings
+            - img [ref=e29]
+            - text: 系统设置
+          - heading "用户端" [level=2] [ref=e34]
+          - link "模板选择" [ref=e35] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e36]
+            - text: 模板选择
+          - link "我的记录" [ref=e38] [cursor=pointer]:
+            - /url: /templates/records
+            - img [ref=e39]
+            - text: 我的记录
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: Administrator
+            - generic [ref=e45]: 管理员
+          - button "退出登录" [ref=e46] [cursor=pointer]
+    - main [ref=e47]:
+      - heading "内网模板驱动办公自动化系统" [level=1] [ref=e49]
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - heading "项目表 - 字段配置" [level=1] [ref=e54]
+            - paragraph [ref=e55]:
+              - text: "编码:"
+              - code [ref=e56]: projects
+          - generic [ref=e57]:
+            - button "查看记录" [ref=e58] [cursor=pointer]
+            - button "添加字段" [ref=e59] [cursor=pointer]
+        - generic [ref=e60]:
+          - generic [ref=e62]: 字段列表 (3)
+          - table [ref=e65]:
+            - rowgroup [ref=e66]:
+              - row "排序 名称 编码 类型 必填 唯一 默认值 操作" [ref=e67]:
+                - columnheader "排序" [ref=e68]
+                - columnheader "名称" [ref=e69]
+                - columnheader "编码" [ref=e70]
+                - columnheader "类型" [ref=e71]
+                - columnheader "必填" [ref=e72]
+                - columnheader "唯一" [ref=e73]
+                - columnheader "默认值" [ref=e74]
+                - columnheader "操作" [ref=e75]
+            - rowgroup [ref=e76]:
+              - row "1 项目名称 project_name 单行文本 是 否 - 编辑 删除" [ref=e77]:
+                - cell "1" [ref=e78]
+                - cell "项目名称" [ref=e79]
+                - cell "project_name" [ref=e80]:
+                  - code [ref=e81]: project_name
+                - cell "单行文本" [ref=e82]
+                - cell "是" [ref=e83]
+                - cell "否" [ref=e84]
+                - cell "-" [ref=e85]
+                - cell "编辑 删除" [ref=e86]:
+                  - button "编辑" [ref=e87] [cursor=pointer]
+                  - button "删除" [ref=e88] [cursor=pointer]
+              - row "2 项目编码 project_code 单行文本 是 否 - 编辑 删除" [ref=e89]:
+                - cell "2" [ref=e90]
+                - cell "项目编码" [ref=e91]
+                - cell "project_code" [ref=e92]:
+                  - code [ref=e93]: project_code
+                - cell "单行文本" [ref=e94]
+                - cell "是" [ref=e95]
+                - cell "否" [ref=e96]
+                - cell "-" [ref=e97]
+                - cell "编辑 删除" [ref=e98]:
+                  - button "编辑" [ref=e99] [cursor=pointer]
+                  - button "删除" [ref=e100] [cursor=pointer]
+              - row "4 开始日期 start_date 单行文本 否 否 - 编辑 删除" [ref=e101]:
+                - cell "4" [ref=e102]
+                - cell "开始日期" [ref=e103]
+                - cell "start_date" [ref=e104]:
+                  - code [ref=e105]: start_date
+                - cell "单行文本" [ref=e106]
+                - cell "否" [ref=e107]
+                - cell "否" [ref=e108]
+                - cell "-" [ref=e109]
+                - cell "编辑 删除" [ref=e110]:
+                  - button "编辑" [ref=e111] [cursor=pointer]
+                  - button "删除" [ref=e112] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e118] [cursor=pointer]:
+    - img [ref=e119]
+  - alert [ref=e122]

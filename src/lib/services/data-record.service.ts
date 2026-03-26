@@ -164,7 +164,7 @@ export async function listRecords(
     ]);
 
     // 优化：无排序时跳过内存处理
-    let sortedRecords = records.map(mapRecordToItem);
+    let processedRecords = records.map(mapRecordToItem);
 
     // 对于简单字段类型的排序，保持内存排序（JSONB 排序在 Prisma 中支持有限）
     // 但仅在明确需要排序时执行
@@ -172,7 +172,7 @@ export async function listRecords(
       const { fieldKey, order } = filters.sortBy;
       const fieldDef = tableResult.data.fields.find(f => f.key === fieldKey);
       if (fieldDef) {
-        sortedRecords.sort((a, b) => {
+        processedRecords = [...processedRecords].sort((a, b) => {
           const aVal = a.data[fieldKey];
           const bVal = b.data[fieldKey];
 
@@ -205,12 +205,12 @@ export async function listRecords(
       // Collect all relation IDs for each relation table
       const relationIdsByTable: Map<string, Set<string>> = new Map();
       for (const field of relationFields) {
-        const tableId = field.relationTo!;
-        if (!relationIdsByTable.has(tableId)) {
-          relationIdsByTable.set(tableId, new Set());
+        const relTableId = field.relationTo!;
+        if (!relationIdsByTable.has(relTableId)) {
+          relationIdsByTable.set(relTableId, new Set());
         }
-        const ids = relationIdsByTable.get(tableId)!;
-        for (const record of sortedRecords) {
+        const ids = relationIdsByTable.get(relTableId)!;
+        for (const record of processedRecords) {
           const relId = record.data[field.key];
           if (typeof relId === "string" && relId) {
             ids.add(relId);
@@ -220,7 +220,7 @@ export async function listRecords(
 
       // Batch fetch related records for each table
       const relatedRecordsMap: Map<string, Record<string, unknown>> = new Map();
-      for (const [tableId, ids] of relationIdsByTable) {
+      for (const [, ids] of relationIdsByTable) {
         if (ids.size > 0) {
           const relatedRecords = await db.dataRecord.findMany({
             where: { id: { in: Array.from(ids) } },
@@ -232,7 +232,7 @@ export async function listRecords(
       }
 
       // Update records with display values
-      for (const record of sortedRecords) {
+      for (const record of processedRecords) {
         for (const field of relationFields) {
           const relId = record.data[field.key];
           if (typeof relId === "string" && relId) {
@@ -252,7 +252,7 @@ export async function listRecords(
     return {
       success: true,
       data: {
-        records: sortedRecords,
+        records: processedRecords,
         total,
         page: filters.page,
         pageSize: filters.pageSize,

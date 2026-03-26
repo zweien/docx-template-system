@@ -1,0 +1,117 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e26]:
+    - complementary [ref=e27]:
+      - link "DOCX 模板系统" [ref=e29] [cursor=pointer]:
+        - /url: /
+        - img [ref=e30]
+        - generic [ref=e33]: DOCX 模板系统
+      - navigation [ref=e34]:
+        - generic [ref=e35]:
+          - link "仪表盘" [ref=e36] [cursor=pointer]:
+            - /url: /
+            - img [ref=e38]
+            - text: 仪表盘
+          - link "生成文档" [ref=e43] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e45]
+            - text: 生成文档
+          - link "模板管理" [ref=e50] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e52]
+            - text: 模板管理
+          - link "主数据" [ref=e55] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e57]
+            - text: 主数据
+          - link "生成记录" [ref=e61] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e63]
+            - text: 生成记录
+          - link "我的草稿" [ref=e67] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e69]
+            - text: 我的草稿
+        - generic [ref=e71]:
+          - paragraph [ref=e72]: 管理员
+          - link "用户管理" [ref=e74] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e76]
+            - text: 用户管理
+      - paragraph [ref=e82]: "已登录: Admin"
+    - generic [ref=e83]:
+      - banner [ref=e84]:
+        - heading "DOCX 模板系统" [level=1] [ref=e398]
+        - separator [ref=e87]
+        - button "A" [ref=e88]:
+          - generic [ref=e89]: A
+      - main [ref=e90]:
+        - generic [ref=e451]:
+          - generic [ref=e452]:
+            - generic [ref=e453]:
+              - generic [ref=e454]:
+                - link "主数据" [ref=e455] [cursor=pointer]:
+                  - /url: /data
+                - generic [ref=e456]: /
+                - generic [ref=e457]: 项目表
+              - heading "项目表" [level=1] [ref=e458]
+            - generic [ref=e459]:
+              - link "导入" [ref=e460] [cursor=pointer]:
+                - /url: /data/cmn4o0lun0000dcbmavbo2pjq/import
+                - button "导入" [ref=e461]:
+                  - img
+                  - text: 导入
+              - link "配置字段" [ref=e462] [cursor=pointer]:
+                - /url: /data/cmn4o0lun0000dcbmavbo2pjq/fields
+                - button "配置字段" [ref=e463]:
+                  - img
+                  - text: 配置字段
+          - generic [ref=e464]:
+            - generic [ref=e465]:
+              - img [ref=e466]
+              - text: 3 个字段
+            - generic [ref=e468]:
+              - img [ref=e469]
+              - text: 5 条记录
+          - separator [ref=e471]
+          - generic [ref=e472]:
+            - generic [ref=e473]:
+              - generic [ref=e474]:
+                - button "默认视图" [ref=e475]:
+                  - img
+                  - generic [ref=e476]: 默认视图
+                  - img
+                - textbox "搜索记录..." [ref=e478]
+              - generic [ref=e479]:
+                - button "字段" [ref=e480]:
+                  - img
+                  - text: 字段
+                - link "新建记录" [ref=e481] [cursor=pointer]:
+                  - /url: /data/cmn4o0lun0000dcbmavbo2pjq/new
+                  - button "新建记录" [ref=e482]:
+                    - img
+                    - text: 新建记录
+            - table [ref=e485]:
+              - rowgroup [ref=e486]:
+                - row "项目名称 出生日期 姓名 操作" [ref=e487]:
+                  - columnheader "项目名称" [ref=e488]:
+                    - button "项目名称" [ref=e489]:
+                      - generic [ref=e490]: 项目名称
+                  - columnheader "出生日期" [ref=e491]:
+                    - button "出生日期" [ref=e492]:
+                      - generic [ref=e493]: 出生日期
+                  - columnheader "姓名" [ref=e494]:
+                    - button "姓名" [ref=e495]:
+                      - generic [ref=e496]: 姓名
+                  - columnheader "操作" [ref=e497]
+              - rowgroup [ref=e498]:
+                - row [ref=e499]:
+                  - cell [ref=e500]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e390] [cursor=pointer]:
+    - generic [ref=e393]:
+      - text: Compiling
+      - generic [ref=e394]:
+        - generic [ref=e395]: .
+        - generic [ref=e396]: .
+        - generic [ref=e397]: .
+  - alert [ref=e25]

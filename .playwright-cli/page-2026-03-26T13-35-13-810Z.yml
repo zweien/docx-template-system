@@ -1,0 +1,165 @@
+- generic [ref=e1]:
+  - generic [ref=e34]:
+    - complementary [ref=e35]:
+      - link "DOCX 模板系统" [ref=e37] [cursor=pointer]:
+        - /url: /
+        - img [ref=e38]
+        - generic [ref=e41]: DOCX 模板系统
+      - navigation [ref=e42]:
+        - generic [ref=e43]:
+          - link "仪表盘" [ref=e44] [cursor=pointer]:
+            - /url: /
+            - img [ref=e46]
+            - text: 仪表盘
+          - link "生成文档" [ref=e51] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e53]
+            - text: 生成文档
+          - link "模板管理" [ref=e58] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e60]
+            - text: 模板管理
+          - link "主数据" [ref=e63] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e65]
+            - text: 主数据
+          - link "生成记录" [ref=e69] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e71]
+            - text: 生成记录
+          - link "我的草稿" [ref=e75] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e77]
+            - text: 我的草稿
+        - generic [ref=e79]:
+          - paragraph [ref=e80]: 管理员
+          - link "用户管理" [ref=e82] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e84]
+            - text: 用户管理
+      - paragraph [ref=e90]: "已登录: Admin"
+    - generic [ref=e91]:
+      - banner [ref=e92]:
+        - heading "DOCX 模板系统" [level=1] [ref=e143]
+        - separator [ref=e95]
+        - button "A" [ref=e96]:
+          - generic [ref=e97]: A
+      - main [ref=e98]:
+        - generic [ref=e196]:
+          - generic [ref=e197]:
+            - generic [ref=e198]:
+              - generic [ref=e199]:
+                - link "主数据" [ref=e200] [cursor=pointer]:
+                  - /url: /data
+                - generic [ref=e201]: /
+                - generic [ref=e202]: 项目表
+              - heading "项目表" [level=1] [ref=e203]
+            - generic [ref=e204]:
+              - link "导入" [ref=e205] [cursor=pointer]:
+                - /url: /data/cmn4o0lun0000dcbmavbo2pjq/import
+                - button "导入" [ref=e206]:
+                  - img
+                  - text: 导入
+              - link "配置字段" [ref=e207] [cursor=pointer]:
+                - /url: /data/cmn4o0lun0000dcbmavbo2pjq/fields
+                - button "配置字段" [ref=e208]:
+                  - img
+                  - text: 配置字段
+          - generic [ref=e209]:
+            - generic [ref=e210]:
+              - img [ref=e211]
+              - text: 3 个字段
+            - generic [ref=e213]:
+              - img [ref=e214]
+              - text: 5 条记录
+          - separator [ref=e216]
+          - generic [ref=e217]:
+            - generic [ref=e218]:
+              - generic [ref=e219]:
+                - button "默认视图" [ref=e220]:
+                  - img
+                  - generic [ref=e221]: 默认视图
+                  - img
+                - textbox "搜索记录..." [active] [ref=e223]
+              - generic [ref=e224]:
+                - button "字段" [ref=e225]:
+                  - img
+                  - text: 字段
+                - link "新建记录" [ref=e226] [cursor=pointer]:
+                  - /url: /data/cmn4o0lun0000dcbmavbo2pjq/new
+                  - button "新建记录" [ref=e227]:
+                    - img
+                    - text: 新建记录
+            - table [ref=e230]:
+              - rowgroup [ref=e231]:
+                - row "项目名称 出生日期 姓名 操作" [ref=e232]:
+                  - columnheader "项目名称" [ref=e233]:
+                    - button "项目名称" [ref=e234]:
+                      - generic [ref=e235]: 项目名称
+                  - columnheader "出生日期" [ref=e236]:
+                    - button "出生日期" [ref=e237]:
+                      - generic [ref=e238]: 出生日期
+                  - columnheader "姓名" [ref=e239]:
+                    - button "姓名" [ref=e240]:
+                      - generic [ref=e241]: 姓名
+                  - columnheader "操作" [ref=e242]
+              - rowgroup [ref=e243]:
+                - row "ssss 2026/3/6 张三 编辑 删除" [ref=e321]:
+                  - cell "ssss" [ref=e322]
+                  - cell "2026/3/6" [ref=e323]
+                  - cell "张三" [ref=e324]:
+                    - generic [ref=e325]: 张三
+                  - cell "编辑 删除" [ref=e326]:
+                    - generic [ref=e327]:
+                      - link "编辑" [ref=e328] [cursor=pointer]:
+                        - /url: /data/cmn4o0lun0000dcbmavbo2pjq/cmn7guqzg0000n1bmo1be2mx0/edit
+                        - button "编辑" [ref=e329]
+                      - button "删除" [ref=e330]
+                - row "探索项目 2026/3/7 李四 编辑 删除" [ref=e331]:
+                  - cell "探索项目" [ref=e332]
+                  - cell "2026/3/7" [ref=e333]
+                  - cell "李四" [ref=e334]:
+                    - generic [ref=e335]: 李四
+                  - cell "编辑 删除" [ref=e336]:
+                    - generic [ref=e337]:
+                      - link "编辑" [ref=e338] [cursor=pointer]:
+                        - /url: /data/cmn4o0lun0000dcbmavbo2pjq/cmn7cjxlm0001znbm9bkoehaa/edit
+                        - button "编辑" [ref=e339]
+                      - button "删除" [ref=e340]
+                - row "机器学习 2026/3/14 李四 编辑 删除" [ref=e341]:
+                  - cell "机器学习" [ref=e342]
+                  - cell "2026/3/14" [ref=e343]
+                  - cell "李四" [ref=e344]:
+                    - generic [ref=e345]: 李四
+                  - cell "编辑 删除" [ref=e346]:
+                    - generic [ref=e347]:
+                      - link "编辑" [ref=e348] [cursor=pointer]:
+                        - /url: /data/cmn4o0lun0000dcbmavbo2pjq/cmn6pl1m100021hbmwn7jzb49/edit
+                        - button "编辑" [ref=e349]
+                      - button "删除" [ref=e350]
+                - row "项目测试项目 2026/3/28 李四 编辑 删除" [ref=e351]:
+                  - cell "项目测试项目" [ref=e352]
+                  - cell "2026/3/28" [ref=e353]
+                  - cell "李四" [ref=e354]:
+                    - generic [ref=e355]: 李四
+                  - cell "编辑 删除" [ref=e356]:
+                    - generic [ref=e357]:
+                      - link "编辑" [ref=e358] [cursor=pointer]:
+                        - /url: /data/cmn4o0lun0000dcbmavbo2pjq/cmn6pk9ct00011hbm0eoh7moj/edit
+                        - button "编辑" [ref=e359]
+                      - button "删除" [ref=e360]
+                - row "智慧城市项目 - 张三 编辑 删除" [ref=e361]:
+                  - cell "智慧城市项目" [ref=e362]
+                  - cell "-" [ref=e363]
+                  - cell "张三" [ref=e364]:
+                    - generic [ref=e365]: 张三
+                  - cell "编辑 删除" [ref=e366]:
+                    - generic [ref=e367]:
+                      - link "编辑" [ref=e368] [cursor=pointer]:
+                        - /url: /data/cmn4o0lun0000dcbmavbo2pjq/cmn4pe0g30000fhbmxrftqlwj/edit
+                        - button "编辑" [ref=e369]
+                      - button "删除" [ref=e370]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e22] [cursor=pointer]:
+    - img [ref=e23]
+  - alert [ref=e16]

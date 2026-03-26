@@ -1,0 +1,127 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "DOCX 模板系统" [ref=e417] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e9]: DOCX 模板系统
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - link "仪表盘" [ref=e418] [cursor=pointer]:
+            - /url: /
+            - img [ref=e14]
+            - text: 仪表盘
+          - link "生成文档" [ref=e419] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e21]
+            - text: 生成文档
+          - link "模板管理" [ref=e420] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - text: 模板管理
+          - link "主数据" [ref=e421] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e33]
+            - text: 主数据
+          - link "生成记录" [ref=e422] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e39]
+            - text: 生成记录
+          - link "我的草稿" [ref=e423] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e45]
+            - text: 我的草稿
+        - generic [ref=e108]:
+          - paragraph [ref=e109]: 管理员
+          - link "用户管理" [ref=e424] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e113]
+            - text: 用户管理
+      - paragraph [ref=e48]: "已登录: Admin"
+    - generic [ref=e49]:
+      - banner [ref=e50]:
+        - heading "DOCX 模板系统" [level=1] [ref=e425]
+        - separator [ref=e53]
+        - button "A" [ref=e426]:
+          - generic [ref=e119]: A
+      - main [ref=e54]:
+        - generic [ref=e260]:
+          - generic [ref=e261]:
+            - generic [ref=e262]:
+              - generic [ref=e263]:
+                - link "主数据" [ref=e427] [cursor=pointer]:
+                  - /url: /data
+                - generic [ref=e265]: /
+                - link "员工表" [ref=e428] [cursor=pointer]:
+                  - /url: /data/cmn4pes9k0001fhbmioud7pz5
+                - generic [ref=e267]: /
+                - generic [ref=e268]: 字段配置
+              - heading "配置字段 - 员工表" [level=1] [ref=e429]
+              - paragraph [ref=e270]: 定义数据表的字段结构，支持多种字段类型
+            - link "返回" [ref=e430] [cursor=pointer]:
+              - /url: /data/cmn4pes9k0001fhbmioud7pz5
+              - button "返回" [ref=e431]:
+                - img
+                - text: 返回
+          - separator [ref=e273]
+          - generic [ref=e274]:
+            - generic [ref=e275]:
+              - heading "字段配置" [level=2] [ref=e432]
+              - generic [ref=e277]:
+                - button "添加字段" [ref=e433]:
+                  - img
+                  - text: 添加字段
+                - button "保存全部" [ref=e434]
+            - table [ref=e282]:
+              - rowgroup [ref=e283]:
+                - row "字段标识 显示名称 类型 必填 选项/关联 操作" [ref=e435]:
+                  - columnheader "字段标识" [ref=e436]
+                  - columnheader "显示名称" [ref=e437]
+                  - columnheader "类型" [ref=e438]
+                  - columnheader "必填" [ref=e439]
+                  - columnheader "选项/关联" [ref=e440]
+                  - columnheader "操作" [ref=e441]
+              - rowgroup [ref=e291]:
+                - row "employee_name 员工姓名 文本 可选 - 编辑 删除" [ref=e442]:
+                  - cell "employee_name" [ref=e443]
+                  - cell "员工姓名" [ref=e444]
+                  - cell "文本" [ref=e445]:
+                    - generic [ref=e296]: 文本
+                  - cell "可选" [ref=e446]
+                  - cell "-" [ref=e447]
+                  - cell "编辑 删除" [ref=e448]:
+                    - generic [ref=e300]:
+                      - button "编辑" [ref=e449]
+                      - button "删除" [ref=e450]
+                - row "department 部门 单选 可选 研发部, 市场部, 销售部... 编辑 删除" [ref=e451]:
+                  - cell "department" [ref=e452]
+                  - cell "部门" [ref=e453]
+                  - cell "单选" [ref=e454]:
+                    - generic [ref=e307]: 单选
+                  - cell "可选" [ref=e455]
+                  - cell "研发部, 市场部, 销售部..." [ref=e456]:
+                    - generic [ref=e310]: 研发部, 市场部, 销售部...
+                  - cell "编辑 删除" [ref=e457]:
+                    - generic [ref=e312]:
+                      - button "编辑" [active] [ref=e458]
+                      - button "删除" [ref=e459]
+                - row "birth 出生日期 日期 可选 - 编辑 删除" [ref=e460]:
+                  - cell "birth" [ref=e461]
+                  - cell "出生日期" [ref=e462]
+                  - cell "日期" [ref=e463]:
+                    - generic [ref=e319]: 日期
+                  - cell "可选" [ref=e464]
+                  - cell "-" [ref=e465]
+                  - cell "编辑 删除" [ref=e466]:
+                    - generic [ref=e323]:
+                      - button "编辑" [ref=e467]
+                      - button "删除" [ref=e468]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e252] [cursor=pointer]:
+    - generic [ref=e255]:
+      - text: Compiling
+      - generic [ref=e256]:
+        - generic [ref=e257]: .
+        - generic [ref=e258]: .
+        - generic [ref=e259]: .
+  - alert [ref=e120]

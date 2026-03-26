@@ -1,0 +1,12 @@
+[     227ms] [ERROR] 获取字段列表失败: TypeError: Failed to fetch
+    at handleOpenPicker (http://localhost:8060/_next/static/chunks/src_components_0i3d_76._.js:1309:35)
+    at onClick (http://localhost:8060/_next/static/chunks/src_components_0i3d_76._.js:1494:66)
+    at onClick (http://localhost:8060/_next/static/chunks/node_modules_%40base-ui_react_esm_0aj1dp7._.js:323:38)
+    at executeDispatch (http://localhost:8060/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10329:13)
+    at runWithFiberInDEV (http://localhost:8060/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:965:74)
+    at processDispatchQueue (http://localhost:8060/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10355:41)
+    at http://localhost:8060/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10633:13
+    at batchedUpdates$1 (http://localhost:8060/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:2253:44)
+    at dispatchEventForPluginEventSystem (http://localhost:8060/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:10431:9)
+    at dispatchEvent (http://localhost:8060/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:13002:37)
+    at dispatchDiscreteEvent (http://localhost:8060/_next/static/chunks/node_modules_next_dist_compiled_react-dom_058-ah~._.js:12984:64) @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272

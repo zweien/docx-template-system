@@ -1,0 +1,86 @@
+- generic [ref=e1]:
+  - generic [ref=e26]:
+    - complementary [ref=e27]:
+      - link "DOCX 模板系统" [ref=e734] [cursor=pointer]:
+        - /url: /
+        - img [ref=e30]
+        - generic [ref=e33]: DOCX 模板系统
+      - navigation [ref=e34]:
+        - generic [ref=e35]:
+          - link "仪表盘" [ref=e735] [cursor=pointer]:
+            - /url: /
+            - img [ref=e38]
+            - text: 仪表盘
+          - link "生成文档" [ref=e736] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e45]
+            - text: 生成文档
+          - link "模板管理" [ref=e737] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e52]
+            - text: 模板管理
+          - link "主数据" [ref=e738] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e57]
+            - text: 主数据
+          - link "生成记录" [ref=e739] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e63]
+            - text: 生成记录
+          - link "我的草稿" [ref=e740] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e69]
+            - text: 我的草稿
+        - generic [ref=e71]:
+          - paragraph [ref=e72]: 管理员
+          - link "用户管理" [ref=e741] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e76]
+            - text: 用户管理
+      - paragraph [ref=e82]: "已登录: Admin"
+    - generic [ref=e83]:
+      - banner [ref=e84]:
+        - heading "DOCX 模板系统" [level=1] [ref=e742]
+        - separator [ref=e87]
+        - button "A" [ref=e743]:
+          - generic [ref=e89]: A
+      - main [ref=e90]:
+        - generic [ref=e623]:
+          - button "返回模板详情" [ref=e744] [cursor=pointer]:
+            - img
+            - text: 返回模板详情
+          - generic [ref=e625]:
+            - heading "填写表单 — 项目模板1" [level=1] [ref=e745]
+            - paragraph [ref=e627]: 请填写以下字段，完成后点击「确认生成」来生成文档
+          - generic [ref=e628]:
+            - generic [ref=e629]:
+              - generic [ref=e631]: 表单字段
+              - generic [ref=e633]:
+                - generic [ref=e634]:
+                  - generic [ref=e635]: 项目名称
+                  - generic [ref=e636]:
+                    - textbox "项目名称" [ref=e746]:
+                      - /placeholder: 请输入项目名称
+                    - button "选择数据" [ref=e747]
+                - generic [ref=e639]:
+                  - generic [ref=e640]: 姓名
+                  - generic [ref=e641]:
+                    - textbox "姓名" [ref=e748]:
+                      - /placeholder: 请输入姓名
+                    - button "选择数据" [active] [ref=e749]
+            - generic [ref=e644]:
+              - button "保存草稿" [ref=e750]:
+                - img
+                - text: 保存草稿
+              - button "确认生成" [ref=e751]:
+                - img
+                - text: 确认生成
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e647] [cursor=pointer]:
+    - generic [ref=e650]:
+      - text: Compiling
+      - generic [ref=e651]:
+        - generic [ref=e652]: .
+        - generic [ref=e653]: .
+        - generic [ref=e654]: .
+  - alert [ref=e25]

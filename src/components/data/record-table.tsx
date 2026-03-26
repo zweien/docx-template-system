@@ -43,7 +43,7 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
   const [searchInput, setSearchInput] = useState(searchParams.get("search") ?? "");
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingId] = useState<string | null>(null);
 
   // 防抖搜索 - 300ms 后触发
   const debouncedSetSearch = useDebouncedCallback(

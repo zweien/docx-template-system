@@ -1,0 +1,25 @@
+Total messages: 7 (Errors: 4, Warnings: 0)
+
+[INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[LOG] [HMR] connected @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431
+[ERROR] Base UI: A component is changing the uncontrolled value state of RadioGroup to be controlled.
+Elements should not switch from uncontrolled to controlled (or vice versa).
+Decide between using a controlled or uncontrolled RadioGroup element for the lifetime of the component.
+The nature of the state is determined during the first render. It's considered controlled if the value is not `undefined`.
+More info: https://fb.me/react-controlled-components @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[ERROR] Base UI: A component is changing the uncontrolled value state of RadioGroup to be controlled.
+Elements should not switch from uncontrolled to controlled (or vice versa).
+Decide between using a controlled or uncontrolled RadioGroup element for the lifetime of the component.
+The nature of the state is determined during the first render. It's considered controlled if the value is not `undefined`.
+More info: https://fb.me/react-controlled-components @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[ERROR] Base UI: A component is changing the uncontrolled value state of RadioGroup to be controlled.
+Elements should not switch from uncontrolled to controlled (or vice versa).
+Decide between using a controlled or uncontrolled RadioGroup element for the lifetime of the component.
+The nature of the state is determined during the first render. It's considered controlled if the value is not `undefined`.
+More info: https://fb.me/react-controlled-components @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[ERROR] Base UI: A component is changing the uncontrolled value state of RadioGroup to be controlled.
+Elements should not switch from uncontrolled to controlled (or vice versa).
+Decide between using a controlled or uncontrolled RadioGroup element for the lifetime of the component.
+The nature of the state is determined during the first render. It's considered controlled if the value is not `undefined`.
+More info: https://fb.me/react-controlled-components @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
+[LOG] resolve-cascade response: {project_name: 机器学习, person_name: 李四} @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:2431

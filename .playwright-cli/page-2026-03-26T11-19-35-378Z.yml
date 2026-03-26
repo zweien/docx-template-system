@@ -1,0 +1,36 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: 登录
+      - generic [ref=e6]: 输入您的邮箱和密码登录系统
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]: 邮箱
+        - textbox "邮箱" [ref=e11]:
+          - /placeholder: your@email.com
+          - text: admin@example.com
+      - generic [ref=e12]:
+        - generic [ref=e13]: 密码
+        - textbox "密码" [ref=e14]:
+          - /placeholder: 输入密码
+          - text: admin123
+      - button "登录" [ref=e15]
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=e26]:
+        - img [ref=e28]
+        - generic [ref=e32]:
+          - generic [ref=e33]: 登录失败
+          - generic [ref=e34]: 发生未知错误，请稍后重试。
+  - generic [ref=e20] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e21]:
+      - img [ref=e22]
+    - generic [ref=e35]:
+      - button "Open issues overlay" [ref=e36]:
+        - generic [ref=e37]:
+          - generic [ref=e38]: "0"
+          - generic [ref=e39]: "1"
+        - generic [ref=e40]: Issue
+      - button "Collapse issues badge" [ref=e41]:
+        - img [ref=e42]
+  - alert [ref=e25]

@@ -1,0 +1,96 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "DOCX 模板系统" [ref=e192] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e9]: DOCX 模板系统
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - link "仪表盘" [ref=e193] [cursor=pointer]:
+            - /url: /
+            - img [ref=e14]
+            - text: 仪表盘
+          - link "生成文档" [ref=e194] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e21]
+            - text: 生成文档
+          - link "模板管理" [ref=e195] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - text: 模板管理
+          - link "主数据" [ref=e196] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e33]
+            - text: 主数据
+          - link "生成记录" [ref=e197] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e39]
+            - text: 生成记录
+          - link "我的草稿" [ref=e198] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e45]
+            - text: 我的草稿
+        - generic [ref=e88]:
+          - paragraph [ref=e89]: 管理员
+          - link "用户管理" [ref=e199] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e93]
+            - text: 用户管理
+      - paragraph [ref=e48]: "已登录: Admin"
+    - generic [ref=e49]:
+      - banner [ref=e50]:
+        - heading "DOCX 模板系统" [level=1] [ref=e200]
+        - separator [ref=e53]
+        - button "A" [ref=e201]:
+          - generic [ref=e99]: A
+      - main [ref=e54]:
+        - generic [ref=e55]:
+          - button "返回模板详情" [ref=e202] [cursor=pointer]:
+            - img
+            - text: 返回模板详情
+          - generic [ref=e57]:
+            - heading "填写表单 — 项目模板1" [level=1] [ref=e203]
+            - paragraph [ref=e59]: 请填写以下字段，完成后点击「确认生成」来生成文档
+          - generic [ref=e60]:
+            - generic [ref=e61]:
+              - generic [ref=e63]: 表单字段
+              - generic [ref=e65]:
+                - generic [ref=e66]:
+                  - generic [ref=e67]: 项目名称
+                  - generic [ref=e68]:
+                    - textbox "项目名称" [ref=e204]:
+                      - /placeholder: 请输入项目名称
+                      - text: 机器学习
+                    - button "选择数据" [active] [ref=e205]
+                - generic [ref=e71]:
+                  - generic [ref=e72]: 姓名
+                  - generic [ref=e73]:
+                    - textbox "姓名" [ref=e206]:
+                      - /placeholder: 请输入姓名
+                      - text: 李四
+                    - button "选择数据" [ref=e207]
+            - generic [ref=e76]:
+              - button "保存草稿" [ref=e208]:
+                - img
+                - text: 保存草稿
+              - button "确认生成" [ref=e209]:
+                - img
+                - text: 确认生成
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=e210]:
+        - img [ref=e212]
+        - generic [ref=e216]: 已自动填充关联字段
+  - generic [ref=e83] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e84]:
+      - img [ref=e85]
+    - generic [ref=e182]:
+      - button "Open issues overlay" [ref=e183]:
+        - generic [ref=e184]:
+          - generic [ref=e185]: "0"
+          - generic [ref=e186]: "1"
+        - generic [ref=e187]: Issue
+      - button "Collapse issues badge" [ref=e188]:
+        - img [ref=e189]
+  - alert [ref=e100]

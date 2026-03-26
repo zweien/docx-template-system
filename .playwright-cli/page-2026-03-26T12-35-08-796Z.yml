@@ -1,0 +1,108 @@
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link [ref=e101] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e9]: DOCX 模板系统
+      - navigation [ref=e10]:
+        - generic [ref=e11]:
+          - link [ref=e102] [cursor=pointer]:
+            - /url: /
+            - img [ref=e14]
+            - text: 仪表盘
+          - link [ref=e103] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e21]
+            - text: 生成文档
+          - link [ref=e104] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - text: 模板管理
+          - link [ref=e105] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e33]
+            - text: 主数据
+          - link [ref=e106] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e39]
+            - text: 生成记录
+          - link [ref=e107] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e45]
+            - text: 我的草稿
+        - generic [ref=e88]:
+          - paragraph [ref=e89]: 管理员
+          - link [ref=e108] [cursor=pointer]:
+            - /url: /admin/users
+            - img [ref=e93]
+            - text: 用户管理
+      - paragraph [ref=e48]: "已登录: Admin"
+    - generic [ref=e49]:
+      - banner [ref=e50]:
+        - heading [level=1] [ref=e109]: DOCX 模板系统
+        - separator [ref=e53]
+        - button [ref=e110]:
+          - generic [ref=e99]: A
+      - main [ref=e54]:
+        - generic [ref=e55]:
+          - button [ref=e111] [cursor=pointer]:
+            - img
+            - text: 返回模板详情
+          - generic [ref=e57]:
+            - heading [level=1] [ref=e112]: 填写表单 — 项目模板1
+            - paragraph [ref=e59]: 请填写以下字段，完成后点击「确认生成」来生成文档
+          - generic [ref=e60]:
+            - generic [ref=e61]:
+              - generic [ref=e63]: 表单字段
+              - generic [ref=e65]:
+                - generic [ref=e66]:
+                  - generic [ref=e67]: 项目名称
+                  - generic [ref=e68]:
+                    - textbox [ref=e113]:
+                      - /placeholder: 请输入项目名称
+                    - button [ref=e114]: 选择数据
+                - generic [ref=e71]:
+                  - generic [ref=e72]: 姓名
+                  - generic [ref=e73]:
+                    - textbox [ref=e115]:
+                      - /placeholder: 请输入姓名
+                    - button [ref=e116]: 选择数据
+            - generic [ref=e76]:
+              - button [ref=e117]:
+                - img
+                - text: 保存草稿
+              - button [ref=e118]:
+                - img
+                - text: 确认生成
+  - region "Notifications alt+T":
+    - list:
+      - listitem [ref=e119]:
+        - img [ref=e121]
+        - generic [ref=e126]: 获取数据失败
+  - generic [ref=e83] [cursor=pointer]:
+    - button "Open Next.js Dev Tools" [ref=e84]:
+      - img [ref=e85]
+    - generic [ref=e127]:
+      - button "Open issues overlay" [ref=e128]:
+        - generic [ref=e129]:
+          - generic [ref=e130]: "0"
+          - generic [ref=e131]: "1"
+        - generic [ref=e132]: Issue
+      - button "Collapse issues badge" [ref=e133]:
+        - img [ref=e134]
+  - alert [ref=e100]
+  - dialog "选择数据" [ref=e139]:
+    - heading "选择数据" [level=2] [ref=e141]
+    - generic [ref=e143]:
+      - img [ref=e144]
+      - textbox "搜索..." [active] [ref=e147]
+    - generic [ref=e149]:
+      - img [ref=e150]
+      - generic [ref=e153]: 暂无数据
+    - generic [ref=e154]:
+      - button "取消" [ref=e155]
+      - button "确认选择" [disabled]
+    - button "Close" [ref=e156]:
+      - img
+      - generic [ref=e157]: Close

@@ -1,4 +1,4 @@
-import type { PlaceholderItem } from "./placeholder";
+import type { PlaceholderItem, PlaceholderSnapshotItem } from "./placeholder";
 
 export interface TemplateListItem {
   id: string;
@@ -27,5 +27,31 @@ export interface TemplateWithRelation extends TemplateDetail {
     id: string;
     name: string;
   };
+  fieldMapping: TemplateFieldMapping | null;
+  currentVersion?: {
+    id: string;
+    version: number;
+    publishedAt: string;
+    publishedByName: string;
+  } | null;
+}
+
+// 版本列表项
+export interface TemplateVersionListItem {
+  version: number;
+  fileName: string;
+  originalFileName: string;
+  fileSize: number;
+  publishedAt: string;
+  publishedByName: string;
+  placeholderCount: number;
+}
+
+// 版本详情
+export interface TemplateVersionDetail extends TemplateVersionListItem {
+  id: string;
+  placeholderSnapshot: PlaceholderSnapshotItem[];
+  dataTableId: string | null;
+  dataTable?: { id: string; name: string };
   fieldMapping: TemplateFieldMapping | null;
 }

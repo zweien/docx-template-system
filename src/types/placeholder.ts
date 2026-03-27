@@ -24,3 +24,17 @@ export interface PlaceholderWithSource {
   sourceField: string | null;
   enablePicker: boolean;
 }
+
+// 占位符快照项（用于版本存储）
+export interface PlaceholderSnapshotItem {
+  key: string;
+  label: string;
+  inputType: "TEXT" | "TEXTAREA";
+  required: boolean;
+  defaultValue: string | null;
+  sortOrder: number;
+  enablePicker: boolean;
+  sourceTableId: string | null;
+  sourceField: string | null;
+  snapshotVersion: 1;
+}

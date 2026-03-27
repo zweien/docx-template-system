@@ -32,17 +32,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
+interface TableColumn {
+  key: string;
+  label: string;
+}
+
 interface PlaceholderRow {
   id?: string;
   key: string;
   label: string;
-  inputType: "TEXT" | "TEXTAREA";
+  inputType: "TEXT" | "TEXTAREA" | "TABLE";
   required: boolean;
   defaultValue: string;
   sortOrder: number;
   enablePicker?: boolean;
   sourceTableId?: string | null;
   sourceField?: string | null;
+  columns?: TableColumn[];
 }
 
 interface DataTableWithFields {
@@ -100,6 +106,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                 enablePicker: ph.enablePicker ?? false,
                 sourceTableId: ph.sourceTableId ?? null,
                 sourceField: ph.sourceField ?? null,
+                columns: ph.columns as TableColumn[] | undefined,
               }) as PlaceholderRow
           )
         );
@@ -464,6 +471,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                       <SelectContent>
                         <SelectItem value="TEXT">单行文本</SelectItem>
                         <SelectItem value="TEXTAREA">多行文本</SelectItem>
+                        <SelectItem value="TABLE">明细表</SelectItem>
                       </SelectContent>
                     </Select>
                   </TableCell>
@@ -481,43 +489,65 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                     </div>
                   </TableCell>
 
-                  {/* Default Value - editable */}
-                  <TableCell>
-                    <Input
-                      value={row.defaultValue}
-                      onChange={(e) =>
-                        updateRow(index, "defaultValue", e.target.value)
-                      }
-                      placeholder="无"
-                      className="h-7 text-sm"
-                    />
-                  </TableCell>
+                  {row.inputType === "TABLE" ? (
+                    /* TABLE type: show columns preview */
+                    <TableCell colSpan={3}>
+                      {row.columns && row.columns.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {row.columns.map((col) => (
+                            <span
+                              key={col.key}
+                              className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-mono"
+                            >
+                              {col.label}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">无列定义</span>
+                      )}
+                    </TableCell>
+                  ) : (
+                    <>
+                      {/* Default Value - editable */}
+                      <TableCell>
+                        <Input
+                          value={row.defaultValue}
+                          onChange={(e) =>
+                            updateRow(index, "defaultValue", e.target.value)
+                          }
+                          placeholder="无"
+                          className="h-7 text-sm"
+                        />
+                      </TableCell>
 
-                  {/* Sort Order - number */}
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={row.sortOrder}
-                      onChange={(e) =>
-                        updateRow(index, "sortOrder", Number(e.target.value))
-                      }
-                      className="h-7 w-16 text-sm"
-                    />
-                  </TableCell>
+                      {/* Sort Order - number */}
+                      <TableCell>
+                        <Input
+                          type="number"
+                          min={0}
+                          value={row.sortOrder}
+                          onChange={(e) =>
+                            updateRow(index, "sortOrder", Number(e.target.value))
+                          }
+                          className="h-7 w-16 text-sm"
+                        />
+                      </TableCell>
 
-                  {/* Data Source - config button */}
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleOpenSourceDialog(row)}
-                      className={row.enablePicker ? "text-primary" : "text-muted-foreground"}
-                    >
-                      <Settings2 className="h-4 w-4" />
-                      {row.enablePicker ? "已配置" : "配置"}
-                    </Button>
-                  </TableCell>
+                      {/* Data Source - config button */}
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenSourceDialog(row)}
+                          className={row.enablePicker ? "text-primary" : "text-muted-foreground"}
+                        >
+                          <Settings2 className="h-4 w-4" />
+                          {row.enablePicker ? "已配置" : "配置"}
+                        </Button>
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

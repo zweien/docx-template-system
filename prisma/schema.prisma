@@ -72,6 +72,7 @@ model Template {
 enum PlaceholderType {
   TEXT
   TEXTAREA
+  TABLE
 }
 
 model Placeholder {
@@ -88,6 +89,7 @@ model Placeholder {
   sourceTableId  String?
   sourceField    String?
   enablePicker   Boolean         @default(false)
+  columns   Json?
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   @@unique([templateId, key])

@@ -37,7 +37,7 @@ export async function listDrafts(
 export async function saveDraft(
   userId: string,
   templateId: string,
-  formData: Record<string, string>
+  formData: Record<string, string | Record<string, string>[]>
 ): Promise<ServiceResult<{ id: string }>> {
   try {
     // Check if a draft already exists for this user + template combination
@@ -101,7 +101,7 @@ export async function getDraft(
 export async function updateDraft(
   id: string,
   userId: string,
-  formData: Record<string, string>
+  formData: Record<string, string | Record<string, string>[]>
 ): Promise<ServiceResult<{ id: string }>> {
   try {
     // Verify ownership

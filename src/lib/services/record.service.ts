@@ -103,7 +103,7 @@ export async function getRecord(
 export async function createRecord(
   userId: string,
   templateId: string,
-  formData: Record<string, string>
+  formData: Record<string, string | Record<string, string>[]>
 ): Promise<
   ServiceResult<{
     id: string;

@@ -269,6 +269,7 @@ export async function generateBatch(
       where: { id: input.templateId },
       include: {
         placeholders: { orderBy: { sortOrder: "asc" } },
+        currentVersion: { select: { id: true, filePath: true } },
       },
     });
 
@@ -276,6 +277,14 @@ export async function generateBatch(
       return {
         success: false,
         error: { code: "TEMPLATE_NOT_FOUND", message: "模板不存在" },
+      };
+    }
+
+    const templatePath = template.currentVersion?.filePath;
+    if (!templatePath) {
+      return {
+        success: false,
+        error: { code: "NO_VERSION", message: "模板尚未发布，无法批量生成" },
       };
     }
 
@@ -333,6 +342,7 @@ export async function generateBatch(
       filePath?: string;
       errorMessage?: string;
       dataRecordId: string;
+      templateVersionId?: string;
     }> = [];
 
     // 确保输出目录存在
@@ -373,7 +383,7 @@ export async function generateBatch(
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              template_path: template.filePath,
+              template_path: templatePath,
               output_filename: fileName,
               form_data: formData,
             }),
@@ -405,6 +415,7 @@ export async function generateBatch(
             fileName,
             filePath,
             dataRecordId: dataRecord.id,
+            templateVersionId: template.currentVersion?.id,
           });
 
           generatedFiles.push({
@@ -435,6 +446,7 @@ export async function generateBatch(
           status: RecordStatus.FAILED,
           errorMessage,
           dataRecordId: dataRecord.id,
+          templateVersionId: template.currentVersion?.id,
         });
       }
     }

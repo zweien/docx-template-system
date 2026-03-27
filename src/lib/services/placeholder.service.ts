@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { PlaceholderType } from "@/generated/prisma/enums";
 import { extractPlaceholders } from "@/lib/docx-parser";
-import { changeStatus } from "@/lib/services/template.service";
 import type { PlaceholderItem, PlaceholderWithSource } from "@/types/placeholder";
 import * as XLSX from "xlsx";
 
@@ -190,9 +189,6 @@ export async function updatePlaceholders(
         sourceField: item.sourceField ?? null,
       })),
     });
-
-    // If valid, also change template status to PUBLISHED
-    await changeStatus(templateId, "PUBLISHED");
 
     // Retrieve the created placeholders
     const placeholders = await db.placeholder.findMany({

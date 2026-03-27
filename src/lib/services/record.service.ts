@@ -147,13 +147,28 @@ export async function generateDocument(
     // a. Get the record with template
     const record = await db.record.findUnique({
       where: { id: recordId },
-      include: { template: { select: { name: true, filePath: true } } },
+      include: {
+        template: {
+          select: {
+            name: true,
+            currentVersion: { select: { filePath: true } },
+          },
+        },
+      },
     });
 
     if (!record) {
       return {
         success: false,
         error: { code: "NOT_FOUND", message: "记录不存在" },
+      };
+    }
+
+    const templatePath = record.template.currentVersion?.filePath;
+    if (!templatePath) {
+      return {
+        success: false,
+        error: { code: "NO_VERSION", message: "模板尚未发布，无法生成文档" },
       };
     }
 
@@ -184,7 +199,7 @@ export async function generateDocument(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          template_path: record.template.filePath,
+          template_path: templatePath,
           output_filename: newFileName,
           form_data: formData,
         }),

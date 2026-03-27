@@ -17,14 +17,14 @@ export async function listDrafts(
     formData: unknown;
     createdAt: Date;
     updatedAt: Date;
-    template: { name: string; fileName: string };
+    template: { name: string; originalFileName: string };
   }[]
 >> {
   try {
     const drafts = await db.draft.findMany({
       where: { userId },
       orderBy: { updatedAt: "desc" },
-      include: { template: { select: { name: true, fileName: true } } },
+      include: { template: { select: { name: true, originalFileName: true } } },
     });
 
     return { success: true, data: drafts };
@@ -75,13 +75,13 @@ export async function getDraft(
     formData: unknown;
     createdAt: Date;
     updatedAt: Date;
-    template: { name: string; fileName: string };
+    template: { name: string; originalFileName: string };
   } | null>
 > {
   try {
     const draft = await db.draft.findUnique({
       where: { id },
-      include: { template: { select: { name: true, fileName: true } } },
+      include: { template: { select: { name: true, originalFileName: true } } },
     });
 
     if (!draft) {

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { saveUploadedFile, deleteFile, type FilePathMeta } from "@/lib/file.service";
+import { saveTemplateDraft, deleteTemplateDir, type FilePathMeta } from "@/lib/file.service";
 import type { TemplateListItem, TemplateWithRelation } from "@/types/template";
 import type { PlaceholderItem } from "@/types/placeholder";
 
@@ -114,6 +114,14 @@ export async function getTemplate(
         createdBy: { select: { name: true } },
         // P2: 包含关联的数据表信息
         dataTable: { select: { id: true, name: true } },
+        currentVersion: {
+          select: {
+            id: true,
+            version: true,
+            publishedAt: true,
+            publishedBy: { select: { name: true } },
+          },
+        },
       },
     });
 
@@ -135,6 +143,14 @@ export async function getTemplate(
         dataTableId: template.dataTableId,
         dataTable: template.dataTable ?? undefined,
         fieldMapping: template.fieldMapping as Record<string, string | null> | null,
+        currentVersion: template.currentVersion
+          ? {
+              id: template.currentVersion.id,
+              version: template.currentVersion.version,
+              publishedAt: template.currentVersion.publishedAt.toISOString(),
+              publishedByName: template.currentVersion.publishedBy.name,
+            }
+          : null,
       },
     };
   } catch (error) {
@@ -151,12 +167,7 @@ export async function createTemplate(
   try {
     const id = crypto.randomUUID();
 
-    const fileMeta: FilePathMeta = await saveUploadedFile(
-      fileBuffer,
-      originalName,
-      "templates",
-      id
-    );
+    const fileMeta: FilePathMeta = await saveTemplateDraft(id, fileBuffer, originalName);
 
     const template = await db.template.create({
       data: {
@@ -222,8 +233,8 @@ export async function deleteTemplate(id: string): Promise<ServiceResult<null>> {
       };
     }
 
-    await deleteFile(template.filePath);
     await db.template.delete({ where: { id } });
+    await deleteTemplateDir(id);
 
     return { success: true, data: null };
   } catch (error) {

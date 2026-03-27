@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
-import { PlaceholderType } from "@/generated/prisma/enums";
-import { extractPlaceholders } from "@/lib/docx-parser";
-import type { PlaceholderItem, PlaceholderWithSource } from "@/types/placeholder";
+import { parseStructuredPlaceholders } from "@/lib/docx-parser";
+import type { PlaceholderItem, PlaceholderWithSource, TableGridColumn } from "@/types/placeholder";
 import * as XLSX from "xlsx";
 
 // ── Unified return type ──
@@ -23,6 +22,7 @@ function mapPlaceholderItem(row: {
   sourceTableId: string | null;
   sourceField: string | null;
   enablePicker: boolean;
+  columns: unknown;
 }): PlaceholderItem {
   return {
     id: row.id,
@@ -35,6 +35,7 @@ function mapPlaceholderItem(row: {
     sourceTableId: row.sourceTableId,
     sourceField: row.sourceField,
     enablePicker: row.enablePicker,
+    columns: row.columns as TableGridColumn[] | undefined,
   };
 }
 
@@ -65,7 +66,7 @@ export function importPlaceholdersFromExcel(
       return { success: false, error: { code: "PARSE_FAILED", message: "Excel 文件中没有数据行" } };
     }
 
-    const validInputTypes = new Set(["TEXT", "TEXTAREA"]);
+    const validInputTypes = new Set(["TEXT", "TEXTAREA", "TABLE"]);
     const errors: string[] = [];
 
     const result: ExcelPlaceholderRow[] = rows.map((row, index) => {
@@ -110,20 +111,51 @@ export async function parsePlaceholders(
       };
     }
 
-    const keys = await extractPlaceholders(template.filePath);
+    const result = await parseStructuredPlaceholders(template.filePath);
+
+    // Build placeholder entries: simple placeholders + table blocks
+    const placeholderData: Array<{
+      key: string;
+      label: string;
+      inputType: "TEXT" | "TABLE";
+      required: boolean;
+      sortOrder: number;
+      templateId: string;
+      columns?: { key: string; label: string }[];
+    }> = [];
+
+    let sortOrder = 0;
+
+    for (const key of result.simplePlaceholders) {
+      placeholderData.push({
+        key,
+        label: key, // default label = key; user will configure later
+        inputType: "TEXT",
+        required: false,
+        sortOrder,
+        templateId,
+      });
+      sortOrder++;
+    }
+
+    for (const block of result.tableBlocks) {
+      placeholderData.push({
+        key: block.name,
+        label: block.name,
+        inputType: "TABLE",
+        required: false,
+        sortOrder,
+        templateId,
+        columns: block.columns.map((col) => ({ key: col, label: col })),
+      });
+      sortOrder++;
+    }
 
     // Replace all existing placeholders with freshly parsed ones
     await db.placeholder.deleteMany({ where: { templateId } });
 
     await db.placeholder.createMany({
-      data: keys.map((key, index) => ({
-        key,
-        label: key, // default label = key; user will configure later
-        inputType: PlaceholderType.TEXT,
-        required: false,
-        sortOrder: index,
-        templateId,
-      })),
+      data: placeholderData,
     });
 
     // Retrieve the created placeholders to return full objects
@@ -179,7 +211,7 @@ export async function updatePlaceholders(
       data: items.map((item) => ({
         key: item.key,
         label: item.label.trim(),
-        inputType: item.inputType as "TEXT" | "TEXTAREA",
+        inputType: item.inputType as "TEXT" | "TEXTAREA" | "TABLE",
         required: item.required,
         defaultValue: item.defaultValue,
         sortOrder: item.sortOrder,

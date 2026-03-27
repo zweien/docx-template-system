@@ -14,6 +14,7 @@ import {
 import { Upload, ChevronLeft, ChevronRight, Pencil, Eye, FileText } from "lucide-react";
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 import { TemplateListDeleteButton } from "./template-list-delete-button";
+import { CategoryTagManagerButton } from "@/components/templates/category-tag-manager-button";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
@@ -40,7 +41,7 @@ const STATUS_TABS: { label: string; value: string }[] = [
 export default async function TemplatesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; status?: string }>;
+  searchParams: Promise<{ page?: string; status?: string; categoryId?: string }>;
 }) {
   const session = await auth();
   const params = await searchParams;
@@ -48,11 +49,23 @@ export default async function TemplatesPage({
   const page = Number(params.page) || 1;
   const pageSize = 20;
   const status = params.status;
+  const categoryId = params.categoryId;
   const isAdmin = (session?.user?.role as Role) === "ADMIN";
 
+  const categories = await db.category.findMany({
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, name: true },
+  });
+
   const where = isAdmin
-    ? (status ? { status: status as TemplateStatus } : {})
-    : { status: "PUBLISHED" as TemplateStatus };
+    ? {
+        ...(status ? { status: status as TemplateStatus } : {}),
+        ...(categoryId ? { categoryId } : {}),
+      }
+    : {
+        status: "PUBLISHED" as TemplateStatus,
+        ...(categoryId ? { categoryId } : {}),
+      };
 
   const [templates, total] = await Promise.all([
     db.template.findMany({
@@ -70,6 +83,14 @@ export default async function TemplatesPage({
         createdBy: {
           select: { name: true },
         },
+        category: {
+          select: { name: true },
+        },
+        tags: {
+          select: {
+            tag: { select: { id: true, name: true } },
+          },
+        },
       },
     }),
     db.template.count({ where }),
@@ -77,10 +98,11 @@ export default async function TemplatesPage({
 
   const totalPages = Math.ceil(total / pageSize);
 
-  function buildUrl(pageNum: number, statusFilter: string) {
+  function buildUrl(pageNum: number, statusFilter: string, categoryFilter?: string) {
     const searchParams = new URLSearchParams();
     if (pageNum > 1) searchParams.set("page", String(pageNum));
     if (statusFilter) searchParams.set("status", statusFilter);
+    if (categoryFilter) searchParams.set("categoryId", categoryFilter);
     const qs = searchParams.toString();
     return `/templates${qs ? `?${qs}` : ""}`;
   }
@@ -96,10 +118,13 @@ export default async function TemplatesPage({
           </p>
         </div>
         {isAdmin && (
-          <Button render={<Link href="/templates/new" />}>
-            <Upload className="h-4 w-4" />
-            上传模板
-          </Button>
+          <div className="flex items-center gap-2">
+            <CategoryTagManagerButton />
+            <Button render={<Link href="/templates/new" />}>
+              <Upload className="h-4 w-4" />
+              上传模板
+            </Button>
+          </div>
         )}
       </div>
 
@@ -110,7 +135,7 @@ export default async function TemplatesPage({
           return (
             <Link
               key={tab.value}
-              href={buildUrl(1, tab.value)}
+              href={buildUrl(1, tab.value, categoryId)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 isActive
                   ? "border-primary text-foreground"
@@ -123,13 +148,44 @@ export default async function TemplatesPage({
         })}
       </div>
 
+      {/* Category Filter Tabs */}
+      {categories.length > 0 && (
+        <div className="flex gap-1 overflow-x-auto">
+          <Link
+            href={buildUrl(1, status || "")}
+            className={`shrink-0 px-3 py-1.5 text-sm rounded-md border transition-colors ${
+              !categoryId
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+            }`}
+          >
+            全部
+          </Link>
+          {categories.map((cat) => (
+            <Link
+              key={cat.id}
+              href={buildUrl(1, status || "", cat.id)}
+              className={`shrink-0 px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                categoryId === cat.id
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+              }`}
+            >
+              {cat.name}
+            </Link>
+          ))}
+        </div>
+      )}
+
       {/* Table */}
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[100px]">分类</TableHead>
               <TableHead className="w-[30%]">名称</TableHead>
               <TableHead>文件名</TableHead>
+              <TableHead className="w-[150px]">标签</TableHead>
               <TableHead className="w-[100px]">状态</TableHead>
               <TableHead className="w-[100px]">创建者</TableHead>
               <TableHead className="w-[160px]">创建时间</TableHead>
@@ -140,7 +196,7 @@ export default async function TemplatesPage({
             {templates.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={8}
                   className="h-32"
                 >
                   <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -161,9 +217,34 @@ export default async function TemplatesPage({
             ) : (
               templates.map((template) => (
                 <TableRow key={template.id}>
+                  <TableCell>
+                    {template.category ? (
+                      <Badge variant="secondary">{template.category.name}</Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="font-medium">{template.name}</TableCell>
                   <TableCell className="text-muted-foreground max-w-[200px] truncate" title={template.originalFileName}>
                     {template.originalFileName || template.fileName}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {template.tags.length === 0 ? (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      ) : (
+                        <>
+                          {template.tags.slice(0, 3).map((t) => (
+                            <Badge key={t.tag.id} variant="outline" className="text-xs">
+                              {t.tag.name}
+                            </Badge>
+                          ))}
+                          {template.tags.length > 3 && (
+                            <span className="text-xs text-muted-foreground">+{template.tags.length - 3}</span>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={STATUS_VARIANTS[template.status]}>
@@ -230,7 +311,7 @@ export default async function TemplatesPage({
               <Button
                 variant="outline"
                 size="sm"
-                render={<Link href={buildUrl(page - 1, status || "")} />}
+                render={<Link href={buildUrl(page - 1, status || "", categoryId)} />}
               >
                 <ChevronLeft className="h-4 w-4" />
                 上一页
@@ -245,7 +326,7 @@ export default async function TemplatesPage({
               <Button
                 variant="outline"
                 size="sm"
-                render={<Link href={buildUrl(page + 1, status || "")} />}
+                render={<Link href={buildUrl(page + 1, status || "", categoryId)} />}
               >
                 下一页
                 <ChevronRight className="h-4 w-4" />

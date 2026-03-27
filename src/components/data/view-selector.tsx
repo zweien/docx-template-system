@@ -124,7 +124,7 @@ export function ViewSelector({
             {views.map((view) => (
               <div
                 key={view.id}
-                className={`group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors cursor-pointer ${
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors cursor-pointer ${
                   view.id === currentViewId ? "font-medium" : ""
                 }`}
                 onClick={() => handleSelectView(view.id)}
@@ -144,11 +144,11 @@ export function ViewSelector({
                   )}
                 </span>
                 <button
-                  className="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
+                  className="shrink-0 p-0.5 rounded text-muted-foreground hover:text-destructive"
                   onClick={(e) => handleDeleteView(e, view.id, view.name)}
                   title="删除视图"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             ))}

@@ -24,6 +24,7 @@
 **Files:**
 - Modify: `prisma/schema.prisma`
 - Modify: `src/lib/constants.ts`
+- Modify: `src/validators/template.ts`
 - Create: `scripts/migrate-template-versions.ts`
 
 - [ ] **Step 1: 修改 Prisma Schema**
@@ -32,7 +33,6 @@
 
 1. 将 `TemplateStatus` 枚举的 `READY` 改为 `PUBLISHED`
 2. 在 `Template` 模型中：
-   - 移除 `fileName` 字段
    - 新增 `currentVersionId String?`
    - 新增 `currentVersion TemplateVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])`
    - 新增 `versions TemplateVersion[]`
@@ -109,21 +109,21 @@ npx prisma generate
 
 ```typescript
 // 此脚本需要手动执行：npx tsx scripts/migrate-template-versions.ts
-import { PrismaClient } from "./src/generated/prisma/client";
-
-const prisma = new PrismaClient();
+// 必须使用项目的 db 单例（包含 driver adapter）
+import { db } from "./src/lib/db";
 
 async function main() {
+  const fs = await import("fs/promises");
+  const path = await import("path");
+  const uploadDir = process.env.UPLOAD_DIR || "public/uploads";
+
   // 1. 获取所有现有模板
-  const templates = await prisma.template.findMany({
+  const templates = await db.template.findMany({
     include: { placeholders: { orderBy: { sortOrder: "asc" } } },
   });
 
   for (const template of templates) {
     // 2. 创建模板目录（如果不存在）
-    const fs = await import("fs/promises");
-    const path = await import("path");
-    const uploadDir = process.env.UPLOAD_DIR || "public/uploads";
     const templateDir = path.join(process.cwd(), uploadDir, "templates", template.id);
     await fs.mkdir(templateDir, { recursive: true });
 
@@ -131,14 +131,22 @@ async function main() {
     const draftPath = path.join(templateDir, "draft.docx");
     const existingFile = template.filePath;
     if (existingFile && !existingFile.includes(template.id + "/")) {
-      // 旧路径格式: uploads/templates/{id}.docx
-      await fs.copyFile(existingFile, draftPath).catch(() => {});
+      // 旧路径格式: uploads/templates/{id}.docx → 新格式: uploads/templates/{id}/draft.docx
+      try {
+        await fs.copyFile(existingFile, draftPath);
+      } catch (err) {
+        console.warn(`⚠️ ${template.name}: failed to copy ${existingFile} to ${draftPath}`, err);
+      }
     }
 
     // 4. 如果是 READY 状态，创建 v1 版本快照
     if (template.status === "READY") {
       const versionPath = path.join(templateDir, "v1.docx");
-      await fs.copyFile(existingFile || draftPath, versionPath).catch(() => {});
+      try {
+        await fs.copyFile(existingFile || draftPath, versionPath);
+      } catch (err) {
+        console.warn(`⚠️ ${template.name}: failed to copy to v1.docx`, err);
+      }
 
       const snapshot = template.placeholders.map(p => ({
         key: p.key,
@@ -153,12 +161,12 @@ async function main() {
         snapshotVersion: 1,
       }));
 
-      const version = await prisma.templateVersion.create({
+      const version = await db.templateVersion.create({
         data: {
           version: 1,
           fileName: "v1.docx",
           filePath: versionPath,
-          originalFileName: template.originalFileName || template.fileName,
+          originalFileName: template.originalFileName,
           fileSize: template.fileSize,
           placeholderSnapshot: snapshot,
           dataTableId: template.dataTableId,
@@ -168,7 +176,7 @@ async function main() {
         },
       });
 
-      await prisma.template.update({
+      await db.template.update({
         where: { id: template.id },
         data: {
           currentVersionId: version.id,
@@ -180,7 +188,7 @@ async function main() {
       console.log(`✅ ${template.name}: migrated to PUBLISHED v1`);
     } else {
       // DRAFT / ARCHIVED: 只迁移文件路径
-      await prisma.template.update({
+      await db.template.update({
         where: { id: template.id },
         data: { filePath: draftPath },
       });
@@ -188,14 +196,42 @@ async function main() {
     }
   }
 
-  // 5. 删除旧的 READY 枚举值
-  await prisma.$executeRaw`ALTER TYPE "TemplateStatus" DROP VALUE 'READY'`;
+  // 5. 回填现有 Record 的 templateVersionId
+  const publishedTemplates = await db.template.findMany({
+    where: { status: "PUBLISHED", currentVersionId: { not: null } },
+    select: { id: true, currentVersionId: true },
+  });
+  const templateVersionMap = new Map(publishedTemplates.map(t => [t.id, t.currentVersionId!]));
+  const recordCount = await db.record.updateMany({
+    where: { templateId: { in: [...templateVersionMap.keys()] } },
+    data: {} // need per-template update
+  });
+  // 使用循环逐个更新（Prisma updateMany 不支持动态字段值）
+  for (const [tid, vid] of templateVersionMap) {
+    await db.record.updateMany({
+      where: { templateId: tid, templateVersionId: null },
+      data: { templateVersionId: vid },
+    });
+  }
+  console.log(`✅ Backfilled Record templateVersionIds`);
+
+  // 6. 回填现有 BatchGeneration 的 templateVersionId
+  for (const [tid, vid] of templateVersionMap) {
+    await db.batchGeneration.updateMany({
+      where: { templateId: tid, templateVersionId: null },
+      data: { templateVersionId: vid },
+    });
+  }
+  console.log(`✅ Backfilled BatchGeneration templateVersionIds`);
+
+  // 7. 删除旧的 READY 枚举值
+  await db.$executeRaw`ALTER TYPE "TemplateStatus" DROP VALUE 'READY'`;
   console.log("\n✅ Migration complete. 'READY' enum value dropped.");
 }
 
 main()
   .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .finally(() => db.$disconnect());
 ```
 
 - [ ] **Step 5: 执行迁移脚本**
@@ -204,9 +240,13 @@ main()
 npx tsx scripts/migrate-template-versions.ts
 ```
 
-- [ ] **Step 6: 更新 changeStatus 函数签名**
+- [ ] **Step 6: 更新 validators 和 changeStatus**
 
-修改 `src/lib/services/template.service.ts` 的 `changeStatus`，将类型从 `"DRAFT" | "READY" | "ARCHIVED"` 改为 `"DRAFT" | "PUBLISHED" | "ARCHIVED"`。
+1. 修改 `src/validators/template.ts`，将所有 `"READY"` 替换为 `"PUBLISHED"`（约第 14 行和第 23 行的 Zod enum）。
+
+2. 修改 `src/lib/services/template.service.ts` 的 `changeStatus`，将类型从 `"DRAFT" | "READY" | "ARCHIVED"` 改为 `"DRAFT" | "PUBLISHED" | "ARCHIVED"`。
+
+3. 修改 `src/lib/services/template.service.ts` 的 `mapTemplateToListItem`，将 `fileName: row.fileName` 改为 `fileName: row.filePath.split("/").pop() ?? "draft.docx"`（从文件路径中提取文件名）。
 
 - [ ] **Step 7: 验证编译通过**
 
@@ -746,9 +786,10 @@ git commit -m "feat: add publish, version list, and version detail API routes"
 
 **Files:**
 - Modify: `src/lib/services/placeholder.service.ts` (移除 changeStatus)
-- Modify: `src/lib/services/template.service.ts` (deleteTemplate 清理目录，createTemplate 使用新文件路径，getTemplate 返回版本信息)
+- Modify: `src/lib/services/template.service.ts` (deleteTemplate 清理目录，createTemplate 使用新文件路径，getTemplate 返回版本信息，mapTemplateToListItem 适配)
 - Modify: `src/lib/services/record.service.ts` (generateDocument 引用 currentVersion)
-- Modify: `src/lib/services/batch-generation.service.ts` (generateBatch 引用 currentVersion)
+- Modify: `src/lib/services/batch-generation.service.ts` (generateBatch 引用 currentVersion，记录 templateVersionId)
+- Modify: `src/lib/services/draft.service.ts` (fileName → originalFileName)
 
 - [ ] **Step 1: placeholder.service.ts — 移除 changeStatus 调用**
 
@@ -778,7 +819,6 @@ export async function createTemplate(
         id,
         name: data.name,
         description: data.description ?? null,
-        fileName: fileMeta.fileName,
         originalFileName: originalName,
         filePath: fileMeta.filePath,
         fileSize: fileBuffer.length,
@@ -929,6 +969,12 @@ if (!templatePath) {
 // 使用 templatePath 替代 template.filePath
 ```
 
+同时在创建 `BatchGeneration` 记录时记录 `templateVersionId`，在 `createMany` 的 data 中新增 `templateVersionId: template.currentVersion?.id`。
+
+- [ ] **Step 6b: draft.service.ts — 适配 fileName 移除**
+
+修改 `src/lib/services/draft.service.ts`，将 `listDrafts` 和 `getDraft` 中的 `include: { template: { select: { name: true, fileName: true } } }` 改为 `include: { template: { select: { name: true, originalFileName: true } } }`。
+
 - [ ] **Step 7: 验证编译通过**
 
 ```bash
@@ -952,18 +998,23 @@ git commit -m "feat: adapt services for version-aware document generation"
 - Modify: `src/app/(dashboard)/templates/[id]/fill/page.tsx` (READY → PUBLISHED)
 - Modify: `src/app/(dashboard)/templates/[id]/configure/page.tsx` (暂保留，后续删除)
 
-- [ ] **Step 1: 修改模板列表页 — 状态映射**
+- [ ] **Step 1: 修改模板列表页 — 状态映射 + 权限过滤**
 
-在 `src/app/(dashboard)/templates/page.tsx` 中，将所有 `READY` 字符串替换为 `PUBLISHED`。包括：
-- `STATUS_LABELS` / `STATUS_VARIANTS` 对象中的 key
-- 筛选标签的 URL 参数
+在 `src/app/(dashboard)/templates/page.tsx` 中：
+1. 将所有 `READY` 字符串替换为 `PUBLISHED`（包括 `STATUS_TABS` 数组、`STATUS_LABELS` / `STATUS_VARIANTS` 对象的 key）
+2. 普通用户权限过滤 — 页面使用 Server Component 直接查询 DB，需要在 `where` 条件中根据角色过滤：
 
-普通用户权限过滤：在 Server Component 中根据 session.user.role 过滤，非 ADMIN 用户只显示 `status: "PUBLISHED"` 的模板。
+```typescript
+const where = isAdmin
+  ? (status ? { status: status as TemplateStatus } : {})
+  : { status: "PUBLISHED" as TemplateStatus };
+```
 
 - [ ] **Step 2: 修改模板详情页 — 状态映射 + 版本信息**
 
 在 `src/app/(dashboard)/templates/[id]/page.tsx` 中：
 - 将所有 `READY` 替换为 `PUBLISHED`
+- 该页面直接使用 `db.template.findUnique()` 查询，需要在 `include` 中新增 `currentVersion: { select: { id: true, version: true, publishedAt: true, publishedBy: { select: { name: true } } } }`
 - 在状态 badge 旁显示当前版本号（如果 currentVersion 存在）
 - 添加「版本历史」按钮（后续 Task 实现 Dialog）
 - 将「配置」按钮改为「编辑」按钮，链接改为 `/templates/[id]/edit`

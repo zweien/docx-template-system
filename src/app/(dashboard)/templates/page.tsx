@@ -49,7 +49,9 @@ export default async function TemplatesPage({
   const status = params.status;
   const isAdmin = (session?.user?.role as Role) === "ADMIN";
 
-  const where = status ? { status: status as TemplateStatus } : {};
+  const where = isAdmin
+    ? (status ? { status: status as TemplateStatus } : {})
+    : { status: "PUBLISHED" as TemplateStatus };
 
   const [templates, total] = await Promise.all([
     db.template.findMany({

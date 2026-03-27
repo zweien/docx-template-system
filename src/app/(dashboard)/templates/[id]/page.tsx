@@ -82,6 +82,14 @@ export default async function TemplateDetailPage({
       dataTable: {
         select: { id: true, name: true },
       },
+      currentVersion: {
+        select: {
+          id: true,
+          version: true,
+          publishedAt: true,
+          publishedBy: { select: { name: true } },
+        },
+      },
     },
   });
 
@@ -113,6 +121,9 @@ export default async function TemplateDetailPage({
             <Badge variant={STATUS_VARIANTS[template.status]}>
               {STATUS_LABELS[template.status]}
             </Badge>
+            {template.currentVersion && (
+              <Badge variant="outline">v{template.currentVersion.version}</Badge>
+            )}
           </div>
           {template.description && (
             <p className="text-muted-foreground">{template.description}</p>
@@ -124,10 +135,10 @@ export default async function TemplateDetailPage({
           {isAdmin && (
             <Button
               variant="outline"
-              render={<Link href={`/templates/${template.id}/configure`} />}
+              render={<Link href={`/templates/${template.id}/edit`} />}
             >
               <Settings className="h-4 w-4" />
-              配置占位符
+              编辑
             </Button>
           )}
           {template.status === "PUBLISHED" && (

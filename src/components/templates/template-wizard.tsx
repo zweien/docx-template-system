@@ -235,13 +235,15 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
           return;
         }
 
-        // Auto-parse placeholders
-        const parseRes = await fetch(
-          `/api/templates/${workingTemplateId}/placeholders`,
-          { method: "POST" }
-        );
-        if (parseRes.ok) {
-          toast.success("占位符已自动解析");
+        // Auto-parse placeholders only when a new file was uploaded
+        if (file) {
+          const parseRes = await fetch(
+            `/api/templates/${workingTemplateId}/placeholders`,
+            { method: "POST" }
+          );
+          if (parseRes.ok) {
+            toast.success("占位符已重新解析");
+          }
         }
 
         toast.success("模板信息已更新");

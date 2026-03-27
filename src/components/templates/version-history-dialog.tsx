@@ -44,8 +44,8 @@ export function VersionHistoryDialog({ templateId, open, onOpenChange }: Version
       if (!res.ok) {
         throw new Error("获取版本历史失败");
       }
-      const data = await res.json();
-      setVersions(data);
+      const json = await res.json();
+      setVersions(json.data);
     } catch (error) {
       console.error("获取版本历史失败:", error);
     } finally {
@@ -85,8 +85,8 @@ export function VersionHistoryDialog({ templateId, open, onOpenChange }: Version
       if (!res.ok) {
         throw new Error("获取版本详情失败");
       }
-      const data = await res.json();
-      setVersionDetail(data);
+      const json = await res.json();
+      setVersionDetail(json.data);
     } catch (error) {
       console.error("获取版本详情失败:", error);
     } finally {

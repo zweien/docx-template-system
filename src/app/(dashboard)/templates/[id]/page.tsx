@@ -23,7 +23,6 @@ import {
 import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
-  Settings,
   Pencil,
   FileText,
   Files,
@@ -34,6 +33,7 @@ import {
 } from "lucide-react";
 import { DeleteTemplateButton } from "./delete-button";
 import { DataTableLinkWrapper } from "@/components/template/data-table-link-wrapper";
+import { VersionHistoryDialogWrapper } from "./version-history-wrapper";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
@@ -132,12 +132,15 @@ export default async function TemplateDetailPage({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2">
+          {template.currentVersion && (
+            <VersionHistoryDialogWrapper templateId={template.id} />
+          )}
           {isAdmin && (
             <Button
               variant="outline"
               render={<Link href={`/templates/${template.id}/edit`} />}
             >
-              <Settings className="h-4 w-4" />
+              <Pencil className="h-4 w-4" />
               编辑
             </Button>
           )}

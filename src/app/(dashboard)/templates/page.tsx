@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, ChevronLeft, ChevronRight, Settings, Trash2, Eye, FileText } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, Pencil, Trash2, Eye, FileText } from "lucide-react";
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
@@ -196,12 +196,12 @@ export default async function TemplatesPage({
                             size="icon-xs"
                             render={
                               <Link
-                                href={`/templates/${template.id}/configure`}
+                                href={`/templates/${template.id}/edit`}
                               />
                             }
                           >
-                            <Settings className="h-3.5 w-3.5" />
-                            <span className="sr-only">配置</span>
+                            <Pencil className="h-3.5 w-3.5" />
+                            <span className="sr-only">编辑</span>
                           </Button>
                           <Button
                             variant="ghost"

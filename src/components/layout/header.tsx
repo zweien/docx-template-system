@@ -1,9 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { UserNav } from "@/components/layout/user-nav";
 import { MobileNav } from "@/components/layout/mobile-nav";
-import { Separator } from "@/components/ui/separator";
 
 const routeTitles: Record<string, string> = {
   "/": "仪表盘",
@@ -27,8 +25,6 @@ export function Header() {
       <div className="flex flex-1 items-center min-w-0">
         <h1 className="text-base sm:text-lg font-semibold truncate">{title}</h1>
       </div>
-      <Separator orientation="vertical" className="h-6 hidden sm:block" />
-      <UserNav />
     </header>
   );
 }

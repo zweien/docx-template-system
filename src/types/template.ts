@@ -55,3 +55,23 @@ export interface TemplateVersionDetail extends TemplateVersionListItem {
   dataTable?: { id: string; name: string };
   fieldMapping: TemplateFieldMapping | null;
 }
+
+// ========== Category & Tag Types ==========
+
+export interface CategoryItem {
+  id: string;
+  name: string;
+  sortOrder: number;
+  _count: { templates: number };
+}
+
+export interface TagItem {
+  id: string;
+  name: string;
+  _count: { templates: number };
+}
+
+export interface TemplateListItemWithCategory extends TemplateListItem {
+  categoryName: string | null;
+  tags: { id: string; name: string }[];
+}

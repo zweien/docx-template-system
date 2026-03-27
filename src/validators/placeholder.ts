@@ -23,4 +23,16 @@ export const updatePlaceholderSourceSchema = z.object({
   enablePicker: z.boolean().default(false),
 });
 
+export const updatePlaceholderSchema = z.object({
+  label: z.string().min(1, "标签不能为空").optional(),
+  inputType: z.enum(["TEXT", "TEXTAREA"]).optional(),
+  required: z.boolean().optional(),
+  defaultValue: z.string().nullable().optional(),
+  sortOrder: z.number().int().min(0).optional(),
+  sourceTableId: z.string().nullable().optional(),
+  sourceField: z.string().nullable().optional(),
+  enablePicker: z.boolean().optional(),
+});
+
 export type UpdatePlaceholderSourceInput = z.infer<typeof updatePlaceholderSourceSchema>;
+export type UpdatePlaceholderInput = z.infer<typeof updatePlaceholderSchema>;

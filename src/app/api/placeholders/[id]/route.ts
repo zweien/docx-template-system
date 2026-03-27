@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { updatePlaceholderSource } from "@/lib/services/placeholder.service";
-import { updatePlaceholderSourceSchema } from "@/validators/placeholder";
+import { updatePlaceholder, updatePlaceholderSource } from "@/lib/services/placeholder.service";
+import { updatePlaceholderSchema, updatePlaceholderSourceSchema } from "@/validators/placeholder";
 import { ZodError } from "zod";
 
 interface RouteParams {
@@ -22,14 +22,34 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   try {
     const body = await request.json();
-    const validated = updatePlaceholderSourceSchema.parse(body);
 
-    const result = await updatePlaceholderSource(id, validated);
+    // Use source-specific schema if only source fields are present
+    const hasOnlySourceFields =
+      body.sourceTableId !== undefined ||
+      body.sourceField !== undefined ||
+      body.enablePicker !== undefined;
+    const hasGeneralFields =
+      body.label !== undefined ||
+      body.inputType !== undefined ||
+      body.required !== undefined ||
+      body.defaultValue !== undefined ||
+      body.sortOrder !== undefined;
 
+    if (hasOnlySourceFields && !hasGeneralFields) {
+      const validated = updatePlaceholderSourceSchema.parse(body);
+      const result = await updatePlaceholderSource(id, validated);
+      if (!result.success) {
+        return NextResponse.json({ error: result.error.message }, { status: 400 });
+      }
+      return NextResponse.json(result.data);
+    }
+
+    // General update
+    const validated = updatePlaceholderSchema.parse(body);
+    const result = await updatePlaceholder(id, validated);
     if (!result.success) {
       return NextResponse.json({ error: result.error.message }, { status: 400 });
     }
-
     return NextResponse.json(result.data);
   } catch (error) {
     if (error instanceof ZodError) {
@@ -39,7 +59,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         { status: 400 }
       );
     }
-    console.error("更新占位符数据源失败:", error);
+    console.error("更新占位符失败:", error);
     return NextResponse.json({ error: "更新失败" }, { status: 500 });
   }
 }

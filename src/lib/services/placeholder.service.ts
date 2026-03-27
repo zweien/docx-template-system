@@ -230,6 +230,41 @@ export async function validatePlaceholders(
   }
 }
 
+export async function updatePlaceholder(
+  id: string,
+  data: {
+    label?: string;
+    inputType?: string;
+    required?: boolean;
+    defaultValue?: string | null;
+    sortOrder?: number;
+    sourceTableId?: string | null;
+    sourceField?: string | null;
+    enablePicker?: boolean;
+  }
+): Promise<ServiceResult<PlaceholderWithSource>> {
+  try {
+    const updateData: Record<string, unknown> = {};
+    if (data.label !== undefined) updateData.label = data.label;
+    if (data.inputType !== undefined) updateData.inputType = data.inputType;
+    if (data.required !== undefined) updateData.required = data.required;
+    if (data.defaultValue !== undefined) updateData.defaultValue = data.defaultValue;
+    if (data.sortOrder !== undefined) updateData.sortOrder = data.sortOrder;
+    if (data.sourceTableId !== undefined) updateData.sourceTableId = data.sourceTableId;
+    if (data.sourceField !== undefined) updateData.sourceField = data.sourceField;
+    if (data.enablePicker !== undefined) updateData.enablePicker = data.enablePicker;
+
+    const placeholder = await db.placeholder.update({
+      where: { id },
+      data: updateData,
+    });
+    return { success: true, data: placeholder as PlaceholderWithSource };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新占位符失败";
+    return { success: false, error: { code: "UPDATE_FAILED", message } };
+  }
+}
+
 export async function updatePlaceholderSource(
   id: string,
   data: { sourceTableId?: string | null; sourceField?: string | null; enablePicker?: boolean }

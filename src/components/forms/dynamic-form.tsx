@@ -11,18 +11,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Save, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataPickerDialog } from "./data-picker-dialog";
+import { DynamicTableField } from "./dynamic-table-field";
 
 interface Placeholder {
   id: string;
   key: string;
   label: string;
-  inputType: "TEXT" | "TEXTAREA";
+  inputType: "TEXT" | "TEXTAREA" | "TABLE";
   required: boolean;
   defaultValue: string | null;
   sortOrder: number;
   sourceTableId?: string | null;
   sourceField?: string | null;
   enablePicker: boolean;
+  columns?: Array<{ key: string; label: string }>;
 }
 
 interface TableField {
@@ -35,7 +37,7 @@ interface TableField {
 interface DynamicFormProps {
   templateId: string;
   placeholders: Placeholder[];
-  initialData?: Record<string, string>;
+  initialData?: Record<string, string | Record<string, string>[]>;
   draftId?: string;
 }
 
@@ -49,11 +51,14 @@ export function DynamicForm({
   const sorted = [...placeholders].sort((a, b) => a.sortOrder - b.sortOrder);
 
   // Initialize form state
-  const [formData, setFormData] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
+  const [formData, setFormData] = useState<Record<string, string | Record<string, string>[]>>(() => {
+    const initial: Record<string, string | Record<string, string>[]> = {};
     for (const ph of sorted) {
-      initial[ph.key] =
-        initialData?.[ph.key] ?? ph.defaultValue ?? "";
+      if (ph.inputType === "TABLE") {
+        initial[ph.key] = (initialData?.[ph.key] as Record<string, string>[]) ?? [];
+      } else {
+        initial[ph.key] = (initialData?.[ph.key] as string) ?? ph.defaultValue ?? "";
+      }
     }
     return initial;
   });
@@ -137,10 +142,16 @@ export function DynamicForm({
     }
   };
 
+  const handleTableChange = (key: string, rows: Record<string, string>[]) => {
+    setFormData((prev) => ({ ...prev, [key]: rows }));
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     for (const ph of sorted) {
-      if (ph.required && !formData[ph.key]?.trim()) {
+      // Skip TABLE type - no validation needed for table data
+      if (ph.inputType === "TABLE") continue;
+      if (ph.required && !(formData[ph.key] as string)?.trim()) {
         newErrors[ph.key] = `${ph.label}不能为空`;
       }
     }
@@ -236,50 +247,60 @@ export function DynamicForm({
                     <span className="text-destructive ml-1">*</span>
                   )}
                 </Label>
-                <div className={cn(
-                  "gap-2",
-                  ph.enablePicker ? "flex flex-col sm:flex-row" : ""
-                )}>
-                  {ph.inputType === "TEXT" ? (
-                    <Input
-                      id={ph.key}
-                      value={formData[ph.key]}
-                      onChange={(e) => handleChange(ph.key, e.target.value)}
-                      placeholder={`请输入${ph.label}`}
-                      aria-invalid={!!errors[ph.key]}
-                      disabled={saving || generating}
-                      className={cn(
-                        "transition-colors",
-                        ph.enablePicker ? "flex-1" : "w-full"
-                      )}
-                    />
-                  ) : (
-                    <Textarea
-                      id={ph.key}
-                      value={formData[ph.key]}
-                      onChange={(e) => handleChange(ph.key, e.target.value)}
-                      placeholder={`请输入${ph.label}`}
-                      rows={3}
-                      aria-invalid={!!errors[ph.key]}
-                      disabled={saving || generating}
-                      className={cn(
-                        "transition-colors resize-none",
-                        ph.enablePicker ? "flex-1" : "w-full"
-                      )}
-                    />
-                  )}
-                  {ph.enablePicker && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleOpenPicker(ph)}
-                      disabled={saving || generating}
-                      className="shrink-0 w-full sm:w-auto"
-                    >
-                      选择数据
-                    </Button>
-                  )}
-                </div>
+                {ph.inputType === "TABLE" ? (
+                  <DynamicTableField
+                    label={ph.label}
+                    columns={ph.columns ?? []}
+                    value={(formData[ph.key] as Record<string, string>[]) ?? []}
+                    onChange={(rows) => handleTableChange(ph.key, rows)}
+                    disabled={saving || generating}
+                  />
+                ) : (
+                  <div className={cn(
+                    "gap-2",
+                    ph.enablePicker ? "flex flex-col sm:flex-row" : ""
+                  )}>
+                    {ph.inputType === "TEXT" ? (
+                      <Input
+                        id={ph.key}
+                        value={formData[ph.key] as string}
+                        onChange={(e) => handleChange(ph.key, e.target.value)}
+                        placeholder={`请输入${ph.label}`}
+                        aria-invalid={!!errors[ph.key]}
+                        disabled={saving || generating}
+                        className={cn(
+                          "transition-colors",
+                          ph.enablePicker ? "flex-1" : "w-full"
+                        )}
+                      />
+                    ) : (
+                      <Textarea
+                        id={ph.key}
+                        value={formData[ph.key] as string}
+                        onChange={(e) => handleChange(ph.key, e.target.value)}
+                        placeholder={`请输入${ph.label}`}
+                        rows={3}
+                        aria-invalid={!!errors[ph.key]}
+                        disabled={saving || generating}
+                        className={cn(
+                          "transition-colors resize-none",
+                          ph.enablePicker ? "flex-1" : "w-full"
+                        )}
+                      />
+                    )}
+                    {ph.enablePicker && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleOpenPicker(ph)}
+                        disabled={saving || generating}
+                        className="shrink-0 w-full sm:w-auto"
+                      >
+                        选择数据
+                      </Button>
+                    )}
+                  </div>
+                )}
                 {errors[ph.key] && (
                   <p className="text-sm text-destructive animate-in fade-in-0 slide-in-from-top-1 duration-200">
                     {errors[ph.key]}

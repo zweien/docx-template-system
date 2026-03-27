@@ -88,8 +88,8 @@ export function validateFieldMapping(
 export function buildFormData(
   mapping: FieldMapping,
   recordData: Record<string, unknown>
-): Record<string, string> {
-  const formData: Record<string, string> = {};
+): Record<string, unknown> {
+  const formData: Record<string, unknown> = {};
 
   for (const [placeholderKey, dataFieldKey] of Object.entries(mapping)) {
     if (dataFieldKey && recordData[dataFieldKey] !== undefined) {

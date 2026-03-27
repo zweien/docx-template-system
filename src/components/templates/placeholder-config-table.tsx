@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -51,13 +51,14 @@ interface DataTableWithFields {
   fields: Array<{ id: string; key: string; label: string }>;
 }
 
-export function PlaceholderConfigTable({
-  templateId,
-  hideActions = false,
-}: {
+export interface PlaceholderConfigTableHandle {
+  save: () => Promise<boolean>;
+}
+
+export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
   templateId: string;
   hideActions?: boolean;
-}) {
+}>(({ templateId, hideActions = false }, ref) => {
   const [placeholders, setPlaceholders] = useState<PlaceholderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -308,12 +309,12 @@ export function PlaceholderConfigTable({
     // Validate
     if (placeholders.length === 0) {
       toast.error("至少需要一个占位符");
-      return;
+      return false;
     }
     const emptyLabel = placeholders.find((row) => !row.label.trim());
     if (emptyLabel) {
       toast.error(`占位符「${emptyLabel.key}」的标签不能为空`);
-      return;
+      return false;
     }
 
     setSaving(true);
@@ -326,19 +327,23 @@ export function PlaceholderConfigTable({
       if (!res.ok) {
         const data = await res.json().catch(() => null);
         toast.error(data?.error?.message || "保存失败");
-        return;
+        return false;
       }
       toast.success("占位符配置已保存");
       if (!hideActions) {
         router.push(`/templates/${templateId}`);
         router.refresh();
       }
+      return true;
     } catch {
       toast.error("保存失败，请重试");
+      return false;
     } finally {
       setSaving(false);
     }
   };
+
+  useImperativeHandle(ref, () => ({ save: handleSave }), [placeholders]);
 
   if (loading) {
     return (
@@ -416,8 +421,8 @@ export function PlaceholderConfigTable({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[160px]">键名</TableHead>
-                <TableHead>标签</TableHead>
+                <TableHead className="w-[140px]">键名</TableHead>
+                <TableHead className="min-w-[160px]">标签</TableHead>
                 <TableHead className="w-[130px]">输入类型</TableHead>
                 <TableHead className="w-[70px]">必填</TableHead>
                 <TableHead className="w-[140px]">默认值</TableHead>
@@ -645,4 +650,6 @@ export function PlaceholderConfigTable({
       </Dialog>
     </div>
   );
-}
+});
+
+PlaceholderConfigTable.displayName = "PlaceholderConfigTable";

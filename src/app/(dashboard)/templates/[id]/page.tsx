@@ -34,6 +34,7 @@ import {
 import { DeleteTemplateButton } from "./delete-button";
 import { DataTableLinkWrapper } from "@/components/template/data-table-link-wrapper";
 import { VersionHistoryDialogWrapper } from "./version-history-wrapper";
+import { PlaceholderEditButton } from "./placeholder-edit-wrapper";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
@@ -300,20 +301,7 @@ export default async function TemplateDetailPage({
                       <TableCell>{ph.sortOrder}</TableCell>
                       {isAdmin && (
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon-xs"
-                              render={
-                                <Link
-                                  href={`/templates/${template.id}/edit`}
-                                />
-                              }
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              <span className="sr-only">编辑</span>
-                            </Button>
-                          </div>
+                          <PlaceholderEditButton placeholder={ph} />
                         </TableCell>
                       )}
                     </TableRow>

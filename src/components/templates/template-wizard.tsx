@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PlaceholderConfigTable } from "./placeholder-config-table";
+import { PlaceholderConfigTable, type PlaceholderConfigTableHandle } from "./placeholder-config-table";
 
 // ── Types ──
 
@@ -64,6 +64,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
   const [submitting, setSubmitting] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(isEditMode);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const configTableRef = useRef<PlaceholderConfigTableHandle>(null);
 
   // Drag & drop state
   const [isDragOver, setIsDragOver] = useState(false);
@@ -290,10 +291,15 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStep === 1) {
       handleStep1Submit();
     } else if (currentStep === 2) {
+      // Save placeholder changes before proceeding
+      if (configTableRef.current) {
+        const saved = await configTableRef.current.save();
+        if (!saved) return; // save failed, stay on step 2
+      }
       loadSummaryInfo();
       setCurrentStep(3);
     }
@@ -345,7 +351,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className={`mx-auto space-y-6 ${currentStep === 2 ? 'max-w-6xl' : 'max-w-3xl'}`}>
       {/* Step Indicator */}
       <div className="flex items-center justify-center gap-2">
         {STEPS.map((step, index) => {
@@ -498,6 +504,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
                 </p>
               </div>
               <PlaceholderConfigTable
+                ref={configTableRef}
                 templateId={workingTemplateId}
                 hideActions
               />

@@ -181,11 +181,19 @@ async def generate_document(request: GenerateRequest):
     for paragraph in doc.paragraphs:
         replace_placeholders_in_paragraph(paragraph, simple_data)
 
-    # Replace placeholders in tables
+    # Collect all block names present in any table
+    all_block_names: set[str] = set(table_data.keys())
+    for table in doc.tables:
+        for row in table.rows:
+            row_text = "".join(cell.text for cell in row.cells)
+            for match in block_start_pattern.finditer(row_text):
+                all_block_names.add(match.group(1))
+
+    # Replace placeholders in tables and process blocks
     for table in doc.tables:
         replace_placeholders_in_table(table, simple_data)
-        for block_name, rows in table_data.items():
-            process_table_block(table, block_name, rows, simple_data)
+        for block_name in all_block_names:
+            process_table_block(table, block_name, table_data.get(block_name, []), simple_data)
 
     # Save to a temp file and return
     output_dir = Path(os.environ.get("OUTPUT_DIR", "/tmp/docx-output"))

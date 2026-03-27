@@ -26,10 +26,10 @@ export default async function DashboardPage() {
 
   const isAdmin = (session?.user?.role as Role) === "ADMIN";
 
-  const [totalTemplates, readyTemplates, monthlyRecords, drafts, totalUsers, todayRecords] =
+  const [publishedTemplates, totalTemplates, monthlyRecords, drafts, totalUsers, todayRecords] =
     await Promise.all([
-      db.template.count(),
       db.template.count({ where: { status: "PUBLISHED" } }),
+      isAdmin ? db.template.count() : Promise.resolve(0),
       session?.user?.id
         ? db.record.count({
             where: {
@@ -47,14 +47,13 @@ export default async function DashboardPage() {
 
   const stats = isAdmin
     ? [
+        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, iconColor: "text-green-500" },
         { label: "模板总数", value: totalTemplates, icon: FileText, iconColor: "text-blue-500" },
-        { label: "可用模板", value: readyTemplates, icon: CheckCircle, iconColor: "text-green-500" },
         { label: "总用户数", value: totalUsers, icon: Users, iconColor: "text-indigo-500" },
         { label: "今日生成", value: todayRecords, icon: History, iconColor: "text-orange-500" },
       ]
     : [
-        { label: "模板总数", value: totalTemplates, icon: FileText, iconColor: "text-blue-500" },
-        { label: "可用模板", value: readyTemplates, icon: CheckCircle, iconColor: "text-green-500" },
+        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, iconColor: "text-green-500" },
         { label: "本月生成", value: monthlyRecords, icon: History, iconColor: "text-orange-500" },
         { label: "我的草稿", value: drafts, icon: PenLine, iconColor: "text-purple-500" },
       ];

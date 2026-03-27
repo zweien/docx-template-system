@@ -53,8 +53,10 @@ interface DataTableWithFields {
 
 export function PlaceholderConfigTable({
   templateId,
+  hideActions = false,
 }: {
   templateId: string;
+  hideActions?: boolean;
 }) {
   const [placeholders, setPlaceholders] = useState<PlaceholderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -327,8 +329,10 @@ export function PlaceholderConfigTable({
         return;
       }
       toast.success("占位符配置已保存");
-      router.push(`/templates/${templateId}`);
-      router.refresh();
+      if (!hideActions) {
+        router.push(`/templates/${templateId}`);
+        router.refresh();
+      }
     } catch {
       toast.error("保存失败，请重试");
     } finally {
@@ -348,14 +352,16 @@ export function PlaceholderConfigTable({
   return (
     <div className="space-y-4">
       {/* Back button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        render={<Link href={`/templates/${templateId}`} />}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        返回模板详情
-      </Button>
+      {!hideActions && (
+        <Button
+          variant="ghost"
+          size="sm"
+          render={<Link href={`/templates/${templateId}`} />}
+        >
+          <ArrowLeft className="h-4 w-4" />
+          返回模板详情
+        </Button>
+      )}
 
       {/* Parse & Import buttons */}
       <div className="flex items-center justify-between">
@@ -515,20 +521,22 @@ export function PlaceholderConfigTable({
       )}
 
       {/* Action buttons */}
-      <div className="flex items-center justify-end gap-2 pt-2">
-        <Button
-          variant="outline"
-          render={<Link href={`/templates/${templateId}`} />}
-        >
-          取消
-        </Button>
-        <Button onClick={handleSave} disabled={saving || placeholders.length === 0}>
-          {saving ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : null}
-          保存配置
-        </Button>
-      </div>
+      {!hideActions && (
+        <div className="flex items-center justify-end gap-2 pt-2">
+          <Button
+            variant="outline"
+            render={<Link href={`/templates/${templateId}`} />}
+          >
+            取消
+          </Button>
+          <Button onClick={handleSave} disabled={saving || placeholders.length === 0}>
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : null}
+            保存配置
+          </Button>
+        </div>
+      )}
 
       {/* Source Binding Dialog */}
       <Dialog open={isSourceDialogOpen} onOpenChange={setIsSourceDialogOpen}>

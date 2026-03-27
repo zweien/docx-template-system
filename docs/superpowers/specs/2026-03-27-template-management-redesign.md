@@ -458,7 +458,8 @@ public/uploads/templates/{templateId}/
 | `src/app/(dashboard)/templates/new/page.tsx` | 修改 | 使用向导组件 |
 | `src/app/(dashboard)/templates/[id]/edit/page.tsx` | 新增 | 替代 configure 路由 |
 | `src/app/(dashboard)/templates/[id]/configure/page.tsx` | 删除 | 合并到 edit |
-| `src/app/(dashboard)/templates/[id]/page.tsx` | 修改 | 展示版本信息 |
+| `src/app/(dashboard)/templates/[id]/page.tsx` | 修改 | 展示版本信息，状态映射 READY → PUBLISHED |
+| `src/app/(dashboard)/templates/[id]/fill/page.tsx` | 修改 | 状态检查 READY → PUBLISHED |
 | `src/app/(dashboard)/templates/page.tsx` | 修改 | 普通用户过滤 PUBLISHED |
 | `src/components/templates/template-wizard.tsx` | 新增 | 向导容器 |
 | `src/components/templates/version-history-dialog.tsx` | 新增 | 版本历史面板 |

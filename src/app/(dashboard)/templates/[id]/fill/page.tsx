@@ -28,11 +28,11 @@ export default async function FillPage({
     notFound();
   }
 
-  let initialData: Record<string, string> | undefined;
+  let initialData: Record<string, unknown> | undefined;
   if (draftId) {
     const draft = await db.draft.findUnique({ where: { id: draftId } });
     if (draft) {
-      initialData = draft.formData as Record<string, string>;
+      initialData = draft.formData as Record<string, unknown>;
     }
   }
 
@@ -64,15 +64,16 @@ export default async function FillPage({
           id: p.id,
           key: p.key,
           label: p.label,
-          inputType: p.inputType as "TEXT" | "TEXTAREA",
+          inputType: p.inputType as "TEXT" | "TEXTAREA" | "TABLE",
           required: p.required,
           defaultValue: p.defaultValue,
           sortOrder: p.sortOrder,
           sourceTableId: p.sourceTableId,
           sourceField: p.sourceField,
           enablePicker: p.enablePicker,
+          columns: p.columns as Array<{ key: string; label: string }> | undefined,
         }))}
-        initialData={initialData}
+        initialData={initialData as Record<string, string | Record<string, string>[]> | undefined}
         draftId={draftId}
       />
     </div>

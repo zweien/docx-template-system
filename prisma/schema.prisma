@@ -40,6 +40,34 @@ enum TemplateStatus {
   ARCHIVED
 }
 
+model Category {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  sortOrder Int        @default(0)
+  createdAt DateTime   @default(now())
+  templates Template[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  templates TagOnTemplate[]
+
+  @@map("tags")
+}
+
+model TagOnTemplate {
+  templateId String
+  tagId      String
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  tag        Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([templateId, tagId])
+  @@map("tag_on_template")
+}
+
 model Template {
   id            String          @id @default(cuid())
   name          String
@@ -55,6 +83,9 @@ model Template {
   updatedAt     DateTime        @updatedAt
   dataTableId   String?
   dataTable     DataTable?      @relation(fields: [dataTableId], references: [id])
+  categoryId    String?
+  category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags          TagOnTemplate[]
   fieldMapping  Json?
   placeholders  Placeholder[]
   drafts        Draft[]
@@ -67,6 +98,7 @@ model Template {
 
 
   @@index([status, createdAt(sort: Desc)])
+  @@index([categoryId])
 }
 
 enum PlaceholderType {

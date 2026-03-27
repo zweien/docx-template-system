@@ -19,6 +19,8 @@ function mapTemplateToListItem(row: {
   fileSize: number;
   status: string;
   createdAt: Date;
+  category?: { name: string } | null;
+  tags?: { tag: { id: string; name: string } }[] | null;
 }): TemplateListItem {
   return {
     id: row.id,
@@ -28,6 +30,8 @@ function mapTemplateToListItem(row: {
     fileSize: row.fileSize,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
+    categoryName: row.category?.name ?? null,
+    tags: (row.tags ?? []).map((t) => ({ id: t.tag.id, name: t.tag.name })),
   };
 }
 
@@ -63,6 +67,9 @@ export async function listTemplates(filters: {
   page: number;
   pageSize: number;
   status?: string;
+  categoryId?: string;
+  tagIds?: string[];
+  search?: string;
 }): Promise<ServiceResult<{
   items: TemplateListItem[];
   total: number;
@@ -74,6 +81,15 @@ export async function listTemplates(filters: {
     if (filters.status) {
       where.status = filters.status;
     }
+    if (filters.categoryId) {
+      where.categoryId = filters.categoryId;
+    }
+    if (filters.search) {
+      where.name = { contains: filters.search, mode: "insensitive" };
+    }
+    if (filters.tagIds && filters.tagIds.length > 0) {
+      where.tags = { some: { tagId: { in: filters.tagIds } } };
+    }
 
     const [rows, total] = await Promise.all([
       db.template.findMany({
@@ -83,6 +99,8 @@ export async function listTemplates(filters: {
         orderBy: { createdAt: "desc" },
         include: {
           createdBy: { select: { name: true } },
+          category: { select: { name: true } },
+          tags: { include: { tag: { select: { id: true, name: true } } } },
         },
       }),
       db.template.count({ where }),
@@ -114,6 +132,8 @@ export async function getTemplate(
         createdBy: { select: { name: true } },
         // P2: 包含关联的数据表信息
         dataTable: { select: { id: true, name: true } },
+        category: { select: { name: true } },
+        tags: { include: { tag: { select: { id: true, name: true } } } },
         currentVersion: {
           select: {
             id: true,
@@ -160,7 +180,7 @@ export async function getTemplate(
 }
 
 export async function createTemplate(
-  data: { name: string; description?: string; createdById: string },
+  data: { name: string; description?: string; createdById: string; categoryId?: string; tagIds?: string[] },
   fileBuffer: Buffer,
   originalName: string
 ): Promise<ServiceResult<TemplateListItem>> {
@@ -180,8 +200,28 @@ export async function createTemplate(
         fileSize: fileBuffer.length,
         status: "DRAFT",
         createdById: data.createdById,
+        categoryId: data.categoryId ?? null,
+      },
+      include: {
+        category: { select: { name: true } },
+        tags: { include: { tag: { select: { id: true, name: true } } } },
       },
     });
+
+    if (data.tagIds && data.tagIds.length > 0) {
+      await db.tagOnTemplate.createMany({
+        data: data.tagIds.map((tagId) => ({ templateId: id, tagId })),
+      });
+      // Re-fetch to include the newly created tags
+      const templateWithTags = await db.template.findUnique({
+        where: { id },
+        include: {
+          category: { select: { name: true } },
+          tags: { include: { tag: { select: { id: true, name: true } } } },
+        },
+      });
+      return { success: true, data: mapTemplateToListItem(templateWithTags!) };
+    }
 
     return { success: true, data: mapTemplateToListItem(template) };
   } catch (error) {
@@ -198,6 +238,8 @@ export async function updateTemplate(
     // P2: 新增字段
     dataTableId?: string | null;
     fieldMapping?: Record<string, string | null>;
+    categoryId?: string | null;
+    tagIds?: string[];
   }
 ): Promise<ServiceResult<TemplateListItem>> {
   try {
@@ -209,11 +251,35 @@ export async function updateTemplate(
     if (data.fieldMapping !== undefined) {
       updateData.fieldMapping = data.fieldMapping;
     }
+    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
 
     const template = await db.template.update({
       where: { id },
       data: updateData,
+      include: {
+        category: { select: { name: true } },
+        tags: { include: { tag: { select: { id: true, name: true } } } },
+      },
     });
+
+    // Handle tag updates: delete existing then create new ones
+    if (data.tagIds !== undefined) {
+      await db.tagOnTemplate.deleteMany({ where: { templateId: id } });
+      if (data.tagIds.length > 0) {
+        await db.tagOnTemplate.createMany({
+          data: data.tagIds.map((tagId) => ({ templateId: id, tagId })),
+        });
+      }
+      // Re-fetch to get updated tags
+      const templateWithTags = await db.template.findUnique({
+        where: { id },
+        include: {
+          category: { select: { name: true } },
+          tags: { include: { tag: { select: { id: true, name: true } } } },
+        },
+      });
+      return { success: true, data: mapTemplateToListItem(templateWithTags!) };
+    }
 
     return { success: true, data: mapTemplateToListItem(template) };
   } catch (error) {

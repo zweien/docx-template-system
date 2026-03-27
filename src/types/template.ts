@@ -8,6 +8,8 @@ export interface TemplateListItem {
   fileSize: number;
   status: string; // TemplateStatus enum value
   createdAt: string; // ISO date string
+  categoryName: string | null;
+  tags: { id: string; name: string }[];
 }
 
 export interface TemplateDetail extends TemplateListItem {
@@ -71,7 +73,3 @@ export interface TagItem {
   _count: { templates: number };
 }
 
-export interface TemplateListItemWithCategory extends TemplateListItem {
-  categoryName: string | null;
-  tags: { id: string; name: string }[];
-}

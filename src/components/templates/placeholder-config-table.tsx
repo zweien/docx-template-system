@@ -571,7 +571,9 @@ export function PlaceholderConfigTable({
                         }}
                       >
                         <SelectTrigger id="source-table">
-                          <SelectValue placeholder="选择数据表" />
+                          {sourceTableId && availableTables.length > 0
+                            ? availableTables.find((t) => t.id === sourceTableId)?.name ?? sourceTableId
+                            : <SelectValue placeholder="选择数据表" />}
                         </SelectTrigger>
                         <SelectContent>
                           {availableTables.map((t) => (
@@ -592,7 +594,11 @@ export function PlaceholderConfigTable({
                           onValueChange={setSourceField}
                         >
                           <SelectTrigger id="source-field">
-                            <SelectValue placeholder="选择字段" />
+                            {sourceField && availableTables.length > 0
+                              ? availableTables
+                                  .find((t) => t.id === sourceTableId)
+                                  ?.fields.find((f) => f.key === sourceField)?.label ?? sourceField
+                              : <SelectValue placeholder="选择字段" />}
                           </SelectTrigger>
                           <SelectContent>
                             {availableTables

@@ -17,7 +17,7 @@ export default async function BatchGenerationPage({ params }: PageProps) {
     select: { id: true, name: true, status: true, dataTableId: true },
   });
 
-  if (!template || template.status !== "READY") {
+  if (!template || template.status !== "PUBLISHED") {
     notFound();
   }
 

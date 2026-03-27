@@ -16,7 +16,7 @@ import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
-  READY: "可用",
+  PUBLISHED: "已发布",
   ARCHIVED: "已归档",
 };
 
@@ -25,14 +25,14 @@ const STATUS_VARIANTS: Record<
   "secondary" | "default" | "destructive"
 > = {
   DRAFT: "secondary",
-  READY: "default",
+  PUBLISHED: "default",
   ARCHIVED: "destructive",
 };
 
 const STATUS_TABS: { label: string; value: string }[] = [
   { label: "全部", value: "" },
   { label: "草稿", value: "DRAFT" },
-  { label: "可用", value: "READY" },
+  { label: "已发布", value: "PUBLISHED" },
   { label: "已归档", value: "ARCHIVED" },
 ];
 

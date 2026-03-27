@@ -239,7 +239,7 @@ export async function changeStatus(
   try {
     const template = await db.template.update({
       where: { id },
-      data: { status: status as "DRAFT" | "READY" | "ARCHIVED" },
+      data: { status: status as "DRAFT" | "PUBLISHED" | "ARCHIVED" },
     });
 
     return { success: true, data: mapTemplateToListItem(template) };

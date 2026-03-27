@@ -7,7 +7,7 @@ export type Role = (typeof ROLES)[keyof typeof ROLES];
 
 export const TEMPLATE_STATUS = {
   DRAFT: "DRAFT",
-  READY: "READY",
+  PUBLISHED: "PUBLISHED",
   ARCHIVED: "ARCHIVED",
 } as const;
 

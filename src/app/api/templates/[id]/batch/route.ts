@@ -36,8 +36,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "权限不足" }, { status: 403 });
   }
 
-  if (template.status !== "READY") {
-    return NextResponse.json({ error: "模板未就绪" }, { status: 400 });
+  if (template.status !== "PUBLISHED") {
+    return NextResponse.json({ error: "模板未发布" }, { status: 400 });
   }
 
   try {

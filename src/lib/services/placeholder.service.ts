@@ -147,6 +147,9 @@ export interface UpdatePlaceholderInput {
   required: boolean;
   defaultValue: string | null;
   sortOrder: number;
+  enablePicker?: boolean;
+  sourceTableId?: string | null;
+  sourceField?: string | null;
 }
 
 export async function updatePlaceholders(
@@ -182,11 +185,14 @@ export async function updatePlaceholders(
         defaultValue: item.defaultValue,
         sortOrder: item.sortOrder,
         templateId,
+        enablePicker: item.enablePicker ?? false,
+        sourceTableId: item.sourceTableId ?? null,
+        sourceField: item.sourceField ?? null,
       })),
     });
 
-    // If valid, also change template status to READY
-    await changeStatus(templateId, "READY");
+    // If valid, also change template status to PUBLISHED
+    await changeStatus(templateId, "PUBLISHED");
 
     // Retrieve the created placeholders
     const placeholders = await db.placeholder.findMany({

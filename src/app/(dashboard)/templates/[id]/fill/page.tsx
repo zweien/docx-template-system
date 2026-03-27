@@ -24,7 +24,7 @@ export default async function FillPage({
     },
   });
 
-  if (!template || template.status !== "READY") {
+  if (!template || template.status !== "PUBLISHED") {
     notFound();
   }
 

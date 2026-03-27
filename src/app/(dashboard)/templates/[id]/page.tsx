@@ -37,7 +37,7 @@ import { DataTableLinkWrapper } from "@/components/template/data-table-link-wrap
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
-  READY: "可用",
+  PUBLISHED: "已发布",
   ARCHIVED: "已归档",
 };
 
@@ -46,7 +46,7 @@ const STATUS_VARIANTS: Record<
   "secondary" | "default" | "destructive"
 > = {
   DRAFT: "secondary",
-  READY: "default",
+  PUBLISHED: "default",
   ARCHIVED: "destructive",
 };
 
@@ -130,7 +130,7 @@ export default async function TemplateDetailPage({
               配置占位符
             </Button>
           )}
-          {template.status === "READY" && (
+          {template.status === "PUBLISHED" && (
             <>
               <Button
                 variant="outline"

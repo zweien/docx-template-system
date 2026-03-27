@@ -31,11 +31,12 @@ model User {
   dataTables    DataTable[]
   dataRecords   DataRecord[]
   batchGenerations BatchGeneration[]
+  publishedTemplateVersions TemplateVersion[]
 }
 
 enum TemplateStatus {
   DRAFT
-  READY
+  PUBLISHED
   ARCHIVED
 }
 
@@ -59,6 +60,13 @@ model Template {
   drafts        Draft[]
   records       Record[]
   batchGenerations BatchGeneration[]
+  // 版本管理（新增）
+  currentVersionId String?  @unique
+  currentVersion   TemplateVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
+  versions         TemplateVersion[] @relation("TemplateVersions")
+
+
+  @@index([status, createdAt(sort: Desc)])
 }
 
 enum PlaceholderType {
@@ -83,6 +91,30 @@ model Placeholder {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   @@unique([templateId, key])
+}
+
+model TemplateVersion {
+  id                  String          @id @default(cuid())
+  version             Int
+  fileName            String
+  filePath            String
+  originalFileName    String
+  fileSize            Int
+  publishedAt         DateTime        @default(now())
+  placeholderSnapshot Json
+  dataTableId         String?
+  dataTable           DataTable?      @relation(fields: [dataTableId], references: [id])
+  fieldMapping        Json?
+  publishedById       String
+  publishedBy         User            @relation(fields: [publishedById], references: [id])
+  templateId          String
+  template            Template        @relation("TemplateVersions", fields: [templateId], references: [id], onDelete: Cascade)
+  isCurrentVersionOf  Template?       @relation("CurrentVersion")
+  records             Record[]
+  batchGenerations    BatchGeneration[]
+
+  @@unique([templateId, version])
+  @@index([templateId, version(sort: Desc)])
 }
 
 model Draft {
@@ -127,6 +159,7 @@ model DataTable {
   records     DataRecord[]
   templates        Template[]
   batchGenerations BatchGeneration[]
+  templateVersions TemplateVersion[]
   views        DataView[]
   createdBy   User         @relation(fields: [createdById], references: [id])
   createdById String
@@ -198,6 +231,8 @@ model Record {
   errorMessage String?
   dataRecordId String?
   dataRecord   DataRecord?  @relation(fields: [dataRecordId], references: [id], onDelete: SetNull)
+  templateVersionId   String?
+  templateVersion     TemplateVersion?  @relation(fields: [templateVersionId], references: [id])
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   @@index([userId])
@@ -233,6 +268,8 @@ model BatchGeneration {
   outputMethod    OutputMethod
   createdById     String
   createdBy       User         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  templateVersionId   String?
+  templateVersion     TemplateVersion?  @relation(fields: [templateVersionId], references: [id])
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 

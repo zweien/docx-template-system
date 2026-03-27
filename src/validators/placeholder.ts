@@ -8,6 +8,9 @@ export const placeholderItemSchema = z.object({
   required: z.boolean(),
   defaultValue: z.string().nullable(),
   sortOrder: z.number().int().min(0),
+  enablePicker: z.boolean().default(false),
+  sourceTableId: z.string().nullable().default(null),
+  sourceField: z.string().nullable().default(null),
 });
 
 export const updatePlaceholdersSchema = z.object({

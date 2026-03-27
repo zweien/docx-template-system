@@ -29,7 +29,7 @@ export default async function DashboardPage() {
   const [totalTemplates, readyTemplates, monthlyRecords, drafts, totalUsers, todayRecords] =
     await Promise.all([
       db.template.count(),
-      db.template.count({ where: { status: "READY" } }),
+      db.template.count({ where: { status: "PUBLISHED" } }),
       session?.user?.id
         ? db.record.count({
             where: {

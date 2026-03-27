@@ -6,13 +6,12 @@ import { FileText, FileOutput } from "lucide-react";
 export default async function GeneratePage() {
 
   const templates = await db.template.findMany({
-    where: { status: "READY" },
+    where: { status: "PUBLISHED" },
     select: {
       id: true,
       name: true,
       originalFileName: true,
       createdAt: true,
-      _count: { select: { placeholders: true } },
     },
     orderBy: { createdAt: "desc" },
   });
@@ -57,8 +56,7 @@ export default async function GeneratePage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span>{t._count.placeholders} 个占位符</span>
+                  <div className="flex items-center justify-end text-xs text-muted-foreground">
                     <span>{t.createdAt.toLocaleDateString("zh-CN")}</span>
                   </div>
                 </CardContent>

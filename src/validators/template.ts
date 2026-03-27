@@ -3,6 +3,8 @@ import { z } from "zod";
 export const createTemplateSchema = z.object({
   name: z.string().min(1, "模板名称不能为空").max(100),
   description: z.string().max(500).optional(),
+  categoryId: z.string().optional(),
+  tagIds: z.array(z.string()).optional(),
 });
 
 // 字段映射验证：key -> string | null
@@ -15,6 +17,8 @@ export const updateTemplateSchema = z.object({
   // P2: 模板关联主数据表
   dataTableId: z.string().nullable().optional(),
   fieldMapping: fieldMappingSchema,
+  categoryId: z.string().nullable().optional(),
+  tagIds: z.array(z.string()).optional(),
 });
 
 export const templateQuerySchema = z.object({

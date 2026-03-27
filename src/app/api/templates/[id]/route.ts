@@ -65,6 +65,8 @@ export async function PUT(
       description?: string;
       dataTableId?: string | null;
       fieldMapping?: Record<string, string | null>;
+      categoryId?: string | null;
+      tagIds?: string[];
     } = {};
 
     if (parsed.name !== undefined) updateData.name = parsed.name;
@@ -72,6 +74,8 @@ export async function PUT(
     // P2: 处理关联字段
     if (parsed.dataTableId !== undefined) updateData.dataTableId = parsed.dataTableId;
     if (parsed.fieldMapping !== undefined) updateData.fieldMapping = parsed.fieldMapping;
+    if (parsed.categoryId !== undefined) updateData.categoryId = parsed.categoryId;
+    if (parsed.tagIds !== undefined) updateData.tagIds = parsed.tagIds;
 
     // Only call updateTemplate if there's something to update
     if (Object.keys(updateData).length > 0) {

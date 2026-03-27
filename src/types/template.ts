@@ -24,6 +24,7 @@ export type TemplateFieldMapping = Record<string, string | null>;
 
 // 扩展 TemplateDetail 包含关联信息
 export interface TemplateWithRelation extends TemplateDetail {
+  categoryId: string | null;
   dataTableId: string | null;
   dataTable?: {
     id: string;

@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlaceholderConfigTable, type PlaceholderConfigTableHandle } from "./placeholder-config-table";
+import { CategorySelect } from "./category-select";
+import { TagMultiSelect } from "./tag-multi-select";
 
 // ── Types ──
 
@@ -37,6 +39,8 @@ interface TemplateInfo {
   placeholderCount: number;
   currentVersion?: { id: string; version: number; publishedAt: string } | null;
   nextVersion: number;
+  categoryId?: string | null;
+  tags?: { id: string; name: string }[];
 }
 
 const STEPS = [
@@ -59,6 +63,8 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
   // Step 1 state
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [tagIds, setTagIds] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [currentFileName, setCurrentFileName] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
@@ -103,6 +109,8 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
       if (data) {
         setName(data.name);
         setDescription(data.description ?? "");
+        setCategoryId(data.categoryId ?? null);
+        setTagIds(data.tags?.map((t: { id: string; name: string }) => t.id) ?? []);
         setCurrentFileName(data.originalFileName || data.fileName);
       }
       setLoadingTemplate(false);
@@ -207,6 +215,11 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
       return;
     }
 
+    if (!categoryId) {
+      toast.error("请选择分类");
+      return;
+    }
+
     if (!isEditMode && !file) {
       toast.error("请上传 .docx 文件");
       return;
@@ -226,7 +239,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
         const res = await fetch(`/api/templates/${workingTemplateId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, description }),
+          body: JSON.stringify({ name, description, categoryId, tagIds }),
         });
 
         if (!res.ok) {
@@ -257,6 +270,8 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
         const formData = new FormData();
         formData.append("name", name);
         formData.append("description", description);
+        formData.append("categoryId", categoryId || "");
+        formData.append("tagIds", tagIds.join(","));
         formData.append("file", file);
 
         const res = await fetch("/api/templates", {
@@ -493,6 +508,20 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
                   placeholder="简要描述模板用途"
                   rows={3}
                 />
+              </div>
+
+              {/* Category */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  分类 <span className="text-destructive">*</span>
+                </label>
+                <CategorySelect value={categoryId} onChange={setCategoryId} />
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">标签（可选）</label>
+                <TagMultiSelect value={tagIds} onChange={setTagIds} />
               </div>
             </div>
           )}

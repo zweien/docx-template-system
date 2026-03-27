@@ -156,6 +156,7 @@ export async function getTemplate(
       success: true,
       data: {
         ...mapTemplateToListItem(template),
+        categoryId: template.categoryId,
         description: template.description,
         createdById: template.createdById,
         placeholders: template.placeholders.map(mapPlaceholderItem),

@@ -62,6 +62,9 @@ export async function POST(request: NextRequest) {
 
     const name = (formData.get("name") as string) || "";
     const description = (formData.get("description") as string) || undefined;
+    const categoryId = (formData.get("categoryId") as string) || undefined;
+    const tagIdsStr = (formData.get("tagIds") as string) || undefined;
+    const tagIds = tagIdsStr ? tagIdsStr.split(",").filter(Boolean) : undefined;
     const file = formData.get("file") as File | null;
 
     if (!file) {
@@ -82,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     const arrayBuffer = await file.arrayBuffer();
     const result = await templateService.createTemplate(
-      { ...parsed, createdById: session.user.id },
+      { ...parsed, createdById: session.user.id, categoryId, tagIds },
       Buffer.from(arrayBuffer),
       file.name
     );

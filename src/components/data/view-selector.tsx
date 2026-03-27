@@ -8,7 +8,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Bookmark, ChevronDown, Filter, ArrowUp, ArrowDown } from "lucide-react";
+import { toast } from "sonner";
+import { Bookmark, ChevronDown, Filter, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import type { DataViewItem } from "@/types/data-table";
 
 interface ViewSelectorProps {
@@ -66,6 +67,26 @@ export function ViewSelector({
     setOpen(false);
   };
 
+  const handleDeleteView = async (e: React.MouseEvent, viewId: string, viewName: string) => {
+    e.stopPropagation();
+    try {
+      const res = await fetch(`/api/data-tables/${tableId}/views/${viewId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        toast.error("删除视图失败");
+        return;
+      }
+      setViews((prev) => prev.filter((v) => v.id !== viewId));
+      if (currentViewId === viewId) {
+        onViewChange(null);
+      }
+      toast.success(`已删除视图「${viewName}」`);
+    } catch {
+      toast.error("删除视图失败");
+    }
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
@@ -101,9 +122,9 @@ export function ViewSelector({
 
             {/* View list */}
             {views.map((view) => (
-              <button
+              <div
                 key={view.id}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors ${
+                className={`group flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors cursor-pointer ${
                   view.id === currentViewId ? "font-medium" : ""
                 }`}
                 onClick={() => handleSelectView(view.id)}
@@ -122,7 +143,14 @@ export function ViewSelector({
                     )
                   )}
                 </span>
-              </button>
+                <button
+                  className="shrink-0 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-destructive transition-opacity"
+                  onClick={(e) => handleDeleteView(e, view.id, view.name)}
+                  title="删除视图"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
             ))}
 
             {views.length > 0 && <Separator />}

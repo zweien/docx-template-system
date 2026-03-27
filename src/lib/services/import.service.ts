@@ -10,6 +10,39 @@ import type {
   DataFieldItem,
 } from "@/types/data-table";
 import type { ImportOptionsInput } from "@/validators/data-table";
+import { FieldType } from "@/generated/prisma/enums";
+
+// ── Helpers ──
+
+/**
+ * Convert a raw Excel value to the appropriate format for a DATE field.
+ * Handles: JS Date objects (from cellDates:true), Excel serial numbers, ISO strings.
+ */
+function toDateValue(value: unknown): string | unknown {
+  if (value instanceof Date) {
+    return value.toISOString().split("T")[0]; // "YYYY-MM-DD"
+  }
+  if (typeof value === "number") {
+    // Excel serial number to date
+    const date = new Date((value - 25569) * 86400 * 1000);
+    return date.toISOString().split("T")[0];
+  }
+  return value;
+}
+
+/**
+ * Normalize an import value based on the target field type.
+ */
+function normalizeImportValue(value: unknown, fieldType: FieldType): unknown {
+  if (fieldType === "DATE" && value !== null && value !== undefined && value !== "") {
+    return toDateValue(value);
+  }
+  if (fieldType === "NUMBER" && typeof value === "string") {
+    const num = Number(value);
+    return isNaN(num) ? value : num;
+  }
+  return value;
+}
 
 // ── Excel Parsing ──
 
@@ -17,7 +50,7 @@ export async function parseExcel(
   buffer: Buffer
 ): Promise<ServiceResult<ImportPreview>> {
   try {
-    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
 
     // Get first sheet
     const sheetName = workbook.SheetNames[0];
@@ -45,7 +78,8 @@ export async function parseExcel(
     const rows = jsonData.slice(1, 6).map((row) => {
       const record: Record<string, unknown> = {};
       columns.forEach((col, index) => {
-        record[col] = row[index];
+        const val = row[index];
+        record[col] = val instanceof Date ? val.toISOString().split("T")[0] : val;
       });
       return record;
     });
@@ -172,11 +206,14 @@ export async function importData(
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
 
-      // Map Excel columns to field keys
+      // Map Excel columns to field keys with type normalization
       const mappedData: Record<string, unknown> = {};
       for (const [excelCol, fieldKey] of Object.entries(mapping)) {
         if (fieldKey && row[excelCol] !== undefined) {
-          mappedData[fieldKey] = row[excelCol];
+          const field = _fields.find((f) => f.key === fieldKey);
+          mappedData[fieldKey] = field
+            ? normalizeImportValue(row[excelCol], field.type)
+            : row[excelCol];
         }
       }
 

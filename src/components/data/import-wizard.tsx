@@ -9,11 +9,17 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from "sonner";
 import type { DataFieldItem, ImportPreview, ImportResult } from "@/types/data-table";
+import {
+  CreateFieldDialog,
+  type CreateFieldFormData,
+} from "@/components/data/create-field-dialog";
 
 interface ImportWizardProps {
   tableId?: string;
@@ -33,6 +39,10 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
+
+  // 创建字段相关 state
+  const [localFields, setLocalFields] = useState<DataFieldItem[]>(fields);
+  const [createFieldForColumn, setCreateFieldForColumn] = useState<string | null>(null);
 
   // Step 1: Upload
   const handleUpload = useCallback(async () => {
@@ -65,7 +75,7 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
       const initialMapping: Record<string, string | null> = {};
       data.columns.forEach((col: string) => {
         // Try to auto-match by label or key
-        const matchedField = fields.find(
+        const matchedField = localFields.find(
           (f) =>
             f.label.toLowerCase() === col.toLowerCase() ||
             f.key.toLowerCase() === col.toLowerCase()
@@ -79,7 +89,75 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [file, tableId, fields]);
+  }, [file, tableId, localFields]);
+
+  // 创建新字段
+  const handleCreateField = useCallback(
+    async (formData: CreateFieldFormData) => {
+      if (!createFieldForColumn || !tableId) return;
+
+      setError("");
+
+      const newField = {
+        key: formData.key,
+        label: formData.label,
+        type: formData.type,
+        required: formData.required,
+        options: formData.options.length > 0 ? formData.options : null,
+        defaultValue: formData.defaultValue || null,
+        sortOrder: localFields.length,
+      };
+
+      // 构建完整字段列表发送到后端
+      const updatedFields = [...localFields, newField];
+
+      try {
+        const response = await fetch(`/api/data-tables/${tableId}/fields`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fields: updatedFields }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || "创建字段失败");
+          return;
+        }
+
+        // 更新本地字段列表
+        setLocalFields(data);
+
+        // 自动将新字段映射到触发列
+        const createdField = data.find(
+          (f: DataFieldItem) => f.key === formData.key
+        );
+        if (createdField) {
+          setMapping((prev) => ({
+            ...prev,
+            [createFieldForColumn]: createdField.key,
+          }));
+        }
+
+        toast.success(`字段「${formData.label}」创建成功`);
+        setCreateFieldForColumn(null);
+      } catch (_err) {
+        setError("创建字段失败，请稍后重试");
+      }
+    },
+    [createFieldForColumn, tableId, localFields]
+  );
+
+  // Select 下拉变更处理
+  const handleMappingChange = (col: string, value: string | null) => {
+    if (value === "__create_new__") {
+      // 将该列 mapping 重置为 null，打开创建字段 Dialog
+      setMapping((prev) => ({ ...prev, [col]: null }));
+      setCreateFieldForColumn(col);
+    } else {
+      setMapping((prev) => ({ ...prev, [col]: value || null }));
+    }
+  };
 
   // Step 3: Import
   const handleImport = useCallback(async () => {
@@ -191,7 +269,7 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
         <div>
           <h2 className="text-lg font-medium">字段映射</h2>
           <p className="text-zinc-500 text-sm mt-1">
-            将 Excel 列映射到数据表字段
+            将 Excel 列映射到数据表字段，也可以新建字段
           </p>
         </div>
 
@@ -203,20 +281,22 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
               <div className="flex-1">
                 <Select
                   value={mapping[col] ?? ""}
-                  onValueChange={(v) => {
-                    setMapping({ ...mapping, [col]: v || null });
-                  }}
+                  onValueChange={(v) => handleMappingChange(col, v)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="不导入" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">不导入</SelectItem>
-                    {fields.map((f) => (
+                    {localFields.map((f) => (
                       <SelectItem key={f.id} value={f.key}>
                         {f.label} ({f.key})
                       </SelectItem>
                     ))}
+                    <SelectSeparator />
+                    <SelectItem value="__create_new__">
+                      + 新建字段
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -257,7 +337,7 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
               <SelectValue placeholder="选择用于判断重复的字段" />
             </SelectTrigger>
             <SelectContent>
-              {fields.map((f) => (
+              {localFields.map((f) => (
                 <SelectItem key={f.id} value={f.key}>
                   {f.label} ({f.key})
                 </SelectItem>
@@ -420,6 +500,19 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
         {step === "options" && renderOptionsStep()}
         {step === "result" && renderResultStep()}
       </div>
+
+      {/* Create Field Dialog */}
+      {createFieldForColumn && (
+        <CreateFieldDialog
+          open={!!createFieldForColumn}
+          onOpenChange={(open) => {
+            if (!open) setCreateFieldForColumn(null);
+          }}
+          columnLabel={createFieldForColumn}
+          existingKeys={localFields.map((f) => f.key)}
+          onSubmit={handleCreateField}
+        />
+      )}
     </div>
   );
 }

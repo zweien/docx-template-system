@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Parse Excel
     const buffer = Buffer.from(await file.arrayBuffer());
-    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);

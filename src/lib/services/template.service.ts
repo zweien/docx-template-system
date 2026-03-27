@@ -233,6 +233,11 @@ export async function deleteTemplate(id: string): Promise<ServiceResult<null>> {
       };
     }
 
+    // Delete associated records in order of foreign key dependencies
+    await db.draft.deleteMany({ where: { templateId: id } });
+    await db.record.deleteMany({ where: { templateId: id } });
+    await db.placeholder.deleteMany({ where: { templateId: id } });
+    await db.templateVersion.deleteMany({ where: { templateId: id } });
     await db.template.delete({ where: { id } });
     await deleteTemplateDir(id);
 

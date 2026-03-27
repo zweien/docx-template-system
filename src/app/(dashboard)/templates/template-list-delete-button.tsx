@@ -15,7 +15,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-export function DeleteTemplateButton({
+export function TemplateListDeleteButton({
   templateId,
   templateName,
 }: {
@@ -36,7 +36,6 @@ export function DeleteTemplateButton({
       if (res.ok) {
         toast.success("模板已删除");
         setOpen(false);
-        router.push("/templates");
         router.refresh();
       } else {
         const data = await res.json().catch(() => null);
@@ -53,9 +52,13 @@ export function DeleteTemplateButton({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="destructive" size="sm">
-            <Trash2 className="h-4 w-4" />
-            删除模板
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span className="sr-only">删除</span>
           </Button>
         }
       />

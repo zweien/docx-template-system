@@ -11,8 +11,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, ChevronLeft, ChevronRight, Pencil, Trash2, Eye, FileText } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, Pencil, Eye, FileText } from "lucide-react";
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
+import { TemplateListDeleteButton } from "./template-list-delete-button";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
@@ -203,14 +204,10 @@ export default async function TemplatesPage({
                             <Pencil className="h-3.5 w-3.5" />
                             <span className="sr-only">编辑</span>
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-xs"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            <span className="sr-only">删除</span>
-                          </Button>
+                          <TemplateListDeleteButton
+                            templateId={template.id}
+                            templateName={template.name}
+                          />
                         </>
                       )}
                     </div>

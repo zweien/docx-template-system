@@ -260,9 +260,6 @@ export async function updateFields(
   tableId: string,
   fields: DataFieldInput[]
 ): Promise<ServiceResult<DataFieldItem[]>> {
-  // Invalidate cache before update
-  invalidateCache(`table:${tableId}`);
-
   try {
     // Validate fields
     const validationResult = validateFields(fields);
@@ -297,6 +294,9 @@ export async function updateFields(
         orderBy: { sortOrder: "asc" },
       });
     });
+
+    // Invalidate cache AFTER transaction commits to prevent stale cache
+    invalidateCache(`table:${tableId}`);
 
     return {
       success: true,

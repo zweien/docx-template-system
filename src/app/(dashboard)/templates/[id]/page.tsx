@@ -259,7 +259,7 @@ export default async function TemplateDetailPage({
                   variant="link"
                   size="sm"
                   render={
-                    <Link href={`/templates/${template.id}/configure`} />
+                    <Link href={`/templates/${template.id}/edit`} />
                   }
                 >
                   前往配置
@@ -303,7 +303,7 @@ export default async function TemplateDetailPage({
                               size="icon-xs"
                               render={
                                 <Link
-                                  href={`/templates/${template.id}/configure`}
+                                  href={`/templates/${template.id}/edit`}
                                 />
                               }
                             >

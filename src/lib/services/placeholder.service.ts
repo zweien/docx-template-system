@@ -181,6 +181,7 @@ export interface UpdatePlaceholderInput {
   enablePicker?: boolean;
   sourceTableId?: string | null;
   sourceField?: string | null;
+  columns?: { key: string; label: string }[];
 }
 
 export async function updatePlaceholders(
@@ -219,6 +220,7 @@ export async function updatePlaceholders(
         enablePicker: item.enablePicker ?? false,
         sourceTableId: item.sourceTableId ?? null,
         sourceField: item.sourceField ?? null,
+        columns: item.columns ?? undefined,
       })),
     });
 

@@ -76,8 +76,6 @@ export default async function TemplatesPage({
       select: {
         id: true,
         name: true,
-        fileName: true,
-        originalFileName: true,
         status: true,
         createdAt: true,
         createdBy: {
@@ -90,6 +88,9 @@ export default async function TemplatesPage({
           select: {
             tag: { select: { id: true, name: true } },
           },
+        },
+        currentVersion: {
+          select: { version: true },
         },
       },
     }),
@@ -184,7 +185,7 @@ export default async function TemplatesPage({
             <TableRow>
               <TableHead className="w-[100px]">分类</TableHead>
               <TableHead className="w-[30%]">名称</TableHead>
-              <TableHead>文件名</TableHead>
+              <TableHead>版本</TableHead>
               <TableHead className="w-[150px]">标签</TableHead>
               <TableHead className="w-[100px]">状态</TableHead>
               <TableHead className="w-[100px]">创建者</TableHead>
@@ -225,8 +226,8 @@ export default async function TemplatesPage({
                     )}
                   </TableCell>
                   <TableCell className="font-medium">{template.name}</TableCell>
-                  <TableCell className="text-muted-foreground max-w-[200px] truncate" title={template.originalFileName}>
-                    {template.originalFileName || template.fileName}
+                  <TableCell className="text-muted-foreground">
+                    {template.currentVersion ? `v${template.currentVersion.version}` : "—"}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">

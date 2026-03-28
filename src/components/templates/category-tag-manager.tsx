@@ -120,12 +120,12 @@ export function CategoryTagManager({ open, onOpenChange }: CategoryTagManagerPro
       const json = await res.json();
 
       if (!res.ok) {
-        toast.error(json.error?.message || "添加分类失败");
+        toast.error(json.error?.message || json.error || "添加分类失败");
         return;
       }
 
       if (json.success) {
-        setCategories((prev) => [...prev, json.data]);
+        setCategories((prev) => [...prev, { ...json.data, _count: { templates: 0 } }]);
         setCatName("");
         setCatSortOrder("");
         toast.success("分类添加成功");
@@ -143,7 +143,7 @@ export function CategoryTagManager({ open, onOpenChange }: CategoryTagManagerPro
       const json = await res.json();
 
       if (!res.ok) {
-        toast.error(json.error?.message || "删除分类失败");
+        toast.error(json.error?.message || json.error || "删除分类失败");
         return;
       }
 
@@ -175,18 +175,17 @@ export function CategoryTagManager({ open, onOpenChange }: CategoryTagManagerPro
       const json = await res.json();
 
       if (!res.ok) {
-        toast.error(json.error?.message || "添加标签失败");
+        toast.error(json.error?.message || json.error || "添加标签失败");
         return;
       }
 
       if (json.success) {
-        setTags((prev) => [...prev, json.data]);
+        setTags((prev) => [...prev, { ...json.data, _count: { templates: 0 } }]);
         setTagName("");
         toast.success("标签添加成功");
       }
     } catch (error) {
       toast.error("添加标签失败");
-      console.error("添加标签失败:", error);
     }
   }, [tagName]);
 
@@ -197,7 +196,7 @@ export function CategoryTagManager({ open, onOpenChange }: CategoryTagManagerPro
       const json = await res.json();
 
       if (!res.ok) {
-        toast.error(json.error?.message || "删除标签失败");
+        toast.error(json.error?.message || json.error || "删除标签失败");
         return;
       }
 

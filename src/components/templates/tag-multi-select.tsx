@@ -69,7 +69,7 @@ export function TagMultiSelect({ value, onChange }: TagMultiSelectProps) {
       });
       if (!res.ok) {
         const data = await res.json().catch(() => null);
-        toast.error(data?.error?.message || "创建标签失败");
+        toast.error(data?.error?.message || data?.error || "创建标签失败");
         return;
       }
       const data = await res.json();

@@ -113,9 +113,9 @@ export default async function TemplateDetailPage({
       </Button>
 
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1 min-w-0">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight">
               {template.name}
             </h1>
@@ -132,7 +132,7 @@ export default async function TemplateDetailPage({
         </div>
 
         {/* Action buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {template.currentVersion && (
             <VersionHistoryDialogWrapper templateId={template.id} />
           )}

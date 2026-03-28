@@ -55,3 +55,6 @@ public/uploads/documents/*
 python-service/.venv/
 __pycache__/
 *.pyc
+
+# Playwright browser automation logs
+.playwright-cli/

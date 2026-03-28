@@ -37,27 +37,31 @@ model Placeholder {
 ```
 
 同步更新：
-- `src/types/placeholder.ts` — `PlaceholderItem` 增加 `description: string | null`
-- `src/lib/services/placeholder.service.ts` — `mapPlaceholderItem` 映射新字段
-- 占位符快照类型 `PlaceholderSnapshotItem` 增加 `description`
+- `src/types/placeholder.ts` — `PlaceholderItem` 增加 `description: string | null`；`PlaceholderWithSource` 增加 `description: string | null`；`PlaceholderSnapshotItem` 增加 `description: string | null`
+- `src/lib/services/placeholder.service.ts` — `mapPlaceholderItem` 辅助函数的参数类型和返回值增加 `description`；`updatePlaceholder` 单条更新方法的 data 参数增加 `description?: string | null`；`UpdatePlaceholderInput` 批量更新接口增加 `description: string | null`
+- `src/lib/services/template-version.service.ts` — `toSnapshotItem` 辅助函数增加 `description` 映射
+- `src/validators/placeholder.ts` — `placeholderItemSchema` 增加 `description: z.string().nullable().default(null)`；`updatePlaceholderSchema` 增加 `description: z.string().nullable().optional()`
 
 ### 配置入口
 
-**占位符配置表格** (`placeholder-config-table.tsx`):
+**占位符配置表格** (`src/components/templates/placeholder-config-table.tsx`):
+- 本地 `PlaceholderRow` 接口增加 `description?: string` 字段
+- `fetchPlaceholders` 回调中的映射逻辑增加 `description` 字段
 - 表格新增"备注"列，位于"标签"列之后
 - 内联文本输入，失焦或回车保存
-- 调用 `PATCH /api/placeholders/[id]` 更新
-
-**单字段编辑弹窗** (如果存在):
-- 在标签和输入类型之间增加"备注"多行文本框
-- 保存时一并提交
+- 调用 `PATCH /api/placeholders/[id]` 仅更新 `description` 字段（独立于批量保存）
+- 批量保存（`handleSave`）通过 `PUT /api/templates/[id]/placeholders` 时也传递 `description`
 
 ### 展示入口
 
-**填写表单** (`dynamic-form.tsx`):
+**填写表单** (`src/components/forms/dynamic-form.tsx`):
+- 组件内本地 `Placeholder` 接口增加 `description?: string | null`
 - 每个字段的 label 和 input 之间，如果 `description` 有值，渲染一行说明文字
-- 样式: `<p className="text-xs text-muted-foreground">{description}</p>`
+- 样式: `<p className="text-xs text-muted-foreground">{ph.description}</p>`
 - 仅在 description 非空时渲染，无额外间距变化
+
+**填写页数据传递** (`src/app/(dashboard)/templates/[id]/fill/page.tsx`):
+- 将 `template.placeholders` 映射到 `DynamicForm` props 时增加 `description: p.description`
 
 示例效果：
 ```
@@ -68,7 +72,8 @@ model Placeholder {
 
 ### API 变更
 
-`PATCH /api/placeholders/[id]` — 接受 `description` 字段更新。
+- `PATCH /api/placeholders/[id]` — 接受 `description` 字段更新（在 `updatePlaceholder` 服务方法中增加 `description` 处理）
+- `PUT /api/templates/[id]/placeholders` — 批量更新接口中的 `placeholderItemSchema` 已包含 `description`，确保 `updatePlaceholders` 服务的 `createMany` 写入 `description`
 
 ## 3. 生成文档页面实时筛选
 
@@ -90,7 +95,7 @@ model Placeholder {
 const filtered = templates.filter(t => {
   if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false;
   if (categoryId && t.categoryId !== categoryId) return false;
-  if (tagIds.length > 0 && !tagIds.some(tid => t.tags.some(t => t.tag.id === tid))) return false;
+  if (tagIds.length > 0 && !tagIds.some(tid => t.tags.some(tTag => tTag.tag.id === tid))) return false;
   return true;
 });
 ```
@@ -109,7 +114,7 @@ const filtered = templates.filter(t => {
 
 - 表格"文件名"列 → 改为"版本"列
 - 显示 `v{version}`（有 currentVersion 时），无版本显示 `—`
-- 查询时 include `currentVersion: { select: { version: true } }`
+- 查询时在 select 中增加 `currentVersion: { select: { version: true } }`（当前使用 select 模式，非 include）
 
 ### 生成文档页
 
@@ -121,23 +126,19 @@ const filtered = templates.filter(t => {
 
 ### 查询变更
 
-两个页面的模板查询都需要 include `currentVersion`:
+两个页面的模板查询都需要获取 `currentVersion`：
 
-```typescript
-include: {
-  currentVersion: { select: { version: true } },
-  // ... 其他现有 include
-}
-```
+- **模板管理页** (`templates/page.tsx`): 当前使用 `select` 模式，在现有 select 对象中增加 `currentVersion: { select: { version: true } }`
+- **生成文档页** (`generate/page.tsx`): 当前使用 `select` 模式，在现有 select 对象中增加 `currentVersion: { select: { version: true } }`
 
 ## 影响范围
 
 | 功能 | 新增文件 | 修改文件 |
 |------|----------|----------|
-| 仪表盘链接 | 0 | 1 (page.tsx) |
-| 字段备注 | 0 | ~5 (schema, types, service, config-table, dynamic-form) |
-| 实时搜索 | 1 (client component) | 1 (generate page) |
-| 版本显示 | 0 | 2 (templates page, generate page) |
+| 仪表盘链接 | 0 | 1 (`src/app/(dashboard)/page.tsx`) |
+| 字段备注 | 0 | ~9 (`schema.prisma`, `src/types/placeholder.ts`, `src/validators/placeholder.ts`, `src/lib/services/placeholder.service.ts`, `src/lib/services/template-version.service.ts`, `src/components/templates/placeholder-config-table.tsx`, `src/components/forms/dynamic-form.tsx`, `src/app/(dashboard)/templates/[id]/fill/page.tsx`, `src/app/api/placeholders/[id]/route.ts`) |
+| 实时搜索 | 1 (client component) | 1 (`src/app/(dashboard)/generate/page.tsx`) |
+| 版本显示 | 0 | 2 (`src/app/(dashboard)/templates/page.tsx`, `src/app/(dashboard)/generate/page.tsx`) |
 
 ## 不做的事
 

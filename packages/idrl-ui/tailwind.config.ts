@@ -32,7 +32,6 @@ const config: Config = {
         foreground: "var(--color-text-primary)",
         "foreground-secondary": "var(--color-text-secondary)",
         "foreground-muted": "var(--color-text-muted)",
-        primary: "var(--color-primary-600)",
         "primary-foreground": "#ffffff",
         secondary: "var(--color-neutral-100)",
         "secondary-foreground": "var(--color-neutral-700)",

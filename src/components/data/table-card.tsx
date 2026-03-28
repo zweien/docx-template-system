@@ -46,19 +46,15 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
   };
 
   return (
-    <Card className="hover:border-zinc-400 transition-colors">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <CardTitle className="text-base flex items-center gap-2">
-              {table.icon && <span>{table.icon}</span>}
-              <Link
-                href={`/data/${table.id}`}
-                className="hover:underline"
-              >
+    <Link href={`/data/${table.id}`}>
+      <Card className="hover:border-zinc-400 transition-colors cursor-pointer h-full">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="space-y-1">
+              <CardTitle className="text-xl flex items-center gap-2">
+                {table.icon && <span>{table.icon}</span>}
                 {table.name}
-              </Link>
-            </CardTitle>
+              </CardTitle>
             {table.description && (
               <CardDescription className="line-clamp-2">
                 {table.description}
@@ -145,6 +141,7 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
           </div>
         </div>
       </CardContent>
-    </Card>
+      </Card>
+    </Link>
   );
 }

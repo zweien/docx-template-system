@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
@@ -97,7 +96,7 @@ export function Sidebar() {
       {/* Logo / Brand */}
       <div className="flex h-14 items-center border-b border-zinc-800 px-4 shrink-0">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <Image
+          <img
             src="/logo.png"
             alt="IDRL填表系统"
             width={28}

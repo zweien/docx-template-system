@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -95,7 +94,7 @@ export function MobileNav() {
       <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
         <SheetHeader className="px-4 py-4 border-b shrink-0">
           <SheetTitle className="flex items-center gap-2">
-            <Image
+            <img
               src="/logo.png"
               alt="IDRL填表系统"
               width={24}

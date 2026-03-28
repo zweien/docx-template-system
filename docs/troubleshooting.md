@@ -1,0 +1,128 @@
+# 故障排查
+
+## `http://localhost:8060/` 打不开
+
+先检查是否有进程监听：
+
+```bash
+lsof -iTCP:8060 -sTCP:LISTEN -n -P
+```
+
+如果没有输出：
+
+```bash
+cd "/home/z/test-hub/docx-template-system"
+npm run dev
+```
+
+## `next dev` 启动后很快失效，日志出现 `ENOSPC`
+
+这是 Linux 文件监听数量上限问题。
+
+当前仓库已经通过两种方式规避：
+
+- `npm run dev` 默认走 `webpack`
+- `next.config.ts` 开启轮询并忽略无关目录
+
+如果仍然出现：
+
+1. 检查是否绕过了 `npm run dev`，直接手敲了别的 `next dev`
+2. 确认没有同时开很多重复的开发进程
+3. 再考虑提升系统 `inotify` 限制
+
+## `/login` 能开，但点击统一登录失败
+
+先检查：
+
+- `AUTHENTIK_ISSUER`
+- `AUTHENTIK_CLIENT_ID`
+- `AUTHENTIK_CLIENT_SECRET`
+- authentik 后台 Redirect URI
+
+正确回调地址应为：
+
+```text
+http://localhost:8060/api/auth/callback/authentik
+```
+
+## 登录成功后没有管理员权限
+
+先确认 authentik 用户邮箱是否和本地用户邮箱一致。
+
+当前本地角色认领规则：
+
+- 优先按 `oidcSubject`
+- 其次按邮箱认领已有本地用户
+
+如果需要首次自动成为管理员：
+
+- 把邮箱加入 `AUTHENTIK_ADMIN_EMAILS`
+- 或者在本地“用户管理”中手动把该邮箱设为 `ADMIN`
+
+## 退出后再次进入还是自动登录
+
+先确认两件事：
+
+1. 前端是否经过 `/api/auth/sso-logout-url`
+2. authentik 后台是否启用了正确的退出失效流程
+
+如果只清本地 Session，没有清 authentik SSO，会出现“退出后再次进入自动登录”。
+
+## `redirect_uri mismatch`
+
+这通常是 authentik 后台和本地代码配置不一致。
+
+检查：
+
+- authentik 应用 Redirect URI
+- `.env.local` 里的 issuer 和站点地址
+- 是否把 `localhost`、`127.0.0.1`、端口、路径写混了
+
+## `invalid_client`
+
+先检查：
+
+- `AUTHENTIK_CLIENT_ID`
+- `AUTHENTIK_CLIENT_SECRET`
+
+最常见原因：
+
+- 从错误的 Provider 复制了凭据
+- 修改 `.env.local` 后没有重启开发服务
+
+## dashboard 首屏很慢
+
+先区分两类慢：
+
+### 首次编译慢
+
+表现：
+
+- 某些页面第一次打开会明显慢
+- 第二次打开明显变快
+
+这通常是开发态编译成本，不是运行时错误。
+
+### 请求链路慢
+
+表现：
+
+- 每次都慢
+- 日志里 `proxy.ts` 或 `application-code` 耗时一直高
+
+建议先看 dev 日志，再判断是：
+
+- 页面本身数据加载慢
+- API 查询慢
+- 认证链路重复请求
+
+## 数据页接口慢
+
+当前已经优化过两条高频接口：
+
+- [`src/app/api/data-tables/[id]/records/route.ts`](/home/z/test-hub/docx-template-system/src/app/api/data-tables/[id]/records/route.ts)
+- [`src/app/api/data-tables/[id]/views/route.ts`](/home/z/test-hub/docx-template-system/src/app/api/data-tables/[id]/views/route.ts)
+
+它们现在直接从 JWT 取路由用户，不再走 `getServerSession()`。
+
+如果后续还有类似热点，可以继续沿这个方向收敛其它高频 Route Handler。

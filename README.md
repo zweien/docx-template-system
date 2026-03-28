@@ -12,6 +12,8 @@
 
 模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。
 
+当前开发环境已接入 `authentik` 统一认证，默认不再使用本地账号密码登录。
+
 ## 功能特性
 
 - **模板管理** — 上传、编辑、发布、归档 Word 模板，支持版本历史
@@ -30,7 +32,7 @@
 | 前端框架 | Next.js 16 (App Router) |
 | UI 组件 | shadcn/ui v4 (Base UI), Tailwind CSS 4 |
 | 数据库 | PostgreSQL + Prisma 7 (Driver Adapter) |
-| 认证 | NextAuth v4 (JWT) |
+| 认证 | NextAuth v4 + authentik OIDC |
 | 文档生成 | Python FastAPI + python-docx |
 | 验证 | Zod |
 | 测试 | Vitest + Testing Library |
@@ -42,10 +44,11 @@
 - Node.js >= 20
 - Python >= 3.10
 - PostgreSQL
+- 本地 `authentik` 统一认证实例，默认使用 `http://127.0.0.1:9000`
 
 ### 环境变量
 
-复制 `.env.example` 为 `.env.local` 并填写：
+项目当前没有提供 `.env.example`。请直接创建 `.env.local` 并填写：
 
 ```bash
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/docx_template_system"
@@ -60,18 +63,25 @@ AUTHENTIK_LOGOUT_REDIRECT_URL="http://127.0.0.1:8081"
 AUTHENTIK_ADMIN_EMAILS="admin@example.com,asfd@qqc.co"
 ```
 
+关键说明：
+
+- `AUTHENTIK_ISSUER` 必须指向 authentik 中对应应用的 issuer，例如 `http://127.0.0.1:9000/application/o/docx-template-system`
+- `AUTHENTIK_CLIENT_ID` 和 `AUTHENTIK_CLIENT_SECRET` 只能从 authentik 后台复制
+- `AUTHENTIK_ADMIN_EMAILS` 只用于首次统一登录时自动赋予本地 `ADMIN` 角色
+- 本地 `User.role` 仍然保留，统一认证只负责“是谁”，业务权限仍由本系统负责
+
 ### 安装与运行
 
 ```bash
-# 1. 安装依赖
+# 1. 安装 Node.js 依赖
 npm install
 
-# 2. 初始化数据库
+# 2. 初始化数据库结构和基础数据
 npx prisma db push
 npx prisma generate
 npx prisma db seed
 
-# 3. 安装 Python 服务依赖
+# 3. 安装 Python 文档生成服务依赖
 cd python-service
 python -m venv .venv
 .venv/bin/pip install -r requirements.txt
@@ -89,6 +99,8 @@ npm run dev
 
 - `npm run dev` 和 `npm run build` 默认使用 `webpack`
 - 原因是当前开发环境下，Next.js 16 默认 Turbopack 会受到系统 file watch limit 和 `python-service/.venv` 符号链接问题影响
+- `next.config.ts` 已显式改成开发态轮询监听，并排除了 `.venv`、`.git`、`.next`、`.worktrees` 等大目录
+- 访问入口为 `http://localhost:8060`
 
 打开 http://localhost:8060/login ，点击“前往统一登录”：
 
@@ -100,6 +112,8 @@ npm run dev
 - `admin@example.com` -> `ADMIN`
 - `asfd@qqc.co` -> `ADMIN`
 - 其它首次登录用户默认会创建为 `USER`
+
+如果你需要先在本地库里准备角色映射，可直接在“用户管理”中新增邮箱和角色。该页面不再维护本地密码，只维护本地业务身份映射。
 
 ### 常用命令
 
@@ -114,6 +128,12 @@ npx prisma db push   # 同步数据库 schema
 npx prisma generate  # 生成 Prisma Client
 npx prisma studio    # 数据库可视化工具
 ```
+
+## 文档索引
+
+- [认证接入说明](./docs/authentication.md)
+- [开发运行说明](./docs/development.md)
+- [故障排查](./docs/troubleshooting.md)
 
 ## 模板语法
 
@@ -164,6 +184,15 @@ python-service/
 ```
 
 三层后端模式：`types/` → `validators/` → `services/` → API Routes。
+
+## 认证边界
+
+- `authentik` 负责统一登录、OIDC 授权、退出登录
+- `NextAuth` 负责把 OIDC 用户映射为本地 Session
+- 本地数据库 `User` 表继续保留 `role`
+- 页面和 API 权限判断仍以本地 `role` 为准
+
+也就是说，这次改造只替换了“登录来源”，没有把业务权限搬到统一认证中心。
 
 ## License
 

@@ -3,7 +3,7 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-interface HeaderProps extends React.HTMLAttributes<HTMLHeaderElement> {
+interface HeaderProps extends React.HTMLAttributes<HTMLElement> {
   children?: React.ReactNode
 }
 

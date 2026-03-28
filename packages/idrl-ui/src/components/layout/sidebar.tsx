@@ -12,7 +12,7 @@ interface NavItem {
   icon: LucideIcon
 }
 
-interface SidebarProps extends React.HTMLAttributes<HTMLaside> {
+interface SidebarProps extends React.HTMLAttributes<HTMLElement> {
   navItems: NavItem[]
 }
 

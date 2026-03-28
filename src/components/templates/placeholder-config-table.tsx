@@ -49,6 +49,7 @@ interface PlaceholderRow {
   sourceTableId?: string | null;
   sourceField?: string | null;
   columns?: TableColumn[];
+  description?: string;
 }
 
 interface DataTableWithFields {
@@ -107,6 +108,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                 sourceTableId: ph.sourceTableId ?? null,
                 sourceField: ph.sourceField ?? null,
                 columns: ph.columns as TableColumn[] | undefined,
+                description: (ph.description as string) ?? "",
               }) as PlaceholderRow
           )
         );
@@ -255,6 +257,8 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                   enablePicker: ph.enablePicker ?? false,
                   sourceTableId: ph.sourceTableId ?? null,
                   sourceField: ph.sourceField ?? null,
+                  columns: ph.columns as TableColumn[] | undefined,
+                  description: (ph.description as string) ?? "",
                 }) as PlaceholderRow
             )
           );
@@ -430,6 +434,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
               <TableRow>
                 <TableHead className="w-[140px]">键名</TableHead>
                 <TableHead className="min-w-[160px]">标签</TableHead>
+                <TableHead className="min-w-[160px]">备注</TableHead>
                 <TableHead className="w-[130px]">输入类型</TableHead>
                 <TableHead className="w-[70px]">必填</TableHead>
                 <TableHead className="w-[140px]">默认值</TableHead>
@@ -453,6 +458,36 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                         updateRow(index, "label", e.target.value)
                       }
                       placeholder="输入标签"
+                      className="h-7 text-sm"
+                    />
+                  </TableCell>
+
+                  {/* Description - editable with inline save */}
+                  <TableCell>
+                    <Input
+                      value={row.description ?? ""}
+                      onChange={(e) =>
+                        updateRow(index, "description", e.target.value)
+                      }
+                      onBlur={() => {
+                        if (row.id && row.description !== undefined) {
+                          fetch(`/api/placeholders/${row.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ description: row.description || null }),
+                          }).catch(() => {});
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && row.id) {
+                          fetch(`/api/placeholders/${row.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ description: row.description || null }),
+                          }).catch(() => {});
+                        }
+                      }}
+                      placeholder="备注说明"
                       className="h-7 text-sm"
                     />
                   </TableCell>
@@ -491,7 +526,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
 
                   {row.inputType === "TABLE" ? (
                     /* TABLE type: show columns preview */
-                    <TableCell colSpan={3}>
+                    <TableCell colSpan={4}>
                       {row.columns && row.columns.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
                           {row.columns.map((col) => (

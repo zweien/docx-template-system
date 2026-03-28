@@ -11,7 +11,7 @@ export const placeholderItemSchema = z.object({
   enablePicker: z.boolean().default(false),
   sourceTableId: z.string().nullable().default(null),
   sourceField: z.string().nullable().default(null),
-  columns: z.array(z.object({ key: z.string(), label: z.string().min(1) })).optional(),
+  columns: z.array(z.object({ key: z.string(), label: z.string().min(1) })).nullable().optional(),
   description: z.string().nullable().default(null),
 });
 
@@ -34,7 +34,7 @@ export const updatePlaceholderSchema = z.object({
   sourceTableId: z.string().nullable().optional(),
   sourceField: z.string().nullable().optional(),
   enablePicker: z.boolean().optional(),
-  columns: z.array(z.object({ key: z.string(), label: z.string().min(1) })).optional(),
+  columns: z.array(z.object({ key: z.string(), label: z.string().min(1) })).nullable().optional(),
   description: z.string().nullable().optional(),
 });
 

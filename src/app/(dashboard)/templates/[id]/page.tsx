@@ -131,7 +131,7 @@ export default async function TemplateDetailPage({
           )}
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons — icon-only on mobile, icon+text on sm+ */}
         <div className="flex flex-wrap items-center gap-2 shrink-0">
           {template.currentVersion && (
             <VersionHistoryDialogWrapper templateId={template.id} />
@@ -139,26 +139,29 @@ export default async function TemplateDetailPage({
           {isAdmin && (
             <Button
               variant="outline"
+              size="sm"
               render={<Link href={`/templates/${template.id}/edit`} />}
             >
               <Pencil className="h-4 w-4" />
-              编辑
+              <span className="hidden sm:inline">编辑</span>
             </Button>
           )}
           {template.status === "PUBLISHED" && (
             <>
               <Button
                 variant="outline"
+                size="sm"
                 render={<Link href={`/templates/${template.id}/batch`} />}
               >
                 <Files className="h-4 w-4" />
-                批量生成
+                <span className="hidden sm:inline">批量生成</span>
               </Button>
               <Button
+                size="sm"
                 render={<Link href={`/templates/${template.id}/fill`} />}
               >
                 <PenLine className="h-4 w-4" />
-                填写表单
+                <span className="hidden sm:inline">填写表单</span>
               </Button>
             </>
           )}

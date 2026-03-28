@@ -10,9 +10,9 @@ export function VersionHistoryDialogWrapper({ templateId }: { templateId: string
 
   return (
     <>
-      <Button variant="outline" onClick={() => setOpen(true)}>
+      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
         <History className="h-4 w-4" />
-        版本历史
+        <span className="hidden sm:inline">版本历史</span>
       </Button>
       <VersionHistoryDialog
         templateId={templateId}

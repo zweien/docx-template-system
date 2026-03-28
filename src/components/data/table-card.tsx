@@ -48,10 +48,10 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
   return (
     <Link href={`/data/${table.id}`}>
       <Card className="hover:border-zinc-400 transition-colors cursor-pointer h-full">
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
-              <CardTitle className="text-xl flex items-center gap-2">
+              <CardTitle className="text-lg flex items-center gap-2">
                 {table.icon && <span>{table.icon}</span>}
                 {table.name}
               </CardTitle>
@@ -100,7 +100,7 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
           )}
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         <div className="flex items-center gap-4 text-sm text-zinc-500">
           <div className="flex items-center gap-1">
             <svg

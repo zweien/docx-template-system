@@ -123,15 +123,15 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
           </Link>
         </div>
       ) : filtered.length === 0 ? null : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filtered.map((t) => (
             <Link key={t.id} href={`/templates/${t.id}/fill`}>
               <Card className="h-full transition-colors hover:bg-accent cursor-pointer">
-                <CardContent className="flex flex-col gap-3 p-5">
+                <CardContent className="flex flex-col gap-3 p-4">
                   <div className="flex items-start gap-3">
                     <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                     <div className="min-w-0 flex-1">
-                      <h3 className="text-xl font-semibold leading-tight truncate">{t.name}</h3>
+                      <h3 className="text-lg font-semibold leading-tight truncate">{t.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
                         {t.currentVersion && (
                           <Badge variant="secondary" className="text-xs">

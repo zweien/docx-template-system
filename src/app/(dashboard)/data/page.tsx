@@ -58,7 +58,7 @@ export default async function DataPage() {
           {isAdmin && <CreateTableDialog trigger={<Button>新建数据表</Button>} />}
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {tables.map((table) => (
             <TableCard
               key={table.id}

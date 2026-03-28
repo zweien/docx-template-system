@@ -72,6 +72,7 @@ export default async function FillPage({
           sourceField: p.sourceField,
           enablePicker: p.enablePicker,
           columns: p.columns as Array<{ key: string; label: string }> | undefined,
+          description: p.description,
         }))}
         initialData={initialData as Record<string, string | Record<string, string>[]> | undefined}
         draftId={draftId}

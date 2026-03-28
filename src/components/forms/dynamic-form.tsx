@@ -25,6 +25,7 @@ interface Placeholder {
   sourceField?: string | null;
   enablePicker: boolean;
   columns?: Array<{ key: string; label: string }>;
+  description?: string | null;
 }
 
 interface TableField {
@@ -247,6 +248,9 @@ export function DynamicForm({
                     <span className="text-destructive ml-1">*</span>
                   )}
                 </Label>
+                {ph.description && (
+                  <p className="text-xs text-muted-foreground">{ph.description}</p>
+                )}
                 {ph.inputType === "TABLE" ? (
                   <DynamicTableField
                     label={ph.label}

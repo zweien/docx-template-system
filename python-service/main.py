@@ -108,16 +108,22 @@ def process_table_block(table, block_name, rows_data, form_data):
     tr_elements = table_element.findall(f".//{ns}tr")
     anchor_idx = min(start_row_idx, len(tr_elements)) if tr_elements else 0
     anchor = tr_elements[anchor_idx] if anchor_idx < len(tr_elements) else None
+    insertion_point = None
 
     # Clone and insert rows for each data item
     for item in rows_data:
         for row_xml in template_rows_xml:
             new_row = deepcopy(row_xml)
             _replace_in_row_xml(new_row, item)
-            if anchor is not None:
-                anchor.addnext(new_row)
+            if insertion_point is not None:
+                insertion_point.addnext(new_row)
+                insertion_point = new_row
+            elif anchor is not None:
+                anchor.addprevious(new_row)
+                insertion_point = new_row
             else:
                 table_element.append(new_row)
+                insertion_point = new_row
 
 
 def _replace_in_row_xml(row_xml, data):

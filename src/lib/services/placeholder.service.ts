@@ -207,6 +207,15 @@ export async function updatePlaceholders(
       };
     }
 
+    const existingPlaceholders = await db.placeholder.findMany({
+      where: { templateId },
+    });
+    const existingTableColumns = new Map(
+      existingPlaceholders
+        .filter((item) => item.inputType === "TABLE")
+        .map((item) => [item.key, item.columns as { key: string; label: string }[] | undefined])
+    );
+
     // Delete all existing placeholders
     await db.placeholder.deleteMany({ where: { templateId } });
 
@@ -223,7 +232,10 @@ export async function updatePlaceholders(
         enablePicker: item.enablePicker ?? false,
         sourceTableId: item.sourceTableId ?? null,
         sourceField: item.sourceField ?? null,
-        columns: item.columns ?? undefined,
+        columns:
+          item.inputType === "TABLE"
+            ? (item.columns ?? existingTableColumns.get(item.key) ?? undefined)
+            : undefined,
         description: item.description ?? null,
       })),
     });

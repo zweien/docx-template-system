@@ -10,8 +10,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DOCX Template System",
-  description: "Word document template management system",
+  title: "IDRL填表系统",
+  description: "IDRL在线填表系统",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/logo.svg",
+  },
 };
 
 export default function RootLayout({

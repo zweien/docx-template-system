@@ -15,7 +15,7 @@ const routeTitles: Record<string, string> = {
 export function Header() {
   const pathname = usePathname();
 
-  const title = routeTitles[pathname] ?? "DOCX 模板系统";
+  const title = routeTitles[pathname] ?? "IDRL填表系统";
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 sm:gap-4 border-b bg-background px-3 sm:px-6">

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useState, useEffect, useCallback } from "react";
@@ -10,11 +11,11 @@ import {
   FileText,
   History,
   PenLine,
-  ShieldCheck,
   Database,
   Users,
   PanelLeftClose,
   PanelLeftOpen,
+  Image,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNav } from "@/components/layout/user-nav";
@@ -97,14 +98,20 @@ export function Sidebar() {
       {/* Logo / Brand */}
       <div className="flex h-14 items-center border-b border-zinc-800 px-4 shrink-0">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <ShieldCheck className="h-6 w-6 text-white shrink-0 transition-transform group-hover:scale-110" />
+          <Image
+            src="/logo.svg"
+            alt="IDRL填表系统"
+            width={28}
+            height={28}
+            className="shrink-0 transition-transform group-hover:scale-110"
+          />
           <span
             className={cn(
               "text-base font-semibold text-white tracking-tight whitespace-nowrap transition-opacity duration-200",
               collapsed && "opacity-0 w-0 overflow-hidden"
             )}
           >
-            DOCX 模板系统
+            IDRL填表系统
           </span>
         </Link>
       </div>

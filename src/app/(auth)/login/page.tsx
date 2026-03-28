@@ -56,7 +56,7 @@ function LoginForm() {
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">登录</CardTitle>
         <CardDescription>
-          使用统一认证中心登录 DOCX 模板系统
+          使用统一认证中心登录 IDRL填表系统
         </CardDescription>
       </CardHeader>
       <CardContent>

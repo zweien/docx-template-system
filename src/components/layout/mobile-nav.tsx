@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
@@ -10,7 +11,6 @@ import {
   FileText,
   History,
   PenLine,
-  ShieldCheck,
   Database,
   Menu,
   X,
@@ -95,8 +95,13 @@ export function MobileNav() {
       <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
         <SheetHeader className="px-4 py-4 border-b shrink-0">
           <SheetTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold">DOCX 模板系统</span>
+            <Image
+              src="/logo.svg"
+              alt="IDRL填表系统"
+              width={24}
+              height={24}
+            />
+            <span className="text-lg font-semibold">IDRL填表系统</span>
           </SheetTitle>
         </SheetHeader>
 

@@ -23,6 +23,7 @@ function mapPlaceholderItem(row: {
   sourceField: string | null;
   enablePicker: boolean;
   columns: unknown;
+  description: string | null;
 }): PlaceholderItem {
   return {
     id: row.id,
@@ -36,6 +37,7 @@ function mapPlaceholderItem(row: {
     sourceField: row.sourceField,
     enablePicker: row.enablePicker,
     columns: row.columns as TableGridColumn[] | undefined,
+    description: row.description,
   };
 }
 
@@ -182,6 +184,7 @@ export interface UpdatePlaceholderInput {
   sourceTableId?: string | null;
   sourceField?: string | null;
   columns?: { key: string; label: string }[];
+  description?: string | null;
 }
 
 export async function updatePlaceholders(
@@ -221,6 +224,7 @@ export async function updatePlaceholders(
         sourceTableId: item.sourceTableId ?? null,
         sourceField: item.sourceField ?? null,
         columns: item.columns ?? undefined,
+        description: item.description ?? null,
       })),
     });
 
@@ -275,6 +279,7 @@ export async function updatePlaceholder(
     sourceTableId?: string | null;
     sourceField?: string | null;
     enablePicker?: boolean;
+    description?: string | null;
   }
 ): Promise<ServiceResult<PlaceholderWithSource>> {
   try {
@@ -287,6 +292,7 @@ export async function updatePlaceholder(
     if (data.sourceTableId !== undefined) updateData.sourceTableId = data.sourceTableId;
     if (data.sourceField !== undefined) updateData.sourceField = data.sourceField;
     if (data.enablePicker !== undefined) updateData.enablePicker = data.enablePicker;
+    if (data.description !== undefined) updateData.description = data.description;
 
     const placeholder = await db.placeholder.update({
       where: { id },

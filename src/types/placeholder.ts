@@ -16,6 +16,7 @@ export interface PlaceholderItem {
   sourceField: string | null;
   enablePicker: boolean;
   columns?: TableGridColumn[];
+  description: string | null;
 }
 
 export interface PlaceholderWithSource {
@@ -30,6 +31,7 @@ export interface PlaceholderWithSource {
   sourceField: string | null;
   enablePicker: boolean;
   columns?: unknown;
+  description: string | null;
 }
 
 // 占位符快照项（用于版本存储）
@@ -43,5 +45,6 @@ export interface PlaceholderSnapshotItem {
   enablePicker: boolean;
   sourceTableId: string | null;
   sourceField: string | null;
+  description: string | null;
   snapshotVersion: 1;
 }

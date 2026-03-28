@@ -12,6 +12,7 @@ export const placeholderItemSchema = z.object({
   sourceTableId: z.string().nullable().default(null),
   sourceField: z.string().nullable().default(null),
   columns: z.array(z.object({ key: z.string(), label: z.string().min(1) })).optional(),
+  description: z.string().nullable().default(null),
 });
 
 export const updatePlaceholdersSchema = z.object({
@@ -34,6 +35,7 @@ export const updatePlaceholderSchema = z.object({
   sourceField: z.string().nullable().optional(),
   enablePicker: z.boolean().optional(),
   columns: z.array(z.object({ key: z.string(), label: z.string().min(1) })).optional(),
+  description: z.string().nullable().optional(),
 });
 
 export type UpdatePlaceholderSourceInput = z.infer<typeof updatePlaceholderSourceSchema>;

@@ -42,6 +42,7 @@ function toSnapshotItem(row: {
   enablePicker: boolean;
   sourceTableId: string | null;
   sourceField: string | null;
+  description: string | null;
 }): PlaceholderSnapshotItem {
   return {
     key: row.key,
@@ -53,6 +54,7 @@ function toSnapshotItem(row: {
     enablePicker: row.enablePicker,
     sourceTableId: row.sourceTableId,
     sourceField: row.sourceField,
+    description: row.description,
     snapshotVersion: 1,
   };
 }

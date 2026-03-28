@@ -33,7 +33,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       body.inputType !== undefined ||
       body.required !== undefined ||
       body.defaultValue !== undefined ||
-      body.sortOrder !== undefined;
+      body.sortOrder !== undefined ||
+      body.description !== undefined;
 
     if (hasOnlySourceFields && !hasGeneralFields) {
       const validated = updatePlaceholderSourceSchema.parse(body);

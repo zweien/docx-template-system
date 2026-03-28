@@ -122,6 +122,7 @@ model Placeholder {
   sourceField    String?
   enablePicker   Boolean         @default(false)
   columns   Json?
+  description String?   // 字段备注/说明
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
   @@unique([templateId, key])

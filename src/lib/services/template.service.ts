@@ -46,6 +46,7 @@ function mapPlaceholderItem(row: {
   sourceTableId: string | null;
   sourceField: string | null;
   enablePicker: boolean;
+  description: string | null;
 }): PlaceholderItem {
   return {
     id: row.id,
@@ -58,6 +59,7 @@ function mapPlaceholderItem(row: {
     sourceTableId: row.sourceTableId,
     sourceField: row.sourceField,
     enablePicker: row.enablePicker,
+    description: row.description,
   };
 }
 

@@ -47,15 +47,15 @@ export default async function DashboardPage() {
 
   const stats = isAdmin
     ? [
-        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, iconColor: "text-green-500" },
-        { label: "模板总数", value: totalTemplates, icon: FileText, iconColor: "text-blue-500" },
-        { label: "总用户数", value: totalUsers, icon: Users, iconColor: "text-indigo-500" },
-        { label: "今日生成", value: todayRecords, icon: History, iconColor: "text-orange-500" },
+        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, iconColor: "text-green-500", href: "/generate" },
+        { label: "模板总数", value: totalTemplates, icon: FileText, iconColor: "text-blue-500", href: "/templates" },
+        { label: "总用户数", value: totalUsers, icon: Users, iconColor: "text-indigo-500", href: "/admin/users" },
+        { label: "今日生成", value: todayRecords, icon: History, iconColor: "text-orange-500", href: "/records" },
       ]
     : [
-        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, iconColor: "text-green-500" },
-        { label: "本月生成", value: monthlyRecords, icon: History, iconColor: "text-orange-500" },
-        { label: "我的草稿", value: drafts, icon: PenLine, iconColor: "text-purple-500" },
+        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, iconColor: "text-green-500", href: "/generate" },
+        { label: "本月生成", value: monthlyRecords, icon: History, iconColor: "text-orange-500", href: "/records" },
+        { label: "我的草稿", value: drafts, icon: PenLine, iconColor: "text-purple-500", href: "/drafts" },
       ];
 
   return (
@@ -75,7 +75,9 @@ export default async function DashboardPage() {
             <Card key={stat.label}>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.label}
+                  <Link href={stat.href} className="hover:underline">
+                    {stat.label}
+                  </Link>
                 </CardTitle>
                 <Icon className={`h-4 w-4 ${stat.iconColor}`} />
               </CardHeader>

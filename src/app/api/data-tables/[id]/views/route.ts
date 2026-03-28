@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getRouteSessionUser } from "@/lib/auth";
 import { z } from "zod";
 import { listViews, createView } from "@/lib/services/data-view.service";
 
@@ -24,8 +24,8 @@ interface RouteParams {
 }
 
 export async function GET(_request: NextRequest, { params }: RouteParams) {
-  const session = await auth();
-  if (!session?.user) {
+  const user = await getRouteSessionUser(_request);
+  if (!user) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
 
@@ -40,12 +40,12 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
-  const session = await auth();
-  if (!session?.user) {
+  const user = await getRouteSessionUser(request);
+  if (!user) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
 
-  if (session.user.role !== "ADMIN") {
+  if (user.role !== "ADMIN") {
     return NextResponse.json({ error: "权限不足" }, { status: 403 });
   }
 

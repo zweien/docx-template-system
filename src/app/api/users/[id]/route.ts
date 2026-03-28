@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { hash } from "bcryptjs";
 import { z } from "zod";
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "姓名不能为空").optional(),
   email: z.string().email("邮箱格式不正确").optional(),
-  password: z.string().min(6, "密码至少6位").optional(),
   role: z.enum(["USER", "ADMIN"]).optional(),
 });
 
@@ -34,6 +32,7 @@ export async function GET(
         id: true,
         name: true,
         email: true,
+        oidcSubject: true,
         role: true,
         createdAt: true,
         updatedAt: true,
@@ -98,10 +97,6 @@ export async function PUT(
     if (updates.name) data.name = updates.name;
     if (updates.email) data.email = updates.email;
     if (updates.role) data.role = updates.role;
-    if (updates.password) {
-      data.password = await hash(updates.password, 10);
-    }
-
     const user = await db.user.update({
       where: { id },
       data,
@@ -109,6 +104,7 @@ export async function PUT(
         id: true,
         name: true,
         email: true,
+        oidcSubject: true,
         role: true,
         createdAt: true,
         updatedAt: true,

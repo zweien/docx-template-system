@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { hash } from "bcryptjs";
 import { z } from "zod";
 
 const createUserSchema = z.object({
   name: z.string().min(1, "姓名不能为空"),
   email: z.string().email("邮箱格式不正确"),
-  password: z.string().min(6, "密码至少6位"),
   role: z.enum(["USER", "ADMIN"]).optional(),
 });
 
@@ -62,6 +60,7 @@ export async function GET(request: NextRequest) {
           id: true,
           name: true,
           email: true,
+          oidcSubject: true,
           role: true,
           createdAt: true,
           updatedAt: true,
@@ -106,7 +105,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, email, password, role } = createUserSchema.parse(body);
+    const { name, email, role } = createUserSchema.parse(body);
 
     // Check if email already exists
     const existing = await db.user.findUnique({ where: { email } });
@@ -114,19 +113,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "邮箱已被注册" }, { status: 400 });
     }
 
-    const hashedPassword = await hash(password, 10);
-
     const user = await db.user.create({
       data: {
         name,
         email,
-        password: hashedPassword,
         role: role || "USER",
       },
       select: {
         id: true,
         name: true,
         email: true,
+        oidcSubject: true,
         role: true,
         createdAt: true,
       },

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getRouteSessionUser } from "@/lib/auth";
 import { listRecords, createRecord } from "@/lib/services/data-record.service";
 import { createRecordSchema } from "@/validators/data-table";
 import type { FieldFilters } from "@/lib/services/data-record.service";
@@ -10,8 +10,8 @@ interface RouteParams {
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  const session = await auth();
-  if (!session?.user) {
+  const user = await getRouteSessionUser(request);
+  if (!user) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
 
@@ -94,13 +94,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
-  const session = await auth();
-  if (!session?.user) {
+  const user = await getRouteSessionUser(request);
+  if (!user) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
 
   // Only ADMIN can create records
-  if (session.user.role !== "ADMIN") {
+  if (user.role !== "ADMIN") {
     return NextResponse.json({ error: "权限不足" }, { status: 403 });
   }
 
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const validated = createRecordSchema.parse(body);
 
-    const result = await createRecord(session.user.id, id, validated.data);
+    const result = await createRecord(user.id, id, validated.data);
 
     if (!result.success) {
       if (result.error.code === "NOT_FOUND") {

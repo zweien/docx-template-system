@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
-import { SessionProvider } from "@/components/providers/session-provider";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -29,9 +28,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SessionProvider>
-            {children}
-          </SessionProvider>
+          {children}
           <Toaster />
         </ThemeProvider>
       </body>

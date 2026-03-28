@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ const roleLabels: Record<string, string> = {
 
 export function UserNav() {
   const { data: session } = useSession();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   if (!session?.user) {
     return null;
@@ -30,6 +32,22 @@ export function UserNav() {
 
   const roleLabel =
     roleLabels[session.user.role as string] ?? session.user.role;
+
+  async function handleLogout() {
+    setIsLoggingOut(true);
+
+    try {
+      const response = await fetch("/api/auth/sso-logout-url");
+      const data = (await response.json()) as { url?: string };
+
+      await signOut({ redirect: false });
+      window.location.assign(data.url || "/login");
+    } catch {
+      await signOut({ callbackUrl: "/login" });
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
 
   return (
     <DropdownMenu>
@@ -57,10 +75,11 @@ export function UserNav() {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           variant="destructive"
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          disabled={isLoggingOut}
+          onClick={handleLogout}
         >
           <LogOut />
-          退出登录
+          {isLoggingOut ? "退出中..." : "退出登录"}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

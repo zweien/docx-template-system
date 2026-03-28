@@ -27,7 +27,7 @@
 
 | 层级 | 技术 |
 |------|------|
-| 前端框架 | Next.js 16 (App Router, Turbopack) |
+| 前端框架 | Next.js 16 (App Router) |
 | UI 组件 | shadcn/ui v4 (Base UI), Tailwind CSS 4 |
 | 数据库 | PostgreSQL + Prisma 7 (Driver Adapter) |
 | 认证 | NextAuth v4 (JWT) |
@@ -53,6 +53,11 @@ NEXTAUTH_SECRET="your-random-secret"
 NEXTAUTH_URL="http://localhost:8060"
 UPLOAD_DIR="public/uploads"
 PYTHON_SERVICE_URL="http://localhost:8065"
+AUTHENTIK_ISSUER="http://127.0.0.1:9000/application/o/docx-template-system"
+AUTHENTIK_CLIENT_ID="从 authentik 复制"
+AUTHENTIK_CLIENT_SECRET="从 authentik 复制"
+AUTHENTIK_LOGOUT_REDIRECT_URL="http://127.0.0.1:8081"
+AUTHENTIK_ADMIN_EMAILS="admin@example.com,asfd@qqc.co"
 ```
 
 ### 安装与运行
@@ -80,18 +85,27 @@ cd ..
 npm run dev
 ```
 
-打开 http://localhost:8060 ，使用以下账号登录：
+说明：
 
-| 角色 | 邮箱 | 密码 |
-|------|------|------|
-| 管理员 | admin@example.com | admin123 |
-| 用户 | user@example.com | user123 |
+- `npm run dev` 和 `npm run build` 默认使用 `webpack`
+- 原因是当前开发环境下，Next.js 16 默认 Turbopack 会受到系统 file watch limit 和 `python-service/.venv` 符号链接问题影响
+
+打开 http://localhost:8060/login ，点击“前往统一登录”：
+
+- `akadmin`
+- 密码使用当前 authentik 实例中的管理员密码
+
+如果 `authentik` 中用户邮箱与本地用户邮箱一致，会自动认领本地角色：
+
+- `admin@example.com` -> `ADMIN`
+- `asfd@qqc.co` -> `ADMIN`
+- 其它首次登录用户默认会创建为 `USER`
 
 ### 常用命令
 
 ```bash
-npm run dev          # 启动开发服务器 (端口 8060)
-npm run build        # 生产构建
+npm run dev          # 启动开发服务器 (webpack, 端口 8060)
+npm run build        # 生产构建 (webpack)
 npm run start        # 启动生产服务
 npm run lint         # ESLint 检查
 npm run test         # 运行测试 (watch 模式)

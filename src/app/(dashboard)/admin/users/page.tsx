@@ -14,7 +14,6 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +49,7 @@ interface UserItem {
   id: string;
   name: string;
   email: string;
+  oidcSubject?: string | null;
   role: "USER" | "ADMIN";
   createdAt: string;
   updatedAt: string;
@@ -89,7 +89,6 @@ export default function UsersPage() {
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    password: "",
     role: "USER" as "USER" | "ADMIN",
   });
 
@@ -152,7 +151,6 @@ export default function UsersPage() {
     setFormData({
       name: "",
       email: "",
-      password: "",
       role: "USER",
     });
     setDialogOpen(true);
@@ -163,7 +161,6 @@ export default function UsersPage() {
     setFormData({
       name: user.name,
       email: user.email,
-      password: "",
       role: user.role,
     });
     setDialogOpen(true);
@@ -172,11 +169,6 @@ export default function UsersPage() {
   const handleSubmit = async () => {
     if (!formData.name.trim() || !formData.email.trim()) {
       toast.error("姓名和邮箱不能为空");
-      return;
-    }
-
-    if (!editingUser && !formData.password.trim()) {
-      toast.error("密码不能为空");
       return;
     }
 
@@ -190,11 +182,6 @@ export default function UsersPage() {
         email: formData.email.trim(),
         role: formData.role,
       };
-
-      // Only include password if provided
-      if (formData.password.trim()) {
-        body.password = formData.password;
-      }
 
       const res = await fetch(url, {
         method,
@@ -261,7 +248,7 @@ export default function UsersPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">用户管理</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            管理系统用户账户和权限
+            管理本地用户角色映射，登录认证统一交给 authentik
           </p>
         </div>
         <Button onClick={openCreateDialog} className="w-full sm:w-auto">
@@ -313,6 +300,7 @@ export default function UsersPage() {
                   <tr>
                     <th className="text-left px-4 py-3 text-sm font-medium">用户</th>
                     <th className="text-left px-4 py-3 text-sm font-medium">角色</th>
+                    <th className="text-left px-4 py-3 text-sm font-medium">统一登录绑定</th>
                     <th className="text-left px-4 py-3 text-sm font-medium">统计数据</th>
                     <th className="text-left px-4 py-3 text-sm font-medium">创建时间</th>
                     <th className="text-right px-4 py-3 text-sm font-medium">操作</th>
@@ -342,6 +330,11 @@ export default function UsersPage() {
                           ) : (
                             "普通用户"
                           )}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge variant={user.oidcSubject ? "default" : "outline"}>
+                          {user.oidcSubject ? "已绑定" : "待首次登录绑定"}
                         </Badge>
                       </td>
                       <td className="px-4 py-3">
@@ -398,6 +391,12 @@ export default function UsersPage() {
                     </div>
                     <Badge variant={user.role === "ADMIN" ? "default" : "secondary"}>
                       {user.role === "ADMIN" ? "管理员" : "用户"}
+                    </Badge>
+                  </div>
+
+                  <div>
+                    <Badge variant={user.oidcSubject ? "default" : "outline"}>
+                      {user.oidcSubject ? "已绑定统一登录" : "待首次登录绑定"}
                     </Badge>
                   </div>
 
@@ -493,18 +492,6 @@ export default function UsersPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">
-                密码 {editingUser && <span className="text-muted-foreground">(留空保持不变)</span>}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder={editingUser ? "留空保持原密码" : "输入密码"}
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="role">角色</Label>
               <Select
                 value={formData.role}
@@ -521,6 +508,9 @@ export default function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
+            <p className="text-sm text-muted-foreground">
+              用户首次通过统一认证中心登录后，会按邮箱自动绑定到本地角色映射。
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
@@ -540,7 +530,7 @@ export default function UsersPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>确认删除</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除用户 "{deletingUser?.name}" 吗？此操作无法撤销。
+              确定要删除用户 &quot;{deletingUser?.name}&quot; 吗？此操作无法撤销。
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

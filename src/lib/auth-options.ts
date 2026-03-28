@@ -1,46 +1,18 @@
 import type { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { compare } from "bcryptjs";
+import AuthentikProvider from "next-auth/providers/authentik";
 import { db } from "@/lib/db";
 import type { Role } from "@/generated/prisma/enums";
+import { getAuthentikConfig } from "@/lib/authentik";
+import { syncOidcUser } from "@/lib/oidc-user-sync";
+
+const authentikConfig = getAuthentikConfig();
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    CredentialsProvider({
-      name: "credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const user = await db.user.findUnique({
-          where: { email: credentials.email },
-        });
-
-        if (!user) {
-          return null;
-        }
-
-        const isPasswordValid = await compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isPasswordValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-        };
-      },
+    AuthentikProvider({
+      issuer: authentikConfig.issuer,
+      clientId: authentikConfig.clientId,
+      clientSecret: authentikConfig.clientSecret,
     }),
   ],
   session: {
@@ -50,13 +22,64 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = user.role;
-        token.name = user.name;
-        token.email = user.email;
+    async signIn({ account, profile }) {
+      if (account?.provider !== "authentik") {
+        return false;
       }
+
+      return Boolean(profile?.sub && profile.email);
+    },
+    async jwt({ token, account, profile }) {
+      if (account?.provider === "authentik" && profile?.sub && profile.email) {
+        const defaultRole: Role = authentikConfig.adminEmails.has(
+          String(profile.email).toLowerCase()
+        )
+          ? "ADMIN"
+          : "USER";
+
+        const localUser = await syncOidcUser(
+          {
+            findByOidcSubject(subject) {
+              return db.user.findUnique({
+                where: { oidcSubject: subject },
+              });
+            },
+            findByEmail(email) {
+              return db.user.findUnique({
+                where: { email },
+              });
+            },
+            update(id, data) {
+              return db.user.update({
+                where: { id },
+                data,
+              });
+            },
+            create(data) {
+              return db.user.create({
+                data,
+              });
+            },
+          },
+          {
+            sub: String(profile.sub),
+            email: String(profile.email),
+            name: profile.name ? String(profile.name) : undefined,
+          },
+          defaultRole
+        );
+
+        token.id = localUser.id;
+        token.role = localUser.role;
+        token.name = localUser.name;
+        token.email = localUser.email;
+        token.oidcSubject = localUser.oidcSubject ?? undefined;
+      }
+
+      if (account?.id_token) {
+        token.idToken = account.id_token;
+      }
+
       return token;
     },
     async session({ session, token }) {

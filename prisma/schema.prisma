@@ -21,7 +21,8 @@ model User {
   id            String    @id @default(cuid())
   name          String
   email         String    @unique
-  password      String
+  password      String?
+  oidcSubject   String?   @unique
   role          Role      @default(USER)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

@@ -13,36 +13,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setIsLoading(true);
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
+      const result = await signIn("authentik", {
+        callbackUrl,
         redirect: false,
       });
 
       if (result?.error) {
         toast.error("登录失败", {
-          description: "邮箱或密码错误，请重试。",
+          description: "统一登录跳转失败，请稍后重试。",
         });
-      } else {
-        router.push(callbackUrl);
+      } else if (result?.url) {
+        router.push(result.url);
         router.refresh();
+      } else {
+        toast.error("登录失败", {
+          description: "未获取到统一登录跳转地址。",
+        });
       }
     } catch {
       toast.error("登录失败", {
@@ -58,39 +56,18 @@ function LoginForm() {
       <CardHeader className="text-center">
         <CardTitle className="text-2xl">登录</CardTitle>
         <CardDescription>
-          输入您的邮箱和密码登录系统
+          使用统一认证中心登录 DOCX 模板系统
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">邮箱</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={isLoading}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">密码</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="输入密码"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={isLoading}
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "登录中..." : "登录"}
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            登录认证由统一认证中心负责，系统内部权限继续按本地角色控制。
+          </p>
+          <Button onClick={handleSubmit} className="w-full" disabled={isLoading}>
+            {isLoading ? "跳转中..." : "前往统一登录"}
           </Button>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );

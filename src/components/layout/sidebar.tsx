@@ -15,7 +15,6 @@ import {
   Users,
   PanelLeftClose,
   PanelLeftOpen,
-  Image,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNav } from "@/components/layout/user-nav";

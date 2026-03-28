@@ -30,6 +30,7 @@ interface PlaceholderData {
   required: boolean;
   defaultValue: string | null;
   sortOrder: number;
+  description: string | null;
 }
 
 export function PlaceholderEditButton({ placeholder }: { placeholder: PlaceholderData }) {
@@ -40,6 +41,7 @@ export function PlaceholderEditButton({ placeholder }: { placeholder: Placeholde
   const [required, setRequired] = useState(placeholder.required);
   const [defaultValue, setDefaultValue] = useState(placeholder.defaultValue ?? "");
   const [sortOrder, setSortOrder] = useState(placeholder.sortOrder);
+  const [description, setDescription] = useState(placeholder.description ?? "");
 
   const handleSave = async () => {
     if (!label.trim()) {
@@ -52,7 +54,7 @@ export function PlaceholderEditButton({ placeholder }: { placeholder: Placeholde
       const res = await fetch(`/api/placeholders/${placeholder.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ label, inputType, required, defaultValue: defaultValue || null, sortOrder }),
+        body: JSON.stringify({ label, inputType, required, defaultValue: defaultValue || null, sortOrder, description: description || null }),
       });
 
       if (!res.ok) {
@@ -79,7 +81,7 @@ export function PlaceholderEditButton({ placeholder }: { placeholder: Placeholde
         <span className="sr-only">编辑</span>
       </Button>
 
-      <Dialog open={open} onOpenChange={(v) => { if (!v) { setLabel(placeholder.label); setInputType(placeholder.inputType); setRequired(placeholder.required); setDefaultValue(placeholder.defaultValue ?? ""); setSortOrder(placeholder.sortOrder); } setOpen(v); }}>
+      <Dialog open={open} onOpenChange={(v) => { if (!v) { setLabel(placeholder.label); setInputType(placeholder.inputType); setRequired(placeholder.required); setDefaultValue(placeholder.defaultValue ?? ""); setSortOrder(placeholder.sortOrder); setDescription(placeholder.description ?? ""); } setOpen(v); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>编辑占位符 - {placeholder.key}</DialogTitle>
@@ -125,6 +127,16 @@ export function PlaceholderEditButton({ placeholder }: { placeholder: Placeholde
                 value={defaultValue}
                 onChange={(e) => setDefaultValue(e.target.value)}
                 placeholder="无"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="ph-description">备注</Label>
+              <Input
+                id="ph-description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="字段说明/备注"
               />
             </div>
 

@@ -277,6 +277,7 @@ export default async function TemplateDetailPage({
                   <TableRow>
                     <TableHead>键名</TableHead>
                     <TableHead>标签</TableHead>
+                    <TableHead>备注</TableHead>
                     <TableHead>输入类型</TableHead>
                     <TableHead>必填</TableHead>
                     <TableHead>排序</TableHead>
@@ -290,6 +291,9 @@ export default async function TemplateDetailPage({
                         {ph.key}
                       </TableCell>
                       <TableCell>{ph.label}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                        {ph.description || "—"}
+                      </TableCell>
                       <TableCell>
                         {INPUT_TYPE_LABELS[ph.inputType] ?? ph.inputType}
                       </TableCell>

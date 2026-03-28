@@ -107,8 +107,8 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                 enablePicker: ph.enablePicker ?? false,
                 sourceTableId: ph.sourceTableId ?? null,
                 sourceField: ph.sourceField ?? null,
-                columns: ph.columns as TableColumn[] | undefined,
-                description: (ph.description as string) ?? "",
+                columns: (ph.columns as TableColumn[] | null) ?? undefined,
+                description: (ph.description as string | null) ?? "",
               }) as PlaceholderRow
           )
         );

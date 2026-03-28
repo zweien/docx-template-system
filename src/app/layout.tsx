@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   title: "IDRL填表系统",
   description: "IDRL在线填表系统",
   icons: {
-    icon: "/favicon.svg",
-    apple: "/logo.svg",
+    icon: "/favicon.png",
+    apple: "/logo.png",
   },
 };
 

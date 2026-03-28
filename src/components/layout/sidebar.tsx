@@ -98,7 +98,7 @@ export function Sidebar() {
       <div className="flex h-14 items-center border-b border-zinc-800 px-4 shrink-0">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Image
-            src="/logo.svg"
+            src="/logo.png"
             alt="IDRL填表系统"
             width={28}
             height={28}

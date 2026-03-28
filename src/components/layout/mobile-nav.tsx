@@ -96,7 +96,7 @@ export function MobileNav() {
         <SheetHeader className="px-4 py-4 border-b shrink-0">
           <SheetTitle className="flex items-center gap-2">
             <Image
-              src="/logo.svg"
+              src="/logo.png"
               alt="IDRL填表系统"
               width={24}
               height={24}

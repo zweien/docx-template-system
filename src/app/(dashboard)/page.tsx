@@ -93,7 +93,7 @@ export default async function DashboardPage() {
       <div className="flex flex-wrap gap-3">
         <Button render={<Link href="/generate" />}>
           <FileOutput className="h-4 w-4" />
-          生成文档
+          我要填表
         </Button>
         {isAdmin && (
           <Button render={<Link href="/templates/new" />}>

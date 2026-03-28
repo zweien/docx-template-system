@@ -39,7 +39,7 @@ const navItems: NavItem[] = [
     icon: <LayoutDashboard className="h-5 w-5" />,
   },
   {
-    title: "生成文档",
+    title: "我要填表",
     href: "/generate",
     icon: <FileOutput className="h-5 w-5" />,
   },

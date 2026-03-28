@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@idrl/ui": ["./packages/idrl-ui/src/index.ts"]
     }
   },
   "include": [

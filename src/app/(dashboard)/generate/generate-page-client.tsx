@@ -131,7 +131,7 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
                   <div className="flex items-start gap-3">
                     <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold leading-tight truncate">{t.name}</h3>
+                      <h3 className="text-xl font-semibold leading-tight truncate">{t.name}</h3>
                       <div className="flex items-center gap-2 mt-1">
                         {t.currentVersion && (
                           <Badge variant="secondary" className="text-xs">

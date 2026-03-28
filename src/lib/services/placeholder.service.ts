@@ -183,7 +183,7 @@ export interface UpdatePlaceholderInput {
   enablePicker?: boolean;
   sourceTableId?: string | null;
   sourceField?: string | null;
-  columns?: { key: string; label: string }[];
+  columns?: { key: string; label: string }[] | null;
   description?: string | null;
 }
 

@@ -11,6 +11,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { ArrowLeft, Download, FileSpreadsheet } from "lucide-react";
 import type { Role, RecordStatus } from "@/generated/prisma/enums";
 import { RetryButton } from "./retry-button";
@@ -45,7 +53,7 @@ export default async function RecordDetailPage({
       template: {
         select: {
           name: true,
-          placeholders: { select: { key: true, label: true }, orderBy: { sortOrder: "asc" } },
+          placeholders: { select: { key: true, label: true, inputType: true, columns: true }, orderBy: { sortOrder: "asc" } },
         },
       },
     },
@@ -63,10 +71,12 @@ export default async function RecordDetailPage({
 
   const formData = record.formData as Record<string, unknown>;
 
-  // Build key → label mapping from template placeholders
+  // Build key → placeholder info mapping from template placeholders
   const labelMap = new Map<string, string>();
+  const placeholderInfoMap = new Map<string, { inputType: string; columns?: unknown }>();
   for (const ph of record.template.placeholders) {
     labelMap.set(ph.key, ph.label);
+    placeholderInfoMap.set(ph.key, { inputType: ph.inputType, columns: ph.columns });
   }
 
   return (
@@ -139,17 +149,57 @@ export default async function RecordDetailPage({
           {Object.keys(formData).length === 0 ? (
             <p className="text-sm text-muted-foreground">（无表单数据）</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {Object.entries(formData).map(([key, value]) => (
-                <div key={key} className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    {labelMap.get(key) || key}
-                  </p>
-                  <p className="text-sm bg-muted rounded-md px-3 py-2 break-all">
-                    {String(value || "")}
-                  </p>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 gap-3">
+              {Object.entries(formData).map(([key, value]) => {
+                const phInfo = placeholderInfoMap.get(key);
+                const isTable = phInfo?.inputType === "TABLE" && Array.isArray(value);
+
+                return (
+                  <div key={key} className={isTable ? "md:col-span-2" : ""}>
+                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                      {labelMap.get(key) || key}
+                    </p>
+                    {isTable ? (
+                      (value as Record<string, string>[]).length === 0 ? (
+                        <p className="text-sm text-muted-foreground">（空表格）</p>
+                      ) : (
+                        <div className="rounded-md border overflow-hidden">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                {(phInfo.columns as Array<{ key: string; label: string }> | undefined)?.map?.((col) => (
+                                  <TableHead key={col.key}>{col.label}</TableHead>
+                                )) ?? (
+                                  Object.keys((value as Record<string, string>[])[0]).map((colKey) => (
+                                    <TableHead key={colKey}>{colKey}</TableHead>
+                                  ))
+                                )}
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {(value as Record<string, string>[]).map((row, i) => (
+                                <TableRow key={i}>
+                                  {(phInfo.columns as Array<{ key: string; label: string }> | undefined)?.map?.((col) => (
+                                    <TableCell key={col.key}>{row[col.key] ?? ""}</TableCell>
+                                  )) ?? (
+                                    Object.keys(row).map((colKey) => (
+                                      <TableCell key={colKey}>{row[colKey] ?? ""}</TableCell>
+                                    ))
+                                  )}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )
+                    ) : (
+                      <p className="text-sm bg-muted rounded-md px-3 py-2 break-all">
+                        {String(value || "")}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

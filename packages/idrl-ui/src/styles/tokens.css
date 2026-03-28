@@ -24,6 +24,7 @@
   --color-border-hover: #CBD5E1;
 
   /* 文本色 */
+  --color-foreground: #0F172A;
   --color-text-primary: #0F172A;
   --color-text-secondary: #475569;
   --color-text-muted: #94A3B8;

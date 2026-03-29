@@ -2,7 +2,7 @@ import { generateText, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { buildSystemPrompt, buildTableContext, buildChatContext } from './context-builder';
-import { searchRecords, aggregateRecords, getTableSchema, listTables } from './tools';
+import { searchRecords, aggregateRecords, getTableSchema, listTables, createRecordPreview, updateRecordPreview, deleteRecordPreview } from './tools';
 import type { ChatMessage, FilterCondition, SortConfig } from './types';
 
 // 创建可配置的 OpenAI 客户端
@@ -106,6 +106,70 @@ export const tools = {
         throw new Error(result.error.message);
       }
       return result.data;
+    },
+  }),
+
+  // 编辑工具（需要管理员确认）
+  createRecord: tool({
+    description: '创建数据记录（需要管理员确认）',
+    inputSchema: z.object({
+      tableId: z.string().min(1, '表ID不能为空'),
+      data: z.record(z.string(), z.unknown()),
+    }),
+    execute: async (args) => {
+      const { tableId, data } = args as {
+        tableId: string;
+        data: Record<string, unknown>;
+      };
+      // 使用占位符 userId，确认执行时会使用当前登录用户的信息
+      const { preview, confirmToken } = await createRecordPreview(tableId, data, 'ai-agent');
+      return {
+        preview,
+        confirmToken,
+        message: `准备创建记录，确认码: ${confirmToken.substring(0, 8)}...`,
+      };
+    },
+  }),
+
+  updateRecord: tool({
+    description: '更新数据记录（需要管理员确认）',
+    inputSchema: z.object({
+      tableId: z.string().min(1, '表ID不能为空'),
+      recordId: z.string().min(1, '记录ID不能为空'),
+      data: z.record(z.string(), z.unknown()),
+    }),
+    execute: async (args) => {
+      const { tableId, recordId, data } = args as {
+        tableId: string;
+        recordId: string;
+        data: Record<string, unknown>;
+      };
+      const { preview, confirmToken } = await updateRecordPreview(tableId, recordId, data, 'ai-agent');
+      return {
+        preview,
+        confirmToken,
+        message: `准备更新记录，确认码: ${confirmToken.substring(0, 8)}...`,
+      };
+    },
+  }),
+
+  deleteRecord: tool({
+    description: '删除数据记录（需要管理员确认）',
+    inputSchema: z.object({
+      tableId: z.string().min(1, '表ID不能为空'),
+      recordId: z.string().min(1, '记录ID不能为空'),
+    }),
+    execute: async (args) => {
+      const { tableId, recordId } = args as {
+        tableId: string;
+        recordId: string;
+      };
+      const { preview, confirmToken } = await deleteRecordPreview(tableId, recordId, 'ai-agent');
+      return {
+        preview,
+        confirmToken,
+        message: `准备删除记录，确认码: ${confirmToken.substring(0, 8)}...`,
+      };
     },
   }),
 };

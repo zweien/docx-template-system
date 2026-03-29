@@ -1,5 +1,6 @@
 import { db } from '@/lib/db';
 import type { EditPreview } from './types';
+import { Prisma } from '@/generated/prisma/client';
 
 export interface LogOperationParams {
   userId: string;
@@ -20,14 +21,14 @@ export async function logOperation(params: LogOperationParams): Promise<void> {
   await db.aIOperationLog.create({
     data: {
       userId: params.userId,
-      userName: params.userName,
+      userName: params.userName ?? null,
       action: params.action,
       tableId: params.tableId,
       tableName: params.tableName,
-      recordId: params.recordId,
-      changes: params.preview.changes ?? [],
+      recordId: params.recordId ?? null,
+      changes: params.preview.changes as Prisma.InputJsonValue ?? null,
       status: params.status,
-      errorMsg: params.errorMsg,
+      errorMsg: params.errorMsg ?? null,
     },
   });
 }
@@ -60,5 +61,8 @@ export async function getUserOperationLogs(
     },
   });
 
-  return logs;
+  return logs.map(log => ({
+    ...log,
+    recordId: log.recordId ?? undefined,
+  }));
 }

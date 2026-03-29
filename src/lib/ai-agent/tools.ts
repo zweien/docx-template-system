@@ -6,7 +6,9 @@ import type {
   AggregateResult,
   TableSchema,
   ServiceResult,
+  EditPreview,
 } from "./types";
+import { createConfirmToken } from './confirm-store';
 import type { DataTableListItem } from "@/types/data-table";
 
 // 列出可访问的表
@@ -285,4 +287,153 @@ function buildFilterConditions(
   }
 
   return conditions;
+}
+
+// ========== 编辑工具函数 ==========
+
+/**
+ * 创建记录 - 生成预览和确认 Token
+ */
+export async function createRecordPreview(
+  tableId: string,
+  data: Record<string, unknown>,
+  userId: string
+): Promise<{ preview: EditPreview; confirmToken: string }> {
+  // 获取表信息
+  const table = await db.dataTable.findUnique({
+    where: { id: tableId },
+  });
+
+  if (!table) {
+    throw new Error('数据表不存在');
+  }
+
+  // 构建预览
+  const changes = Object.entries(data).map(([field, to]) => ({
+    field,
+    from: null,
+    to,
+  }));
+
+  const preview: EditPreview = {
+    action: 'create',
+    tableId,
+    tableName: table.name,
+    changes,
+  };
+
+  // 生成确认 Token
+  const confirmToken = createConfirmToken({
+    action: 'create',
+    tableId,
+    data,
+    userId,
+  });
+
+  return { preview, confirmToken };
+}
+
+/**
+ * 更新记录 - 生成预览和确认 Token
+ */
+export async function updateRecordPreview(
+  tableId: string,
+  recordId: string,
+  data: Record<string, unknown>,
+  userId: string
+): Promise<{ preview: EditPreview; confirmToken: string }> {
+  // 获取表信息
+  const table = await db.dataTable.findUnique({
+    where: { id: tableId },
+  });
+
+  if (!table) {
+    throw new Error('数据表不存在');
+  }
+
+  // 获取现有记录
+  const record = await db.dataRecord.findUnique({
+    where: { id: recordId },
+  });
+
+  if (!record) {
+    throw new Error('记录不存在');
+  }
+
+  const existingData = record.data as Record<string, unknown>;
+
+  // 构建变更预览
+  const changes: Array<{ field: string; from: unknown; to: unknown }> = [];
+
+  for (const [field, to] of Object.entries(data)) {
+    const from = existingData[field];
+    // 只显示有变化的字段
+    if (from !== to) {
+      changes.push({ field, from, to });
+    }
+  }
+
+  const preview: EditPreview = {
+    action: 'update',
+    tableId,
+    tableName: table.name,
+    changes,
+    recordId,
+  };
+
+  // 生成确认 Token
+  const confirmToken = createConfirmToken({
+    action: 'update',
+    tableId,
+    recordId,
+    data,
+    userId,
+  });
+
+  return { preview, confirmToken };
+}
+
+/**
+ * 删除记录 - 生成预览和确认 Token
+ */
+export async function deleteRecordPreview(
+  tableId: string,
+  recordId: string,
+  userId: string
+): Promise<{ preview: EditPreview; confirmToken: string }> {
+  // 获取表信息
+  const table = await db.dataTable.findUnique({
+    where: { id: tableId },
+  });
+
+  if (!table) {
+    throw new Error('数据表不存在');
+  }
+
+  // 验证记录存在
+  const record = await db.dataRecord.findUnique({
+    where: { id: recordId },
+  });
+
+  if (!record) {
+    throw new Error('记录不存在');
+  }
+
+  const preview: EditPreview = {
+    action: 'delete',
+    tableId,
+    tableName: table.name,
+    recordId,
+    recordCount: 1,
+  };
+
+  // 生成确认 Token
+  const confirmToken = createConfirmToken({
+    action: 'delete',
+    tableId,
+    recordId,
+    userId,
+  });
+
+  return { preview, confirmToken };
 }

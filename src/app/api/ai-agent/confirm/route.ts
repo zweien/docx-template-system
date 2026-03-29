@@ -1,12 +1,125 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
+import { db } from '@/lib/db';
+import { getConfirmOperation, deleteConfirmToken } from '@/lib/ai-agent/confirm-store';
+import { logOperation } from '@/lib/ai-agent/operation-log';
+import { createRecord as dbCreateRecord, updateRecord as dbUpdateRecord, deleteRecord as dbDeleteRecord } from '@/lib/services/data-record.service';
+import { confirmRequestSchema } from '@/validators/ai-agent';
 
 export async function POST(request: NextRequest) {
   const session = await auth();
+
+  // 检查登录
   if (!session?.user) {
-    return NextResponse.json({ error: '未授权' }, { status: 401 });
+    return NextResponse.json(
+      { error: { code: 'UNAUTHORIZED', message: '未授权' } },
+      { status: 401 }
+    );
   }
 
-  // 编辑功能待后续实现
-  return NextResponse.json({ error: '编辑功能尚未实现' }, { status: 501 });
+  // 检查 ADMIN 权限
+  if (session.user.role !== 'ADMIN') {
+    return NextResponse.json(
+      { error: { code: 'FORBIDDEN', message: '仅管理员可执行此操作' } },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const validated = confirmRequestSchema.parse(body);
+
+    // 获取并验证 token
+    const operation = getConfirmOperation(validated.confirmToken);
+    if (!operation) {
+      return NextResponse.json(
+        { error: { code: 'INVALID_TOKEN', message: '确认令牌无效或已过期' } },
+        { status: 400 }
+      );
+    }
+
+    // 执行操作
+    let result;
+    try {
+      switch (operation.action) {
+        case 'create':
+          result = await dbCreateRecord(
+            operation.userId,
+            operation.tableId,
+            operation.data!
+          );
+          break;
+        case 'update':
+          result = await dbUpdateRecord(
+            operation.recordId!,
+            operation.data!
+          );
+          break;
+        case 'delete':
+          result = await dbDeleteRecord(operation.recordId!);
+          break;
+        default:
+          throw new Error('未知操作类型');
+      }
+    } catch (dbError) {
+      // 记录失败日志（此时 tableName 未知）
+      await logOperation({
+        userId: session.user.id,
+        userName: session.user.name ?? undefined,
+        action: operation.action,
+        tableId: operation.tableId,
+        tableName: '未知',
+        recordId: operation.recordId,
+        preview: { action: operation.action, tableId: operation.tableId, tableName: '未知' },
+        status: 'failed',
+        errorMsg: dbError instanceof Error ? dbError.message : '执行失败',
+      });
+
+      // 删除 token
+      deleteConfirmToken(validated.confirmToken);
+
+      return NextResponse.json(
+        { error: { code: 'EXECUTE_FAILED', message: dbError instanceof Error ? dbError.message : '执行失败' } },
+        { status: 500 }
+      );
+    }
+
+    // 获取表名（用于日志）
+    const table = await db.dataTable.findUnique({
+      where: { id: operation.tableId },
+      select: { name: true },
+    });
+    const tableName = table?.name ?? '未知';
+
+    // 记录成功日志
+    await logOperation({
+      userId: session.user.id,
+      userName: session.user.name ?? undefined,
+      action: operation.action,
+      tableId: operation.tableId,
+      tableName,
+      recordId: operation.recordId,
+      preview: { action: operation.action, tableId: operation.tableId, tableName },
+      status: 'success',
+    });
+
+    // 删除 token（一次性使用）
+    deleteConfirmToken(validated.confirmToken);
+
+    return NextResponse.json({
+      success: true,
+      result: result.success ? result.data : null,
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'ZodError') {
+      return NextResponse.json(
+        { error: { code: 'VALIDATION_ERROR', message: '数据验证失败' } },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      { error: { code: 'CONFIRM_FAILED', message: '确认执行失败' } },
+      { status: 500 }
+    );
+  }
 }

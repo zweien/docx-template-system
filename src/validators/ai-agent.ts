@@ -39,7 +39,7 @@ export const aggregateRequestSchema = z.object({
 
 export const confirmRequestSchema = z.object({
   confirmToken: z.string().min(1, "确认令牌不能为空"),
-  action: z.enum(["create", "update", "delete"]),
+  // action 已存储在 token 内部，无需重复传递
 });
 
 // ========== Type Exports ==========

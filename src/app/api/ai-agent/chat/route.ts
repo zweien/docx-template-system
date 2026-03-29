@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
 import { chat } from '@/lib/ai-agent/service';

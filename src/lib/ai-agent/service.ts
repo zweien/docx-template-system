@@ -40,13 +40,14 @@ export const tools = {
         direction: z.enum(['asc', 'desc']),
       }).optional(),
     }),
-    execute: async ({ tableId, filters, pagination, sort }) => {
-      const result = await searchRecords(
-        tableId,
-        filters as FilterCondition[],
-        pagination,
-        sort as SortConfig | undefined
-      );
+    execute: async (args) => {
+      const { tableId, filters, pagination, sort } = args as {
+        tableId: string;
+        filters?: FilterCondition[];
+        pagination?: { page: number; pageSize: number };
+        sort?: SortConfig;
+      };
+      const result = await searchRecords(tableId, filters, pagination, sort);
       if (!result.success) {
         throw new Error(result.error.message);
       }
@@ -66,13 +67,14 @@ export const tools = {
         value: z.unknown(),
       })).optional(),
     }),
-    execute: async ({ tableId, field, operation, filters }) => {
-      const result = await aggregateRecords(
-        tableId,
-        field,
-        operation,
-        filters as FilterCondition[] | undefined
-      );
+    execute: async (args) => {
+      const { tableId, field, operation, filters } = args as {
+        tableId: string;
+        field: string;
+        operation: 'count' | 'sum' | 'avg' | 'min' | 'max';
+        filters?: FilterCondition[];
+      };
+      const result = await aggregateRecords(tableId, field, operation, filters);
       if (!result.success) {
         throw new Error(result.error.message);
       }
@@ -85,7 +87,8 @@ export const tools = {
     inputSchema: z.object({
       tableId: z.string(),
     }),
-    execute: async ({ tableId }) => {
+    execute: async (args) => {
+      const { tableId } = args as { tableId: string };
       const result = await getTableSchema(tableId);
       if (!result.success) {
         throw new Error(result.error.message);

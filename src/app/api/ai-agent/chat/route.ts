@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
 
     const apiKey = process.env.AI_API_KEY;
     const baseURL = process.env.AI_BASE_URL;
+    const model = process.env.AI_MODEL;
     if (!apiKey) {
       return Response.json({ error: { code: 'CONFIG_ERROR', message: 'AI_API_KEY 未配置' } }, { status: 500 });
     }
@@ -29,6 +30,7 @@ export async function POST(request: NextRequest) {
             history: validated.history,
             apiKey,
             baseURL,
+            model,
           })) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
           }

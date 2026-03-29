@@ -123,13 +123,16 @@ export async function* chat(options: ChatOptions): AsyncGenerator<{
   toolArgs?: unknown;
   result?: unknown;
 }> {
-  const { message, tableId, history = [], model = 'gpt-4o-mini', apiKey, baseURL } = options;
+  const { message, tableId, history = [], model, apiKey, baseURL } = options;
 
   // 获取配置
   const apiKeyValue = apiKey || process.env.AI_API_KEY;
   if (!apiKeyValue) {
     throw new Error('AI_API_KEY is required');
   }
+
+  // 默认模型
+  const modelName = model || process.env.AI_MODEL || 'gpt-4o-mini';
 
   const openai = getOpenAIClient(apiKeyValue, baseURL);
 
@@ -150,9 +153,9 @@ export async function* chat(options: ChatOptions): AsyncGenerator<{
     contextPrompt += '\n## 对话历史\n' + buildChatContext(history);
   }
 
-  // 调用 LLM
+  // 调用 LLM - 使用 chat 模型 (Chat Completions API)
   const { text, toolCalls, toolResults } = await generateText({
-    model: openai(model),
+    model: openai.chat(modelName),
     system: systemPrompt + (contextPrompt ? '\n\n' + contextPrompt : ''),
     messages: [{ role: 'user', content: message }],
     tools: tools as any,

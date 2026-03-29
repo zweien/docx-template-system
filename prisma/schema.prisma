@@ -313,3 +313,21 @@ model BatchGeneration {
   @@index([status])
   @@index([createdById])
 }
+
+model AIOperationLog {
+  id        String   @id @default(cuid())
+  userId    String
+  userName  String?
+  action    String   // create, update, delete
+  tableId   String
+  tableName String
+  recordId  String?
+  changes   Json?    // Array<{ field, from, to }>
+  status    String   // success, failed
+  errorMsg  String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([tableId])
+  @@index([createdAt])
+}

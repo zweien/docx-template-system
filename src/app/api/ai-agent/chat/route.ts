@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
     const validated = chatRequestSchema.parse(body);
 
     const apiKey = process.env.AI_API_KEY;
+    const baseURL = process.env.AI_BASE_URL;
     if (!apiKey) {
       return Response.json({ error: { code: 'CONFIG_ERROR', message: 'AI_API_KEY 未配置' } }, { status: 500 });
     }
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
             tableId: validated.tableId,
             history: validated.history,
             apiKey,
+            baseURL,
           })) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
           }

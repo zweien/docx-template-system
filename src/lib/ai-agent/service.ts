@@ -1,9 +1,24 @@
 import { generateText, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
-import { openai } from '@ai-sdk/openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import { buildSystemPrompt, buildTableContext, buildChatContext } from './context-builder';
 import { searchRecords, aggregateRecords, getTableSchema, listTables } from './tools';
 import type { ChatMessage, FilterCondition, SortConfig } from './types';
+
+// 创建可配置的 OpenAI 客户端
+function getOpenAIClient(apiKey?: string, baseURL?: string) {
+  const key = apiKey || process.env.AI_API_KEY;
+  const baseUrl = baseURL || process.env.AI_BASE_URL;
+
+  if (!key) {
+    throw new Error('AI_API_KEY is required');
+  }
+
+  return createOpenAI({
+    apiKey: key,
+    baseURL: baseUrl,
+  });
+}
 
 // 工具定义（用于 AI SDK）
 export const tools = {
@@ -98,6 +113,7 @@ export interface ChatOptions {
   history?: ChatMessage[];
   model?: string;
   apiKey?: string;
+  baseURL?: string;
 }
 
 export async function* chat(options: ChatOptions): AsyncGenerator<{
@@ -107,11 +123,15 @@ export async function* chat(options: ChatOptions): AsyncGenerator<{
   toolArgs?: unknown;
   result?: unknown;
 }> {
-  const { message, tableId, history = [], model = 'gpt-4o-mini', apiKey } = options;
+  const { message, tableId, history = [], model = 'gpt-4o-mini', apiKey, baseURL } = options;
 
-  if (!apiKey) {
+  // 获取配置
+  const apiKeyValue = apiKey || process.env.AI_API_KEY;
+  if (!apiKeyValue) {
     throw new Error('AI_API_KEY is required');
   }
+
+  const openai = getOpenAIClient(apiKeyValue, baseURL);
 
   // 构建上下文
   const systemPrompt = buildSystemPrompt();

@@ -2,6 +2,8 @@
   /* 主色调 - 蓝色系 */
   --color-primary-50: #EFF6FF;
   --color-primary-100: #DBEAFE;
+  --color-primary: #2563EB;
+  --color-primary-foreground: #FFFFFF;
   --color-primary-500: #3B82F6;
   --color-primary-600: #2563EB;
   --color-primary-700: #1D4ED8;
@@ -10,6 +12,10 @@
   /* 中性色 */
   --color-background: #FFFFFF;
   --color-background-subtle: #F8FAFC;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #0F172A;
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #0F172A;
   --color-neutral-50: #FAFAFA;
   --color-neutral-100: #F5F5F5;
   --color-neutral-200: #E5E5E5;
@@ -22,6 +28,14 @@
   --color-neutral-900: #171717;
   --color-border: #E2E8F0;
   --color-border-hover: #CBD5E1;
+  --color-input: #E2E8F0;
+  --color-ring: #3B82F6;
+  --color-secondary: #F5F5F5;
+  --color-secondary-foreground: #0F172A;
+  --color-muted: #F8FAFC;
+  --color-muted-foreground: #475569;
+  --color-accent: #EFF6FF;
+  --color-accent-foreground: #0F172A;
 
   /* 文本色 */
   --color-foreground: #0F172A;
@@ -32,6 +46,8 @@
   /* 功能色 */
   --color-success: #16A34A;
   --color-warning: #D97706;
+  --color-destructive: #DC2626;
+  --color-destructive-foreground: #FFFFFF;
   --color-error: #DC2626;
   --color-info: #0284C7;
 
@@ -44,6 +60,7 @@
   --spacing-2xl: 48px;
 
   /* 圆角 */
+  --radius: 12px;
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;

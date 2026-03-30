@@ -90,6 +90,30 @@ http://localhost:8060/api/auth/callback/authentik
 - 从错误的 Provider 复制了凭据
 - 修改 `.env.local` 后没有重启开发服务
 
+## 页面框体或下拉弹层变透明
+
+先打开公开 smoke page：
+
+```text
+http://localhost:8060/login/ui-check
+```
+
+重点看四件事：
+
+1. 外层卡片是不是白底
+2. 卡片边框是不是可见
+3. Select 下拉层是不是白底深字
+4. Popover、DropdownMenu 是否会透出背景内容
+
+如果这个页面也异常，优先检查：
+
+- `src/app/tokens.css`
+- `src/components/ui/select.tsx`
+- `src/components/ui/popover.tsx`
+- `src/components/ui/dropdown-menu.tsx`
+
+如果 smoke page 正常，但业务页异常，说明更可能是业务页局部样式覆盖，不是全局 token 问题。
+
 ## dashboard 首屏很慢
 
 先区分两类慢：

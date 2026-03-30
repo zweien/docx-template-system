@@ -87,6 +87,7 @@ npm run dev
 访问：
 
 - `http://localhost:8060/login`
+- `http://localhost:8060/login/ui-check`
 
 ## 为什么默认不用 Turbopack
 
@@ -147,3 +148,29 @@ npx prisma studio
 3. `/login` 点击“前往统一登录”能跳 authentik
 4. 登录后能回到 dashboard
 5. 退出后会离开系统并回统一出口
+
+## UI Smoke Page
+
+仓库内保留了一个公开样式验证页：
+
+- `http://localhost:8060/login/ui-check`
+
+用途：
+
+- 快速检查 `Select`、`Popover`、`DropdownMenu` 的弹层背景是否正常
+- 快速检查容器边框、卡片背景、弹层前景色是否仍然绑定到语义 token
+- 排查“整体框体透明”这类全局主题回归
+
+适用场景：
+
+- 改了 `src/app/tokens.css`
+- 改了 `src/components/ui/*`
+- 升级了 Tailwind、shadcn、Base UI
+- 怀疑是全局样式或 token 退化，不确定是不是业务页单独写坏
+
+建议最少看这几项：
+
+1. 页面外层卡片是否为白底
+2. 卡片边框是否可见
+3. Select 下拉层是否为白底深字
+4. Popover 和 DropdownMenu 弹层是否会透出背景文字

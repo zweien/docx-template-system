@@ -17,7 +17,8 @@ export const chatRequestSchema = z.object({
         content: z.string(),
       })
     )
-    .max(20, "历史记录最多20条"),
+    .max(20, "历史记录最多20条")
+    .optional(),
 });
 
 // ========== Aggregate Schemas ==========

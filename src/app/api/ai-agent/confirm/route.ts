@@ -29,8 +29,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = confirmRequestSchema.parse(body);
 
+    console.log('[CONFIRM] Received confirmToken:', validated.confirmToken);
+
     // 获取并验证 token
     const operation = getConfirmOperation(validated.confirmToken);
+    console.log('[CONFIRM] Operation from store:', operation);
+
     if (!operation) {
       return NextResponse.json(
         { error: { code: 'INVALID_TOKEN', message: '确认令牌无效或已过期' } },
@@ -43,20 +47,27 @@ export async function POST(request: NextRequest) {
     try {
       switch (operation.action) {
         case 'create':
+          console.log('[CONFIRM] Creating record with:', { userId: operation.userId, tableId: operation.tableId, data: operation.data });
+          // 使用当前确认的管理员ID，而不是token中存储的userId
           result = await dbCreateRecord(
-            operation.userId,
+            session.user.id,
             operation.tableId,
             operation.data!
           );
+          console.log('[CONFIRM] Create result:', JSON.stringify(result));
           break;
         case 'update':
+          console.log('[CONFIRM] Updating record:', { recordId: operation.recordId, data: operation.data });
           result = await dbUpdateRecord(
             operation.recordId!,
             operation.data!
           );
+          console.log('[CONFIRM] Update result:', JSON.stringify(result));
           break;
         case 'delete':
+          console.log('[CONFIRM] Deleting record:', { recordId: operation.recordId });
           result = await dbDeleteRecord(operation.recordId!);
+          console.log('[CONFIRM] Delete result:', JSON.stringify(result));
           break;
         default:
           throw new Error('未知操作类型');
@@ -111,14 +122,16 @@ export async function POST(request: NextRequest) {
       result: result.success ? result.data : null,
     });
   } catch (error) {
+    console.error('[CONFIRM] Unexpected error:', error);
     if (error instanceof Error && error.name === 'ZodError') {
       return NextResponse.json(
         { error: { code: 'VALIDATION_ERROR', message: '数据验证失败' } },
         { status: 400 }
       );
     }
+    const errorMessage = error instanceof Error ? error.message : '确认执行失败';
     return NextResponse.json(
-      { error: { code: 'CONFIRM_FAILED', message: '确认执行失败' } },
+      { error: { code: 'CONFIRM_FAILED', message: errorMessage } },
       { status: 500 }
     );
   }

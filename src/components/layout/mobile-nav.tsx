@@ -14,6 +14,7 @@ import {
   Menu,
   X,
   Users,
+  Bot,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +62,11 @@ const navItems: NavItem[] = [
     title: "我的草稿",
     href: "/drafts",
     icon: <PenLine className="h-5 w-5" />,
+  },
+  {
+    title: "AI 助手",
+    href: "/ai-agent",
+    icon: <Bot className="h-5 w-5" />,
   },
 ];
 

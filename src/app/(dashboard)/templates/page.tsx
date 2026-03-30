@@ -267,6 +267,7 @@ export default async function TemplatesPage({
                       <Button
                         variant="ghost"
                         size="icon-xs"
+                        className="text-foreground/80 hover:text-foreground hover:bg-muted"
                         render={<Link href={`/templates/${template.id}`} />}
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -277,6 +278,7 @@ export default async function TemplatesPage({
                           <Button
                             variant="ghost"
                             size="icon-xs"
+                            className="text-foreground/80 hover:text-foreground hover:bg-muted"
                             render={
                               <Link
                                 href={`/templates/${template.id}/edit`}

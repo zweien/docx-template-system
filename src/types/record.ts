@@ -10,7 +10,7 @@ export interface RecordDetail {
   id: string;
   templateId: string;
   templateName: string;
-  formData: Record<string, string>;
+  formData: Record<string, string | string[] | Record<string, string>[]>;
   status: string;
   fileName: string | null;
   filePath: string | null;

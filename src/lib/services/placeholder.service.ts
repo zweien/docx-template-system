@@ -1,6 +1,12 @@
 import { db } from "@/lib/db";
 import { parseStructuredPlaceholders } from "@/lib/docx-parser";
-import type { PlaceholderItem, PlaceholderWithSource, TableGridColumn } from "@/types/placeholder";
+import { Prisma } from "@/generated/prisma/client";
+import type {
+  ChoicePlaceholderConfig,
+  PlaceholderItem,
+  PlaceholderWithSource,
+  TableGridColumn,
+} from "@/types/placeholder";
 import * as XLSX from "xlsx";
 
 // ── Unified return type ──
@@ -10,6 +16,14 @@ type ServiceResult<T> =
   | { success: false; error: { code: string; message: string } };
 
 // ── Helper ──
+
+function toJsonValue(value: unknown): Prisma.InputJsonValue | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return value as Prisma.InputJsonValue;
+}
 
 function mapPlaceholderItem(row: {
   id: string;
@@ -23,6 +37,7 @@ function mapPlaceholderItem(row: {
   sourceField: string | null;
   enablePicker: boolean;
   columns: unknown;
+  choiceConfig?: unknown;
   description: string | null;
 }): PlaceholderItem {
   return {
@@ -37,6 +52,7 @@ function mapPlaceholderItem(row: {
     sourceField: row.sourceField,
     enablePicker: row.enablePicker,
     columns: row.columns as TableGridColumn[] | undefined,
+    choiceConfig: row.choiceConfig as ChoicePlaceholderConfig | null | undefined,
     description: row.description,
   };
 }
@@ -68,7 +84,7 @@ export function importPlaceholdersFromExcel(
       return { success: false, error: { code: "PARSE_FAILED", message: "Excel 文件中没有数据行" } };
     }
 
-    const validInputTypes = new Set(["TEXT", "TEXTAREA", "TABLE"]);
+    const validInputTypes = new Set(["TEXT", "TEXTAREA", "TABLE", "CHOICE_SINGLE", "CHOICE_MULTI"]);
     const errors: string[] = [];
 
     const result: ExcelPlaceholderRow[] = rows.map((row, index) => {
@@ -119,11 +135,12 @@ export async function parsePlaceholders(
     const placeholderData: Array<{
       key: string;
       label: string;
-      inputType: "TEXT" | "TABLE";
+      inputType: "TEXT" | "TABLE" | "CHOICE_SINGLE" | "CHOICE_MULTI";
       required: boolean;
       sortOrder: number;
       templateId: string;
       columns?: { key: string; label: string }[];
+      choiceConfig?: ChoicePlaceholderConfig;
     }> = [];
 
     let sortOrder = 0;
@@ -153,11 +170,39 @@ export async function parsePlaceholders(
       sortOrder++;
     }
 
+    for (const block of result.choiceBlocks ?? []) {
+      placeholderData.push({
+        key: block.key,
+        label: block.key,
+        inputType: block.mode === "single" ? "CHOICE_SINGLE" : "CHOICE_MULTI",
+        required: false,
+        sortOrder,
+        templateId,
+        choiceConfig: {
+          mode: block.mode,
+          options: block.options.map((option) => ({
+            value: option.value,
+            label: option.label,
+          })),
+          marker: {
+            template: "□",
+            checked: "☑",
+            unchecked: "☐",
+          },
+        },
+      });
+      sortOrder++;
+    }
+
     // Replace all existing placeholders with freshly parsed ones
     await db.placeholder.deleteMany({ where: { templateId } });
 
     await db.placeholder.createMany({
-      data: placeholderData,
+      data: placeholderData.map((item) => ({
+        ...item,
+        columns: toJsonValue(item.columns),
+        choiceConfig: toJsonValue(item.choiceConfig),
+      })),
     });
 
     // Retrieve the created placeholders to return full objects
@@ -184,6 +229,7 @@ export interface UpdatePlaceholderInput {
   sourceTableId?: string | null;
   sourceField?: string | null;
   columns?: { key: string; label: string }[] | null;
+  choiceConfig?: ChoicePlaceholderConfig | null;
   description?: string | null;
 }
 
@@ -215,6 +261,14 @@ export async function updatePlaceholders(
         .filter((item) => item.inputType === "TABLE")
         .map((item) => [item.key, item.columns as { key: string; label: string }[] | undefined])
     );
+    const existingChoiceConfigs = new Map(
+      existingPlaceholders
+        .filter((item) => item.inputType === "CHOICE_SINGLE" || item.inputType === "CHOICE_MULTI")
+        .map((item) => [
+          item.key,
+          (item.choiceConfig as ChoicePlaceholderConfig | null | undefined) ?? undefined,
+        ])
+    );
 
     // Delete all existing placeholders
     await db.placeholder.deleteMany({ where: { templateId } });
@@ -224,7 +278,7 @@ export async function updatePlaceholders(
       data: items.map((item) => ({
         key: item.key,
         label: item.label.trim(),
-        inputType: item.inputType as "TEXT" | "TEXTAREA" | "TABLE",
+        inputType: item.inputType as "TEXT" | "TEXTAREA" | "TABLE" | "CHOICE_SINGLE" | "CHOICE_MULTI",
         required: item.required,
         defaultValue: item.defaultValue,
         sortOrder: item.sortOrder,
@@ -234,7 +288,11 @@ export async function updatePlaceholders(
         sourceField: item.sourceField ?? null,
         columns:
           item.inputType === "TABLE"
-            ? (item.columns ?? existingTableColumns.get(item.key) ?? undefined)
+            ? toJsonValue(item.columns ?? existingTableColumns.get(item.key) ?? undefined)
+            : undefined,
+        choiceConfig:
+          item.inputType === "CHOICE_SINGLE" || item.inputType === "CHOICE_MULTI"
+            ? toJsonValue(item.choiceConfig ?? existingChoiceConfigs.get(item.key) ?? undefined)
             : undefined,
         description: item.description ?? null,
       })),

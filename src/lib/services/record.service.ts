@@ -103,7 +103,7 @@ export async function getRecord(
 export async function createRecord(
   userId: string,
   templateId: string,
-  formData: Record<string, string | Record<string, string>[]>
+  formData: Record<string, string | string[] | Record<string, string>[]>
 ): Promise<
   ServiceResult<{
     id: string;
@@ -189,7 +189,7 @@ export async function generateDocument(
     const newFileName = `${record.template.name}_${yyyy}${MM}${dd}_${HH}${mm}${ss}.docx`;
 
     // d. Call Python service
-    const formData = record.formData as Record<string, string>;
+    const formData = record.formData as Record<string, string | string[] | Record<string, string>[]>;
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30_000);
@@ -303,7 +303,7 @@ export async function copyRecordToDraft(
       data: {
         userId,
         templateId: record.templateId,
-        formData: record.formData as Record<string, string>,
+        formData: record.formData as Record<string, string | string[] | Record<string, string>[]>,
       },
     });
 

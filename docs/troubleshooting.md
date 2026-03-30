@@ -150,3 +150,58 @@ http://localhost:8060/login/ui-check
 它们现在直接从 JWT 取路由用户，不再走 `getServerSession()`。
 
 如果后续还有类似热点，可以继续沿这个方向收敛其它高频 Route Handler。
+
+## 选项模板上传后解析为空
+
+先区分两类原因：
+
+### 模板语法本身不在支持范围内
+
+当前支持：
+
+- `{{选项:key|single}}` + `□ 选项`
+- Word `w:sym` 形式的内联勾选段落，例如 `单项：☑是 ☐否`
+
+当前不支持：
+
+- 完全没有字段前缀或控制信息，只摆一排勾选框让系统猜
+- 使用了别的字体符号，但不是当前识别的 `Wingdings 2`
+- 复杂嵌套到表格、文本框、页眉页脚的混合场景
+
+### 运行中的服务还是旧版本
+
+如果你已经改了：
+
+- [`src/lib/docx-parser.ts`](/home/z/test-hub/docx-template-system/src/lib/docx-parser.ts)
+- [`python-service/main.py`](/home/z/test-hub/docx-template-system/python-service/main.py)
+
+但上传或生成结果还是旧行为，先重启：
+
+```bash
+cd "/home/z/test-hub/docx-template-system"
+npm run dev
+```
+
+```bash
+cd "/home/z/test-hub/docx-template-system/python-service"
+".venv/bin/python" "main.py"
+```
+
+典型现象：
+
+- Next 服务没重启：上传解析仍按旧规则运行
+- Python 服务没重启：普通占位符会替换成功，但单选 / 多选勾选结果不更新
+
+## 真实 Word 模板里多选都被解析成同一个文本
+
+这通常不是用户看到的内容有问题，而是 Word 在 XML 里把：
+
+- `选项1`
+- `选项2`
+
+拆成了多个连续 run，例如：
+
+- `选项`
+- `1`
+
+当前实现已经兼容这种拆分。如果还复现，优先检查运行中的 Next 服务是不是旧进程。

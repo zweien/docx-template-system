@@ -12,12 +12,13 @@ import { Loader2, Save, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DataPickerDialog } from "./data-picker-dialog";
 import { DynamicTableField } from "./dynamic-table-field";
+import { ChoicePickerField } from "./choice-picker-field";
 
 interface Placeholder {
   id: string;
   key: string;
   label: string;
-  inputType: "TEXT" | "TEXTAREA" | "TABLE";
+  inputType: "TEXT" | "TEXTAREA" | "TABLE" | "CHOICE_SINGLE" | "CHOICE_MULTI";
   required: boolean;
   defaultValue: string | null;
   sortOrder: number;
@@ -25,6 +26,11 @@ interface Placeholder {
   sourceField?: string | null;
   enablePicker: boolean;
   columns?: Array<{ key: string; label: string }>;
+  choiceConfig?: {
+    mode: "single" | "multiple";
+    options: Array<{ value: string; label: string }>;
+    marker: { template: string; checked: string; unchecked: string };
+  } | null;
   description?: string | null;
 }
 
@@ -38,9 +44,11 @@ interface TableField {
 interface DynamicFormProps {
   templateId: string;
   placeholders: Placeholder[];
-  initialData?: Record<string, string | Record<string, string>[]>;
+  initialData?: Record<string, string | string[] | Record<string, string>[]>;
   draftId?: string;
 }
+
+type FormFieldValue = string | string[] | Record<string, string>[];
 
 export function DynamicForm({
   templateId,
@@ -52,11 +60,13 @@ export function DynamicForm({
   const sorted = [...placeholders].sort((a, b) => a.sortOrder - b.sortOrder);
 
   // Initialize form state
-  const [formData, setFormData] = useState<Record<string, string | Record<string, string>[]>>(() => {
-    const initial: Record<string, string | Record<string, string>[]> = {};
+  const [formData, setFormData] = useState<Record<string, FormFieldValue>>(() => {
+    const initial: Record<string, FormFieldValue> = {};
     for (const ph of sorted) {
       if (ph.inputType === "TABLE") {
         initial[ph.key] = (initialData?.[ph.key] as Record<string, string>[]) ?? [];
+      } else if (ph.inputType === "CHOICE_MULTI") {
+        initial[ph.key] = (initialData?.[ph.key] as string[]) ?? [];
       } else {
         initial[ph.key] = (initialData?.[ph.key] as string) ?? ph.defaultValue ?? "";
       }
@@ -147,12 +157,33 @@ export function DynamicForm({
     setFormData((prev) => ({ ...prev, [key]: rows }));
   };
 
+  const handleChoiceChange = (key: string, value: string | string[]) => {
+    setFormData((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) {
+      setErrors((prev) => {
+        const next = { ...prev };
+        delete next[key];
+        return next;
+      });
+    }
+  };
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     for (const ph of sorted) {
       // Skip TABLE type - no validation needed for table data
       if (ph.inputType === "TABLE") continue;
-      if (ph.required && !(formData[ph.key] as string)?.trim()) {
+      if (!ph.required) continue;
+
+      const value = formData[ph.key];
+      if (ph.inputType === "CHOICE_MULTI") {
+        if (!Array.isArray(value) || value.length === 0) {
+          newErrors[ph.key] = `${ph.label}不能为空`;
+        }
+        continue;
+      }
+
+      if (typeof value !== "string" || !value.trim()) {
         newErrors[ph.key] = `${ph.label}不能为空`;
       }
     }
@@ -257,6 +288,18 @@ export function DynamicForm({
                     columns={ph.columns ?? []}
                     value={(formData[ph.key] as Record<string, string>[]) ?? []}
                     onChange={(rows) => handleTableChange(ph.key, rows)}
+                    disabled={saving || generating}
+                  />
+                ) : ph.inputType === "CHOICE_SINGLE" || ph.inputType === "CHOICE_MULTI" ? (
+                  <ChoicePickerField
+                    mode={ph.inputType === "CHOICE_SINGLE" ? "single" : "multiple"}
+                    options={ph.choiceConfig?.options ?? []}
+                    value={
+                      ph.inputType === "CHOICE_MULTI"
+                        ? ((formData[ph.key] as string[]) ?? [])
+                        : ((formData[ph.key] as string) ?? "")
+                    }
+                    onChange={(value) => handleChoiceChange(ph.key, value)}
                     disabled={saving || generating}
                   />
                 ) : (

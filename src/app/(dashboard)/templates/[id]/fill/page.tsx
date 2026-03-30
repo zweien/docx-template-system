@@ -64,7 +64,7 @@ export default async function FillPage({
           id: p.id,
           key: p.key,
           label: p.label,
-          inputType: p.inputType as "TEXT" | "TEXTAREA" | "TABLE",
+          inputType: p.inputType as "TEXT" | "TEXTAREA" | "TABLE" | "CHOICE_SINGLE" | "CHOICE_MULTI",
           required: p.required,
           defaultValue: p.defaultValue,
           sortOrder: p.sortOrder,
@@ -72,9 +72,14 @@ export default async function FillPage({
           sourceField: p.sourceField,
           enablePicker: p.enablePicker,
           columns: p.columns as Array<{ key: string; label: string }> | undefined,
+          choiceConfig: p.choiceConfig as {
+            mode: "single" | "multiple";
+            options: Array<{ value: string; label: string }>;
+            marker: { template: string; checked: string; unchecked: string };
+          } | null | undefined,
           description: p.description,
         }))}
-        initialData={initialData as Record<string, string | Record<string, string>[]> | undefined}
+        initialData={initialData as Record<string, string | string[] | Record<string, string>[]> | undefined}
         draftId={draftId}
       />
     </div>

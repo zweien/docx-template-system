@@ -1,10 +1,25 @@
 import { z } from "zod";
 
+const choiceOptionSchema = z.object({
+  value: z.string().min(1),
+  label: z.string().min(1),
+});
+
+const choiceConfigSchema = z.object({
+  mode: z.enum(["single", "multiple"]),
+  options: z.array(choiceOptionSchema).min(1),
+  marker: z.object({
+    template: z.string().min(1),
+    checked: z.string().min(1),
+    unchecked: z.string().min(1),
+  }),
+});
+
 export const placeholderItemSchema = z.object({
   id: z.string().optional(),
   key: z.string(),
   label: z.string().min(1, "标签不能为空"),
-  inputType: z.enum(["TEXT", "TEXTAREA", "TABLE"]),
+  inputType: z.enum(["TEXT", "TEXTAREA", "TABLE", "CHOICE_SINGLE", "CHOICE_MULTI"]),
   required: z.boolean(),
   defaultValue: z.string().nullable(),
   sortOrder: z.number().int().min(0),
@@ -12,6 +27,7 @@ export const placeholderItemSchema = z.object({
   sourceTableId: z.string().nullable().default(null),
   sourceField: z.string().nullable().default(null),
   columns: z.array(z.object({ key: z.string(), label: z.string().min(1) })).nullable().optional(),
+  choiceConfig: choiceConfigSchema.nullable().optional(),
   description: z.string().nullable().default(null),
 });
 
@@ -27,7 +43,7 @@ export const updatePlaceholderSourceSchema = z.object({
 
 export const updatePlaceholderSchema = z.object({
   label: z.string().min(1, "标签不能为空").optional(),
-  inputType: z.enum(["TEXT", "TEXTAREA", "TABLE"]).optional(),
+  inputType: z.enum(["TEXT", "TEXTAREA", "TABLE", "CHOICE_SINGLE", "CHOICE_MULTI"]).optional(),
   required: z.boolean().optional(),
   defaultValue: z.string().nullable().optional(),
   sortOrder: z.number().int().min(0).optional(),
@@ -35,6 +51,7 @@ export const updatePlaceholderSchema = z.object({
   sourceField: z.string().nullable().optional(),
   enablePicker: z.boolean().optional(),
   columns: z.array(z.object({ key: z.string(), label: z.string().min(1) })).nullable().optional(),
+  choiceConfig: choiceConfigSchema.nullable().optional(),
   description: z.string().nullable().optional(),
 });
 

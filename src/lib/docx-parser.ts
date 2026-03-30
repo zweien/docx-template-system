@@ -4,6 +4,16 @@ import { readFile } from "fs/promises";
 export interface ParseResult {
   simplePlaceholders: string[];
   tableBlocks: Array<{ name: string; columns: string[] }>;
+  choiceBlocks: Array<{
+    key: string;
+    mode: "single" | "multiple";
+    options: Array<{
+      value: string;
+      label: string;
+      paragraphIndex: number;
+      markerText: string;
+    }>;
+  }>;
 }
 
 /**
@@ -57,6 +67,74 @@ function extractTextFromXml(xml: string): string {
   return paragraphs.join("\n");
 }
 
+function extractParagraphTextsFromXml(xml: string): string[] {
+  const paragraphs: string[] = [];
+  const paragraphRegex = /<w:p[\s>][\s\S]*?<\/w:p>/g;
+  let match;
+
+  while ((match = paragraphRegex.exec(xml)) !== null) {
+    const paragraphXml = match[0];
+    let paragraphText = "";
+    const textRegex = /<w:t[^>]*>([\s\S]*?)<\/w:t>/g;
+    let textMatch;
+
+    while ((textMatch = textRegex.exec(paragraphXml)) !== null) {
+      paragraphText += textMatch[1];
+    }
+
+    if (paragraphText.trim()) {
+      paragraphs.push(paragraphText);
+    }
+  }
+
+  return paragraphs;
+}
+
+interface InlineChoiceToken {
+  type: "text" | "sym";
+  value: string;
+}
+
+function extractParagraphTokenGroupsFromXml(xml: string): InlineChoiceToken[][] {
+  const paragraphs: InlineChoiceToken[][] = [];
+  const paragraphRegex = /<w:p[\s>][\s\S]*?<\/w:p>/g;
+  let paragraphMatch;
+
+  while ((paragraphMatch = paragraphRegex.exec(xml)) !== null) {
+    const paragraphXml = paragraphMatch[0];
+    const tokens: InlineChoiceToken[] = [];
+    const childRegex = /<w:r[\s>][\s\S]*?<\/w:r>/g;
+    let childMatch;
+
+    while ((childMatch = childRegex.exec(paragraphXml)) !== null) {
+      const runXml = childMatch[0];
+      const symMatches = Array.from(
+        runXml.matchAll(/<w:sym[^>]*w:char="([^"]+)"[^>]*\/>/g)
+      );
+
+      if (symMatches.length > 0) {
+        for (const symMatch of symMatches) {
+          tokens.push({ type: "sym", value: symMatch[1].toUpperCase() });
+        }
+        continue;
+      }
+
+      const textMatches = Array.from(runXml.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>/g));
+      for (const textMatch of textMatches) {
+        if (textMatch[1]) {
+          tokens.push({ type: "text", value: textMatch[1] });
+        }
+      }
+    }
+
+    if (tokens.length > 0) {
+      paragraphs.push(tokens);
+    }
+  }
+
+  return paragraphs;
+}
+
 function matchPlaceholders(text: string): string[] {
   const regex = /\{\{\s*([\w\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+)\s*\}\}/g;
   const keys = new Set<string>();
@@ -74,6 +152,12 @@ function matchPlaceholders(text: string): string[] {
 const CJK_RANGE = "\\u4e00-\\u9fff\\u3400-\\u4dbf\\uf900-\\ufaff";
 const blockStartRegex = new RegExp(`\\{\\{\\s*#([\\w${CJK_RANGE}]+)\\s*\\}\\}`, "g");
 const blockEndRegex = new RegExp(`\\{\\{\\s*/([\\w${CJK_RANGE}]+)\\s*\\}\\}`, "g");
+const choiceControlRegex = new RegExp(
+  `\\{\\{\\s*选项:([\\w${CJK_RANGE}]+)\\|(single|multiple)\\s*\\}\\}`
+);
+const choiceOptionRegex = /^([□☐☑])\s*(.+)$/;
+const checkedSymChars = new Set(["0052"]);
+const uncheckedSymChars = new Set(["00A3"]);
 
 /**
  * Parse a docx file into structured placeholders, recognizing
@@ -90,6 +174,124 @@ export async function parseStructuredPlaceholders(filePath: string): Promise<Par
 
   const xmlContent = await documentXml.async("string");
   const text = extractTextFromXml(xmlContent);
+  const paragraphTexts = extractParagraphTextsFromXml(xmlContent);
+  const paragraphTokenGroups = extractParagraphTokenGroupsFromXml(xmlContent);
+
+  const choiceBlocks: ParseResult["choiceBlocks"] = [];
+
+  for (let i = 0; i < paragraphTexts.length; i++) {
+    const controlMatch = paragraphTexts[i].match(choiceControlRegex);
+    if (!controlMatch) {
+      continue;
+    }
+
+    const key = controlMatch[1];
+    const mode = controlMatch[2] as "single" | "multiple";
+    const options: ParseResult["choiceBlocks"][number]["options"] = [];
+
+    let cursor = i + 1;
+    while (cursor < paragraphTexts.length) {
+      const paragraphText = paragraphTexts[cursor];
+      if (
+        !paragraphText.trim() ||
+        choiceControlRegex.test(paragraphText) ||
+        blockStartRegex.test(paragraphText) ||
+        blockEndRegex.test(paragraphText) ||
+        /\{\{\s*[\w\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+\s*\}\}/.test(paragraphText)
+      ) {
+        break;
+      }
+
+      const optionMatch = paragraphText.match(choiceOptionRegex);
+      if (!optionMatch) {
+        break;
+      }
+
+      options.push({
+        value: optionMatch[2],
+        label: optionMatch[2],
+        paragraphIndex: cursor,
+        markerText: optionMatch[1],
+      });
+      cursor++;
+    }
+
+    if (options.length === 0) {
+      throw new Error(`选项组 "${key}" 至少需要一个选项项`);
+    }
+
+    choiceBlocks.push({ key, mode, options });
+  }
+
+  for (let i = 0; i < paragraphTokenGroups.length; i++) {
+    const tokens = paragraphTokenGroups[i];
+    if (!tokens.some((token) => token.type === "sym")) {
+      continue;
+    }
+
+    const leadingText = tokens
+      .filter((token) => token.type === "text")
+      .map((token) => token.value)
+      .join("");
+    const firstSeparatorIndex = leadingText.search(/[:：]/);
+    if (firstSeparatorIndex < 0) {
+      continue;
+    }
+
+    const key = leadingText.slice(0, firstSeparatorIndex).trim();
+    if (!key || choiceBlocks.some((block) => block.key === key)) {
+      continue;
+    }
+
+    const options: ParseResult["choiceBlocks"][number]["options"] = [];
+    let pendingMarker: string | null = null;
+
+    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
+      const token = tokens[tokenIndex];
+      if (token.type === "sym") {
+        if (checkedSymChars.has(token.value)) {
+          pendingMarker = "☑";
+        } else if (uncheckedSymChars.has(token.value)) {
+          pendingMarker = "☐";
+        }
+        continue;
+      }
+
+      if (!pendingMarker) {
+        continue;
+      }
+
+      let optionLabel = token.value;
+      while (
+        tokenIndex + 1 < tokens.length &&
+        tokens[tokenIndex + 1].type === "text"
+      ) {
+        optionLabel += tokens[tokenIndex + 1].value;
+        tokenIndex++;
+      }
+
+      optionLabel = optionLabel.trim();
+      if (!optionLabel || optionLabel === ":" || optionLabel === "：") {
+        continue;
+      }
+
+      options.push({
+        value: optionLabel,
+        label: optionLabel,
+        paragraphIndex: i,
+        markerText: pendingMarker,
+      });
+      pendingMarker = null;
+    }
+
+    if (options.length >= 2) {
+      choiceBlocks.push({
+        key,
+        mode: key.includes("多") ? "multiple" : "single",
+        options,
+      });
+    }
+  }
 
   // Collect all block start/end markers with their positions
   const starts: Array<{ name: string; index: number }> = [];
@@ -166,8 +368,13 @@ export async function parseStructuredPlaceholders(filePath: string): Promise<Par
     }
   }
 
+  const simplePlaceholders = Array.from(simpleKeys).filter((key) => {
+    return !choiceBlocks.some((block) => block.key === key);
+  });
+
   return {
-    simplePlaceholders: Array.from(simpleKeys),
+    simplePlaceholders,
     tableBlocks,
+    choiceBlocks,
   };
 }

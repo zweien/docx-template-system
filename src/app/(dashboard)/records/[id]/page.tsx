@@ -152,7 +152,13 @@ export default async function RecordDetailPage({
             <div className="grid grid-cols-1 gap-3">
               {Object.entries(formData).map(([key, value]) => {
                 const phInfo = placeholderInfoMap.get(key);
-                const isTable = phInfo?.inputType === "TABLE" && Array.isArray(value);
+                const isTable =
+                  phInfo?.inputType === "TABLE" &&
+                  Array.isArray(value) &&
+                  value.every((item) => typeof item === "object" && item !== null);
+                const isChoiceArray =
+                  Array.isArray(value) &&
+                  value.every((item) => typeof item === "string");
 
                 return (
                   <div key={key} className={isTable ? "md:col-span-2" : ""}>
@@ -194,7 +200,7 @@ export default async function RecordDetailPage({
                       )
                     ) : (
                       <p className="text-sm bg-muted rounded-md px-3 py-2 break-all">
-                        {String(value || "")}
+                        {isChoiceArray ? value.join("、") : String(value || "")}
                       </p>
                     )}
                   </div>

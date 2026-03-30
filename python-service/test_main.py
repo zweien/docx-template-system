@@ -46,7 +46,7 @@ class _BaseModel:
 pydantic_stub.BaseModel = _BaseModel
 sys.modules.setdefault("pydantic", pydantic_stub)
 
-from main import process_table_block
+from main import process_choice_blocks, process_inline_choice_paragraphs, process_table_block
 
 
 def set_vertical_merge(cell, value: str) -> None:
@@ -61,6 +61,23 @@ def get_vertical_merge_from_row(row, cell_index: int = 0) -> str | None:
     if tc_pr is None or tc_pr.vMerge is None:
         return None
     return tc_pr.vMerge.val or "continue-empty"
+
+
+def append_sym_run(paragraph, char: str) -> None:
+    run = paragraph.add_run()
+    sym = OxmlElement("w:sym")
+    sym.set(qn("w:font"), "Wingdings 2")
+    sym.set(qn("w:char"), char)
+    run._r.append(sym)
+
+
+def get_sym_chars(paragraph) -> list[str]:
+    chars: list[str] = []
+    for run in paragraph.runs:
+        for child in run._r:
+            if child.tag == qn("w:sym"):
+                chars.append(child.get(qn("w:char")))
+    return chars
 
 
 class ProcessTableBlockTest(unittest.TestCase):
@@ -104,6 +121,58 @@ class ProcessTableBlockTest(unittest.TestCase):
         self.assertEqual(get_vertical_merge_from_row(table.rows[1]), "continue")
         self.assertEqual(get_vertical_merge_from_row(table.rows[2]), "continue")
         self.assertIsNone(get_vertical_merge_from_row(table.rows[3]))
+
+
+class ProcessChoiceBlocksTest(unittest.TestCase):
+    def test_single_choice_replaces_only_marker_and_clears_control_line(self) -> None:
+        doc = Document()
+        doc.add_paragraph("{{选项:性别|single}}")
+        doc.add_paragraph("□ 男")
+        doc.add_paragraph("□ 女")
+
+        process_choice_blocks(doc, {"性别": "女"})
+
+        self.assertEqual(doc.paragraphs[0].text, "")
+        self.assertEqual(doc.paragraphs[1].text, "☐ 男")
+        self.assertEqual(doc.paragraphs[2].text, "☑ 女")
+
+    def test_multiple_choice_replaces_only_selected_markers(self) -> None:
+        doc = Document()
+        doc.add_paragraph("{{选项:爱好|multiple}}")
+        doc.add_paragraph("□ 篮球")
+        doc.add_paragraph("□ 音乐")
+
+        process_choice_blocks(doc, {"爱好": ["音乐"]})
+
+        self.assertEqual(doc.paragraphs[0].text, "")
+        self.assertEqual(doc.paragraphs[1].text, "☐ 篮球")
+        self.assertEqual(doc.paragraphs[2].text, "☑ 音乐")
+
+    def test_inline_choice_paragraphs_should_update_wingdings_symbols(self) -> None:
+        doc = Document()
+
+        single = doc.add_paragraph()
+        single.add_run("单项：")
+        append_sym_run(single, "0052")
+        single.add_run("是")
+        append_sym_run(single, "00A3")
+        single.add_run("否")
+
+        multiple = doc.add_paragraph()
+        multiple.add_run("多选：")
+        append_sym_run(multiple, "00A3")
+        multiple.add_run("选项1")
+        append_sym_run(multiple, "0052")
+        multiple.add_run("选项2")
+        append_sym_run(multiple, "0052")
+        multiple.add_run("选项3")
+        append_sym_run(multiple, "00A3")
+        multiple.add_run("选项4")
+
+        process_inline_choice_paragraphs(doc, {"单项": "否", "多选": ["选项1", "选项4"]})
+
+        self.assertEqual(get_sym_chars(doc.paragraphs[0]), ["00A3", "0052"])
+        self.assertEqual(get_sym_chars(doc.paragraphs[1]), ["0052", "00A3", "00A3", "0052"])
 
 
 if __name__ == "__main__":

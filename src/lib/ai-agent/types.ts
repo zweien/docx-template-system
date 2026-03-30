@@ -13,7 +13,7 @@ export interface SortConfig {
 
 // 搜索结果
 export interface SearchResult {
-  records: Record<string, unknown>[];
+  records: Array<{ id: string; [key: string]: unknown }>;
   total: number;
   page: number;
   pageSize: number;

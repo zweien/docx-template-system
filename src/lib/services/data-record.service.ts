@@ -353,7 +353,8 @@ export async function updateRecord(
 
     const record = await db.dataRecord.update({
       where: { id },
-      data: { data: toJsonInput(data) },
+      // 合并更新：保留原有数据，只更新传入的字段
+      data: { data: toJsonInput({ ...(existingRecord.data as Record<string, unknown>), ...data }) },
       include: {
         createdBy: { select: { name: true } },
       },

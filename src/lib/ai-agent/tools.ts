@@ -131,7 +131,7 @@ export async function searchRecords(
     return {
       success: true,
       data: {
-        records: records.map((r) => r.data as Record<string, unknown>),
+        records: records.map((r) => ({ id: r.id, ...r.data as Record<string, unknown> })),
         total,
         page,
         pageSize,

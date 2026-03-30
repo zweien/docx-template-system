@@ -1,21 +1,29 @@
 @theme {
   /* 主色调 - 蓝色系 */
+  --color-primary: #2563EB;
   --color-primary-50: #EFF6FF;
   --color-primary-100: #DBEAFE;
-  --color-primary: #2563EB;
   --color-primary-foreground: #FFFFFF;
   --color-primary-500: #3B82F6;
   --color-primary-600: #2563EB;
   --color-primary-700: #1D4ED8;
   --color-primary-900: #1E3A8A;
 
-  /* 中性色 */
+  /* 语义表面色 */
   --color-background: #FFFFFF;
   --color-background-subtle: #F8FAFC;
   --color-card: #FFFFFF;
   --color-card-foreground: #0F172A;
   --color-popover: #FFFFFF;
   --color-popover-foreground: #0F172A;
+  --color-secondary: #F5F5F5;
+  --color-secondary-foreground: #0F172A;
+  --color-muted: #F8FAFC;
+  --color-muted-foreground: #475569;
+  --color-accent: #EFF6FF;
+  --color-accent-foreground: #0F172A;
+
+  /* 中性色 */
   --color-neutral-50: #FAFAFA;
   --color-neutral-100: #F5F5F5;
   --color-neutral-200: #E5E5E5;
@@ -30,34 +38,29 @@
   --color-border-hover: #CBD5E1;
   --color-input: #E2E8F0;
   --color-ring: #3B82F6;
-  --color-secondary: #F5F5F5;
-  --color-secondary-foreground: #0F172A;
-  --color-muted: #F8FAFC;
-  --color-muted-foreground: #475569;
-  --color-accent: #EFF6FF;
-  --color-accent-foreground: #0F172A;
 
   /* 文本色 */
   --color-foreground: #0F172A;
   --color-text-primary: #0F172A;
   --color-text-secondary: #475569;
   --color-text-muted: #94A3B8;
+  --color-primary-foreground: #FFFFFF;
 
   /* 功能色 */
   --color-success: #16A34A;
   --color-warning: #D97706;
-  --color-destructive: #DC2626;
-  --color-destructive-foreground: #FFFFFF;
   --color-error: #DC2626;
   --color-info: #0284C7;
+  --color-destructive: #DC2626;
+  --color-destructive-foreground: #FFFFFF;
 
   /* 间距 */
-  --spacing-xs: 4px;
-  --spacing-sm: 8px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
-  --spacing-2xl: 48px;
+  --ui-space-xs: 4px;
+  --ui-space-sm: 8px;
+  --ui-space-md: 16px;
+  --ui-space-lg: 24px;
+  --ui-space-xl: 32px;
+  --ui-space-2xl: 48px;
 
   /* 圆角 */
   --radius: 12px;
@@ -75,8 +78,8 @@
 /* 移动端适配 */
 @media (max-width: 640px) {
   :root {
-    --spacing-md: 12px;
-    --spacing-lg: 16px;
-    --spacing-xl: 24px;
+    --ui-space-md: 12px;
+    --ui-space-lg: 16px;
+    --ui-space-xl: 24px;
   }
 }

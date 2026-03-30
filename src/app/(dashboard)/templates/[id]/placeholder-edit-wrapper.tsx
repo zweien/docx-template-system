@@ -82,12 +82,12 @@ export function PlaceholderEditButton({ placeholder }: { placeholder: Placeholde
       </Button>
 
       <Dialog open={open} onOpenChange={(v) => { if (!v) { setLabel(placeholder.label); setInputType(placeholder.inputType); setRequired(placeholder.required); setDefaultValue(placeholder.defaultValue ?? ""); setSortOrder(placeholder.sortOrder); setDescription(placeholder.description ?? ""); } setOpen(v); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="w-[90vw] sm:w-full sm:max-w-lg max-h-[80vh] flex flex-col overflow-hidden">
+          <DialogHeader className="shrink-0">
             <DialogTitle>编辑占位符 - {placeholder.key}</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="ph-label">标签</Label>
               <Input

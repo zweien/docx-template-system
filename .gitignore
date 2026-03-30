@@ -58,3 +58,4 @@ __pycache__/
 
 # Playwright browser automation logs
 .playwright-cli/
+.gstack/

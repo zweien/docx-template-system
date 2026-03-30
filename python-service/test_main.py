@@ -46,7 +46,12 @@ class _BaseModel:
 pydantic_stub.BaseModel = _BaseModel
 sys.modules.setdefault("pydantic", pydantic_stub)
 
-from main import process_choice_blocks, process_inline_choice_paragraphs, process_table_block
+from main import (
+    process_choice_blocks,
+    process_choice_blocks_in_paragraphs,
+    process_inline_choice_paragraphs,
+    process_table_block,
+)
 
 
 def set_vertical_merge(cell, value: str) -> None:
@@ -132,9 +137,9 @@ class ProcessChoiceBlocksTest(unittest.TestCase):
 
         process_choice_blocks(doc, {"性别": "女"})
 
-        self.assertEqual(doc.paragraphs[0].text, "")
-        self.assertEqual(doc.paragraphs[1].text, "☐ 男")
-        self.assertEqual(doc.paragraphs[2].text, "☑ 女")
+        self.assertEqual(len(doc.paragraphs), 2)
+        self.assertEqual(doc.paragraphs[0].text, "☐ 男")
+        self.assertEqual(doc.paragraphs[1].text, "☑ 女")
 
     def test_multiple_choice_replaces_only_selected_markers(self) -> None:
         doc = Document()
@@ -144,9 +149,43 @@ class ProcessChoiceBlocksTest(unittest.TestCase):
 
         process_choice_blocks(doc, {"爱好": ["音乐"]})
 
-        self.assertEqual(doc.paragraphs[0].text, "")
-        self.assertEqual(doc.paragraphs[1].text, "☐ 篮球")
-        self.assertEqual(doc.paragraphs[2].text, "☑ 音乐")
+        self.assertEqual(len(doc.paragraphs), 2)
+        self.assertEqual(doc.paragraphs[0].text, "☐ 篮球")
+        self.assertEqual(doc.paragraphs[1].text, "☑ 音乐")
+
+    def test_control_line_can_drive_inline_wingdings_choices(self) -> None:
+        doc = Document()
+        doc.add_paragraph("{{选项:单项|single}}")
+
+        inline = doc.add_paragraph()
+        inline.add_run("单项：")
+        append_sym_run(inline, "0052")
+        inline.add_run("是")
+        append_sym_run(inline, "00A3")
+        inline.add_run("否")
+
+        process_choice_blocks(doc, {"单项": "否"})
+
+        self.assertEqual(len(doc.paragraphs), 1)
+        self.assertEqual(get_sym_chars(doc.paragraphs[0]), ["00A3", "0052"])
+
+    def test_table_cell_control_line_can_drive_inline_wingdings_choices(self) -> None:
+        doc = Document()
+        table = doc.add_table(rows=1, cols=1)
+        cell = table.cell(0, 0)
+
+        cell.paragraphs[0].text = "{{选项:五类|single}}"
+        inline = cell.add_paragraph()
+        inline.add_run("符合“五类”来源 ")
+        append_sym_run(inline, "00A3")
+        inline.add_run("是   ")
+        append_sym_run(inline, "00A3")
+        inline.add_run("否")
+
+        process_choice_blocks_in_paragraphs(cell.paragraphs, {"五类": "是"})
+
+        self.assertEqual(len(cell.paragraphs), 1)
+        self.assertEqual(get_sym_chars(cell.paragraphs[0]), ["0052", "00A3"])
 
     def test_inline_choice_paragraphs_should_update_wingdings_symbols(self) -> None:
         doc = Document()

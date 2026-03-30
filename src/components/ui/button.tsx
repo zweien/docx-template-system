@@ -51,10 +51,9 @@ function Button({
   nativeButton,
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
-  // When render is a non-button element (e.g. Link), auto-disable nativeButton
-  const isNonButtonRender =
-    render && React.isValidElement(render) && render.type !== "button"
-  const resolvedNativeButton = nativeButton ?? (isNonButtonRender ? false : true)
+  // Any custom render can change the host element, so default to non-native mode unless
+  // the caller explicitly opts back into native button semantics.
+  const resolvedNativeButton = nativeButton ?? (render ? false : true)
 
   return (
     <ButtonPrimitive

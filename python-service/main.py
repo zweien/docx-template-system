@@ -80,6 +80,14 @@ def replace_paragraph_text(paragraph, new_text: str):
         paragraph.text = new_text
 
 
+def remove_paragraph(paragraph) -> None:
+    """Remove a paragraph element from the document tree."""
+    element = paragraph._element
+    parent = element.getparent()
+    if parent is not None:
+        parent.remove(element)
+
+
 def replace_placeholders_in_table(table, form_data):
     """Replace placeholders in table cells."""
     for row in table.rows:
@@ -88,9 +96,9 @@ def replace_placeholders_in_table(table, form_data):
                 replace_placeholders_in_paragraph(paragraph, form_data)
 
 
-def process_choice_blocks(doc, form_data):
-    """Process {{选项:key|single}} / {{选项:key|multiple}} blocks in paragraphs."""
-    paragraphs = doc.paragraphs
+def process_choice_blocks_in_paragraphs(paragraphs, form_data):
+    """Process {{选项:key|single}} / {{选项:key|multiple}} blocks in the given paragraphs."""
+    paragraphs = list(paragraphs)
     index = 0
 
     while index < len(paragraphs):
@@ -110,8 +118,19 @@ def process_choice_blocks(doc, form_data):
         else:
             selected_values = set()
 
-        replace_paragraph_text(paragraphs[index], "")
-        index += 1
+        control_paragraph = paragraphs.pop(index)
+        remove_paragraph(control_paragraph)
+
+        if index < len(paragraphs):
+            inline_segments = extract_inline_choice_segments(paragraphs[index])
+            if len(inline_segments) >= 2:
+                next_markers = [
+                    "0052" if segment["label"] in selected_values else "00A3"
+                    for segment in inline_segments
+                ]
+                update_paragraph_sym_markers(paragraphs[index], next_markers)
+                index += 1
+                continue
 
         while index < len(paragraphs):
             option_match = choice_option_pattern.match(paragraphs[index].text)
@@ -122,6 +141,11 @@ def process_choice_blocks(doc, form_data):
             marker = "☑" if label in selected_values else "☐"
             replace_paragraph_text(paragraphs[index], f"{marker} {label}")
             index += 1
+
+
+def process_choice_blocks(doc, form_data):
+    """Process {{选项:key|single}} / {{选项:key|multiple}} blocks in body paragraphs."""
+    process_choice_blocks_in_paragraphs(doc.paragraphs, form_data)
 
 
 def extract_inline_choice_segments(paragraph):
@@ -180,9 +204,9 @@ def update_paragraph_sym_markers(paragraph, next_markers: list[str]) -> None:
             marker_index += 1
 
 
-def process_inline_choice_paragraphs(doc, form_data):
-    """Process inline paragraphs like '单项：☑是☐否' stored as w:sym runs."""
-    for paragraph in doc.paragraphs:
+def process_inline_choice_paragraphs_in_paragraphs(paragraphs, form_data):
+    """Process fallback inline paragraphs like '单项：☑是☐否' stored as w:sym runs."""
+    for paragraph in paragraphs:
         text = paragraph.text
         separator_index = text.find("：") if "：" in text else text.find(":")
         if separator_index < 0:
@@ -209,6 +233,11 @@ def process_inline_choice_paragraphs(doc, form_data):
             for segment in segments
         ]
         update_paragraph_sym_markers(paragraph, next_markers)
+
+
+def process_inline_choice_paragraphs(doc, form_data):
+    """Process fallback inline choice paragraphs in body paragraphs."""
+    process_inline_choice_paragraphs_in_paragraphs(doc.paragraphs, form_data)
 
 
 def process_table_block(table, block_name, rows_data, form_data):
@@ -343,6 +372,10 @@ async def generate_document(request: GenerateRequest):
     # Replace placeholders in tables and process blocks
     for table in doc.tables:
         replace_placeholders_in_table(table, simple_data)
+        for row in table.rows:
+            for cell in row.cells:
+                process_choice_blocks_in_paragraphs(cell.paragraphs, choice_data | simple_data)
+                process_inline_choice_paragraphs_in_paragraphs(cell.paragraphs, choice_data | simple_data)
         for block_name in all_block_names:
             process_table_block(table, block_name, table_data.get(block_name, []), simple_data)
 

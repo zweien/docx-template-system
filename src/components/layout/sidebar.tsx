@@ -216,16 +216,14 @@ export function Sidebar() {
               <UserNav />
             </div>
           )}
-          {collapsed && (
-            <div className="w-full flex justify-center">
-              <UserNav />
-            </div>
-          )}
           <Button
             variant="ghost"
             size="icon-xs"
             onClick={toggle}
-            className="shrink-0 text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className={cn(
+              "shrink-0 text-zinc-400 hover:text-white hover:bg-zinc-800",
+              collapsed && "mx-auto"
+            )}
           >
             {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
           </Button>

@@ -11,6 +11,34 @@ import type {
 import { createConfirmToken } from './confirm-store';
 import type { DataTableListItem } from "@/types/data-table";
 
+export interface CurrentTimePayload {
+  nowIso: string;
+  timezone: string;
+  timestamp: number;
+  localeString: string;
+}
+
+// 获取当前服务器时间
+export async function getCurrentTime(): Promise<ServiceResult<CurrentTimePayload>> {
+  try {
+    const now = new Date();
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+    return {
+      success: true,
+      data: {
+        nowIso: now.toISOString(),
+        timezone,
+        timestamp: now.getTime(),
+        localeString: now.toLocaleString('zh-CN', { timeZone: timezone }),
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "获取当前时间失败";
+    return { success: false, error: { code: "GET_TIME_FAILED", message } };
+  }
+}
+
 // 列出可访问的表
 export async function listTables(): Promise<ServiceResult<DataTableListItem[]>> {
   try {

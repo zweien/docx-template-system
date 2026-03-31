@@ -8,6 +8,7 @@ describe('buildSystemPrompt', () => {
     expect(prompt).toContain('searchRecords');
     expect(prompt).toContain('aggregateRecords');
     expect(prompt).toContain('getTableSchema');
+    expect(prompt).toContain('getCurrentTime');
   });
 });
 
@@ -37,5 +38,19 @@ describe('buildChatContext', () => {
     const context = buildChatContext(messages);
     expect(context).toContain('用户');
     expect(context).toContain('助手');
+  });
+
+  it('should preserve message order and support system role', () => {
+    const messages: ChatMessage[] = [
+      { role: 'system', content: '已绑定当前表上下文' },
+      { role: 'user', content: '今天几号？' },
+      { role: 'assistant', content: '我先查询当前服务器时间。' },
+    ];
+
+    const context = buildChatContext(messages);
+
+    expect(context).toBe(
+      '系统: 已绑定当前表上下文\n用户: 今天几号？\n助手: 我先查询当前服务器时间。'
+    );
   });
 });

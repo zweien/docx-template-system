@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { auth } from '@/lib/auth';
 import { chat } from '@/lib/ai-agent/service';
+import { encodeStreamEvent } from '@/lib/ai-agent/stream-events';
 import { chatRequestSchema } from '@/validators/ai-agent';
 
 export async function POST(request: NextRequest) {
@@ -23,7 +25,18 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
+        const messageId = randomUUID();
         try {
+          controller.enqueue(
+            encoder.encode(
+              encodeStreamEvent({
+                type: 'message-created',
+                messageId,
+                role: 'assistant',
+              })
+            )
+          );
+
           for await (const chunk of chat({
             message: validated.message,
             tableId: validated.tableId,
@@ -32,11 +45,91 @@ export async function POST(request: NextRequest) {
             baseURL,
             model,
           })) {
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
+            if (chunk.type === 'text') {
+              controller.enqueue(
+                encoder.encode(
+                  encodeStreamEvent({
+                    type: 'text-delta',
+                    messageId,
+                    content: chunk.content,
+                  })
+                )
+              );
+              continue;
+            }
+
+            if (chunk.type === 'confirm') {
+              controller.enqueue(
+                encoder.encode(
+                  encodeStreamEvent({
+                    type: 'confirm-required',
+                    messageId,
+                    confirmToken: chunk.confirmToken ?? '',
+                    content: chunk.content,
+                  })
+                )
+              );
+              continue;
+            }
+
+            if (chunk.type === 'tool_call') {
+              controller.enqueue(
+                encoder.encode(
+                  encodeStreamEvent({
+                    type: 'tool-call',
+                    messageId,
+                    toolName: chunk.toolName ?? 'unknown',
+                    toolArgs: chunk.toolArgs,
+                  })
+                )
+              );
+              continue;
+            }
+
+            if (chunk.type === 'result') {
+              controller.enqueue(
+                encoder.encode(
+                  encodeStreamEvent({
+                    type: 'tool-result',
+                    messageId,
+                    result: chunk.result,
+                  })
+                )
+              );
+              continue;
+            }
+
+            if (chunk.type === 'error') {
+              controller.enqueue(
+                encoder.encode(
+                  encodeStreamEvent({
+                    type: 'error',
+                    messageId,
+                    content: chunk.content,
+                  })
+                )
+              );
+            }
           }
+          controller.enqueue(
+            encoder.encode(
+              encodeStreamEvent({
+                type: 'message-completed',
+                messageId,
+              })
+            )
+          );
           controller.close();
         } catch (error) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'error', content: error instanceof Error ? error.message : '未知错误' })}\n\n`));
+          controller.enqueue(
+            encoder.encode(
+              encodeStreamEvent({
+                type: 'error',
+                messageId,
+                content: error instanceof Error ? error.message : '未知错误',
+              })
+            )
+          );
           controller.close();
         }
       },

@@ -23,6 +23,10 @@ export function buildSystemPrompt(): string {
 列出所有可访问的表
 参数: {}
 
+#### getCurrentTime
+获取当前服务器时间和时区信息
+参数: {}
+
 ### 编辑工具（需要管理员确认）
 
 #### createRecord
@@ -44,11 +48,12 @@ export function buildSystemPrompt(): string {
 
 1. 先了解用户想查询哪个表、什么条件
 2. 如果不确定表结构，先调用 getTableSchema
-3. 使用 searchRecords 进行搜索，使用 aggregateRecords 进行统计
-4. 用户要求创建/更新/删除记录时，使用相应的编辑工具
-5. 编辑操作会返回确认码，管理员需要调用 /api/ai-agent/confirm 确认执行
-6. 返回结果要简洁明了
-7. 如果需要分页，默认每页 20 条
+3. 用户询问当前日期、时间、今天、现在几点等实时信息时，优先调用 getCurrentTime
+4. 使用 searchRecords 进行搜索，使用 aggregateRecords 进行统计
+5. 用户要求创建/更新/删除记录时，使用相应的编辑工具
+6. 编辑操作会返回确认码，管理员需要调用 /api/ai-agent/confirm 确认执行
+7. 返回结果要简洁明了
+8. 如果需要分页，默认每页 20 条
 
 ## FilterCondition 操作符
 - eq: 等于
@@ -76,6 +81,14 @@ ${fieldDesc}
 
 export function buildChatContext(messages: ChatMessage[]): string {
   return messages
-    .map((m) => `${m.role === 'user' ? '用户' : '助手'}: ${m.content}`)
+    .map((m) => {
+      const roleLabel = m.role === 'user'
+        ? '用户'
+        : m.role === 'assistant'
+          ? '助手'
+          : '系统';
+
+      return `${roleLabel}: ${m.content}`;
+    })
     .join('\n');
 }

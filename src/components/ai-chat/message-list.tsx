@@ -1,21 +1,39 @@
 "use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area";
+import type { RefObject } from "react";
+import { AssistantStreamState } from "./assistant-stream-state";
+import { MessageMarkdown } from "./message-markdown";
+import { MessageAttachments } from "./message-attachments";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
+  isStreaming?: boolean;
+  streamStatus?: string;
+  streamTimeline?: string[];
+  attachments?: Array<{
+    id: string;
+    fileName: string;
+    extractStatus?: "pending" | "processing" | "completed" | "failed";
+    extractSummary?: string | null;
+  }>;
 }
 
 interface MessageListProps {
   messages: Message[];
+  messagesEndRef?: RefObject<HTMLDivElement | null>;
+  containerRef?: RefObject<HTMLDivElement | null>;
 }
 
-export function MessageList({ messages }: MessageListProps) {
+export function MessageList({
+  messages,
+  messagesEndRef,
+  containerRef,
+}: MessageListProps) {
   return (
-    <ScrollArea className="flex-1 p-4">
-      <div className="space-y-4">
+    <div className="min-h-0 flex-1 overflow-y-auto" ref={containerRef}>
+      <div className="space-y-4 p-4">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -28,11 +46,30 @@ export function MessageList({ messages }: MessageListProps) {
                   : "bg-gray-100 text-gray-900"
               }`}
             >
-              <div className="whitespace-pre-wrap">{msg.content}</div>
+              {msg.role === "assistant" ? (
+                <>
+                  <AssistantStreamState
+                    status={msg.streamStatus}
+                    timeline={msg.streamTimeline}
+                    isStreaming={msg.isStreaming}
+                    hasContent={Boolean(msg.content)}
+                  />
+                  <MessageMarkdown
+                    content={msg.content}
+                    isStreaming={msg.isStreaming}
+                  />
+                </>
+              ) : (
+                <div className="whitespace-pre-wrap">{msg.content}</div>
+              )}
+              {msg.attachments?.length ? (
+                <MessageAttachments attachments={msg.attachments} />
+              ) : null}
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
-    </ScrollArea>
+    </div>
   );
 }

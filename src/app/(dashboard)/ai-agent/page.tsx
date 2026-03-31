@@ -1,11 +1,15 @@
-import { AIChatClient } from "@/components/ai-chat/ai-chat-client";
+import { AIChatShell } from "@/components/ai-chat/ai-chat-shell";
 
-export default function AIPage() {
+interface AIPageProps {
+  searchParams?: Promise<{ tableId?: string }>;
+}
+
+export default async function AIPage({ searchParams }: AIPageProps) {
+  const params = searchParams ? await searchParams : undefined;
+
   return (
-    <div className="container mx-auto py-6 max-w-4xl">
-      <div className="h-[calc(100vh-8rem)] border rounded-lg overflow-hidden">
-        <AIChatClient />
-      </div>
+    <div className="h-full min-h-0 w-full">
+      <AIChatShell initialTableId={params?.tableId} />
     </div>
   );
 }

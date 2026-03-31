@@ -10,15 +10,32 @@ export const chatMessageSchema = z.object({
 export const chatRequestSchema = z.object({
   message: z.string().min(1, "消息不能为空").max(2000, "消息最长2000字符"),
   tableId: z.string().optional(),
+  conversationId: z.string().optional(),
+  attachmentIds: z.array(z.string().min(1)).max(10, "附件最多10个").optional(),
   history: z
     .array(
       z.object({
-        role: z.enum(["user", "assistant"]),
+        role: z.enum(["user", "assistant", "system"]),
         content: z.string(),
       })
     )
     .max(20, "历史记录最多20条")
     .optional(),
+});
+
+export const createConversationSchema = z.object({
+  initialTableId: z.string().optional(),
+  title: z.string().trim().min(1).max(120).optional(),
+});
+
+export const renameConversationSchema = z.object({
+  title: z.string().trim().min(1, "标题不能为空").max(120, "标题最长120字符"),
+});
+
+export const conversationMessageSchema = z.object({
+  message: z.string().min(1, "消息不能为空").max(4000, "消息最长4000字符"),
+  attachmentIds: z.array(z.string().min(1)).max(10, "附件最多10个").optional(),
+  tableId: z.string().optional(),
 });
 
 // ========== Aggregate Schemas ==========
@@ -47,6 +64,9 @@ export const confirmRequestSchema = z.object({
 
 export type ChatMessage = z.infer<typeof chatMessageSchema>;
 export type ChatRequestInput = z.infer<typeof chatRequestSchema>;
+export type CreateConversationInput = z.infer<typeof createConversationSchema>;
+export type RenameConversationInput = z.infer<typeof renameConversationSchema>;
+export type ConversationMessageInput = z.infer<typeof conversationMessageSchema>;
 export type AggregateFilter = z.infer<typeof aggregateFilterSchema>;
 export type AggregateRequestInput = z.infer<typeof aggregateRequestSchema>;
 export type ConfirmRequestInput = z.infer<typeof confirmRequestSchema>;

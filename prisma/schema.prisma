@@ -33,6 +33,8 @@ model User {
   dataRecords   DataRecord[]
   batchGenerations BatchGeneration[]
   publishedTemplateVersions TemplateVersion[]
+  aiConversations AiConversation[]
+  aiAttachments   AiAttachment[]
 }
 
 enum TemplateStatus {
@@ -333,4 +335,88 @@ model AIOperationLog {
   @@index([userId])
   @@index([tableId])
   @@index([createdAt])
+}
+
+enum AIConversationRuntime {
+  AI_SDK
+  LANGGRAPH
+}
+
+enum AIMessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum AIMessageStatus {
+  PENDING
+  STREAMING
+  COMPLETED
+  FAILED
+}
+
+enum AIAttachmentExtractStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model AiConversation {
+  id             String                @id @default(cuid())
+  title          String
+  userId         String
+  user           User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  initialTableId String?
+  runtime        AIConversationRuntime @default(AI_SDK)
+  lastMessageAt  DateTime              @default(now())
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  messages       AiMessage[]
+
+  @@index([userId, lastMessageAt(sort: Desc)])
+}
+
+model AiMessage {
+  id           String          @id @default(cuid())
+  conversationId String
+  conversation AiConversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role         AIMessageRole
+  status       AIMessageStatus @default(PENDING)
+  content      String          @default("")
+  errorMessage String?
+  metadata     Json?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  attachments  AiMessageAttachment[]
+
+  @@index([conversationId, createdAt])
+}
+
+model AiAttachment {
+  id            String                    @id @default(cuid())
+  userId        String
+  user          User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileName      String
+  mimeType      String
+  size          Int
+  storagePath   String
+  extractStatus AIAttachmentExtractStatus @default(PENDING)
+  extractedText String?
+  extractSummary String?
+  extractError  String?
+  createdAt     DateTime                  @default(now())
+  updatedAt     DateTime                  @updatedAt
+  messages      AiMessageAttachment[]
+
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model AiMessageAttachment {
+  messageId    String
+  attachmentId String
+  message      AiMessage    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  attachment   AiAttachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
+
+  @@id([messageId, attachmentId])
 }

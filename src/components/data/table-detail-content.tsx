@@ -1,12 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Bot } from "lucide-react";
-import { AIChatClient } from "@/components/ai-chat/ai-chat-client";
 import { RecordTable } from "@/components/data/record-table";
 import type { DataTableDetail } from "@/types/data-table";
 
@@ -17,8 +14,6 @@ interface TableDetailContentProps {
 }
 
 export function TableDetailContent({ tableId, table, isAdmin }: TableDetailContentProps) {
-  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -38,22 +33,12 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
           )}
         </div>
         <div className="flex gap-2">
-          {/* AI Assistant Button */}
-          <Sheet open={aiDrawerOpen} onOpenChange={setAiDrawerOpen}>
-            <SheetTrigger
-              render={
-                <Button variant="outline" size="sm">
-                  <Bot className="h-4 w-4 mr-2" />
-                  AI 助手
-                </Button>
-              }
-            />
-            <SheetContent side="right" className="w-[400px] sm:w-[540px] p-0">
-              <div className="h-full">
-                <AIChatClient initialTableId={tableId} />
-              </div>
-            </SheetContent>
-          </Sheet>
+          <Link href={`/ai-agent?tableId=${tableId}`}>
+            <Button variant="outline" size="sm">
+              <Bot className="h-4 w-4 mr-2" />
+              AI 助手
+            </Button>
+          </Link>
 
           {isAdmin && (
             <>

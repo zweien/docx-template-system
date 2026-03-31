@@ -41,8 +41,34 @@ export interface TableSchema {
 
 // 聊天消息
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
+}
+
+export interface PersistedChatAttachment {
+  id: string;
+  fileName: string;
+  mimeType?: string;
+  size?: number;
+  extractStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+  extractSummary?: string | null;
+  extractError?: string | null;
+}
+
+export interface PersistedChatMessage extends ChatMessage {
+  id: string;
+  status: 'pending' | 'streaming' | 'completed' | 'failed';
+  errorMessage?: string | null;
+  attachments?: PersistedChatAttachment[];
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  initialTableId?: string | null;
+  lastMessageAt: Date;
 }
 
 // 服务结果（复用项目现有模式）

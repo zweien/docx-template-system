@@ -1,9 +1,11 @@
-import { generateText, tool, stepCountIs } from 'ai';
+import { streamText, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
 import { buildSystemPrompt, buildTableContext, buildChatContext } from './context-builder';
-import { searchRecords, aggregateRecords, getTableSchema, listTables, createRecordPreview, updateRecordPreview, deleteRecordPreview } from './tools';
+import { searchRecords, aggregateRecords, getTableSchema, listTables, getCurrentTime, createRecordPreview, updateRecordPreview, deleteRecordPreview } from './tools';
 import type { ChatMessage, FilterCondition, SortConfig } from './types';
+
+type StreamTextOptions = Parameters<typeof streamText>[0];
 
 // 创建可配置的 OpenAI 客户端
 function getOpenAIClient(apiKey?: string, baseURL?: string) {
@@ -109,6 +111,18 @@ export const tools = {
     },
   }),
 
+  getCurrentTime: tool({
+    description: '获取当前服务器时间和时区信息',
+    inputSchema: z.object({}),
+    execute: async () => {
+      const result = await getCurrentTime();
+      if (!result.success) {
+        throw new Error(result.error.message);
+      }
+      return result.data;
+    },
+  }),
+
   // 编辑工具（需要管理员确认）
   createRecord: tool({
     description: '创建数据记录（需要管理员确认）',
@@ -183,12 +197,87 @@ export interface ChatOptions {
   baseURL?: string;
 }
 
+export function sanitizeModelText(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, "")
+    .trim();
+}
+
+function getPartialTagLength(text: string, tag: string) {
+  const normalizedText = text.toLowerCase();
+  const normalizedTag = tag.toLowerCase();
+  const maxLength = Math.min(normalizedText.length, normalizedTag.length - 1);
+
+  for (let length = maxLength; length > 0; length -= 1) {
+    if (normalizedText.endsWith(normalizedTag.slice(0, length))) {
+      return length;
+    }
+  }
+
+  return 0;
+}
+
+export function createThinkTagStreamSanitizer() {
+  let pending = '';
+  let inThink = false;
+
+  return {
+    push(chunk: string) {
+      pending += chunk;
+      let output = '';
+
+      while (pending) {
+        const lower = pending.toLowerCase();
+
+        if (inThink) {
+          const endIndex = lower.indexOf('</think>');
+          if (endIndex === -1) {
+            const keepLength = getPartialTagLength(pending, '</think>');
+            pending = keepLength > 0 ? pending.slice(-keepLength) : '';
+            break;
+          }
+
+          pending = pending.slice(endIndex + '</think>'.length);
+          inThink = false;
+          continue;
+        }
+
+        const startIndex = lower.indexOf('<think>');
+        if (startIndex !== -1) {
+          output += pending.slice(0, startIndex);
+          pending = pending.slice(startIndex + '<think>'.length);
+          inThink = true;
+          continue;
+        }
+
+        const keepLength = getPartialTagLength(pending, '<think>');
+        output += pending.slice(0, pending.length - keepLength);
+        pending = pending.slice(pending.length - keepLength);
+        break;
+      }
+
+      return output;
+    },
+    flush() {
+      if (inThink) {
+        pending = '';
+        return '';
+      }
+
+      const output = pending;
+      pending = '';
+      return output;
+    },
+  };
+}
+
 export async function* chat(options: ChatOptions): AsyncGenerator<{
   type: string;
   content: string;
   toolName?: string;
   toolArgs?: unknown;
   result?: unknown;
+  confirmToken?: string;
 }> {
   const { message, tableId, history = [], model, apiKey, baseURL } = options;
 
@@ -221,26 +310,57 @@ export async function* chat(options: ChatOptions): AsyncGenerator<{
   }
 
   // 调用 LLM - 使用 chat 模型 (Chat Completions API)
-  const { text, toolCalls, toolResults } = await generateText({
+  const result = streamText({
     model: openai.chat(modelName),
     system: systemPrompt + (contextPrompt ? '\n\n' + contextPrompt : ''),
     messages: [{ role: 'user', content: message }],
-    tools: tools as any,
+    tools: tools as StreamTextOptions['tools'],
     stopWhen: stepCountIs(10),
   });
+  const sanitizer = createThinkTagStreamSanitizer();
 
-  // 返回工具调用
-  for (const call of toolCalls) {
-    yield { type: 'tool_call', content: '', toolName: call.toolName, toolArgs: (call as any).input };
+  for await (const part of result.fullStream) {
+    if (part.type === 'text-delta') {
+      const sanitizedDelta = sanitizer.push(part.text);
+      if (sanitizedDelta) {
+        yield { type: 'text', content: sanitizedDelta };
+      }
+      continue;
+    }
+
+    if (part.type === 'tool-call') {
+      yield {
+        type: 'tool_call',
+        content: '',
+        toolName: part.toolName,
+        toolArgs: part.input,
+      };
+      continue;
+    }
+
+    if (part.type === 'tool-result') {
+      const output = part.output;
+      if (output?.confirmToken) {
+        yield {
+          type: 'confirm',
+          content: output.preview ?? output.message ?? '请确认执行此操作',
+          result: output,
+          confirmToken: output.confirmToken,
+        };
+        continue;
+      }
+
+      yield { type: 'result', content: '', result: output };
+      continue;
+    }
+
+    if (part.type === 'error') {
+      throw (part.error instanceof Error ? part.error : new Error('流式输出失败'));
+    }
   }
 
-  // 返回工具执行结果
-  for (const result of toolResults) {
-    yield { type: 'result', content: '', result: (result as any).output };
-  }
-
-  // 返回最终文本
-  if (text) {
-    yield { type: 'text', content: text };
+  const remainingText = sanitizer.flush();
+  if (remainingText) {
+    yield { type: 'text', content: remainingText };
   }
 }

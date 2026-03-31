@@ -128,6 +128,20 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const conversationTitle =
       titleResult.success && titleResult.data.updated ? titleResult.data.title : undefined;
     const attachmentsResult = await listAttachmentsByIds(parsed.attachmentIds ?? []);
+
+    // 获取历史消息并转换为 ChatMessage 格式
+    // 注意：数据库中 role 是枚举 USER/ASSISTANT，需要转换为小写
+    const historyResult = await listMessagesByConversation(id);
+    const history: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> =
+      historyResult.success && historyResult.data
+        ? (historyResult.data as Array<{ role: string; content: string }>)
+            .filter((m) => m.role === 'USER' || m.role === 'ASSISTANT')
+            .map((m) => ({
+              role: m.role === 'USER' ? 'user' : m.role === 'ASSISTANT' ? 'assistant' : 'system',
+              content: m.content as string,
+            }))
+        : [];
+
     const messageInput =
       attachmentsResult.success
         ? buildMessageInput(
@@ -175,6 +189,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
           for await (const chunk of chat({
             message: messageInput,
             tableId: parsed.tableId,
+            history,
             apiKey,
             baseURL,
             model,

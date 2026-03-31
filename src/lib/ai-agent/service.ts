@@ -309,11 +309,17 @@ export async function* chat(options: ChatOptions): AsyncGenerator<{
     contextPrompt += '\n## 对话历史\n' + buildChatContext(history);
   }
 
+  // 构建消息数组（包含历史消息 + 当前消息）
+  const messagesForLLM = [
+    ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+    { role: 'user' as const, content: message },
+  ];
+
   // 调用 LLM - 使用 chat 模型 (Chat Completions API)
   const result = streamText({
     model: openai.chat(modelName),
     system: systemPrompt + (contextPrompt ? '\n\n' + contextPrompt : ''),
-    messages: [{ role: 'user', content: message }],
+    messages: messagesForLLM,
     tools: tools as StreamTextOptions['tools'],
     stopWhen: stepCountIs(10),
   });

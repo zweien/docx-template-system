@@ -75,7 +75,11 @@ export default function UiCheckPage() {
         <section className="grid gap-6 md:grid-cols-3">
           <div className="space-y-3">
             <p className="text-sm font-medium text-foreground">Select</p>
-            <Select value={selectValue} onValueChange={setSelectValue} defaultOpen>
+            <Select
+              value={selectValue}
+              onValueChange={(value) => setSelectValue(value ?? "contract")}
+              defaultOpen
+            >
               <SelectTrigger className="w-full" data-testid="ui-check-select-trigger">
                 <SelectValue placeholder="请选择类型" />
               </SelectTrigger>

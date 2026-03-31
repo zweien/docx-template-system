@@ -20,6 +20,7 @@ import {
 import { ChevronRight, ChevronDown, Loader2 } from "lucide-react";
 import type { TemplateVersionListItem, TemplateVersionDetail } from "@/types/template";
 import type { PlaceholderSnapshotItem } from "@/types/placeholder";
+import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
 
 interface VersionHistoryDialogProps {
   templateId: string;
@@ -100,10 +101,6 @@ export function VersionHistoryDialog({ templateId, open, onOpenChange }: Version
 
   const formatFileSize = (bytes: number) => {
     return `${(bytes / 1024).toFixed(1)} KB`;
-  };
-
-  const getInputTypeLabel = (type: string) => {
-    return type === "TEXTAREA" ? "多行文本" : "单行文本";
   };
 
   return (
@@ -194,7 +191,7 @@ export function VersionHistoryDialog({ templateId, open, onOpenChange }: Version
                                         {ph.key}
                                       </TableCell>
                                       <TableCell>{ph.label}</TableCell>
-                                      <TableCell>{getInputTypeLabel(ph.inputType)}</TableCell>
+                                      <TableCell>{getPlaceholderInputTypeLabel(ph.inputType)}</TableCell>
                                       <TableCell>{ph.required ? "是" : "否"}</TableCell>
                                     </TableRow>
                                   ))}

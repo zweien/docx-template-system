@@ -31,6 +31,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
 
 interface TableColumn {
   key: string;
@@ -41,7 +42,7 @@ interface PlaceholderRow {
   id?: string;
   key: string;
   label: string;
-  inputType: "TEXT" | "TEXTAREA" | "TABLE";
+  inputType: "TEXT" | "TEXTAREA" | "TABLE" | "CHOICE_SINGLE" | "CHOICE_MULTI";
   required: boolean;
   defaultValue: string;
   sortOrder: number;
@@ -298,7 +299,8 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
               ({
                 key: row.key,
                 label: row.label,
-                inputType: (row.inputType as "TEXT" | "TEXTAREA") ?? "TEXT",
+                inputType:
+                  (row.inputType as "TEXT" | "TEXTAREA" | "TABLE" | "CHOICE_SINGLE" | "CHOICE_MULTI") ?? "TEXT",
                 required: row.required === "true" || row.required === true,
                 defaultValue: row.defaultValue ?? "",
                 sortOrder: index,
@@ -494,21 +496,27 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
 
                   {/* Input Type - select */}
                   <TableCell>
-                    <Select
-                      value={row.inputType}
-                      onValueChange={(val) =>
-                        updateRow(index, "inputType", val)
-                      }
-                    >
-                      <SelectTrigger size="sm" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="TEXT">单行文本</SelectItem>
-                        <SelectItem value="TEXTAREA">多行文本</SelectItem>
-                        <SelectItem value="TABLE">明细表</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {row.inputType === "CHOICE_SINGLE" || row.inputType === "CHOICE_MULTI" ? (
+                      <div className="flex h-9 items-center text-sm text-foreground">
+                        {getPlaceholderInputTypeLabel(row.inputType)}
+                      </div>
+                    ) : (
+                      <Select
+                        value={row.inputType}
+                        onValueChange={(val) =>
+                          updateRow(index, "inputType", val)
+                        }
+                      >
+                        <SelectTrigger size="sm" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="TEXT">单行文本</SelectItem>
+                          <SelectItem value="TEXTAREA">多行文本</SelectItem>
+                          <SelectItem value="TABLE">明细表</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
                   </TableCell>
 
                   {/* Required - switch */}
@@ -542,6 +550,16 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                         <span className="text-xs text-muted-foreground">无列定义</span>
                       )}
                     </TableCell>
+                  ) : row.inputType === "CHOICE_SINGLE" || row.inputType === "CHOICE_MULTI" ? (
+                    <>
+                      <TableCell className="text-xs text-muted-foreground">
+                        由模板选项定义
+                      </TableCell>
+                      <TableCell>{row.sortOrder}</TableCell>
+                      <TableCell>
+                        <span className="text-xs text-muted-foreground">不适用</span>
+                      </TableCell>
+                    </>
                   ) : (
                     <>
                       {/* Default Value - editable */}

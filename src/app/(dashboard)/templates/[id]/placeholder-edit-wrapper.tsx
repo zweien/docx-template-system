@@ -21,6 +21,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
 
 interface PlaceholderData {
   id: string;
@@ -32,6 +33,8 @@ interface PlaceholderData {
   sortOrder: number;
   description: string | null;
 }
+
+const EDITABLE_INPUT_TYPES = new Set(["TEXT", "TEXTAREA"]);
 
 export function PlaceholderEditButton({ placeholder }: { placeholder: PlaceholderData }) {
   const [open, setOpen] = useState(false);
@@ -100,15 +103,23 @@ export function PlaceholderEditButton({ placeholder }: { placeholder: Placeholde
 
             <div className="space-y-2">
               <Label htmlFor="ph-input-type">输入类型</Label>
-              <Select value={inputType} onValueChange={(v) => setInputType(v ?? "")}>
-                <SelectTrigger id="ph-input-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TEXT">单行文本</SelectItem>
-                  <SelectItem value="TEXTAREA">多行文本</SelectItem>
-                </SelectContent>
-              </Select>
+              {EDITABLE_INPUT_TYPES.has(placeholder.inputType) ? (
+                <Select value={inputType} onValueChange={(v) => setInputType(v ?? "")}>
+                  <SelectTrigger id="ph-input-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TEXT">单行文本</SelectItem>
+                    <SelectItem value="TEXTAREA">多行文本</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="ph-input-type"
+                  value={getPlaceholderInputTypeLabel(placeholder.inputType)}
+                  readOnly
+                />
+              )}
             </div>
 
             <div className="flex items-center justify-between">

@@ -35,6 +35,7 @@ import { DeleteTemplateButton } from "./delete-button";
 import { DataTableLinkWrapper } from "@/components/template/data-table-link-wrapper";
 import { VersionHistoryDialogWrapper } from "./version-history-wrapper";
 import { PlaceholderEditButton } from "./placeholder-edit-wrapper";
+import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
@@ -49,11 +50,6 @@ const STATUS_VARIANTS: Record<
   DRAFT: "secondary",
   PUBLISHED: "default",
   ARCHIVED: "destructive",
-};
-
-const INPUT_TYPE_LABELS: Record<string, string> = {
-  TEXT: "单行文本",
-  TEXTAREA: "多行文本",
 };
 
 function formatFileSize(bytes: number): string {
@@ -298,7 +294,7 @@ export default async function TemplateDetailPage({
                         {ph.description || "—"}
                       </TableCell>
                       <TableCell>
-                        {INPUT_TYPE_LABELS[ph.inputType] ?? ph.inputType}
+                        {getPlaceholderInputTypeLabel(ph.inputType)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={ph.required ? "default" : "secondary"}>

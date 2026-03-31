@@ -95,6 +95,13 @@ interface InlineChoiceToken {
   value: string;
 }
 
+interface ChoiceOptionMatch {
+  value: string;
+  label: string;
+  paragraphIndex: number;
+  markerText: string;
+}
+
 function extractParagraphTokenGroupsFromXml(xml: string): InlineChoiceToken[][] {
   const paragraphs: InlineChoiceToken[][] = [];
   const paragraphRegex = /<w:p[\s>][\s\S]*?<\/w:p>/g;
@@ -133,6 +140,51 @@ function extractParagraphTokenGroupsFromXml(xml: string): InlineChoiceToken[][] 
   }
 
   return paragraphs;
+}
+
+function extractChoiceOptionsFromTokenGroup(
+  tokens: InlineChoiceToken[],
+  paragraphIndex: number
+): ChoiceOptionMatch[] {
+  const options: ChoiceOptionMatch[] = [];
+  let pendingMarker: string | null = null;
+
+  for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
+    const token = tokens[tokenIndex];
+    if (token.type === "sym") {
+      if (checkedSymChars.has(token.value)) {
+        pendingMarker = "☑";
+      } else if (uncheckedSymChars.has(token.value)) {
+        pendingMarker = "☐";
+      }
+      continue;
+    }
+
+    if (!pendingMarker) {
+      continue;
+    }
+
+    let optionLabel = token.value;
+    while (tokenIndex + 1 < tokens.length && tokens[tokenIndex + 1].type === "text") {
+      optionLabel += tokens[tokenIndex + 1].value;
+      tokenIndex++;
+    }
+
+    optionLabel = optionLabel.trim();
+    if (!optionLabel || optionLabel === ":" || optionLabel === "：") {
+      continue;
+    }
+
+    options.push({
+      value: optionLabel,
+      label: optionLabel,
+      paragraphIndex,
+      markerText: pendingMarker,
+    });
+    pendingMarker = null;
+  }
+
+  return options;
 }
 
 function matchPlaceholders(text: string): string[] {
@@ -216,81 +268,23 @@ export async function parseStructuredPlaceholders(filePath: string): Promise<Par
       cursor++;
     }
 
+    if (options.length === 0 && cursor < paragraphTokenGroups.length) {
+      const inlineOptions = extractChoiceOptionsFromTokenGroup(
+        paragraphTokenGroups[cursor] ?? [],
+        cursor
+      );
+
+      if (inlineOptions.length >= 2) {
+        options.push(...inlineOptions);
+        cursor++;
+      }
+    }
+
     if (options.length === 0) {
       throw new Error(`选项组 "${key}" 至少需要一个选项项`);
     }
 
     choiceBlocks.push({ key, mode, options });
-  }
-
-  for (let i = 0; i < paragraphTokenGroups.length; i++) {
-    const tokens = paragraphTokenGroups[i];
-    if (!tokens.some((token) => token.type === "sym")) {
-      continue;
-    }
-
-    const leadingText = tokens
-      .filter((token) => token.type === "text")
-      .map((token) => token.value)
-      .join("");
-    const firstSeparatorIndex = leadingText.search(/[:：]/);
-    if (firstSeparatorIndex < 0) {
-      continue;
-    }
-
-    const key = leadingText.slice(0, firstSeparatorIndex).trim();
-    if (!key || choiceBlocks.some((block) => block.key === key)) {
-      continue;
-    }
-
-    const options: ParseResult["choiceBlocks"][number]["options"] = [];
-    let pendingMarker: string | null = null;
-
-    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++) {
-      const token = tokens[tokenIndex];
-      if (token.type === "sym") {
-        if (checkedSymChars.has(token.value)) {
-          pendingMarker = "☑";
-        } else if (uncheckedSymChars.has(token.value)) {
-          pendingMarker = "☐";
-        }
-        continue;
-      }
-
-      if (!pendingMarker) {
-        continue;
-      }
-
-      let optionLabel = token.value;
-      while (
-        tokenIndex + 1 < tokens.length &&
-        tokens[tokenIndex + 1].type === "text"
-      ) {
-        optionLabel += tokens[tokenIndex + 1].value;
-        tokenIndex++;
-      }
-
-      optionLabel = optionLabel.trim();
-      if (!optionLabel || optionLabel === ":" || optionLabel === "：") {
-        continue;
-      }
-
-      options.push({
-        value: optionLabel,
-        label: optionLabel,
-        paragraphIndex: i,
-        markerText: pendingMarker,
-      });
-      pendingMarker = null;
-    }
-
-    if (options.length >= 2) {
-      choiceBlocks.push({
-        key,
-        mode: key.includes("多") ? "multiple" : "single",
-        options,
-      });
-    }
   }
 
   // Collect all block start/end markers with their positions

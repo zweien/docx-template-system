@@ -92,11 +92,14 @@ describe("docx-parser", () => {
     await expect(parseStructuredPlaceholders(filePath)).rejects.toThrow("选项组");
   });
 
-  it("应解析 Word w:sym 内联单选和多选模板", async () => {
+  it("应解析带显式类型控制行的 Word w:sym 内联模板", async () => {
     const zip = new JSZip();
     const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
       <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
         <w:body>
+          <w:p>
+            <w:r><w:t>{{选项:单项|single}}</w:t></w:r>
+          </w:p>
           <w:p>
             <w:r><w:t>单项</w:t></w:r>
             <w:r><w:t>：</w:t></w:r>
@@ -104,6 +107,9 @@ describe("docx-parser", () => {
             <w:r><w:t>是</w:t></w:r>
             <w:r><w:sym w:font="Wingdings 2" w:char="00A3"/></w:r>
             <w:r><w:t>否</w:t></w:r>
+          </w:p>
+          <w:p>
+            <w:r><w:t>{{选项:多选|multiple}}</w:t></w:r>
           </w:p>
           <w:p>
             <w:r><w:t>多选</w:t></w:r>
@@ -133,20 +139,47 @@ describe("docx-parser", () => {
         key: "单项",
         mode: "single",
         options: [
-          { value: "是", label: "是", paragraphIndex: 0, markerText: "☑" },
-          { value: "否", label: "否", paragraphIndex: 0, markerText: "☐" },
+          { value: "是", label: "是", paragraphIndex: 1, markerText: "☑" },
+          { value: "否", label: "否", paragraphIndex: 1, markerText: "☐" },
         ],
       },
       {
         key: "多选",
         mode: "multiple",
         options: [
-          { value: "选项1", label: "选项1", paragraphIndex: 1, markerText: "☐" },
-          { value: "选项2", label: "选项2", paragraphIndex: 1, markerText: "☑" },
-          { value: "选项3", label: "选项3", paragraphIndex: 1, markerText: "☑" },
-          { value: "选项4", label: "选项4", paragraphIndex: 1, markerText: "☐" },
+          { value: "选项1", label: "选项1", paragraphIndex: 3, markerText: "☐" },
+          { value: "选项2", label: "选项2", paragraphIndex: 3, markerText: "☑" },
+          { value: "选项3", label: "选项3", paragraphIndex: 3, markerText: "☑" },
+          { value: "选项4", label: "选项4", paragraphIndex: 3, markerText: "☐" },
         ],
       },
     ]);
+  });
+
+  it("没有显式类型控制行的 w:sym 段落不应解析为选项组", async () => {
+    const zip = new JSZip();
+    const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+      <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+        <w:body>
+          <w:p>
+            <w:r><w:t>单项</w:t></w:r>
+            <w:r><w:t>：</w:t></w:r>
+            <w:r><w:sym w:font="Wingdings 2" w:char="0052"/></w:r>
+            <w:r><w:t>是</w:t></w:r>
+            <w:r><w:sym w:font="Wingdings 2" w:char="00A3"/></w:r>
+            <w:r><w:t>否</w:t></w:r>
+          </w:p>
+        </w:body>
+      </w:document>`;
+
+    zip.file("word/document.xml", documentXml);
+    const dir = await mkdtemp(join(tmpdir(), "docx-parser-inline-explicit-test-"));
+    tempDirs.push(dir);
+    const filePath = join(dir, "inline-choice-no-control.docx");
+    await writeFile(filePath, await zip.generateAsync({ type: "nodebuffer" }));
+
+    const result = await parseStructuredPlaceholders(filePath);
+
+    expect(result.choiceBlocks).toEqual([]);
   });
 });

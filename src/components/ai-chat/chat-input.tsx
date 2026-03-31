@@ -49,17 +49,19 @@ export function ChatInput({
   };
 
   return (
-    <div className="shrink-0 border-t p-4">
+    <div className="shrink-0 border-t p-4" suppressHydrationWarning>
       {attachments.length > 0 ? (
         <MessageAttachments attachments={attachments} />
       ) : null}
-      <div className="mt-3 flex items-end gap-2">
-        <AttachmentPicker
-          disabled={disabled || isStreaming}
-          onUploaded={(attachment) => {
-            setDraftAttachments((current) => [...current, attachment]);
-          }}
-        />
+      <div className="mt-3 flex items-end gap-2" suppressHydrationWarning>
+        <div suppressHydrationWarning>
+          <AttachmentPicker
+            disabled={disabled || isStreaming}
+            onUploaded={(attachment) => {
+              setDraftAttachments((current) => [...current, attachment]);
+            }}
+          />
+        </div>
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}

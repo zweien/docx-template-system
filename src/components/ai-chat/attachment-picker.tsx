@@ -2,8 +2,6 @@
 
 import { Paperclip } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-
 interface UploadedAttachment {
   id: string;
   fileName: string;
@@ -80,19 +78,23 @@ export function AttachmentPicker({
   }
 
   return (
-    <div>
-      <label className="inline-flex cursor-pointer">
+    <div suppressHydrationWarning>
+      <button
+        type="button"
+        suppressHydrationWarning
+        className="relative inline-flex h-8 w-8 items-center justify-center rounded-md border border-input bg-background text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
+        disabled={disabled}
+      >
+        <Paperclip className="h-4 w-4" />
         <input
           aria-label="上传附件"
-          className="sr-only"
+          suppressHydrationWarning
+          className="absolute inset-0 cursor-pointer opacity-0"
           onChange={handleChange}
           disabled={disabled}
           type="file"
         />
-        <Button type="button" variant="outline" size="icon-sm" disabled={disabled}>
-          <Paperclip className="h-4 w-4" />
-        </Button>
-      </label>
+      </button>
     </div>
   );
 }

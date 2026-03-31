@@ -1,7 +1,7 @@
 import { streamText, tool, stepCountIs } from 'ai';
 import { z } from 'zod';
 import { createOpenAI } from '@ai-sdk/openai';
-import { buildSystemPrompt, buildTableContext, buildChatContext } from './context-builder';
+import { buildSystemPrompt, buildTableContext } from './context-builder';
 import { searchRecords, aggregateRecords, getTableSchema, listTables, getCurrentTime, createRecordPreview, updateRecordPreview, deleteRecordPreview } from './tools';
 import type { ChatMessage, FilterCondition, SortConfig } from './types';
 
@@ -304,11 +304,7 @@ export async function* chat(options: ChatOptions): AsyncGenerator<{
     }
   }
 
-  // 添加历史对话
-  if (history.length > 0) {
-    contextPrompt += '\n## 对话历史\n' + buildChatContext(history);
-  }
-
+  // 历史消息只通过 messages 数组传递，避免重复
   // 构建消息数组（包含历史消息 + 当前消息）
   const messagesForLLM = [
     ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),

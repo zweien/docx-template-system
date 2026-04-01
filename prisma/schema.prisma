@@ -35,6 +35,7 @@ model User {
   publishedTemplateVersions TemplateVersion[]
   aiConversations AiConversation[]
   aiAttachments   AiAttachment[]
+  agent2Conversations Agent2Conversation[]
 }
 
 enum TemplateStatus {
@@ -419,4 +420,70 @@ model AiMessageAttachment {
   attachment   AiAttachment @relation(fields: [attachmentId], references: [id], onDelete: Cascade)
 
   @@id([messageId, attachmentId])
+}
+
+// ========== Agent2 (AI Assistant 2) ==========
+
+model Agent2Conversation {
+  id         String   @id @default(cuid())
+  title      String   @default("新对话")
+  isFavorite Boolean  @default(false)
+  userId     String
+  model      String   @default("gpt-4o")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+  messages   Agent2Message[]
+
+  @@index([userId, isFavorite])
+  @@index([userId, updatedAt])
+}
+
+model Agent2Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  parts          Json
+  attachments    Json?
+  createdAt      DateTime @default(now())
+  conversation   Agent2Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+model Agent2ToolConfirm {
+  id             String    @id @default(cuid())
+  conversationId String
+  messageId      String
+  toolName       String
+  toolInput      Json
+  token          String    @unique
+  status         String    @default("pending")
+  createdAt      DateTime  @default(now())
+  confirmedAt    DateTime?
+}
+
+model Agent2ModelConfig {
+  id              String   @id @default(cuid())
+  name            String
+  providerId      String
+  modelId         String
+  baseUrl         String
+  apiKeyEncrypted String?
+  isGlobal        Boolean  @default(false)
+  userId          String?
+  createdAt       DateTime @default(now())
+
+  @@index([userId])
+  @@index([isGlobal])
+}
+
+model Agent2UserSettings {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  autoConfirmTools Json     @default("{}")
+  defaultModel     String   @default("gpt-4o")
+  showReasoning    Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

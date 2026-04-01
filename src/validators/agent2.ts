@@ -13,9 +13,10 @@ export const updateConversationSchema = z.object({
 export const chatRequestSchema = z.object({
   messages: z.array(
     z.object({
-      role: z.string(),
-      content: z.string(),
-      parts: z.array(z.unknown()).optional(),
+      id: z.string(),
+      role: z.enum(["user", "assistant", "system"]),
+      parts: z.array(z.unknown()),
+      metadata: z.unknown().optional(),
     })
   ),
   model: z.string().min(1),

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { streamText, type ModelMessage } from "ai";
+import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { randomUUID } from "crypto";
 import { ZodError } from "zod";
 import { chatRequestSchema } from "@/validators/agent2";
@@ -8,7 +8,7 @@ import { getConversation } from "@/lib/services/agent2-conversation.service";
 import { getSettings } from "@/lib/services/agent2-settings.service";
 import { saveMessages } from "@/lib/services/agent2-message.service";
 import { resolveModel } from "@/lib/agent2/model-resolver";
-import { buildSystemPrompt, truncateMessages } from "@/lib/agent2/context-builder";
+import { buildSystemPrompt } from "@/lib/agent2/context-builder";
 import { createTools } from "@/lib/agent2/tools";
 
 interface RouteContext {
@@ -53,12 +53,9 @@ export async function POST(
     // Build system prompt
     const systemPrompt = buildSystemPrompt();
 
-    // Truncate messages if needed
-    const truncated = truncateMessages(validated.messages);
-
-    // Convert to ModelMessage[] — the client sends {role, content} objects
-    // which are compatible with AI SDK's ModelMessage at runtime
-    const messages = truncated as unknown as ModelMessage[];
+    // Convert UIMessages to ModelMessages using AI SDK utility
+    const uiMessages = validated.messages as unknown as UIMessage[];
+    const messages = await convertToModelMessages(uiMessages);
 
     // Create tools with auto-confirm settings
     const messageId = randomUUID();
@@ -72,9 +69,13 @@ export async function POST(
       tools,
       onFinish: async ({ response }) => {
         try {
-          const userContent =
-            validated.messages[validated.messages.length - 1]?.content || "";
-          const userParts = [{ type: "text" as const, text: userContent }];
+          // Extract user text from parts
+          const lastMsg = uiMessages[uiMessages.length - 1];
+          const userText = lastMsg?.parts
+            ?.filter((p: any) => p.type === "text")
+            .map((p: any) => p.text)
+            .join("") || "";
+          const userParts = [{ type: "text" as const, text: userText }];
 
           // ResponseMessage has `content` (string | ContentPart[]) not `parts`
           const assistantParts = response.messages.flatMap((m) => {

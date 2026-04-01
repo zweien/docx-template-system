@@ -172,15 +172,29 @@ POST /api/agent2/conversations/[id]/chat
 
 ## 5. 工具确认流程
 
+### 技术实现方案（AI SDK v6）
+
+AI SDK v6 的 `streamText` 不原生支持"暂停等待用户确认"。采用以下方案：
+
+**后端**：需确认的工具在 `tool.execute` 中生成 confirm token，立即返回包含 token 的结果（`{ _needsConfirm: true, token, toolName, toolInput }`），不执行实际操作。前端识别此标记后展示确认弹窗。
+
+**前端**：渲染 `tool-invocation` part 时检查 output 中是否包含 `_needsConfirm`：
+- 是 → 展示 `ToolConfirmDialog`，用户确认后调用 `/api/agent2/confirm/[token]`
+- 否 → 正常展示 ToolInput/ToolOutput
+
+**确认后执行**：`/api/agent2/confirm/[token]` 验证 token 后执行实际操作，返回结果。前端收到结果后更新对应 tool-invocation part 的 output 并继续对话。
+
 ### 时序
 
 ```
 用户 → "删除销售记录中金额为 0 的所有记录"
 AI   → 调用 searchRecords → 找到 3 条记录
-AI   → 调用 deleteRecord × 3 → 暂停，等待确认
-系统  → 展示 ToolConfirmDialog（工具名 + 参数 JSON + 风险提示）
-用户  → 点击"确认执行"（或勾选"以后自动确认此类操作"）
-后端  → token 验证 → 执行操作 → 返回结果
+AI   → 调用 deleteRecord → tool.execute 返回 { _needsConfirm: true, token: "xxx" }
+前端  → 识别 _needsConfirm → 展示 ToolConfirmDialog
+用户  → 点击"确认执行"
+前端  → POST /api/agent2/confirm/xxx
+后端  → token 验证 → 执行删除 → 返回结果
+前端  → 更新 tool output → 追加用户确认消息 → AI 继续生成回复
 AI   → "已成功删除 3 条金额为 0 的销售记录"
 ```
 
@@ -192,11 +206,25 @@ AI   → "已成功删除 3 条金额为 0 的销售记录"
 - "拒绝"和"确认执行"两个按钮
 - 复选框："以后自动确认此类操作"
 
+### 确认令牌机制
+
+- Token 为加密随机字符串（`crypto.randomUUID()`），存入 `Agent2ToolConfirm` 表
+- **过期时间**：5 分钟。`/api/agent2/confirm/[token]` 检查 `createdAt + 5min > now`，过期则返回 410 Gone
+- **并发保护**：token 为一次性使用。确认后 status 立即更新为 confirmed/rejected，重复调用返回 409 Conflict
+- **清理**：通过定时任务或惰性清理删除超过 1 小时的 pending 状态记录
+
 ### 自动确认
 
 - 侧边栏底部全局"自动确认工具调用"开关
 - 确认弹窗中可勾选"以后自动确认此类操作"（按工具类别记忆）
 - 自动确认设置存储在客户端（localStorage），不存数据库
+- 自动确认开启时，前端检测到 `_needsConfirm` 后自动调用 confirm API，不弹窗
+
+### 流中断与错误处理
+
+- **流中断**：如果 SSE 流在传输过程中断开（网络错误、服务端崩溃），`useChat` 的 `onError` 回调触发，显示错误提示。前端保留已接收的部分消息
+- **消息持久化时机**：流正常结束后（`onFinish` 回调）持久化完整消息。流中断时，已接收的完整消息仍然持久化（按 message 粒度），不完整的最后一条消息标记为 `status: "failed"`
+- **工具确认中断**：如果用户关闭页面时仍有未确认的工具调用，token 在 5 分钟后自动过期，不产生副作用
 
 ## 6. 前端组件架构
 

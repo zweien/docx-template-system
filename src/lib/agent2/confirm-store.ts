@@ -2,10 +2,7 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import { randomUUID } from "crypto";
-
-type ServiceResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: { code: string; message: string } };
+import type { ServiceResult } from "@/types/data-table";
 
 const CONFIRM_REQUIRED_TOOLS = new Set([
   "createRecord",
@@ -60,7 +57,8 @@ export async function createConfirmToken(
 }
 
 export async function validateAndClaimToken(
-  token: string
+  token: string,
+  userId?: string
 ): Promise<
   ServiceResult<{
     id: string;
@@ -80,6 +78,20 @@ export async function validateAndClaimToken(
         success: false,
         error: { code: "NOT_FOUND", message: "确认令牌不存在" },
       };
+    }
+
+    // Verify conversation ownership if userId provided
+    if (userId) {
+      const conversation = await db.agent2Conversation.findUnique({
+        where: { id: record.conversationId },
+        select: { userId: true },
+      });
+      if (!conversation || conversation.userId !== userId) {
+        return {
+          success: false,
+          error: { code: "FORBIDDEN", message: "无权操作此确认令牌" },
+        };
+      }
     }
 
     if (record.status !== "pending") {
@@ -131,7 +143,8 @@ export async function validateAndClaimToken(
 }
 
 export async function rejectToken(
-  token: string
+  token: string,
+  userId?: string
 ): Promise<ServiceResult<void>> {
   try {
     const record = await db.agent2ToolConfirm.findUnique({
@@ -143,6 +156,20 @@ export async function rejectToken(
         success: false,
         error: { code: "NOT_FOUND", message: "确认令牌不存在" },
       };
+    }
+
+    // Verify conversation ownership if userId provided
+    if (userId) {
+      const conversation = await db.agent2Conversation.findUnique({
+        where: { id: record.conversationId },
+        select: { userId: true },
+      });
+      if (!conversation || conversation.userId !== userId) {
+        return {
+          success: false,
+          error: { code: "FORBIDDEN", message: "无权操作此确认令牌" },
+        };
+      }
     }
 
     if (record.status !== "pending") {

@@ -1,10 +1,7 @@
 import { db } from "@/lib/db";
 import type { Agent2MessageItem } from "@/types/agent2";
 import type { Prisma } from "@/generated/prisma/client";
-
-type ServiceResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: { code: string; message: string } };
+import type { ServiceResult } from "@/types/data-table";
 
 export async function saveMessages(
   conversationId: string,

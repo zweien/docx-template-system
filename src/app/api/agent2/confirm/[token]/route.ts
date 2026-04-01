@@ -30,7 +30,7 @@ export async function POST(
     const { approved } = toolConfirmSchema.parse(body);
 
     if (approved) {
-      const claimResult = await validateAndClaimToken(token);
+      const claimResult = await validateAndClaimToken(token, session.user.id);
       if (!claimResult.success) {
         const status =
           claimResult.error.code === "EXPIRED" ? 410 : 409;
@@ -60,7 +60,7 @@ export async function POST(
 
       return NextResponse.json({ success: true, data: execResult.data });
     } else {
-      const rejectResult = await rejectToken(token);
+      const rejectResult = await rejectToken(token, session.user.id);
       if (!rejectResult.success) {
         return NextResponse.json(
           { error: rejectResult.error },

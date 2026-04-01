@@ -1,7 +1,7 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
-import { useCallback } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { DefaultChatTransport } from "ai"
 
 // AI Elements
@@ -28,7 +28,21 @@ const SUGGESTIONS = [
 ]
 
 export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: ChatAreaProps) {
-  const model = "gpt-4o"
+  const [model, setModel] = useState("gpt-4o")
+
+  // Load user's default model from settings
+  useEffect(() => {
+    fetch("/api/agent2/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.data.defaultModel) {
+          setModel(data.data.defaultModel)
+        }
+      })
+      .catch(() => {
+        // Use fallback model
+      })
+  }, [])
 
   const {
     messages,
@@ -36,6 +50,7 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: 
     sendMessage,
     stop,
     error,
+    addToolOutput,
   } = useChat({
     id: conversationId,
     transport: new DefaultChatTransport({
@@ -97,7 +112,16 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: 
             {messages.map((message) => (
               <Message key={message.id} from={message.role}>
                 <MessageContent>
-                  <MessageParts message={message} />
+                  <MessageParts
+                    message={message}
+                    onToolConfirm={({ toolCallId, toolName, result }) => {
+                      addToolOutput({
+                        tool: toolName as "dynamic",
+                        toolCallId,
+                        output: result,
+                      })
+                    }}
+                  />
                 </MessageContent>
               </Message>
             ))}

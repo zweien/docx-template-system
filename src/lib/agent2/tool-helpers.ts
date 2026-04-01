@@ -1,10 +1,7 @@
 // src/lib/agent2/tool-helpers.ts
 import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-
-type ServiceResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: { code: string; message: string } };
+import type { ServiceResult } from "@/types/data-table";
 
 // ── List all data tables ──
 
@@ -142,12 +139,8 @@ function buildFilterConditions(
       case "gte":
       case "lt":
       case "lte":
-        conditions.push({
-          data: {
-            path: [filter.field],
-            string_contains: String(filter.value),
-          },
-        });
+        // JSON field numeric comparison requires application-level filtering.
+        // We do not push a Prisma condition here; filtering happens post-query.
         break;
       case "in":
         if (Array.isArray(filter.value)) {
@@ -160,6 +153,38 @@ function buildFilterConditions(
   }
 
   return conditions;
+}
+
+function extractNumericComparisons(
+  filters: FilterCondition[]
+): FilterCondition[] {
+  return filters.filter((f) =>
+    ["gt", "gte", "lt", "lte"].includes(f.operator)
+  );
+}
+
+function applyNumericFilters(
+  records: Array<Record<string, unknown>>,
+  numericFilters: FilterCondition[]
+): Array<Record<string, unknown>> {
+  if (numericFilters.length === 0) return records;
+
+  return records.filter((record) => {
+    return numericFilters.every((filter) => {
+      const rawValue = record[filter.field];
+      const numValue = typeof rawValue === "number" ? rawValue : Number(rawValue);
+      const filterNum = typeof filter.value === "number" ? filter.value : Number(filter.value);
+      if (isNaN(numValue) || isNaN(filterNum)) return true; // skip non-numeric
+
+      switch (filter.operator) {
+        case "gt": return numValue > filterNum;
+        case "gte": return numValue >= filterNum;
+        case "lt": return numValue < filterNum;
+        case "lte": return numValue <= filterNum;
+        default: return true;
+      }
+    });
+  });
 }
 
 export async function searchRecords(params: {
@@ -198,12 +223,16 @@ export async function searchRecords(params: {
 
     const where: Record<string, unknown> = { tableId };
 
+    const typedFilters: FilterCondition[] = filters.map((f) => ({
+      field: f.field,
+      operator: f.operator as FilterCondition["operator"],
+      value: f.value,
+    }));
+
+    const numericFilters = extractNumericComparisons(typedFilters);
+    const hasNumericFilters = numericFilters.length > 0;
+
     if (filters.length > 0) {
-      const typedFilters: FilterCondition[] = filters.map((f) => ({
-        field: f.field,
-        operator: f.operator as FilterCondition["operator"],
-        value: f.value,
-      }));
       const filterConditions = buildFilterConditions(
         typedFilters,
         table.fields.map((f) => ({ key: f.key, type: f.type }))
@@ -211,6 +240,36 @@ export async function searchRecords(params: {
       if (filterConditions.length > 0) {
         where.AND = filterConditions;
       }
+    }
+
+    if (hasNumericFilters) {
+      // Fetch all matching records, apply numeric filters in JS, then paginate
+      const allRecords = await db.dataRecord.findMany({
+        where,
+        orderBy: sortBy
+          ? { [sortBy]: sortOrder }
+          : { createdAt: "desc" },
+      });
+
+      const expanded = allRecords.map((r) => ({
+        id: r.id,
+        ...(r.data as Record<string, unknown>),
+      }));
+
+      const filtered = applyNumericFilters(expanded, numericFilters);
+      const total = filtered.length;
+      const skip = (page - 1) * pageSize;
+      const paged = filtered.slice(skip, skip + pageSize);
+
+      return {
+        success: true,
+        data: {
+          records: paged as Array<{ id: string; [key: string]: unknown }>,
+          total,
+          page,
+          pageSize,
+        },
+      };
     }
 
     const skip = (page - 1) * pageSize;

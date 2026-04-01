@@ -1,9 +1,6 @@
 import { db } from "@/lib/db";
 import type { Agent2UserSettingsData } from "@/types/agent2";
-
-type ServiceResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: { code: string; message: string } };
+import type { ServiceResult } from "@/types/data-table";
 
 function mapSettings(row: {
   id: string;

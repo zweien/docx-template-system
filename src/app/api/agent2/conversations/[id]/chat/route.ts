@@ -6,9 +6,9 @@ import { ZodError } from "zod";
 import { chatRequestSchema } from "@/validators/agent2";
 import { getConversation } from "@/lib/services/agent2-conversation.service";
 import { getSettings } from "@/lib/services/agent2-settings.service";
-import { saveMessages } from "@/lib/services/agent2-message.service";
+import { saveMessages, getMessages } from "@/lib/services/agent2-message.service";
 import { resolveModel } from "@/lib/agent2/model-resolver";
-import { buildSystemPrompt } from "@/lib/agent2/context-builder";
+import { buildSystemPrompt, truncateMessages } from "@/lib/agent2/context-builder";
 import { createTools } from "@/lib/agent2/tools";
 
 interface RouteContext {
@@ -53,9 +53,25 @@ export async function POST(
     // Build system prompt
     const systemPrompt = buildSystemPrompt();
 
-    // Convert UIMessages to ModelMessages using AI SDK utility
+    // Load conversation history from DB
+    const historyResult = await getMessages(conversationId);
+    const historyMessages: UIMessage[] = historyResult.success
+      ? historyResult.data.map((m) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          parts: m.parts as UIMessage["parts"],
+          createdAt: new Date(m.createdAt),
+        }))
+      : [];
+
+    // Extract the latest user message from the frontend payload
     const uiMessages = validated.messages as unknown as UIMessage[];
-    const messages = await convertToModelMessages(uiMessages);
+    const lastUserMessage = uiMessages[uiMessages.length - 1];
+    const allMessages = [...historyMessages, lastUserMessage as unknown as UIMessage];
+
+    // Convert UIMessages to ModelMessages and truncate to prevent context overflow
+    const convertedMessages = await convertToModelMessages(allMessages);
+    const messages = truncateMessages(convertedMessages as { role: string; content: string }[]) as typeof convertedMessages;
 
     // Create tools with auto-confirm settings
     const messageId = randomUUID();
@@ -70,10 +86,10 @@ export async function POST(
       onFinish: async ({ response }) => {
         try {
           // Extract user text from parts
-          const lastMsg = uiMessages[uiMessages.length - 1];
+          const lastMsg = lastUserMessage;
           const userText = lastMsg?.parts
-            ?.filter((p: any) => p.type === "text")
-            .map((p: any) => p.text)
+            ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+            .map((p) => p.text)
             .join("") || "";
           const userParts = [{ type: "text" as const, text: userText }];
 

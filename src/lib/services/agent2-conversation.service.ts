@@ -3,10 +3,7 @@ import type {
   Agent2ConversationItem,
   Agent2ConversationDetail,
 } from "@/types/agent2";
-
-type ServiceResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: { code: string; message: string } };
+import type { ServiceResult } from "@/types/data-table";
 
 function mapConversationItem(row: {
   id: string;

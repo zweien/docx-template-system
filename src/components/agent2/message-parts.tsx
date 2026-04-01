@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { UIMessage, DynamicToolUIPart } from "ai"
+import type { UIMessage, DynamicToolUIPart, FileUIPart, ToolUIPart } from "ai"
 import { MessageResponse } from "@/components/ai-elements/message"
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning"
 import { Tool, ToolHeader, ToolContent, ToolInput, ToolOutput } from "@/components/ai-elements/tool"
@@ -13,20 +13,35 @@ import { ChartRenderer } from "./chart-renderer"
 interface ConfirmState {
   open: boolean
   toolName: string
+  toolCallId: string
   toolInput: Record<string, unknown>
   riskMessage: string
   token: string
   toolCategory: string
 }
 
-interface MessagePartsProps {
-  message: UIMessage
+interface ConfirmToolOutput {
+  _needsConfirm: true
+  riskMessage: string
+  toolInput: Record<string, unknown>
+  token: string
+  toolCategory?: string
 }
 
-export function MessageParts({ message }: MessagePartsProps) {
+interface MessagePartsProps {
+  message: UIMessage
+  onToolConfirm?: (params: {
+    toolCallId: string
+    toolName: string
+    result: unknown
+  }) => void
+}
+
+export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     open: false,
     toolName: "",
+    toolCallId: "",
     toolInput: {},
     riskMessage: "",
     token: "",
@@ -71,28 +86,31 @@ export function MessageParts({ message }: MessagePartsProps) {
             // Sources rendered collectively below
             return null
 
-          case "file":
+          case "file": {
+            const filePart = part as FileUIPart
             return (
               <Attachments key={index} variant="inline">
                 <Attachment data={{
                   id: `file-${index}`,
                   type: "file" as const,
-                  url: (part as any).url,
-                  mediaType: (part as any).mediaType,
-                  filename: (part as any).filename,
+                  url: filePart.url,
+                  mediaType: filePart.mediaType,
+                  filename: filePart.filename,
                 }}>
                   <AttachmentPreview />
                 </Attachment>
               </Attachments>
             )
+          }
 
           case "dynamic-tool": {
             const toolPart = part as DynamicToolUIPart
             const toolState = toolPart.state
 
             // Check for needs-confirm from tool output
-            if ((toolPart as any).output?._needsConfirm) {
-              const confirmOutput = (toolPart as any).output
+            const toolOutput = toolState === "output-available" ? (toolPart as DynamicToolUIPart & { state: "output-available"; output: unknown }).output : undefined
+            if (toolOutput && typeof toolOutput === "object" && toolOutput !== null && "_needsConfirm" in toolOutput) {
+              const confirmOutput = toolOutput as ConfirmToolOutput
               return (
                 <Tool key={index}>
                   <ToolHeader
@@ -110,6 +128,7 @@ export function MessageParts({ message }: MessagePartsProps) {
                           setConfirmState({
                             open: true,
                             toolName: toolPart.toolName,
+                            toolCallId: toolPart.toolCallId,
                             toolInput: confirmOutput.toolInput,
                             riskMessage: confirmOutput.riskMessage,
                             token: confirmOutput.token,
@@ -127,11 +146,12 @@ export function MessageParts({ message }: MessagePartsProps) {
 
             // Check for chart tool with output
             if (toolPart.toolName === "generateChart" && toolState === "output-available") {
+              const chartOutput = (toolPart as DynamicToolUIPart & { state: "output-available"; output: unknown }).output
               return (
                 <Tool key={index}>
                   <ToolHeader type="dynamic-tool" state={toolState} toolName={toolPart.toolName} />
                   <ToolContent>
-                    <ChartRenderer option={(toolPart as any).output} />
+                    <ChartRenderer option={chartOutput as Record<string, unknown>} />
                   </ToolContent>
                 </Tool>
               )
@@ -144,10 +164,10 @@ export function MessageParts({ message }: MessagePartsProps) {
                 <ToolContent>
                   <ToolInput input={toolPart.input} />
                   {toolState === "output-available" && (
-                    <ToolOutput output={(toolPart as any).output} errorText={(toolPart as any).errorText} />
+                    <ToolOutput output={(toolPart as DynamicToolUIPart & { state: "output-available" }).output} errorText={undefined} />
                   )}
                   {toolState === "output-error" && (
-                    <ToolOutput output={null} errorText={(toolPart as any).errorText} />
+                    <ToolOutput output={null} errorText={(toolPart as DynamicToolUIPart & { state: "output-error" }).errorText} />
                   )}
                 </ToolContent>
               </Tool>
@@ -157,9 +177,9 @@ export function MessageParts({ message }: MessagePartsProps) {
           default:
             // Handle tool-${name} parts (static ToolUIPart from AI SDK)
             if (part.type.startsWith("tool-")) {
-              const toolPart = part as any
+              const toolPart = part as ToolUIPart
               const toolName = part.type.replace("tool-", "")
-              const toolState = toolPart.state as DynamicToolUIPart["state"]
+              const toolState = toolPart.state
 
               return (
                 <Tool key={index}>
@@ -221,7 +241,16 @@ export function MessageParts({ message }: MessagePartsProps) {
         riskMessage={confirmState.riskMessage}
         token={confirmState.token}
         toolCategory={confirmState.toolCategory}
-        onConfirm={() => setConfirmState(prev => ({ ...prev, open: false }))}
+        onConfirm={(result) => {
+          setConfirmState(prev => ({ ...prev, open: false }))
+          if (onToolConfirm && confirmState.toolCallId) {
+            onToolConfirm({
+              toolCallId: confirmState.toolCallId,
+              toolName: confirmState.toolName,
+              result,
+            })
+          }
+        }}
         onReject={() => setConfirmState(prev => ({ ...prev, open: false }))}
       />
     </>

@@ -43,13 +43,23 @@ export function ToolConfirmDialog({
     }
 
     if (autoConfirm) {
-      fetch("/api/agent2/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          autoConfirmTools: { [toolCategory]: true },
-        }),
-      })
+      // Merge with existing auto-confirm settings instead of overwriting
+      try {
+        const settingsRes = await fetch("/api/agent2/settings")
+        const settingsData = await settingsRes.json()
+        const existing = settingsData.success
+          ? (settingsData.data.autoConfirmTools as Record<string, boolean>)
+          : {}
+        await fetch("/api/agent2/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            autoConfirmTools: { ...existing, [toolCategory]: true },
+          }),
+        })
+      } catch {
+        // Best-effort — don't block the confirm flow
+      }
     }
   }
 

@@ -1,17 +1,25 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import type { Agent2ModelItem } from "@/types/agent2";
-
-type ServiceResult<T> =
-  | { success: true; data: T }
-  | { success: false; error: { code: string; message: string } };
+import type { ServiceResult } from "@/types/data-table";
 
 // ── AES-256-GCM encryption ──
 
 const ENCRYPTION_KEY = process.env.MODEL_CONFIG_ENCRYPTION_KEY || "";
 const ALGORITHM = "aes-256-gcm";
 
+// Validate encryption key at module load time
+if (!ENCRYPTION_KEY || !/^[0-9a-f]{64}$/i.test(ENCRYPTION_KEY)) {
+  console.warn(
+    "[agent2-model] MODEL_CONFIG_ENCRYPTION_KEY is not set or invalid (expected 64 hex chars / 32 bytes). " +
+    "API key encryption will fail. Set it in .env.local"
+  );
+}
+
 function encrypt(text: string): string {
+  if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
+    throw new Error("MODEL_CONFIG_ENCRYPTION_KEY 未配置或无效（需要 64 位十六进制字符）");
+  }
   const key = Buffer.from(ENCRYPTION_KEY, "hex");
   const iv = randomBytes(12);
   const cipher = createCipheriv(ALGORITHM, key, iv);
@@ -22,6 +30,9 @@ function encrypt(text: string): string {
 }
 
 export function decrypt(encryptedText: string): string {
+  if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
+    throw new Error("MODEL_CONFIG_ENCRYPTION_KEY 未配置或无效（需要 64 位十六进制字符）");
+  }
   const key = Buffer.from(ENCRYPTION_KEY, "hex");
   const parts = encryptedText.split(":");
   const iv = Buffer.from(parts[0], "hex");

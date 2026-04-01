@@ -12,6 +12,12 @@
 
 新建独立的 AI 聊天页面 `/ai-agent2`，使用 Vercel AI Elements 组件库构建，提供完整的对话管理、附件上传、推理过程展示、工具调用确认等功能。
 
+### 1.2 技术依赖
+
+- **AI SDK**: v6.0.141 (项目现有)
+- **AI Elements**: 需要额外安装 `@ai-sdk/react`
+- **Node.js**: 18+ (项目要求)
+
 ### 1.2 与现有 ai-agent 的关系
 
 - **完全独立**：新建独立 API (`/api/ai2/*`) 和独立数据库表
@@ -134,12 +140,11 @@
 ├── /conversations
 │   ├── GET    /conversations          # 获取对话列表
 │   ├── POST   /conversations          # 创建对话
-│   ├── PATCH  /conversations/[id]     # 更新对话 (标题、收藏)
 │   └── DELETE /conversations/[id]     # 删除对话
 │
 ├── /conversations/[id]
 │   ├── GET    /conversations/[id]     # 获取对话详情
-│   └── DELETE /conversations/[id]     # 删除对话
+│   └── PATCH  /conversations/[id]     # 更新对话 (标题、收藏)
 │
 ├── /conversations/[id]/messages
 │   ├── GET    /conversations/[id]/messages  # 获取消息列表
@@ -186,11 +191,29 @@ interface StreamEvent {
   type: 'message-created' | 'text-delta' | 'tool-call' |
         'tool-result' | 'confirm-required' | 'message-completed' | 'error';
   messageId: string;
+  timestamp: number;  // Unix timestamp (ms)
   content?: string;
   toolName?: string;
   toolArgs?: object;
   result?: object;
   confirmToken?: string;
+  error?: string;
+}
+```
+
+#### 确认执行
+
+```typescript
+// POST /api/ai2/confirm
+interface Request {
+  confirmToken: string;
+  approved: boolean;
+}
+
+interface Response {
+  success: boolean;
+  result?: object;
+  error?: string;
 }
 ```
 
@@ -212,6 +235,11 @@ model AIConversation2 {
   updatedAt     DateTime  @updatedAt
 
   messages      AIMessage2[]
+
+  // 索引
+  @@index([userId])
+  @@index([userId, isFavorite])
+  @@index([userId, updatedAt])
 }
 
 // AIMessage2 - 消息
@@ -227,6 +255,10 @@ model AIMessage2 {
 
   conversation  AIConversation2 @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   attachments   AIAttachment2[]
+
+  // 索引
+  @@index([conversationId])
+  @@index([conversationId, createdAt])
 }
 
 // AIAttachment2 - 附件
@@ -242,6 +274,32 @@ model AIAttachment2 {
   createdAt     DateTime  @default(now())
 
   message       AIMessage2  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // 索引
+  @@index([messageId])
+}
+
+// AIUserSettings2 - 用户设置
+model AIUserSettings2 {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+
+  // 工具执行设置
+  autoExecuteQuery      Boolean   @default(true)   // 查询类工具免确认
+  autoExecuteGet        Boolean   @default(true)  // 获取类工具免确认
+  autoExecuteCreate     Boolean   @default(false) // 创建类工具免确认
+  autoExecuteUpdate     Boolean   @default(false) // 更新类工具免确认
+  autoExecuteDelete     Boolean   @default(false) // 删除类工具免确认
+
+  // 对话设置
+  showReasoning         Boolean   @default(true)  // 显示推理过程
+  autoScroll            Boolean   @default(true)  // 自动滚动到底部
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // 索引
+  @@index([userId])
 }
 ```
 
@@ -270,6 +328,12 @@ model AIAttachment2 {
 - 删除前显示确认对话框
 - 删除后自动切换至第一个会话或显示空状态
 
+#### 标题自动生成
+
+- 新对话默认标题为 "新对话"
+- 首条用户消息作为标题来源（截取前 30 字符）
+- 调用 `deriveConversationTitleFromMessage` 生成
+
 ### 6.2 消息展示
 
 #### 用户消息
@@ -284,6 +348,11 @@ model AIAttachment2 {
 - Reasoning 部分：折叠显示，streaming 时自动展开
 - 文本部分：Markdown 渲染
 - 工具调用：展示在消息下方
+
+#### 附件存储
+
+- 附件上传后保存到 `public/uploads/ai2-attachments/` 目录
+- 复用现有的 `file.service.ts` 处理文件操作
 
 ### 6.3 工具调用
 
@@ -317,11 +386,18 @@ input-streaming → input-available → (需要确认?)
 | 更新 | `updateRecord` | ❌ |
 | 删除 | `deleteRecord` | ❌ |
 
+#### 批量工具调用
+
+- 一次对话中可能触发多个工具，按顺序执行
+- 每个工具独立判断是否需要确认
+- 用户设置对所有工具生效
+
 ### 6.4 确认流程
 
 - 需要确认的工具：显示 Confirmation 组件
 - 免确认工具：根据设置自动执行
 - 确认后：携带 confirmToken 调用 `/api/ai2/confirm` 执行
+- **Token 有效期**: 5 分钟，过期后需要重新触发操作
 
 ### 6.5 设置面板
 
@@ -347,7 +423,7 @@ input-streaming → input-available → (需要确认?)
 
 #### 存储
 
-用户设置存储在 `AIConversation2` 表或独立的用户设置表中
+用户设置存储在独立的 `AIUserSettings2` 表中，与对话表分离。
 
 ---
 

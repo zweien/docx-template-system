@@ -1,17 +1,38 @@
 "use client"
 
+import { useState } from "react"
 import type { UIMessage, DynamicToolUIPart } from "ai"
 import { MessageResponse } from "@/components/ai-elements/message"
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning"
 import { Tool, ToolHeader, ToolContent, ToolInput, ToolOutput } from "@/components/ai-elements/tool"
 import { Sources, SourcesTrigger, SourcesContent, Source } from "@/components/ai-elements/sources"
 import { Attachments, Attachment, AttachmentPreview } from "@/components/ai-elements/attachments"
+import { ToolConfirmDialog } from "./tool-confirm-dialog"
+import { ChartRenderer } from "./chart-renderer"
+
+interface ConfirmState {
+  open: boolean
+  toolName: string
+  toolInput: Record<string, unknown>
+  riskMessage: string
+  token: string
+  toolCategory: string
+}
 
 interface MessagePartsProps {
   message: UIMessage
 }
 
 export function MessageParts({ message }: MessagePartsProps) {
+  const [confirmState, setConfirmState] = useState<ConfirmState>({
+    open: false,
+    toolName: "",
+    toolInput: {},
+    riskMessage: "",
+    token: "",
+    toolCategory: "",
+  })
+
   if (!message.parts || message.parts.length === 0) {
     return null
   }
@@ -71,6 +92,7 @@ export function MessageParts({ message }: MessagePartsProps) {
 
             // Check for needs-confirm from tool output
             if ((toolPart as any).output?._needsConfirm) {
+              const confirmOutput = (toolPart as any).output
               return (
                 <Tool key={index}>
                   <ToolHeader
@@ -80,42 +102,23 @@ export function MessageParts({ message }: MessagePartsProps) {
                   />
                   <ToolContent>
                     <div className="space-y-3 p-3">
-                      <p className="text-sm text-muted-foreground">{(toolPart as any).output.riskMessage}</p>
-                      <ToolInput input={(toolPart as any).output.toolInput} />
-                      <div className="flex gap-2">
-                        <button
-                          className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md"
-                          onClick={async () => {
-                            try {
-                              await fetch(`/api/agent2/confirm/${(toolPart as any).output.token}`, {
-                                method: "POST",
-                                body: JSON.stringify({ approved: true }),
-                                headers: { "Content-Type": "application/json" },
-                              })
-                            } catch (e) {
-                              console.error("Failed to confirm tool:", e)
-                            }
-                          }}
-                        >
-                          确认执行
-                        </button>
-                        <button
-                          className="px-3 py-1.5 text-sm border rounded-md"
-                          onClick={async () => {
-                            try {
-                              await fetch(`/api/agent2/confirm/${(toolPart as any).output.token}`, {
-                                method: "POST",
-                                body: JSON.stringify({ approved: false }),
-                                headers: { "Content-Type": "application/json" },
-                              })
-                            } catch (e) {
-                              console.error("Failed to reject tool:", e)
-                            }
-                          }}
-                        >
-                          拒绝
-                        </button>
-                      </div>
+                      <p className="text-sm text-muted-foreground">{confirmOutput.riskMessage}</p>
+                      <ToolInput input={confirmOutput.toolInput} />
+                      <button
+                        className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md"
+                        onClick={() => {
+                          setConfirmState({
+                            open: true,
+                            toolName: toolPart.toolName,
+                            toolInput: confirmOutput.toolInput,
+                            riskMessage: confirmOutput.riskMessage,
+                            token: confirmOutput.token,
+                            toolCategory: confirmOutput.toolCategory || "execute",
+                          })
+                        }}
+                      >
+                        查看详情并确认
+                      </button>
                     </div>
                   </ToolContent>
                 </Tool>
@@ -128,7 +131,7 @@ export function MessageParts({ message }: MessagePartsProps) {
                 <Tool key={index}>
                   <ToolHeader type="dynamic-tool" state={toolState} toolName={toolPart.toolName} />
                   <ToolContent>
-                    <ChartPlaceholder option={(toolPart as any).output} />
+                    <ChartRenderer option={(toolPart as any).output} />
                   </ToolContent>
                 </Tool>
               )
@@ -208,16 +211,19 @@ export function MessageParts({ message }: MessagePartsProps) {
           </Sources>
         )
       })()}
-    </>
-  )
-}
 
-function ChartPlaceholder({ option }: { option: any }) {
-  return (
-    <div className="border rounded-lg p-4 text-center text-muted-foreground text-sm">
-      图表：{option?.title || "未命名图表"}
-      <br />
-      <span className="text-xs">（图表渲染将在 Task 8 中实现）</span>
-    </div>
+      {/* Tool confirm dialog */}
+      <ToolConfirmDialog
+        open={confirmState.open}
+        onOpenChange={(open) => setConfirmState(prev => ({ ...prev, open }))}
+        toolName={confirmState.toolName}
+        toolInput={confirmState.toolInput}
+        riskMessage={confirmState.riskMessage}
+        token={confirmState.token}
+        toolCategory={confirmState.toolCategory}
+        onConfirm={() => setConfirmState(prev => ({ ...prev, open: false }))}
+        onReject={() => setConfirmState(prev => ({ ...prev, open: false }))}
+      />
+    </>
   )
 }

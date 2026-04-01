@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ConversationSidebar } from "./conversation-sidebar"
 import { ChatArea } from "./chat-area"
+import { SettingsDialog } from "./settings-dialog"
 import { Button } from "@/components/ui/button"
 import { MessageSquarePlus, PanelLeft, PanelLeftClose } from "lucide-react"
 
@@ -51,6 +52,9 @@ export function Agent2Layout() {
           />
         )}
       </div>
+
+      {/* Settings dialog */}
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   )
 }

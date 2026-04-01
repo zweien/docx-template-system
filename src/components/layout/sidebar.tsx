@@ -15,6 +15,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Bot,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNav } from "@/components/layout/user-nav";
@@ -61,6 +62,11 @@ const navItems: NavItem[] = [
     title: "AI 助手",
     href: "/ai-agent",
     icon: <Bot className="h-4 w-4" />,
+  },
+  {
+    title: "AI 助手 2",
+    href: "/ai-agent2",
+    icon: <Sparkles className="h-4 w-4" />,
   },
 ];
 

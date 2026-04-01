@@ -151,15 +151,32 @@
 POST /api/agent2/conversations/[id]/chat
   → 验证输入 (Zod)
   → 检查认证和会话所有权
+  → 从 DB 加载完整对话历史
+  → 上下文窗口管理：
+      → 计算 messages 总 token 数
+      → 未超限： 发送全部历史
+      → 超限（>80% 模型上下文窗口）: 截断最早的消息，保留最近的消息
+      → 始终保留 system prompt（表结构、工具说明等）
   → streamText({
       model,
-      messages: convertToModelMessages(messages),
+      system: systemPrompt,        // 包含表结构上下文
+      messages: truncatedMessages,
       tools: { ... },
       onToolCall: 需确认的工具 → 返回 needs-confirm 状态
     })
   → toUIMessageStreamResponse({ sendReasoning: true, sendSources: true })
   → 流结束后持久化完整消息到 Agent2Message
 ```
+
+### 上下文窗口管理策略
+
+采用**完整历史 + 滑动窗口截断**方案，与主流 ChatGPT 一致：
+
+1. **正常情况**：从 DB 加载完整对话历史，现代模型上下文窗口为 128K+ tokens，普通对话很难超限
+2. **截断规则**：当消息 token 总数超过模型上下文窗口的 80% 时，从最早的消息开始丢弃，直到总量回到 70% 以下
+3. **始终保留**：system prompt（表结构上下文、工具说明）不参与截断计数，它是固定的 overhead
+4. **实现方式**：使用 AI SDK 的 `generateText` 或 `countTokens` 工具预估 token 数。简单实现可用消息数 × 平均倍率估算（每条消息约 500-1000 tokens），精确实现可调用 tokenizer
+5. **不做摘要**：不使用 AI 摘要早期对话。摘要增加复杂度和额外 API 调用成本，现代模型的大窗口使得摘要大部分场景下不必要
 
 ## 4. 工具系统
 

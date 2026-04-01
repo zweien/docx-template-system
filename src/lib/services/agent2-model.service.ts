@@ -21,7 +21,7 @@ function encrypt(text: string): string {
   return iv.toString("hex") + ":" + authTag + ":" + encrypted;
 }
 
-function decrypt(encryptedText: string): string {
+export function decrypt(encryptedText: string): string {
   const key = Buffer.from(ENCRYPTION_KEY, "hex");
   const parts = encryptedText.split(":");
   const iv = Buffer.from(parts[0], "hex");

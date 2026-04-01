@@ -30,11 +30,20 @@
 └──────────────────────────────────────────┘
 ```
 
-侧边栏功能：新建对话、会话列表（按日期分组）、会话右键菜单（重命名/删除）、底部自动确认开关、可折叠。
+侧边栏功能：新建对话、会话列表（按收藏/今天/更早分组）、会话右键菜单（重命名/删除/收藏）、底部设置按钮（打开设置弹窗）、可折叠。
+
+### 会话列表分组
+
+按以下优先级分组展示：
+1. **⭐ 收藏** — 用户标记的收藏会话，始终置顶
+2. **今天** — 当天创建或更新的会话
+3. **更早** — 昨天及之前的会话
+
+会话项支持右键菜单：重命名、删除、收藏/取消收藏。收藏的会话显示 ⭐ 图标。
 
 ## 2. 数据模型
 
-新增 3 张数据库表。
+新增 5 张数据库表。
 
 ### Agent2Conversation
 
@@ -42,12 +51,14 @@
 |------|------|------|
 | id | String @id @default(cuid()) | 主键 |
 | title | String @default("新对话") | 会话标题 |
+| isFavorite | Boolean @default(false) | 是否收藏 |
 | userId | String | 用户 ID |
 | model | String @default("gpt-4o") | 上次使用的模型 |
 | createdAt | DateTime @default(now()) | 创建时间 |
 | updatedAt | DateTime @updatedAt | 更新时间 |
 
 关联：`user User`、`messages Agent2Message[]`
+索引：`@@index([userId, isFavorite])`、`@@index([userId, updatedAt])`
 
 ### Agent2Message
 
@@ -78,6 +89,48 @@
 | createdAt | DateTime @default(now()) | 创建时间 |
 | confirmedAt | DateTime? | 确认时间 |
 
+### Agent2ModelConfig（模型配置）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | String @id @default(cuid()) | 主键 |
+| name | String | 模型显示名（如 "GPT-4o"） |
+| providerId | String | Provider 标识（如 "openai"、"custom"） |
+| modelId | String | 模型 ID（如 "gpt-4o"） |
+| baseUrl | String | API Base URL |
+| apiKeyEncrypted | String? | 加密的 API Key（用户自定义时存储） |
+| isGlobal | Boolean @default(false) | 是否全局可见（管理员配置） |
+| userId | String? | 所属用户（null 表示全局模型） |
+| createdAt | DateTime @default(now()) | 创建时间 |
+
+索引：`@@index([userId])`、`@@index([isGlobal])`
+约束：全局模型 `isGlobal=true AND userId IS NULL`，用户模型 `isGlobal=false AND userId NOT NULL`
+
+**设计决策**：
+- 管理员在后台添加全局模型（`isGlobal=true`），所有用户可见
+- 用户可添加自定义模型（`isGlobal=false`），仅自己可见
+- 自定义模型统一使用 OpenAI 兼容格式（`baseUrl` + `apiKey`）
+- API Key 使用 AES 加密存储，解密后使用
+- 模型列表 = 全局模型 + 当前用户自定义模型
+
+### Agent2UserSettings（用户设置）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | String @id @default(cuid()) | 主键 |
+| userId | String @unique | 用户 ID |
+| autoConfirmTools | Json @default("{}") | 按工具类别存储自动确认设置 |
+| defaultModel | String @default("gpt-4o") | 默认模型 |
+| showReasoning | Boolean @default(true) | 显示推理过程 |
+| createdAt | DateTime @default(now()) | 创建时间 |
+| updatedAt | DateTime @updatedAt | 更新时间 |
+
+**设置弹窗内容**：
+- **工具执行**：按工具类别的自动确认开关（查询/获取/创建/更新/删除）
+- **模型设置**：默认模型选择、管理自定义模型（添加/删除 OpenAI 兼容模型）
+- **显示设置**：显示推理过程、自动滚动等
+- 未来可扩展更多设置项
+
 ## 3. API 设计
 
 | 方法 | 路径 | 说明 |
@@ -85,7 +138,7 @@
 | GET | `/api/agent2/conversations` | 列出当前用户的所有会话 |
 | POST | `/api/agent2/conversations` | 创建新会话 |
 | POST | `/api/agent2/conversations/[id]/chat` | 发送消息（SSE 流式响应） |
-| PATCH | `/api/agent2/conversations/[id]` | 重命名会话 |
+| PATCH | `/api/agent2/conversations/[id]` | 更新会话（重命名/收藏） |
 | DELETE | `/api/agent2/conversations/[id]` | 删除会话 |
 | POST | `/api/agent2/confirm/[token]` | 确认/拒绝工具调用 |
 | POST | `/api/agent2/upload` | 上传附件（Excel/Word） |
@@ -215,10 +268,40 @@ AI   → "已成功删除 3 条金额为 0 的销售记录"
 
 ### 自动确认
 
-- 侧边栏底部全局"自动确认工具调用"开关
+- 设置弹窗中的"工具执行"选项卡：按工具类别的自动确认开关
 - 确认弹窗中可勾选"以后自动确认此类操作"（按工具类别记忆）
-- 自动确认设置存储在客户端（localStorage），不存数据库
+- 自动确认设置持久化到 `Agent2UserSettings.autoConfirmTools`（Json 格式：`{ read: true, write: false, delete: false }`）
 - 自动确认开启时，前端检测到 `_needsConfirm` 后自动调用 confirm API，不弹窗
+
+### 设置弹窗
+
+侧边栏底部"设置"按钮打开设置弹窗（`Dialog`），使用 `Tabs` 分选项卡：
+
+```
+设置
+├── 🔧 工具执行
+│   ├── 查询类工具自动确认 [开]
+│   ├── 创建类工具自动确认 [关]
+│   ├── 更新类工具自动确认 [关]
+│   └── 删除类工具自动确认 [关]
+│
+├── 🤖 模型管理
+│   ├── 默认模型选择
+│   ├── 自定义模型列表
+│   │   ├── DeepSeek V3 — https://api.deepseek.com/v1
+│   │   └── Qwen-Max — https://dashscope.aliyuncs.com/v1
+│   └── [+ 添加自定义模型]
+│       → 模型名称
+│       → Base URL
+│       → API Key (密码输入)
+│       → 模型 ID
+│
+└── 🎨 显示设置
+    ├── 显示推理过程 [开]
+    └── 自动滚动到底部 [开]
+```
+
+设置变更后即时生效，无需刷新页面。
 
 ### 流中断与错误处理
 
@@ -236,7 +319,8 @@ Agent2Page                          // src/app/(dashboard)/ai-agent2/page.tsx
     ├── ConversationSidebar         // 会话列表 + 操作
     │   ├── 新建对话按钮
     │   ├── 会话列表（按日期分组）
-    │   ├── 会话项（标题 + 右键菜单）
+    │   ├── 会话项（标题 + 右键菜单：重命名/删除/收藏）
+    │   └── 底部设置按钮 → 打开 SettingsDialog
     │   └── 底部设置区（自动确认开关）
     │
     └── ChatArea                    // 主聊天区域
@@ -302,6 +386,14 @@ Agent2Page                          // src/app/(dashboard)/ai-agent2/page.tsx
 - 流程：选择文件 → 上传到 `/api/agent2/upload` → 返回提取文本
 - 使用 AI Elements Attachments + usePromptInputAttachments hook
 
+**SettingsDialog** — 设置弹窗
+- 侧边栏底部齿轮按钮触发，使用 shadcn `Dialog` + `Tabs`
+- 三个选项卡：
+  - **工具执行**：按工具类别的自动确认开关
+  - **模型管理**：自定义模型 CRUD（名称 + baseURL + apiKey + 模型ID）
+  - **显示设置**：推理过程显示、自动滚动等
+- 设置变更即时生效，API Key 加密存储
+
 ### 数据流
 
 ```
@@ -339,13 +431,61 @@ PromptInput → sendMessage
 
 ## 8. 多模型支持
 
-通过 AI SDK 的 provider 机制支持多模型切换：
+### 模型来源
 
-- **OpenAI**: GPT-4o, GPT-4o Mini
-- **Anthropic**: Claude 4 Opus, Claude 4 Sonnet（需安装 @ai-sdk/anthropic）
-- **Google**: Gemini 2.0 Flash（需安装 @ai-sdk/google）
+模型列表由两部分合并：
 
-模型选择器使用 AI Elements 的 `ModelSelector` 组件，按 provider 分组展示。
+1. **全局模型**（管理员配置）— 管理员在后台添加，所有用户可见。配置包含 provider（openai/anthropic/google 等）、模型 ID、base URL。API Key 由管理员在服务端配置（环境变量或加密存储），用户无需关心。
+2. **用户自定义模型** — 用户在设置弹窗中添加，仅自己可见。使用 OpenAI 兼容格式，用户自行配置 base URL 和 API Key。
+
+### 自定义模型配置
+
+用户可在设置弹窗中管理自定义模型：
+
+- **添加模型**：填写模型名称、Base URL、API Key、模型 ID
+- **编辑/删除**：管理已添加的自定义模型
+- **格式**：统一使用 OpenAI 兼容格式（`@ai-sdk/openai` 的 `createOpenAI({ baseURL })`）
+- **安全**：API Key 加密存储在数据库（`Agent2ModelConfig.apiKeyEncrypted`），传输和显示时脱敏
+
+### 管理员后台
+
+管理员可在系统设置中配置全局模型：
+
+- 配置 provider、模型 ID、Base URL、API Key
+- 设置全局可见性
+- 管理模型列表（启用/禁用）
+
+### 模型选择器
+
+使用 AI Elements 的 `ModelSelector` 组件，按 provider 分组展示：
+
+```
+全局模型
+├── OpenAI
+│   ├── GPT-4o
+│   └── GPT-4o Mini
+├── Anthropic
+│   ├── Claude 4 Opus
+│   └── Claude 4 Sonnet
+└── Google
+    └── Gemini 2.0 Flash
+
+我的模型
+├── DeepSeek V3 (自定义)
+└── Qwen-Max (自定义)
+```
+
+### 后端路由
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/agent2/models` | 获取可用模型列表（全局 + 用户自定义） |
+| POST | `/api/agent2/models` | 添加自定义模型 |
+| DELETE | `/api/agent2/models/[id]` | 删除自定义模型 |
+| GET | `/api/agent2/admin/models` | 管理员：获取全局模型列表 |
+| POST | `/api/agent2/admin/models` | 管理员：添加全局模型 |
+| PATCH | `/api/agent2/admin/models/[id]` | 管理员：更新全局模型 |
+| DELETE | `/api/agent2/admin/models/[id]` | 管理员：删除全局模型 |
 
 ## 9. 附件支持
 

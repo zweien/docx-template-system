@@ -102,6 +102,7 @@ export default async function TemplateDetailPage({
       <Button
         variant="ghost"
         size="sm"
+        nativeButton={false}
         render={<Link href="/templates" />}
       >
         <ArrowLeft className="h-4 w-4" />
@@ -136,6 +137,7 @@ export default async function TemplateDetailPage({
             <Button
               variant="outline"
               size="sm"
+              nativeButton={false}
               render={<Link href={`/templates/${template.id}/edit`} />}
             >
               <Pencil className="h-4 w-4" />
@@ -147,6 +149,7 @@ export default async function TemplateDetailPage({
               <Button
                 variant="outline"
                 size="sm"
+                nativeButton={false}
                 render={<Link href={`/templates/${template.id}/batch`} />}
               >
                 <Files className="h-4 w-4" />
@@ -154,6 +157,7 @@ export default async function TemplateDetailPage({
               </Button>
               <Button
                 size="sm"
+                nativeButton={false}
                 render={<Link href={`/templates/${template.id}/fill`} />}
               >
                 <PenLine className="h-4 w-4" />
@@ -261,6 +265,7 @@ export default async function TemplateDetailPage({
                 <Button
                   variant="link"
                   size="sm"
+                  nativeButton={false}
                   render={
                     <Link href={`/templates/${template.id}/edit`} />
                   }

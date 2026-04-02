@@ -70,6 +70,7 @@ export default async function DraftsPage() {
             <Button
               variant="link"
               size="sm"
+              nativeButton={false}
               render={<Link href="/templates" />}
             >
               浏览可用模板

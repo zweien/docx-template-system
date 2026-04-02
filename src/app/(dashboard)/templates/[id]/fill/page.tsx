@@ -42,6 +42,7 @@ export default async function FillPage({
       <Button
         variant="ghost"
         size="sm"
+        nativeButton={false}
         render={<Link href={`/templates/${id}`} />}
       >
         <ArrowLeft className="h-4 w-4" />

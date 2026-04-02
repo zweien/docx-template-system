@@ -85,6 +85,7 @@ export default async function RecordDetailPage({
       <Button
         variant="ghost"
         size="sm"
+        nativeButton={false}
         render={<Link href="/records" />}
       >
         <ArrowLeft className="h-4 w-4" />

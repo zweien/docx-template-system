@@ -121,7 +121,7 @@ export default async function TemplatesPage({
         {isAdmin && (
           <div className="flex items-center gap-2">
             <CategoryTagManagerButton />
-            <Button render={<Link href="/templates/new" />}>
+            <Button nativeButton={false} render={<Link href="/templates/new" />}>
               <Upload className="h-4 w-4" />
               上传模板
             </Button>
@@ -207,6 +207,7 @@ export default async function TemplatesPage({
                       <Button
                         variant="link"
                         size="sm"
+                        nativeButton={false}
                         render={<Link href="/templates/new" />}
                       >
                         上传第一个模板
@@ -268,6 +269,7 @@ export default async function TemplatesPage({
                         variant="ghost"
                         size="icon-xs"
                         className="text-foreground/80 hover:text-foreground hover:bg-muted"
+                        nativeButton={false}
                         render={<Link href={`/templates/${template.id}`} />}
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -314,6 +316,7 @@ export default async function TemplatesPage({
               <Button
                 variant="outline"
                 size="sm"
+                nativeButton={false}
                 render={<Link href={buildUrl(page - 1, status || "", categoryId)} />}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -329,6 +332,7 @@ export default async function TemplatesPage({
               <Button
                 variant="outline"
                 size="sm"
+                nativeButton={false}
                 render={<Link href={buildUrl(page + 1, status || "", categoryId)} />}
               >
                 下一页

@@ -91,17 +91,17 @@ export default async function DashboardPage() {
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button render={<Link href="/generate" />}>
+        <Button nativeButton={false} render={<Link href="/generate" />}>
           <FileOutput className="h-4 w-4" />
           我要填表
         </Button>
         {isAdmin && (
-          <Button render={<Link href="/templates/new" />}>
+          <Button nativeButton={false} render={<Link href="/templates/new" />}>
             <Upload className="h-4 w-4" />
             上传模板
           </Button>
         )}
-        <Button variant="outline" render={<Link href="/templates" />}>
+        <Button variant="outline" nativeButton={false} render={<Link href="/templates" />}>
           <FileText className="h-4 w-4" />
           查看模板
         </Button>

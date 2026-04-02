@@ -138,6 +138,7 @@ export default async function RecordsPage({
                     <Button
                       variant="link"
                       size="sm"
+                      nativeButton={false}
                       render={<Link href="/templates" />}
                     >
                       前往模板列表填写表单
@@ -180,6 +181,7 @@ export default async function RecordsPage({
                       <Button
                         variant="ghost"
                         size="sm"
+                        nativeButton={false}
                         render={<Link href={`/records/${record.id}`} />}
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -205,6 +207,7 @@ export default async function RecordsPage({
               <Button
                 variant="outline"
                 size="sm"
+                nativeButton={false}
                 render={<Link href={buildUrl(page - 1, status || "")} />}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -220,6 +223,7 @@ export default async function RecordsPage({
               <Button
                 variant="outline"
                 size="sm"
+                nativeButton={false}
                 render={<Link href={buildUrl(page + 1, status || "")} />}
               >
                 下一页

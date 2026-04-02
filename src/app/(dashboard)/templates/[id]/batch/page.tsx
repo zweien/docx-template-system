@@ -23,7 +23,7 @@ export default async function BatchGenerationPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" render={<Link href={`/templates/${id}`} />}>
+      <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/templates/${id}`} />}>
         <ArrowLeft className="h-4 w-4" />
         返回模板详情
       </Button>

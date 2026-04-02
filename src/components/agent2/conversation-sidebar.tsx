@@ -67,7 +67,11 @@ export function ConversationSidebar({
   }, [fetchConversations, refreshKey])
 
   const handleNew = async () => {
-    const res = await fetch("/api/agent2/conversations", { method: "POST" })
+    const res = await fetch("/api/agent2/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    })
     const data = await res.json()
     if (data.success) {
       onSelect(data.data.id)

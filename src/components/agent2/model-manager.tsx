@@ -55,7 +55,8 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
     loadModels().then(setModels)
   }
 
-  const globalModels = models.filter(m => m.isGlobal)
+  const envModels = models.filter(m => m.providerId === "env")
+  const globalModels = models.filter(m => m.isGlobal && m.providerId !== "env")
   const userModels = models.filter(m => !m.isGlobal)
 
   return (
@@ -68,11 +69,44 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
           onChange={(e) => onUpdateSettings({ defaultModel: e.target.value })}
           className="w-full h-8 rounded-md border bg-background px-2 text-sm"
         >
-          {models.map(m => (
-            <option key={m.id} value={m.id}>{m.name}</option>
-          ))}
+          <optgroup label="系统默认">
+            {envModels.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </optgroup>
+          {globalModels.length > 0 && (
+            <optgroup label="全局模型">
+              {globalModels.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </optgroup>
+          )}
+          {userModels.length > 0 && (
+            <optgroup label="自定义模型">
+              {userModels.map(m => (
+                <option key={m.id} value={m.id}>{m.name}</option>
+              ))}
+            </optgroup>
+          )}
         </select>
       </div>
+
+      {/* Env default models */}
+      {envModels.length > 0 && (
+        <div>
+          <p className="text-sm font-medium mb-2">系统默认模型</p>
+          <div className="space-y-1">
+            {envModels.map(m => (
+              <div key={m.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 text-sm">
+                <div>
+                  <p className="font-medium">{m.name}</p>
+                  <p className="text-xs text-muted-foreground">{m.baseUrl}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Global models */}
       {globalModels.length > 0 && (

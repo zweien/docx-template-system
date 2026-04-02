@@ -9,6 +9,9 @@ import { Sources, SourcesTrigger, SourcesContent, Source } from "@/components/ai
 import { Attachments, Attachment, AttachmentPreview } from "@/components/ai-elements/attachments"
 import { ToolConfirmDialog } from "./tool-confirm-dialog"
 import { ChartRenderer } from "./chart-renderer"
+import { parseThinkTaggedText } from "@/lib/agent2/think-parser"
+import { extractChartOptionFromText } from "@/lib/agent2/chart-text-parser"
+import { AssistantStreamState } from "../ai-chat/assistant-stream-state"
 
 interface ConfirmState {
   open: boolean
@@ -37,6 +40,103 @@ interface MessagePartsProps {
   }) => void
 }
 
+function getToolProgressLabel(toolName: string) {
+  switch (toolName) {
+    case "listTables":
+      return "正在查看数据表"
+    case "getTableSchema":
+      return "正在读取表结构"
+    case "searchRecords":
+      return "正在查询数据"
+    case "aggregateRecords":
+      return "正在汇总统计"
+    case "generateChart":
+      return "正在生成图表"
+    case "listTemplates":
+    case "getTemplate":
+      return "正在读取模板"
+    default:
+      return "正在处理工具调用"
+  }
+}
+
+function getMessageProgress(message: UIMessage) {
+  if (message.role !== "assistant" || !message.parts || message.parts.length === 0) {
+    return null
+  }
+
+  const timeline: string[] = []
+  const pushStep = (step: string) => {
+    if (timeline[timeline.length - 1] !== step) {
+      timeline.push(step)
+    }
+  }
+
+  let isStreaming = false
+  let hasVisibleText = false
+
+  for (const part of message.parts) {
+    if (part.type === "reasoning") {
+      pushStep("正在分析问题")
+      if (part.state === "streaming") {
+        isStreaming = true
+      }
+      continue
+    }
+
+    if (part.type === "text") {
+      const segments = parseThinkTaggedText(part.text)
+      if (segments.some((segment) => segment.type === "reasoning")) {
+        pushStep("正在分析问题")
+      }
+      if (segments.some((segment) => segment.type === "text" && segment.text.trim().length > 0)) {
+        pushStep("正在生成回复")
+        hasVisibleText = true
+      }
+      if (part.state === "streaming") {
+        isStreaming = true
+      }
+      continue
+    }
+
+    if (part.type === "dynamic-tool") {
+      pushStep(getToolProgressLabel(part.toolName))
+      if (
+        part.state === "input-streaming" ||
+        part.state === "input-available" ||
+        part.state === "approval-requested" ||
+        part.state === "approval-responded"
+      ) {
+        isStreaming = true
+      }
+      continue
+    }
+
+    if (part.type.startsWith("tool-")) {
+      pushStep(getToolProgressLabel(part.type.replace("tool-", "")))
+      if (
+        part.state === "input-streaming" ||
+        part.state === "input-available" ||
+        part.state === "approval-requested" ||
+        part.state === "approval-responded"
+      ) {
+        isStreaming = true
+      }
+    }
+  }
+
+  if (timeline.length === 0) {
+    return null
+  }
+
+  return {
+    status: timeline[timeline.length - 1],
+    timeline,
+    isStreaming,
+    hasContent: hasVisibleText,
+  }
+}
+
 export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     open: false,
@@ -53,20 +153,45 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
   }
 
   // Collect reasoning parts to merge into a single Reasoning block
-  const reasoningParts = message.parts.filter((p) => p.type === "reasoning") as Array<{
+  const reasoningParts = message.parts.flatMap((part) => {
+    if (part.type === "reasoning") {
+      return [part]
+    }
+
+    if (part.type === "text") {
+      return parseThinkTaggedText(part.text)
+        .filter((segment) => segment.type === "reasoning")
+        .map((segment) => ({
+          type: "reasoning" as const,
+          text: segment.text,
+        }))
+    }
+
+    return []
+  }) as Array<{
     type: "reasoning"
     text: string
     state?: string
   }>
   const reasoningText = reasoningParts.map((p) => p.text).join("")
   const isReasoningStreaming = reasoningParts.some((p) => p.state === "streaming")
+  const messageProgress = getMessageProgress(message)
 
   return (
     <>
+      {messageProgress && (
+        <AssistantStreamState
+          status={messageProgress.status}
+          timeline={messageProgress.timeline}
+          isStreaming={messageProgress.isStreaming}
+          hasContent={messageProgress.hasContent}
+        />
+      )}
+
       {/* Reasoning section */}
       {reasoningText && (
         <Reasoning isStreaming={isReasoningStreaming}>
-          <ReasoningTrigger />
+          <ReasoningTrigger getThinkingMessage={() => <p>思维过程</p>} />
           <ReasoningContent>{reasoningText}</ReasoningContent>
         </Reasoning>
       )}
@@ -74,8 +199,23 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
       {/* Render each part */}
       {message.parts.map((part, index) => {
         switch (part.type) {
-          case "text":
-            return <MessageResponse key={index}>{part.text}</MessageResponse>
+          case "text": {
+            const textParts = parseThinkTaggedText(part.text)
+              .filter((segment) => segment.type === "text")
+              .map((segment) => segment.text)
+            if (textParts.length === 0) {
+              return null
+            }
+            const textContent = textParts.join("\n\n")
+            const chartOption = extractChartOptionFromText(textContent)
+
+            return (
+              <div key={index} className="space-y-4">
+                {chartOption && <ChartRenderer option={chartOption} />}
+                <MessageResponse>{textContent}</MessageResponse>
+              </div>
+            )
+          }
 
           case "reasoning":
             // Already handled above as merged block
@@ -148,7 +288,7 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
             if (toolPart.toolName === "generateChart" && toolState === "output-available") {
               const chartOutput = (toolPart as DynamicToolUIPart & { state: "output-available"; output: unknown }).output
               return (
-                <Tool key={index}>
+                <Tool key={index} defaultOpen>
                   <ToolHeader type="dynamic-tool" state={toolState} toolName={toolPart.toolName} />
                   <ToolContent>
                     <ChartRenderer option={chartOutput as Record<string, unknown>} />
@@ -180,6 +320,17 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
               const toolPart = part as ToolUIPart
               const toolName = part.type.replace("tool-", "")
               const toolState = toolPart.state
+
+              if (toolName === "generateChart" && toolState === "output-available") {
+                return (
+                  <Tool key={index} defaultOpen>
+                    <ToolHeader type="dynamic-tool" state={toolState} toolName={toolName} />
+                    <ToolContent>
+                      <ChartRenderer option={toolPart.output as Record<string, unknown>} />
+                    </ToolContent>
+                  </Tool>
+                )
+              }
 
               return (
                 <Tool key={index}>

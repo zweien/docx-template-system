@@ -22,13 +22,15 @@ function mapSettings(row: {
   };
 }
 
+const envDefaultModel = process.env.AI_MODEL || "gpt-4o";
+
 export async function getSettings(
   userId: string
 ): Promise<ServiceResult<Agent2UserSettingsData>> {
   const settings = await db.agent2UserSettings.upsert({
     where: { userId },
     update: {},
-    create: { userId },
+    create: { userId, defaultModel: envDefaultModel },
   });
 
   return {

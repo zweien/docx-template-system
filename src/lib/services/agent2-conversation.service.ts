@@ -45,7 +45,7 @@ export async function createConversation(
     data: {
       userId,
       title: data?.title ?? "新对话",
-      model: data?.model ?? "gpt-4o",
+      model: data?.model ?? process.env.AI_MODEL ?? "gpt-4o",
     },
   });
 

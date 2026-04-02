@@ -69,6 +69,30 @@ function mapModelItem(row: {
   };
 }
 
+// ── Env-configured default models ──
+
+export function getEnvDefaultModels(): Agent2ModelItem[] {
+  const models: Agent2ModelItem[] = [];
+  const apiKey = process.env.AI_API_KEY;
+  const baseUrl = process.env.AI_BASE_URL;
+  const model = process.env.AI_MODEL;
+
+  if (apiKey && baseUrl && model) {
+    models.push({
+      id: model,
+      name: `${model}（系统默认）`,
+      providerId: "env",
+      modelId: model,
+      baseUrl,
+      isGlobal: true,
+      userId: null,
+      createdAt: new Date(0).toISOString(),
+    });
+  }
+
+  return models;
+}
+
 // ── User model functions ──
 
 export async function listUserModels(
@@ -101,7 +125,7 @@ export async function listAllModels(
 
   return {
     success: true,
-    data: [...globalModels, ...userModels].map(mapModelItem),
+    data: [...getEnvDefaultModels(), ...globalModels.map(mapModelItem), ...userModels.map(mapModelItem)],
   };
 }
 

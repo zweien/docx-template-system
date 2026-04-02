@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { streamText, convertToModelMessages, type UIMessage } from "ai";
+import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
 import { randomUUID } from "crypto";
 import { ZodError } from "zod";
 import { chatRequestSchema } from "@/validators/agent2";
@@ -10,6 +10,10 @@ import { saveMessages, getMessages } from "@/lib/services/agent2-message.service
 import { resolveModel } from "@/lib/agent2/model-resolver";
 import { buildSystemPrompt, truncateMessages } from "@/lib/agent2/context-builder";
 import { createTools } from "@/lib/agent2/tools";
+import {
+  getLatestPersistableMessages,
+  sanitizeStoredMessages,
+} from "@/lib/agent2/message-persistence";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -47,11 +51,11 @@ export async function POST(
       ? (settingsResult.data.autoConfirmTools as Record<string, boolean>)
       : {};
 
-    // Resolve model
+    // Resolve model and build prompt/tools
     const model = await resolveModel(validated.model, session.user.id);
-
-    // Build system prompt
     const systemPrompt = buildSystemPrompt();
+    const messageId = randomUUID();
+    const tools = createTools(conversationId, messageId, autoConfirm);
 
     // Load conversation history from DB
     const historyResult = await getMessages(conversationId);
@@ -67,15 +71,17 @@ export async function POST(
     // Extract the latest user message from the frontend payload
     const uiMessages = validated.messages as unknown as UIMessage[];
     const lastUserMessage = uiMessages[uiMessages.length - 1];
-    const allMessages = [...historyMessages, lastUserMessage as unknown as UIMessage];
+    const allMessages = sanitizeStoredMessages([
+      ...historyMessages,
+      lastUserMessage as unknown as UIMessage,
+    ]);
 
     // Convert UIMessages to ModelMessages and truncate to prevent context overflow
-    const convertedMessages = await convertToModelMessages(allMessages);
+    const convertedMessages = await convertToModelMessages(allMessages, {
+      tools,
+      ignoreIncompleteToolCalls: true,
+    });
     const messages = truncateMessages(convertedMessages as { role: string; content: string }[]) as typeof convertedMessages;
-
-    // Create tools with auto-confirm settings
-    const messageId = randomUUID();
-    const tools = createTools(conversationId, messageId, autoConfirm);
 
     // Stream with AI SDK
     const result = streamText({
@@ -83,44 +89,32 @@ export async function POST(
       system: systemPrompt,
       messages,
       tools,
-      onFinish: async ({ response }) => {
-        try {
-          // Extract user text from parts
-          const lastMsg = lastUserMessage;
-          const userText = lastMsg?.parts
-            ?.filter((p): p is { type: "text"; text: string } => p.type === "text")
-            .map((p) => p.text)
-            .join("") || "";
-          const userParts = [{ type: "text" as const, text: userText }];
+      stopWhen: stepCountIs(10),
+    });
 
-          // ResponseMessage has `content` (string | ContentPart[]) not `parts`
-          const assistantParts = response.messages.flatMap((m) => {
-            if (typeof m.content === "string") {
-              return [{ type: "text" as const, text: m.content }];
-            }
-            // content is an array of parts
-            return (m.content as Array<{ type: string; text?: string; [key: string]: unknown }>).map(
-              (part) => ({
-                type: part.type,
-                ...("text" in part ? { text: part.text } : {}),
-              })
-            );
-          });
+    return result.toUIMessageStreamResponse({
+      originalMessages: allMessages,
+      sendReasoning: true,
+      sendSources: true,
+      onFinish: async ({ messages }) => {
+        try {
+          const persistableMessages = getLatestPersistableMessages(
+            messages as UIMessage[]
+          );
+
+          if (!persistableMessages) {
+            return;
+          }
 
           await saveMessages(
             conversationId,
-            { role: "user", parts: userParts },
-            { role: "assistant", parts: assistantParts }
+            persistableMessages.userMessage,
+            persistableMessages.assistantMessage
           );
         } catch (e) {
           console.error("Failed to save messages:", e);
         }
       },
-    });
-
-    return result.toUIMessageStreamResponse({
-      sendReasoning: true,
-      sendSources: true,
     });
   } catch (error) {
     if (error instanceof ZodError) {

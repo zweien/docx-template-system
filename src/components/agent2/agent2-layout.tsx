@@ -1,17 +1,34 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { ConversationSidebar } from "./conversation-sidebar"
 import { ChatArea } from "./chat-area"
 import { SettingsDialog } from "./settings-dialog"
 import { Button } from "@/components/ui/button"
 import { MessageSquarePlus, PanelLeft, PanelLeftClose } from "lucide-react"
 
+const SELECTED_CONVERSATION_STORAGE_KEY = "agent2:selectedConversationId"
+
 export function Agent2Layout() {
-  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null)
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(() => {
+    if (typeof window === "undefined") {
+      return null
+    }
+
+    return window.localStorage.getItem(SELECTED_CONVERSATION_STORAGE_KEY)
+  })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+
+  useEffect(() => {
+    if (selectedConversationId) {
+      window.localStorage.setItem(SELECTED_CONVERSATION_STORAGE_KEY, selectedConversationId)
+      return
+    }
+
+    window.localStorage.removeItem(SELECTED_CONVERSATION_STORAGE_KEY)
+  }, [selectedConversationId])
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
@@ -42,7 +59,11 @@ export function Agent2Layout() {
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             sidebarCollapsed={sidebarCollapsed}
             onNewConversation={async () => {
-              const res = await fetch("/api/agent2/conversations", { method: "POST" })
+              const res = await fetch("/api/agent2/conversations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: "{}",
+              })
               const data = await res.json()
               if (data.success) {
                 setSelectedConversationId(data.data.id)

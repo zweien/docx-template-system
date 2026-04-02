@@ -21,6 +21,14 @@ const DEFAULT_MODELS: Record<string, DefaultModelConfig> = {
     baseURL: process.env.AI_BASE_URL,
     model: "gpt-4o-mini",
   },
+  // Include the env-configured model so it resolves without DB lookup
+  ...(process.env.AI_MODEL
+    ? { [process.env.AI_MODEL]: {
+        apiKey: process.env.AI_API_KEY,
+        baseURL: process.env.AI_BASE_URL,
+        model: process.env.AI_MODEL,
+      } }
+    : {}),
 };
 
 export async function resolveModel(
@@ -34,7 +42,7 @@ export async function resolveModel(
       apiKey: defaultConfig.apiKey,
       baseURL: defaultConfig.baseURL,
     });
-    return openai(defaultConfig.model);
+    return openai.chat(defaultConfig.model);
   }
 
   // Look up custom model config by ID
@@ -46,12 +54,12 @@ export async function resolveModel(
   });
 
   if (!config) {
-    // Fallback to default gpt-4o
+    // Fallback to env-configured model
     const openai = createOpenAI({
       apiKey: process.env.AI_API_KEY,
       baseURL: process.env.AI_BASE_URL,
     });
-    return openai("gpt-4o");
+    return openai.chat(process.env.AI_MODEL || "gpt-4o");
   }
 
   let apiKey = "";
@@ -65,5 +73,5 @@ export async function resolveModel(
     apiKey,
     baseURL: config.baseUrl,
   });
-  return openai(config.modelId);
+  return openai.chat(config.modelId);
 }

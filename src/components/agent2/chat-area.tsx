@@ -2,17 +2,39 @@
 
 import { useChat } from "@ai-sdk/react"
 import { useCallback, useEffect, useState } from "react"
-import { DefaultChatTransport } from "ai"
+import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai"
 
 // AI Elements
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation"
-import { PromptInput, PromptInputTextarea, PromptInputSubmit, PromptInputFooter, PromptInputProvider } from "@/components/ai-elements/prompt-input"
+import {
+  PromptInput,
+  PromptInputButton,
+  PromptInputTextarea,
+  PromptInputSubmit,
+  PromptInputFooter,
+  PromptInputHeader,
+  PromptInputProvider,
+  PromptInputTools,
+  usePromptInputAttachments,
+  type PromptInputMessage,
+} from "@/components/ai-elements/prompt-input"
 import { Suggestions, Suggestion } from "@/components/ai-elements/suggestion"
 import { Message, MessageContent } from "@/components/ai-elements/message"
+import {
+  Attachment,
+  AttachmentInfo,
+  AttachmentPreview,
+  AttachmentRemove,
+  Attachments,
+} from "@/components/ai-elements/attachments"
 
 import { MessageParts } from "./message-parts"
 import { Button } from "@/components/ui/button"
-import { PanelLeftClose, PanelLeft, Sparkles } from "lucide-react"
+import { PanelLeftClose, PanelLeft, Paperclip, Sparkles } from "lucide-react"
+import {
+  buildAttachmentMessageText,
+  uploadAgent2Files,
+} from "@/lib/agent2/file-attachments"
 
 interface ChatAreaProps {
   conversationId: string
@@ -27,8 +49,65 @@ const SUGGESTIONS = [
   "查看可用的文档模板",
 ]
 
+function PromptInputAttachmentsPreview() {
+  const attachments = usePromptInputAttachments()
+
+  if (attachments.files.length === 0) {
+    return null
+  }
+
+  return (
+    <Attachments className="w-full" variant="list">
+      {attachments.files.map((file) => (
+        <Attachment
+          key={file.id}
+          data={file}
+          onRemove={() => attachments.remove(file.id)}
+        >
+          <AttachmentPreview />
+          <AttachmentInfo showMediaType />
+          <AttachmentRemove label="移除附件" />
+        </Attachment>
+      ))}
+    </Attachments>
+  )
+}
+
+function PromptInputAttachmentButton({ disabled = false }: { disabled?: boolean }) {
+  const attachments = usePromptInputAttachments()
+
+  return (
+    <PromptInputButton
+      aria-label="添加附件"
+      onClick={() => attachments.openFileDialog()}
+      tooltip="添加附件"
+      disabled={disabled}
+    >
+      <Paperclip className="size-4" />
+    </PromptInputButton>
+  )
+}
+
 export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: ChatAreaProps) {
-  const [model, setModel] = useState("gpt-4o")
+  const [model, setModel] = useState("MiniMax-M2.5")
+  const [inputError, setInputError] = useState<string | null>(null)
+  const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null)
+
+  const {
+    messages,
+    status,
+    sendMessage,
+    stop,
+    error,
+    addToolOutput,
+    setMessages,
+  } = useChat({
+    id: conversationId,
+    transport: new DefaultChatTransport({
+      api: `/api/agent2/conversations/${conversationId}/chat`,
+      body: { model },
+    }),
+  })
 
   // Load user's default model from settings
   useEffect(() => {
@@ -44,32 +123,81 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: 
       })
   }, [])
 
-  const {
-    messages,
-    status,
-    sendMessage,
-    stop,
-    error,
-    addToolOutput,
-  } = useChat({
-    id: conversationId,
-    transport: new DefaultChatTransport({
-      api: `/api/agent2/conversations/${conversationId}/chat`,
-      body: { model },
-    }),
-  })
+  useEffect(() => {
+    let active = true
+
+    void fetch(`/api/agent2/conversations/${conversationId}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error("加载历史消息失败")
+        }
+
+        return res.json()
+      })
+      .then((data) => {
+        if (!active) {
+          return
+        }
+
+        const historyMessages: UIMessage[] = Array.isArray(data?.data?.messages)
+          ? data.data.messages.map((message: {
+              id: string
+              role: string
+              parts: unknown[]
+            }) => ({
+              id: message.id,
+              role: message.role as UIMessage["role"],
+              parts: Array.isArray(message.parts) ? message.parts : [],
+            }))
+          : []
+
+        setMessages(historyMessages)
+        setLoadedConversationId(conversationId)
+      })
+      .catch(() => {
+        if (!active) {
+          return
+        }
+
+        setMessages([])
+        setLoadedConversationId(conversationId)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [conversationId, setMessages])
+
+  const historyLoaded = loadedConversationId === conversationId
 
   const handleSubmit = useCallback(
-    async ({ text }: { text: string; files?: Array<any> }) => {
-      if (!text.trim()) return
-      await sendMessage({ text })
+    ({ text, files }: PromptInputMessage) => {
+      if (!historyLoaded) {
+        return
+      }
+
+      setInputError(null)
+      if (!text.trim() && files.length === 0) return
+
+      if (files.length === 0) {
+        void sendMessage({ text })
+        return
+      }
+
+      void (async () => {
+        const uploads = await uploadAgent2Files(files as FileUIPart[])
+        const messageText = buildAttachmentMessageText(text, uploads)
+        await sendMessage({ text: messageText })
+      })().catch((error) => {
+        setInputError(error instanceof Error ? error.message : "附件上传失败")
+      })
     },
-    [sendMessage]
+    [historyLoaded, sendMessage]
   )
 
   const handleSuggestionClick = useCallback(
     (suggestion: string) => {
-      handleSubmit({ text: suggestion })
+      handleSubmit({ text: suggestion, files: [] })
     },
     [handleSubmit]
   )
@@ -91,7 +219,15 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: 
 
       {/* Messages */}
       <Conversation className="flex-1">
-        {messages.length === 0 ? (
+        {!historyLoaded ? (
+          <ConversationContent>
+            <ConversationEmptyState
+              title="正在加载历史消息"
+              description="请稍候，正在恢复当前会话内容"
+              icon={<Sparkles className="size-12 text-muted-foreground/50" />}
+            />
+          </ConversationContent>
+        ) : messages.length === 0 ? (
           <ConversationContent>
             <ConversationEmptyState
               title="开始新对话"
@@ -133,18 +269,30 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: 
       {/* Input area */}
       <div className="shrink-0 border-t p-4">
         <PromptInputProvider>
-          <PromptInput onSubmit={handleSubmit}>
-            <PromptInputTextarea placeholder="输入消息..." />
+          <PromptInput
+            accept=".csv,.xlsx,.xls,.docx,.txt,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            onSubmit={handleSubmit}
+          >
+            <PromptInputHeader>
+              <PromptInputAttachmentsPreview />
+            </PromptInputHeader>
+            <PromptInputTextarea
+              placeholder={historyLoaded ? "输入消息..." : "正在加载历史消息..."}
+              disabled={!historyLoaded}
+            />
             <PromptInputFooter>
-              <PromptInputSubmit status={status} onStop={stop} />
+              <PromptInputTools>
+                <PromptInputAttachmentButton disabled={!historyLoaded} />
+              </PromptInputTools>
+              <PromptInputSubmit status={status} onStop={stop} disabled={!historyLoaded} />
             </PromptInputFooter>
           </PromptInput>
         </PromptInputProvider>
       </div>
 
-      {error && (
+      {(error || inputError) && (
         <div className="px-4 py-2 text-sm text-destructive bg-destructive/10">
-          {error.message || "发生错误"}
+          {inputError || error?.message || "发生错误"}
         </div>
       )}
     </div>

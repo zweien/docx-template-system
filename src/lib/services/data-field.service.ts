@@ -48,18 +48,23 @@ function isRelationSubtable(field: DataFieldInput): boolean {
   return field.type === "RELATION_SUBTABLE";
 }
 
-function resolveInverseRelationCardinality(field: DataFieldInput): PrismaRelationCardinality {
+function resolveInverseRelationCardinality(
+  field: DataFieldInput,
+  fallback?: PrismaRelationCardinality | null
+): PrismaRelationCardinality {
+  const explicit = field.inverseRelationCardinality;
+
   if (field.relationCardinality === "MULTIPLE") {
-    if (field.inverseRelationCardinality && field.inverseRelationCardinality !== "MULTIPLE") {
+    if (explicit && explicit !== "MULTIPLE") {
       throw new FieldServiceError(
         "INVALID_INVERSE_RELATION_CARDINALITY",
         `字段 "${field.label}" 的反向关系基数必须是 MULTIPLE`
       );
     }
-    return "MULTIPLE";
+    return fallback ?? "MULTIPLE";
   }
 
-  return field.inverseRelationCardinality ?? "SINGLE";
+  return explicit ?? fallback ?? "SINGLE";
 }
 
 function validateInputFields(fields: DataFieldInput[]): void {
@@ -244,13 +249,21 @@ function assertLockedRelationFieldInput(existing: FieldRow, next: DataFieldInput
     throw new FieldServiceError("RELATION_FIELD_LOCKED", `字段 "${existing.label}" 的 sortOrder 已锁定，不能修改`);
   }
 
-  if ((next.inverseFieldId ?? null) !== (existing.inverseFieldId ?? null)) {
+  if (
+    Object.prototype.hasOwnProperty.call(next, "inverseFieldId") &&
+    (next.inverseFieldId ?? null) !== (existing.inverseFieldId ?? null)
+  ) {
     throw new FieldServiceError("RELATION_FIELD_LOCKED", `字段 "${existing.label}" 的 inverseFieldId 已锁定，不能修改`);
   }
 
-  const existingInverseCardinality = existing.inverseField?.relationCardinality ?? null;
-  if (existingInverseCardinality !== null) {
-    const nextInverseCardinality = next.inverseRelationCardinality ?? existingInverseCardinality;
+  const existingInverseCardinality = (existing.inverseField?.relationCardinality ?? null) as
+    | PrismaRelationCardinality
+    | null;
+  if (
+    existingInverseCardinality !== null &&
+    Object.prototype.hasOwnProperty.call(next, "inverseRelationCardinality")
+  ) {
+    const nextInverseCardinality = resolveInverseRelationCardinality(next, existingInverseCardinality);
     if (nextInverseCardinality !== existingInverseCardinality) {
       throw new FieldServiceError(
         "RELATION_FIELD_LOCKED",
@@ -479,7 +492,10 @@ export async function saveTableFieldsWithRelations(input: {
           if (matched.inverseFieldId) {
             const inverse = existingById.get(matched.inverseFieldId);
             if (inverse) {
-              const nextInverseRelationCardinality = resolveInverseRelationCardinality(field);
+              const nextInverseRelationCardinality = resolveInverseRelationCardinality(
+                field,
+                inverse.relationCardinality as PrismaRelationCardinality | null
+              );
               if (inverse.relationCardinality !== nextInverseRelationCardinality) {
                 throw new FieldServiceError(
                   "RELATION_FIELD_LOCKED",

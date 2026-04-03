@@ -259,6 +259,25 @@ describe("saveTableFieldsWithRelations", () => {
     }
   });
 
+  it("allows updating an existing relation field without resending inverse lock fields", async () => {
+    setupTransaction({
+      currentFields: [buildCurrentField()],
+    });
+
+    const input = buildRelationInput({
+      relationCardinality: "MULTIPLE",
+    });
+    delete (input as Record<string, unknown>).inverseRelationCardinality;
+    delete (input as Record<string, unknown>).inverseFieldId;
+
+    const result = await saveTableFieldsWithRelations({
+      tableId: "paper_table_id",
+      fields: [input],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("rejects tampering inverseRelationCardinality on an existing relation field", async () => {
     setupTransaction({
       currentFields: [buildCurrentField({ inverseField: { id: "inverse-1", relationCardinality: "MULTIPLE" } })],

@@ -21,8 +21,15 @@ function mapFieldToItem(row: {
   options: unknown;
   relationTo: string | null;
   displayField: string | null;
+  relationCardinality: string | null;
+  inverseFieldId: string | null;
+  isSystemManagedInverse: boolean;
+  relationSchema: unknown;
   defaultValue: string | null;
   sortOrder: number;
+  inverseField?: {
+    relationCardinality: string | null;
+  } | null;
 }): DataFieldItem {
   return {
     id: row.id,
@@ -33,9 +40,19 @@ function mapFieldToItem(row: {
     options: row.options as string[] | undefined,
     relationTo: row.relationTo ?? undefined,
     displayField: row.displayField ?? undefined,
+    relationCardinality: row.relationCardinality as DataFieldItem["relationCardinality"],
+    inverseFieldId: row.inverseFieldId ?? null,
+    inverseRelationCardinality: (row.inverseField?.relationCardinality ?? null) as DataFieldItem["relationCardinality"],
+    isSystemManagedInverse: row.isSystemManagedInverse,
+    relationSchema: row.relationSchema === null ? null : (row.relationSchema as DataFieldItem["relationSchema"]),
     defaultValue: row.defaultValue ?? undefined,
     sortOrder: row.sortOrder,
   };
+}
+
+function mapBusinessKeys(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.filter((item): item is string => typeof item === "string");
 }
 
 // ── Table Management ──
@@ -78,7 +95,16 @@ export async function getTable(id: string): Promise<ServiceResult<DataTableDetai
         const table = await db.dataTable.findUnique({
           where: { id },
           include: {
-            fields: { orderBy: { sortOrder: "asc" } },
+            fields: {
+              orderBy: { sortOrder: "asc" },
+              include: {
+                inverseField: {
+                  select: {
+                    relationCardinality: true,
+                  },
+                },
+              },
+            },
             _count: {
               select: { records: true },
             },
@@ -102,6 +128,7 @@ export async function getTable(id: string): Promise<ServiceResult<DataTableDetai
             fieldCount: table.fields.length,
             recordCount: table._count.records,
             createdAt: table.createdAt,
+            businessKeys: mapBusinessKeys(table.businessKeys),
             fields: table.fields.map(mapFieldToItem),
           },
         };
@@ -155,6 +182,7 @@ export async function createTable(
         fieldCount: 0,
         recordCount: 0,
         createdAt: table.createdAt,
+        businessKeys: mapBusinessKeys(table.businessKeys),
         fields: [],
       },
     };
@@ -215,6 +243,7 @@ export async function updateTable(
         fieldCount: table.fields.length,
         recordCount: table._count.records,
         createdAt: table.createdAt,
+        businessKeys: mapBusinessKeys(table.businessKeys),
         fields: table.fields.map(mapFieldToItem),
       },
     };
@@ -267,6 +296,13 @@ export async function updateFields(
     const result = await db.dataField.findMany({
       where: { tableId },
       orderBy: { sortOrder: "asc" },
+      include: {
+        inverseField: {
+          select: {
+            relationCardinality: true,
+          },
+        },
+      },
     });
 
     // Invalidate cache AFTER transaction commits to prevent stale cache

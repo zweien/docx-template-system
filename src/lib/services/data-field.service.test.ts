@@ -9,6 +9,7 @@ const dbMock = vi.hoisted(() => ({
   },
   dataField: {
     findMany: vi.fn(),
+    findUnique: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     deleteMany: vi.fn(),
@@ -68,6 +69,7 @@ function setupTransaction({
     }
     return [];
   });
+  dbMock.dataField.findUnique.mockResolvedValue(null);
   dbMock.dataField.create.mockImplementation(async ({ data }: { data: Record<string, unknown> }) => ({
     id: `created-${dbMock.dataField.create.mock.calls.length}`,
     ...data,
@@ -209,6 +211,32 @@ describe("saveTableFieldsWithRelations", () => {
     );
   });
 
+  it("creates inverse displayField from newly added source fields in the same save batch", async () => {
+    setupTransaction({
+      currentFields: [],
+    });
+
+    const result = await saveTableFieldsWithRelations({
+      tableId: "paper_table_id",
+      fields: [
+        buildTextField("title") as never,
+        buildRelationInput({ inverseRelationCardinality: "MULTIPLE" }),
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(dbMock.dataField.create).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tableId: "author_table_id",
+          relationTo: "paper_table_id",
+          displayField: "title",
+        }),
+      })
+    );
+  });
+
   it.each([
     { field: "required", value: true },
     { field: "defaultValue", value: "changed" },
@@ -259,9 +287,99 @@ describe("saveTableFieldsWithRelations", () => {
     }
   });
 
+  it("syncs inverse field updates when a forward relation field changes", async () => {
+    setupTransaction({
+      currentFields: [buildCurrentField()],
+    });
+    dbMock.dataField.findUnique.mockResolvedValue({
+      id: "inverse-1",
+      tableId: "author_table_id",
+      key: "authors_inverse",
+      label: "作者（反向）",
+      type: "RELATION_SUBTABLE",
+      required: false,
+      options: null,
+      relationTo: "paper_table_id",
+      displayField: "title",
+      relationCardinality: "MULTIPLE",
+      inverseFieldId: "field-1",
+      isSystemManagedInverse: true,
+      relationSchema: null,
+      defaultValue: null,
+      sortOrder: 0,
+      inverseField: null,
+    });
+
+    const result = await saveTableFieldsWithRelations({
+      tableId: "paper_table_id",
+      fields: [
+        buildRelationInput({
+          relationCardinality: "MULTIPLE",
+          inverseRelationCardinality: "MULTIPLE",
+          displayField: "summary",
+          relationSchema: {
+            version: 1,
+            fields: [
+              {
+                key: "author_order",
+                label: "作者顺序",
+                type: "NUMBER" as never,
+                required: true,
+                sortOrder: 0,
+              },
+              {
+                key: "contribution",
+                label: "贡献",
+                type: "TEXT" as never,
+                required: false,
+                sortOrder: 1,
+              },
+            ],
+          },
+        }),
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(dbMock.dataField.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "inverse-1" },
+        data: expect.objectContaining({
+          relationCardinality: "MULTIPLE",
+          displayField: "summary",
+          relationSchema: {
+            version: 1,
+            fields: expect.arrayContaining([
+              expect.objectContaining({ key: "author_order" }),
+              expect.objectContaining({ key: "contribution" }),
+            ]),
+          },
+        }),
+      })
+    );
+  });
+
   it("allows updating an existing relation field without resending inverse lock fields", async () => {
     setupTransaction({
       currentFields: [buildCurrentField()],
+    });
+    dbMock.dataField.findUnique.mockResolvedValue({
+      id: "inverse-1",
+      tableId: "author_table_id",
+      key: "authors_inverse",
+      label: "作者（反向）",
+      type: "RELATION_SUBTABLE",
+      required: false,
+      options: null,
+      relationTo: "paper_table_id",
+      displayField: "title",
+      relationCardinality: "MULTIPLE",
+      inverseFieldId: "field-1",
+      isSystemManagedInverse: true,
+      relationSchema: null,
+      defaultValue: null,
+      sortOrder: 0,
+      inverseField: null,
     });
 
     const input = buildRelationInput({

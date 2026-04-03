@@ -296,20 +296,36 @@ function buildInverseDefaults(
   };
 }
 
-function getDefaultInverseDisplayField(sourceFields: FieldRow[]): string {
-  const firstNonRelationField = sourceFields.find(
-    (field) => field.type !== FieldType.RELATION && field.type !== FieldType.RELATION_SUBTABLE
-  );
-
-  if (firstNonRelationField) {
-    return firstNonRelationField.key;
-  }
-
-  if (sourceFields.length > 0) {
-    return sourceFields[0].key;
+function getDefaultInverseDisplayField(candidateKeys: string[]): string {
+  if (candidateKeys.length > 0) {
+    return candidateKeys[0];
   }
 
   return "id";
+}
+
+function buildSourceDisplayFieldCandidates(existingFields: FieldRow[]): string[] {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+
+  for (const field of existingFields) {
+    if (field.isSystemManagedInverse) continue;
+    if (field.type === FieldType.RELATION || field.type === FieldType.RELATION_SUBTABLE) continue;
+    if (seen.has(field.key)) continue;
+    seen.add(field.key);
+    candidates.push(field.key);
+  }
+
+  return candidates;
+}
+
+function recordSourceDisplayFieldCandidate(
+  candidates: string[],
+  field: DataFieldInput
+): void {
+  if (isRelationSubtable(field)) return;
+  if (candidates.includes(field.key)) return;
+  candidates.push(field.key);
 }
 
 async function loadTableFieldKeys(
@@ -353,7 +369,7 @@ async function createInverseFieldPair(
   sourceTableId: string,
   sourceField: DataFieldInput,
   sourceFieldId: string,
-  sourceFields: FieldRow[],
+  sourceDisplayFieldCandidates: string[],
   inverseRelationCardinality: PrismaRelationCardinality
 ): Promise<string> {
   if (!sourceField.relationTo) {
@@ -377,7 +393,7 @@ async function createInverseFieldPair(
       ...buildInverseDefaults(
         sourceField,
         sourceTableId,
-        getDefaultInverseDisplayField(sourceFields),
+        getDefaultInverseDisplayField(sourceDisplayFieldCandidates),
         inverseRelationCardinality
       ),
       inverseFieldId: sourceFieldId,
@@ -406,9 +422,11 @@ async function createInverseFieldPair(
 export async function saveTableFieldsWithRelations(input: {
   tableId: string;
   fields: DataFieldInput[];
-}): Promise<ServiceResult<null>> {
+}): Promise<ServiceResult<{ affectedTableIds: string[] }>> {
   try {
     validateInputFields(input.fields);
+
+    const affectedTableIds = new Set<string>([input.tableId]);
 
     await db.$transaction(async (tx) => {
       const table = await tx.dataTable.findUnique({
@@ -431,6 +449,7 @@ export async function saveTableFieldsWithRelations(input: {
       const existingById = new Map(existingFields.map((field) => [field.id, field]));
       const existingByKey = new Map(existingFields.map((field) => [field.key, field]));
       const desiredIdOrKey = new Set(input.fields.map(getFieldIdentity));
+      const sourceDisplayFieldCandidates = buildSourceDisplayFieldCandidates(existingFields);
       const tableKeyCache = new Map<string, Set<string>>();
       tableKeyCache.set(input.tableId, new Set(existingFields.map((field) => field.key)));
 
@@ -457,11 +476,13 @@ export async function saveTableFieldsWithRelations(input: {
               where: { id: matched.id },
               data: buildFieldUpdateData(field, matched),
             });
+            recordSourceDisplayFieldCandidate(sourceDisplayFieldCandidates, field);
           } else {
             const created = await tx.dataField.create({
               data: buildFieldCreateData(input.tableId, field, existingFields.length),
             });
             keptIds.add(created.id);
+            recordSourceDisplayFieldCandidate(sourceDisplayFieldCandidates, field);
           }
           continue;
         }
@@ -469,6 +490,7 @@ export async function saveTableFieldsWithRelations(input: {
         if (!field.relationTo) {
           throw new FieldServiceError("MISSING_RELATION_TO", `字段 "${field.label}" 缺少关联表`);
         }
+        affectedTableIds.add(field.relationTo);
 
         const matched = field.id ? existingById.get(field.id) : existingByKey.get(field.key);
         if (matched) {
@@ -490,35 +512,45 @@ export async function saveTableFieldsWithRelations(input: {
           keptIds.add(matched.id);
 
           if (matched.inverseFieldId) {
-            const inverse = existingById.get(matched.inverseFieldId);
-            if (inverse) {
-              const nextInverseRelationCardinality = resolveInverseRelationCardinality(
-                field,
-                inverse.relationCardinality as PrismaRelationCardinality | null
+            const inverse = await tx.dataField.findUnique({
+              where: { id: matched.inverseFieldId },
+            });
+            if (!inverse) {
+              throw new FieldServiceError(
+                "INVERSE_FIELD_NOT_FOUND",
+                `字段 "${matched.label}" 的反向字段不存在`
               );
-              if (inverse.relationCardinality !== nextInverseRelationCardinality) {
-                throw new FieldServiceError(
-                  "RELATION_FIELD_LOCKED",
-                  `字段 "${matched.label}" 的 inverseRelationCardinality 已锁定，不能修改`
-                );
-              }
-
-              await tx.dataField.update({
-                where: { id: inverse.id },
-                data: {
-                  key: inverse.key,
-                  label: inverse.label,
-                  required: inverse.required,
-                  options: inverse.options as Prisma.InputJsonValue | undefined,
-                  displayField: inverse.displayField,
-                  defaultValue: inverse.defaultValue,
-                  sortOrder: inverse.sortOrder,
-                  relationCardinality: nextInverseRelationCardinality,
-                  relationSchema: relationSchemaToJson(nextSchema),
-                },
-              });
-              keptIds.add(inverse.id);
             }
+
+            const nextInverseRelationCardinality = resolveInverseRelationCardinality(
+              field,
+              inverse.relationCardinality as PrismaRelationCardinality | null
+            );
+            if (inverse.relationCardinality !== nextInverseRelationCardinality) {
+              throw new FieldServiceError(
+                "RELATION_FIELD_LOCKED",
+                `字段 "${matched.label}" 的 inverseRelationCardinality 已锁定，不能修改`
+              );
+            }
+
+            const nextInverseDisplayField = field.displayField ?? matched.displayField ?? inverse.displayField ?? null;
+
+            await tx.dataField.update({
+              where: { id: inverse.id },
+              data: {
+                key: inverse.key,
+                label: inverse.label,
+                required: inverse.required,
+                options: inverse.options as Prisma.InputJsonValue | undefined,
+                displayField: nextInverseDisplayField,
+                defaultValue: inverse.defaultValue,
+                sortOrder: inverse.sortOrder,
+                relationCardinality: nextInverseRelationCardinality,
+                relationSchema: relationSchemaToJson(nextSchema),
+              },
+            });
+            keptIds.add(inverse.id);
+            affectedTableIds.add(inverse.tableId);
           } else {
             const nextInverseRelationCardinality = resolveInverseRelationCardinality(field);
             const inverseId = await createInverseFieldPair(
@@ -527,10 +559,11 @@ export async function saveTableFieldsWithRelations(input: {
               input.tableId,
               field,
               matched.id,
-              existingFields,
+              sourceDisplayFieldCandidates,
               nextInverseRelationCardinality
             );
             keptIds.add(inverseId);
+            affectedTableIds.add(field.relationTo);
           }
           continue;
         }
@@ -540,6 +573,7 @@ export async function saveTableFieldsWithRelations(input: {
           data: buildFieldCreateData(input.tableId, field, existingFields.length),
         });
         keptIds.add(sourceField.id);
+        recordSourceDisplayFieldCandidate(sourceDisplayFieldCandidates, field);
 
         const nextInverseRelationCardinality = resolveInverseRelationCardinality(field);
         const inverseId = await createInverseFieldPair(
@@ -548,10 +582,11 @@ export async function saveTableFieldsWithRelations(input: {
           input.tableId,
           field,
           sourceField.id,
-          existingFields,
+          sourceDisplayFieldCandidates,
           nextInverseRelationCardinality
         );
         keptIds.add(inverseId);
+        affectedTableIds.add(field.relationTo);
 
         // 新建字段时，关系 schema 直接按输入落库，不做破坏性约束判断。
         if (nextSchema) {
@@ -577,7 +612,7 @@ export async function saveTableFieldsWithRelations(input: {
       }
     });
 
-    return { success: true, data: null };
+    return { success: true, data: { affectedTableIds: Array.from(affectedTableIds) } };
   } catch (error) {
     if (error instanceof FieldServiceError) {
       return { success: false, error: { code: error.code, message: error.message } };

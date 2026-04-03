@@ -226,7 +226,16 @@ export async function updateTable(
       where: { id },
       data: updateData,
       include: {
-        fields: { orderBy: { sortOrder: "asc" } },
+        fields: {
+          orderBy: { sortOrder: "asc" },
+          include: {
+            inverseField: {
+              select: {
+                relationCardinality: true,
+              },
+            },
+          },
+        },
         _count: {
           select: { records: true },
         },
@@ -293,6 +302,7 @@ export async function updateFields(
       return saveResult;
     }
 
+    const affectedTableIds = new Set<string>([tableId, ...saveResult.data.affectedTableIds]);
     const result = await db.dataField.findMany({
       where: { tableId },
       orderBy: { sortOrder: "asc" },
@@ -306,7 +316,9 @@ export async function updateFields(
     });
 
     // Invalidate cache AFTER transaction commits to prevent stale cache
-    invalidateCache(`table:${tableId}`);
+    for (const affectedTableId of affectedTableIds) {
+      invalidateCache(`table:${affectedTableId}`);
+    }
 
     return {
       success: true,

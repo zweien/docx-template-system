@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+const saveTableFieldsWithRelationsMock = vi.hoisted(() => vi.fn());
+const invalidateCacheMock = vi.hoisted(() => vi.fn());
+
 const dbMock = vi.hoisted(() => ({
   dataTable: {
     findUnique: vi.fn(),
@@ -18,9 +21,13 @@ vi.mock("@/lib/db", () => ({
   db: dbMock,
 }));
 
+vi.mock("./data-field.service", () => ({
+  saveTableFieldsWithRelations: saveTableFieldsWithRelationsMock,
+}));
+
 vi.mock("@/lib/cache", () => ({
   withCache: async (_key: string, _ttl: number, fn: () => Promise<unknown>) => fn(),
-  invalidateCache: vi.fn(),
+  invalidateCache: invalidateCacheMock,
   CACHE_TTL: {
     TABLE_DEF: 300000,
     RELATIONS: 60000,
@@ -109,7 +116,27 @@ describe("data-table.service", () => {
       businessKeys: ["title"],
       createdAt: new Date("2026-04-03T00:00:00.000Z"),
       updatedAt: new Date("2026-04-03T00:00:00.000Z"),
-      fields: [],
+      fields: [
+        {
+          id: "field-1",
+          key: "authors",
+          label: "作者",
+          type: "RELATION_SUBTABLE",
+          required: false,
+          options: null,
+          relationTo: "author_table_id",
+          displayField: "name",
+          relationCardinality: "SINGLE",
+          inverseFieldId: "inverse-1",
+          isSystemManagedInverse: false,
+          relationSchema: null,
+          defaultValue: null,
+          sortOrder: 0,
+          inverseField: {
+            relationCardinality: "MULTIPLE",
+          },
+        },
+      ],
       _count: { records: 0 },
     });
 
@@ -125,6 +152,44 @@ describe("data-table.service", () => {
     expect(updated.success).toBe(true);
     if (updated.success) {
       expect(updated.data.businessKeys).toEqual(["title"]);
+      expect(updated.data.fields[0]).toMatchObject({
+        inverseRelationCardinality: "MULTIPLE",
+      });
     }
+  });
+
+  it("updateFields 应失效当前表和对端表缓存", async () => {
+    saveTableFieldsWithRelationsMock.mockResolvedValue({
+      success: true,
+      data: { affectedTableIds: ["author_table_id"] },
+    });
+    dbMock.dataField.findMany.mockResolvedValue([
+      {
+        id: "field-1",
+        key: "authors",
+        label: "作者",
+        type: "RELATION_SUBTABLE",
+        required: false,
+        options: null,
+        relationTo: "author_table_id",
+        displayField: "name",
+        relationCardinality: "MULTIPLE",
+        inverseFieldId: "inverse-1",
+        isSystemManagedInverse: false,
+        relationSchema: null,
+        defaultValue: null,
+        sortOrder: 0,
+        inverseField: {
+          relationCardinality: "MULTIPLE",
+        },
+      },
+    ]);
+
+    const service = await import("./data-table.service");
+    const result = await service.updateFields("paper_table_id", []);
+
+    expect(result.success).toBe(true);
+    expect(invalidateCacheMock).toHaveBeenCalledWith("table:paper_table_id");
+    expect(invalidateCacheMock).toHaveBeenCalledWith("table:author_table_id");
   });
 });

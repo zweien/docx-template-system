@@ -25,11 +25,23 @@ interface RelationSubtableEditorProps {
   onChange: (next: RelationSubtableValueItem[]) => void;
 }
 
-function normalizeRows(
+function sortRowsBySortOrder(
   value: RelationSubtableValueItem[]
 ): RelationSubtableValueItem[] {
   return [...value]
     .sort((left, right) => left.sortOrder - right.sortOrder)
+    .map((item) => ({
+      targetRecordId: item.targetRecordId,
+      displayValue: item.displayValue,
+      attributes: { ...(item.attributes ?? {}) },
+      sortOrder: item.sortOrder,
+    }));
+}
+
+function normalizeRowsByCurrentOrder(
+  value: RelationSubtableValueItem[]
+): RelationSubtableValueItem[] {
+  return value
     .map((item, index) => ({
       targetRecordId: item.targetRecordId,
       displayValue: item.displayValue,
@@ -75,7 +87,7 @@ export function RelationSubtableEditor({
   value,
   onChange,
 }: RelationSubtableEditorProps) {
-  const rows = normalizeRows(value);
+  const rows = normalizeRowsByCurrentOrder(sortRowsBySortOrder(value));
   const schemaFields = [...(field.relationSchema?.fields ?? [])].sort(
     (left, right) => left.sortOrder - right.sortOrder
   );
@@ -83,7 +95,11 @@ export function RelationSubtableEditor({
   const canAddRow = !isSingle || rows.length === 0;
 
   const emitRows = (nextRows: RelationSubtableValueItem[]) => {
-    onChange(normalizeRows(isSingle ? nextRows.slice(0, 1) : nextRows));
+    onChange(
+      normalizeRowsByCurrentOrder(
+        isSingle ? nextRows.slice(0, 1) : nextRows
+      )
+    );
   };
 
   const handleAddRow = () => {

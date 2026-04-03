@@ -97,15 +97,24 @@ function buildRelationField(
 function RelationSubtableEditorHarness({
   field,
   initialValue,
+  onValueChange,
 }: {
   field: DataFieldItem;
   initialValue: RelationSubtableValueItem[];
+  onValueChange?: (next: RelationSubtableValueItem[]) => void;
 }) {
   const [value, setValue] = useState(initialValue);
 
   return (
     <div>
-      <RelationSubtableEditor field={field} value={value} onChange={setValue} />
+      <RelationSubtableEditor
+        field={field}
+        value={value}
+        onChange={(nextValue) => {
+          onValueChange?.(nextValue);
+          setValue(nextValue);
+        }}
+      />
       <pre data-testid="relation-value">{JSON.stringify(value)}</pre>
     </div>
   );
@@ -176,5 +185,72 @@ describe("RelationSubtableEditor", () => {
     expect(
       screen.getByRole("button", { name: "添加关联记录" })
     ).toBeDisabled();
+  });
+
+  it("moves rows by current array order and rewrites sortOrder from indices", async () => {
+    const onValueChange = vi.fn();
+
+    render(
+      <RelationSubtableEditorHarness
+        field={buildRelationField()}
+        initialValue={[
+          {
+            targetRecordId: "target-1",
+            displayValue: "张三",
+            attributes: { role: "第一作者", rank: 1 },
+            sortOrder: 0,
+          },
+          {
+            targetRecordId: "target-2",
+            displayValue: "李四",
+            attributes: { role: "通讯作者", rank: 2 },
+            sortOrder: 1,
+          },
+        ]}
+        onValueChange={onValueChange}
+      />
+    );
+
+    fireEvent.click(
+      within(screen.getAllByTestId("relation-row")[0]).getByRole("button", {
+        name: "下移",
+      })
+    );
+
+    expect(onValueChange).toHaveBeenLastCalledWith([
+      {
+        targetRecordId: "target-2",
+        displayValue: "李四",
+        attributes: { role: "通讯作者", rank: 2 },
+        sortOrder: 0,
+      },
+      {
+        targetRecordId: "target-1",
+        displayValue: "张三",
+        attributes: { role: "第一作者", rank: 1 },
+        sortOrder: 1,
+      },
+    ]);
+
+    fireEvent.click(
+      within(screen.getAllByTestId("relation-row")[1]).getByRole("button", {
+        name: "上移",
+      })
+    );
+
+    expect(onValueChange).toHaveBeenLastCalledWith([
+      {
+        targetRecordId: "target-1",
+        displayValue: "张三",
+        attributes: { role: "第一作者", rank: 1 },
+        sortOrder: 0,
+      },
+      {
+        targetRecordId: "target-2",
+        displayValue: "李四",
+        attributes: { role: "通讯作者", rank: 2 },
+        sortOrder: 1,
+      },
+    ]);
   });
 });

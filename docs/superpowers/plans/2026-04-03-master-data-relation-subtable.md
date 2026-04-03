@@ -220,7 +220,9 @@ export interface BusinessKeyConfig {
 }
 ```
 
-并在 `DataFieldItem` 增加 `relationCardinality`、`inverseFieldId`、`isSystemManagedInverse`、`relationSchema?: RelationSchemaConfig | null`；在 `DataTableDetail` 增加 `businessKeys?: string[]`。
+并在 `DataFieldItem` 增加 `relationCardinality`、`inverseRelationCardinality`、`inverseFieldId`、`isSystemManagedInverse`、`relationSchema?: RelationSchemaConfig | null`；在 `DataTableDetail` 增加 `businessKeys?: string[]`。
+
+`inverseRelationCardinality?: RelationCardinality | null` 只用于“创建/编辑正向字段时显式声明反向侧基数”的输入模型，不对应 Prisma 新列。保存时由字段服务把它写到自动生成的反向字段 `relationCardinality` 上；读取表详情时如需回填，可从 `inverseField.relationCardinality` 推导。
 
 - [ ] **Step 2: 扩展 Zod schema**
 
@@ -253,6 +255,7 @@ export const businessKeySchema = z.object({
 
 ```typescript
 relationCardinality: z.enum(["SINGLE", "MULTIPLE"]).nullable().optional(),
+inverseRelationCardinality: z.enum(["SINGLE", "MULTIPLE"]).nullable().optional(),
 inverseFieldId: z.string().nullable().optional(),
 isSystemManagedInverse: z.boolean().default(false),
 relationSchema: relationSchemaConfigSchema.nullable().optional(),

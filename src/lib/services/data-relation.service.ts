@@ -37,6 +37,7 @@ type RelationRow = {
 };
 
 type RelationTxClient = {
+  $queryRawUnsafe(query: string, ...values: unknown[]): Promise<unknown>;
   dataField: {
     findMany(args: Record<string, unknown>): Promise<RelationFieldRow[]>;
     findUnique(args: { where: { id: string } }): Promise<RelationFieldRow | null>;
@@ -229,6 +230,24 @@ async function loadRelationFields(
   });
 }
 
+function assertPayloadKeysAreKnownRelationFields(
+  relationPayload: Record<
+    string,
+    RelationSubtableValueItem[] | RelationSubtableValueItem | null
+  >,
+  relationFields: RelationFieldRow[]
+): void {
+  const knownKeys = new Set(relationFields.map((field) => field.key));
+  for (const payloadKey of Object.keys(relationPayload)) {
+    if (!knownKeys.has(payloadKey)) {
+      throw new RelationServiceError(
+        "INVALID_RELATION_FIELD_KEY",
+        `字段 "${payloadKey}" 不是当前表的关系子表格字段`
+      );
+    }
+  }
+}
+
 async function assertTargetRecordsBelongToRelationTable(
   tx: RelationTxClient,
   field: RelationFieldRow,
@@ -286,21 +305,48 @@ async function assertInverseSingleRelationAvailable(
   }
 }
 
-async function refreshRecordRelationSnapshots(
+async function lockRelationRecords(
   tx: RelationTxClient,
-  recordId: string
+  recordIds: Iterable<string>
 ): Promise<void> {
-  const record = await tx.dataRecord.findUnique({
-    where: { id: recordId },
-  });
-
-  if (!record) {
+  const sortedRecordIds = [...new Set(recordIds)].sort((left, right) => left.localeCompare(right));
+  if (sortedRecordIds.length === 0) {
     return;
   }
 
+  // 固定排序锁行，避免并发写相同关系集合时产生死锁；FOR UPDATE 保证反向 SINGLE 校验与写入串行化。
+  await tx.$queryRawUnsafe(
+    'SELECT id FROM "DataRecord" WHERE id = ANY($1::text[]) ORDER BY id ASC FOR UPDATE',
+    sortedRecordIds
+  );
+}
+
+async function refreshRelationSnapshotsForRecords(
+  tx: RelationTxClient,
+  recordIds: Iterable<string>
+): Promise<void> {
+  const affectedRecordIds = [...new Set(recordIds)];
+  if (affectedRecordIds.length === 0) {
+    return;
+  }
+
+  const records = await tx.dataRecord.findMany({
+    where: {
+      id: {
+        in: affectedRecordIds,
+      },
+    },
+  });
+  if (records.length === 0) {
+    return;
+  }
+
+  const tableIds = [...new Set(records.map((record) => record.tableId))];
   const relationFields = await tx.dataField.findMany({
     where: {
-      tableId: record.tableId,
+      tableId: {
+        in: tableIds,
+      },
       type: "RELATION_SUBTABLE",
     },
   });
@@ -310,19 +356,22 @@ async function refreshRecordRelationSnapshots(
   }
 
   const relationFieldById = new Map(relationFields.map((field) => [field.id, field]));
-  const inverseFieldIdSet = new Set(relationFields.map((field) => field.id));
+  const relationFieldsByTableId = new Map<string, RelationFieldRow[]>();
+  const inverseFieldIds = new Set<string>();
+  for (const field of relationFields) {
+    relationFieldsByTableId.set(field.tableId, [
+      ...(relationFieldsByTableId.get(field.tableId) ?? []),
+      field,
+    ]);
+    inverseFieldIds.add(field.id);
+  }
 
-  const outgoingRows = await tx.dataRelationRow.findMany({
+  const relationRows = await tx.dataRelationRow.findMany({
     where: {
-      sourceRecordId: recordId,
-      fieldId: {
-        in: relationFields.map((field) => field.id),
-      },
-    },
-  });
-  const incomingRows = await tx.dataRelationRow.findMany({
-    where: {
-      targetRecordId: recordId,
+      OR: [
+        { sourceRecordId: { in: affectedRecordIds } },
+        { targetRecordId: { in: affectedRecordIds } },
+      ],
     },
     include: {
       field: true,
@@ -330,12 +379,14 @@ async function refreshRecordRelationSnapshots(
   });
 
   const relatedRecordIds = new Set<string>();
-  outgoingRows.forEach((row) => relatedRecordIds.add(row.targetRecordId));
-  incomingRows.forEach((row) => {
-    if (row.field?.inverseFieldId && inverseFieldIdSet.has(row.field.inverseFieldId)) {
+  for (const row of relationRows) {
+    if (affectedRecordIds.includes(row.sourceRecordId) && relationFieldById.has(row.fieldId)) {
+      relatedRecordIds.add(row.targetRecordId);
+    }
+    if (affectedRecordIds.includes(row.targetRecordId) && row.field?.inverseFieldId && inverseFieldIds.has(row.field.inverseFieldId)) {
       relatedRecordIds.add(row.sourceRecordId);
     }
-  });
+  }
 
   const relatedRecords = relatedRecordIds.size > 0
     ? await tx.dataRecord.findMany({
@@ -350,33 +401,37 @@ async function refreshRecordRelationSnapshots(
     relatedRecords.map((item) => [item.id, toRecordData(item.data)])
   );
 
-  const snapshotItemsByFieldId = new Map<string, RelationSubtableValueItem[]>();
-  for (const field of relationFields) {
-    snapshotItemsByFieldId.set(field.id, []);
+  const snapshotItemsByRecordId = new Map<string, Map<string, RelationSubtableValueItem[]>>();
+  for (const record of records) {
+    const snapshotItemsByFieldId = new Map<string, RelationSubtableValueItem[]>();
+    for (const field of relationFieldsByTableId.get(record.tableId) ?? []) {
+      snapshotItemsByFieldId.set(field.id, []);
+    }
+    snapshotItemsByRecordId.set(record.id, snapshotItemsByFieldId);
   }
 
-  for (const row of outgoingRows) {
+  for (const row of relationRows) {
     const field = relationFieldById.get(row.fieldId);
-    if (!field) continue;
+    if (field && snapshotItemsByRecordId.has(row.sourceRecordId)) {
+      const relatedData = relatedRecordById.get(row.targetRecordId) ?? {};
+      snapshotItemsByRecordId.get(row.sourceRecordId)?.get(field.id)?.push({
+        targetRecordId: row.targetRecordId,
+        displayValue: field.displayField
+          ? String(relatedData[field.displayField] ?? row.targetRecordId)
+          : row.targetRecordId,
+        attributes: unwrapRelationAttributes(row.attributes),
+        sortOrder: row.sortOrder,
+      });
+    }
 
-    const relatedData = relatedRecordById.get(row.targetRecordId) ?? {};
-    snapshotItemsByFieldId.get(field.id)?.push({
-      targetRecordId: row.targetRecordId,
-      displayValue: field.displayField ? String(relatedData[field.displayField] ?? row.targetRecordId) : row.targetRecordId,
-      attributes: unwrapRelationAttributes(row.attributes),
-      sortOrder: row.sortOrder,
-    });
-  }
-
-  for (const row of incomingRows) {
     const inverseFieldId = row.field?.inverseFieldId;
-    if (!inverseFieldId || !snapshotItemsByFieldId.has(inverseFieldId)) continue;
+    if (!inverseFieldId || !snapshotItemsByRecordId.has(row.targetRecordId)) continue;
 
     const inverseField = relationFieldById.get(inverseFieldId);
     if (!inverseField) continue;
 
     const sourceData = relatedRecordById.get(row.sourceRecordId) ?? {};
-    snapshotItemsByFieldId.get(inverseFieldId)?.push({
+    snapshotItemsByRecordId.get(row.targetRecordId)?.get(inverseFieldId)?.push({
       targetRecordId: row.sourceRecordId,
       displayValue: inverseField.displayField
         ? String(sourceData[inverseField.displayField] ?? row.sourceRecordId)
@@ -386,18 +441,21 @@ async function refreshRecordRelationSnapshots(
     });
   }
 
-  const nextData = toRecordData(record.data);
-  for (const field of relationFields) {
-    nextData[field.key] = buildSnapshotValue(
-      field,
-      snapshotItemsByFieldId.get(field.id) ?? []
-    );
-  }
+  for (const record of records) {
+    const nextData = toRecordData(record.data);
+    const snapshotItemsByFieldId = snapshotItemsByRecordId.get(record.id) ?? new Map();
+    for (const field of relationFieldsByTableId.get(record.tableId) ?? []) {
+      nextData[field.key] = buildSnapshotValue(
+        field,
+        snapshotItemsByFieldId.get(field.id) ?? []
+      );
+    }
 
-  await tx.dataRecord.update({
-    where: { id: recordId },
-    data: { data: nextData },
-  });
+    await tx.dataRecord.update({
+      where: { id: record.id },
+      data: { data: nextData },
+    });
+  }
 }
 
 export async function syncRelationSubtableValues(input: {
@@ -419,17 +477,31 @@ export async function syncRelationSubtableValues(input: {
       input.tableId,
       Object.keys(input.relationPayload)
     );
+    assertPayloadKeysAreKnownRelationFields(input.relationPayload, relationFields);
+
     const relationPayloadByFieldId = new Map<string, NormalizedRelationInput>();
+    const lockedRecordIds = new Set<string>([input.sourceRecordId]);
 
     for (const field of relationFields) {
       const items = normalizeRelationPayload(field, input.relationPayload[field.key]);
       await assertTargetRecordsBelongToRelationTable(tx, field, items);
-      await assertInverseSingleRelationAvailable(tx, input.sourceRecordId, field, items);
       relationPayloadByFieldId.set(field.id, { field, items });
+      items.forEach((item) => lockedRecordIds.add(item.targetRecordId));
     }
 
     if (relationPayloadByFieldId.size === 0) {
       return { success: true, data: null };
+    }
+
+    await lockRelationRecords(tx, lockedRecordIds);
+
+    for (const payload of relationPayloadByFieldId.values()) {
+      await assertInverseSingleRelationAvailable(
+        tx,
+        input.sourceRecordId,
+        payload.field,
+        payload.items
+      );
     }
 
     const existingRows = await tx.dataRelationRow.findMany({
@@ -494,9 +566,7 @@ export async function syncRelationSubtableValues(input: {
       }
     }
 
-    for (const recordId of affectedRecordIds) {
-      await refreshRecordRelationSnapshots(tx, recordId);
-    }
+    await refreshRelationSnapshotsForRecords(tx, affectedRecordIds);
 
     return { success: true, data: null };
   } catch (error) {
@@ -560,9 +630,7 @@ export async function removeAllRelationsForRecord(input: {
       },
     });
 
-    for (const recordId of affectedRecordIds) {
-      await refreshRecordRelationSnapshots(tx, recordId);
-    }
+    await refreshRelationSnapshotsForRecords(tx, affectedRecordIds);
 
     return { success: true, data: null };
   } catch (error) {
@@ -571,6 +639,37 @@ export async function removeAllRelationsForRecord(input: {
       success: false,
       error: {
         code: "REMOVE_RELATIONS_FAILED",
+        message,
+      },
+    };
+  }
+}
+
+export async function refreshSnapshotsForTargetRecord(input: {
+  tx: unknown;
+  recordId: string;
+}): Promise<ServiceResult<null>> {
+  const tx = asTxClient(input.tx);
+
+  try {
+    const incomingRows = await tx.dataRelationRow.findMany({
+      where: {
+        targetRecordId: input.recordId,
+      },
+    });
+
+    await refreshRelationSnapshotsForRecords(
+      tx,
+      new Set(incomingRows.map((row) => row.sourceRecordId))
+    );
+
+    return { success: true, data: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "刷新目标记录引用快照失败";
+    return {
+      success: false,
+      error: {
+        code: "REFRESH_TARGET_SNAPSHOTS_FAILED",
         message,
       },
     };

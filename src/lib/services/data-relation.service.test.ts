@@ -51,14 +51,23 @@ function createFakeTx(input: {
     (input.relationRows ?? []).map((row) => [row.id, { ...row, attributes: structuredClone(row.attributes) }])
   );
   let nextRelationId = relationRows.size + 1;
+  const lockedIdBatches: string[][] = [];
+  const queryCounts = {
+    dataFieldFindMany: 0,
+    dataRecordFindMany: 0,
+    dataRelationRowFindMany: 0,
+  };
 
   const matchesRelationWhere = (
     row: FakeRelationRow,
     where?: {
       fieldId?: string | { in?: string[] };
-      sourceRecordId?: string;
+      sourceRecordId?: string | { in?: string[] };
       targetRecordId?: string | { in?: string[] };
-      OR?: Array<{ sourceRecordId?: string; targetRecordId?: string }>;
+      OR?: Array<{
+        sourceRecordId?: string | { in?: string[] };
+        targetRecordId?: string | { in?: string[] };
+      }>;
       NOT?: { sourceRecordId?: string };
     }
   ) => {
@@ -68,7 +77,14 @@ function createFakeTx(input: {
     if (typeof where.fieldId === "object" && where.fieldId.in && !where.fieldId.in.includes(row.fieldId)) {
       return false;
     }
-    if (where.sourceRecordId && row.sourceRecordId !== where.sourceRecordId) return false;
+    if (typeof where.sourceRecordId === "string" && row.sourceRecordId !== where.sourceRecordId) return false;
+    if (
+      typeof where.sourceRecordId === "object" &&
+      where.sourceRecordId.in &&
+      !where.sourceRecordId.in.includes(row.sourceRecordId)
+    ) {
+      return false;
+    }
     if (typeof where.targetRecordId === "string" && row.targetRecordId !== where.targetRecordId) return false;
     if (
       typeof where.targetRecordId === "object" &&
@@ -79,8 +95,16 @@ function createFakeTx(input: {
     }
     if (where.NOT?.sourceRecordId && row.sourceRecordId === where.NOT.sourceRecordId) return false;
     if (where.OR && !where.OR.some((item) => (
-      (item.sourceRecordId ? row.sourceRecordId === item.sourceRecordId : true) &&
-      (item.targetRecordId ? row.targetRecordId === item.targetRecordId : true)
+      (typeof item.sourceRecordId === "string"
+        ? row.sourceRecordId === item.sourceRecordId
+        : item.sourceRecordId?.in
+          ? item.sourceRecordId.in.includes(row.sourceRecordId)
+          : true) &&
+      (typeof item.targetRecordId === "string"
+        ? row.targetRecordId === item.targetRecordId
+        : item.targetRecordId?.in
+          ? item.targetRecordId.in.includes(row.targetRecordId)
+          : true)
     ))) {
       return false;
     }
@@ -89,17 +113,28 @@ function createFakeTx(input: {
   };
 
   const tx = {
+    $queryRawUnsafe: async (_query: string, recordIds: string[]) => {
+      lockedIdBatches.push([...recordIds]);
+      return [];
+    },
     dataField: {
       findMany: async ({
         where,
       }: {
         where?: {
-          tableId?: string;
+          tableId?: string | { in?: string[] };
           type?: "RELATION_SUBTABLE";
           key?: { in: string[] };
         };
       } = {}) => {
-        const rows = where?.tableId ? (fieldsByTable.get(where.tableId) ?? []) : [...fields.values()];
+        queryCounts.dataFieldFindMany += 1;
+        const rows = typeof where?.tableId === "string"
+          ? (fieldsByTable.get(where.tableId) ?? [])
+          : [...fields.values()].filter((field) => (
+            typeof where?.tableId === "object" && where.tableId.in
+              ? where.tableId.in.includes(field.tableId)
+              : true
+          ));
         return rows.filter((field) => {
           if (where?.type && field.type !== where.type) return false;
           if (where?.key?.in && !where.key.in.includes(field.key)) return false;
@@ -118,6 +153,7 @@ function createFakeTx(input: {
       }: {
         where?: { id?: { in: string[] }; tableId?: string };
       } = {}) => {
+        queryCounts.dataRecordFindMany += 1;
         return [...records.values()].filter((record) => {
           if (where?.id?.in && !where.id.in.includes(record.id)) return false;
           if (where?.tableId && record.tableId !== where.tableId) return false;
@@ -133,9 +169,12 @@ function createFakeTx(input: {
     },
     dataRelationRow: {
       findMany: async ({ where }: { where?: Parameters<typeof matchesRelationWhere>[1] } = {}) =>
-        [...relationRows.values()]
+      {
+        queryCounts.dataRelationRowFindMany += 1;
+        return [...relationRows.values()]
           .filter((row) => matchesRelationWhere(row, where))
-          .map((row) => ({ ...row, attributes: structuredClone(row.attributes), field: fields.get(row.fieldId) })),
+          .map((row) => ({ ...row, attributes: structuredClone(row.attributes), field: fields.get(row.fieldId) }));
+      },
       create: async ({ data }: { data: Omit<FakeRelationRow, "id"> }) => {
         const row = { id: `relation-${nextRelationId++}`, ...data, attributes: structuredClone(data.attributes) };
         relationRows.set(row.id, row);
@@ -161,6 +200,8 @@ function createFakeTx(input: {
     tx,
     getRecord: (id: string) => records.get(id),
     getRelationRows: () => [...relationRows.values()].map((row) => ({ ...row, attributes: structuredClone(row.attributes) })),
+    getLockedIdBatches: () => lockedIdBatches.map((ids) => [...ids]),
+    getQueryCounts: () => ({ ...queryCounts }),
   };
 }
 
@@ -274,6 +315,7 @@ describe("syncRelationSubtableValues", () => {
         sortOrder: 0,
       },
     ]);
+    expect(store.getLockedIdBatches()).toEqual([["author-1", "author-2", "paper-1"]]);
   });
 
   it("rejects duplicate target rows for SINGLE cardinality", async () => {
@@ -310,6 +352,57 @@ describe("syncRelationSubtableValues", () => {
       expect(result.error.code).toBe("RELATION_CARDINALITY_VIOLATION");
     }
     expect(store.getRelationRows()).toHaveLength(0);
+  });
+
+  it("rejects relation payload keys that are not RELATION_SUBTABLE fields of the current table", async () => {
+    const store = createFakeTx({
+      fields: [
+        authorField,
+        paperInverseField,
+        {
+          id: "paper-title-field",
+          tableId: "paper-table",
+          key: "title",
+          type: "TEXT",
+          relationTo: null,
+          displayField: null,
+          relationCardinality: null,
+          inverseFieldId: null,
+          inverseField: null,
+        },
+      ],
+      records: [
+        { id: "paper-1", tableId: "paper-table", data: { title: "论文 A", authors: [] } },
+        { id: "author-1", tableId: "author-table", data: { name: "Ada", papers: [] } },
+      ],
+    });
+
+    const typoResult = await syncRelationSubtableValues({
+      tx: store.tx,
+      sourceRecordId: "paper-1",
+      tableId: "paper-table",
+      relationPayload: {
+        authorz: [{ targetRecordId: "author-1", attributes: {}, sortOrder: 0 }],
+      },
+    });
+    expect(typoResult.success).toBe(false);
+    if (!typoResult.success) {
+      expect(typoResult.error.code).toBe("INVALID_RELATION_FIELD_KEY");
+    }
+
+    const scalarFieldResult = await syncRelationSubtableValues({
+      tx: store.tx,
+      sourceRecordId: "paper-1",
+      tableId: "paper-table",
+      relationPayload: {
+        title: { targetRecordId: "author-1", attributes: {}, sortOrder: 0 },
+      },
+    });
+    expect(scalarFieldResult.success).toBe(false);
+    if (!scalarFieldResult.success) {
+      expect(scalarFieldResult.error.code).toBe("INVALID_RELATION_FIELD_KEY");
+    }
+    expect(store.getRelationRows()).toEqual([]);
   });
 
   it("rejects sourceRecordId that does not belong to tableId", async () => {
@@ -470,6 +563,52 @@ describe("syncRelationSubtableValues", () => {
     expect(store.getRecord("paper-1")?.data.authors).toEqual([]);
     expect(store.getRecord("author-1")?.data.papers).toEqual([]);
   });
+
+  it("rebuilds snapshots for multiple affected records with batched reads", async () => {
+    const store = createFakeTx({
+      fields: [authorField, paperInverseField],
+      records: [
+        { id: "paper-1", tableId: "paper-table", data: { title: "论文 A", authors: [] } },
+        { id: "author-1", tableId: "author-table", data: { name: "Ada", papers: [] } },
+        { id: "author-2", tableId: "author-table", data: { name: "Lin", papers: [] } },
+      ],
+    });
+
+    const result = await syncRelationSubtableValues({
+      tx: store.tx,
+      sourceRecordId: "paper-1",
+      tableId: "paper-table",
+      relationPayload: {
+        authors: [
+          { targetRecordId: "author-1", attributes: { role: "第一作者" }, sortOrder: 0 },
+          { targetRecordId: "author-2", attributes: { role: "通讯作者" }, sortOrder: 1 },
+        ],
+      },
+    });
+
+    expect(result.success).toBe(true);
+    expect(store.getRecord("author-1")?.data.papers).toEqual([
+      {
+        targetRecordId: "paper-1",
+        displayValue: "论文 A",
+        attributes: { role: "第一作者" },
+        sortOrder: 0,
+      },
+    ]);
+    expect(store.getRecord("author-2")?.data.papers).toEqual([
+      {
+        targetRecordId: "paper-1",
+        displayValue: "论文 A",
+        attributes: { role: "通讯作者" },
+        sortOrder: 1,
+      },
+    ]);
+    expect(store.getQueryCounts()).toMatchObject({
+      dataFieldFindMany: 2,
+      dataRecordFindMany: 3,
+      dataRelationRowFindMany: 2,
+    });
+  });
 });
 
 describe("removeAllRelationsForRecord", () => {
@@ -559,5 +698,102 @@ describe("removeAllRelationsForRecord", () => {
     expect(result.success).toBe(true);
     expect(store.getRelationRows()).toEqual([]);
     expect(store.getRecord("author-1")?.data.papers).toEqual([]);
+  });
+});
+
+describe("refreshSnapshotsForTargetRecord", () => {
+  it("updates source-side displayValue after target scalar fields change", async () => {
+    const store = createFakeTx({
+      fields: [
+        {
+          id: "paper-authors-field",
+          tableId: "paper-table",
+          key: "authors",
+          type: "RELATION_SUBTABLE",
+          relationTo: "author-table",
+          displayField: "name",
+          relationCardinality: "MULTIPLE",
+          inverseFieldId: "author-papers-field",
+          inverseField: {
+            id: "author-papers-field",
+            key: "papers",
+            relationCardinality: "MULTIPLE",
+          },
+        },
+        {
+          id: "author-papers-field",
+          tableId: "author-table",
+          key: "papers",
+          type: "RELATION_SUBTABLE",
+          relationTo: "paper-table",
+          displayField: "title",
+          relationCardinality: "MULTIPLE",
+          inverseFieldId: "paper-authors-field",
+          inverseField: {
+            id: "paper-authors-field",
+            key: "authors",
+            relationCardinality: "MULTIPLE",
+          },
+        },
+      ],
+      records: [
+        {
+          id: "paper-1",
+          tableId: "paper-table",
+          data: {
+            title: "论文 A",
+            authors: [
+              {
+                targetRecordId: "author-1",
+                displayValue: "Ada",
+                attributes: { role: "第一作者" },
+                sortOrder: 0,
+              },
+            ],
+          },
+        },
+        {
+          id: "author-1",
+          tableId: "author-table",
+          data: {
+            name: "Ada Lovelace",
+            papers: [
+              {
+                targetRecordId: "paper-1",
+                displayValue: "论文 A",
+                attributes: { role: "第一作者" },
+                sortOrder: 0,
+              },
+            ],
+          },
+        },
+      ],
+      relationRows: [
+        {
+          id: "relation-1",
+          fieldId: "paper-authors-field",
+          sourceRecordId: "paper-1",
+          targetRecordId: "author-1",
+          attributes: { version: 1, values: { role: "第一作者" } },
+          sortOrder: 0,
+        },
+      ],
+    });
+
+    const { refreshSnapshotsForTargetRecord } = await import("./data-relation.service");
+    const result = await refreshSnapshotsForTargetRecord({
+      tx: store.tx,
+      recordId: "author-1",
+    });
+
+    expect(result.success).toBe(true);
+    expect(store.getRecord("paper-1")?.data.authors).toEqual([
+      {
+        targetRecordId: "author-1",
+        displayValue: "Ada Lovelace",
+        attributes: { role: "第一作者" },
+        sortOrder: 0,
+      },
+    ]);
   });
 });

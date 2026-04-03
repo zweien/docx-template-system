@@ -12,6 +12,7 @@ import type {
 import { getTable } from "./data-table.service";
 import {
   removeAllRelationsForRecord,
+  refreshSnapshotsForTargetRecord,
   syncRelationSubtableValues,
 } from "./data-relation.service";
 
@@ -437,6 +438,16 @@ export async function updateRecord(
           }),
         },
       });
+
+      if (Object.keys(scalarData).length > 0) {
+        const refreshResult = await refreshSnapshotsForTargetRecord({
+          tx,
+          recordId: id,
+        });
+        if (!refreshResult.success) {
+          throw new Error(`${refreshResult.error.code}:${refreshResult.error.message}`);
+        }
+      }
 
       if (Object.keys(relationData).length > 0) {
         const relationResult = await syncRelationSubtableValues({

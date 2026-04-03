@@ -359,7 +359,7 @@ model DataRelationRow {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  /// SINGLE 基数的同源唯一性约束由后续 service 事务校验保证。
+  /// SINGLE 基数的同源唯一性约束由 Task 4 的 service 事务校验保证。
   /// Prisma 无法在通用单表模型中表达基于字段元数据的条件唯一索引。
 
   @@unique([fieldId, sourceRecordId, targetRecordId])

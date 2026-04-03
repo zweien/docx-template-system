@@ -33,6 +33,7 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   [FieldType.PHONE]: "电话",
   [FieldType.FILE]: "附件",
   [FieldType.RELATION]: "关联",
+  [FieldType.RELATION_SUBTABLE]: "关系子表格",
 };
 
 export function FieldConfigList({

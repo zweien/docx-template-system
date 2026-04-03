@@ -203,6 +203,11 @@ export interface RelationSchemaField {
   sortOrder: number;
 }
 
+export interface RelationSchemaConfig {
+  version: 1;
+  fields: RelationSchemaField[];
+}
+
 export interface RelationSubtableValueItem {
   targetRecordId: string;
   displayValue?: string;
@@ -215,7 +220,7 @@ export interface BusinessKeyConfig {
 }
 ```
 
-并在 `DataFieldItem` 增加 `relationCardinality`、`inverseFieldId`、`isSystemManagedInverse`、`relationSchema`；在 `DataTableDetail` 增加 `businessKeys?: string[]`。
+并在 `DataFieldItem` 增加 `relationCardinality`、`inverseFieldId`、`isSystemManagedInverse`、`relationSchema?: RelationSchemaConfig | null`；在 `DataTableDetail` 增加 `businessKeys?: string[]`。
 
 - [ ] **Step 2: 扩展 Zod schema**
 
@@ -234,6 +239,11 @@ const relationSchemaFieldSchema = z.object({
   sortOrder: z.number().int().min(0).default(0),
 });
 
+const relationSchemaConfigSchema = z.object({
+  version: z.literal(1),
+  fields: z.array(relationSchemaFieldSchema),
+});
+
 export const businessKeySchema = z.object({
   fieldKeys: z.array(z.string()).min(1).max(5),
 });
@@ -245,7 +255,7 @@ export const businessKeySchema = z.object({
 relationCardinality: z.enum(["SINGLE", "MULTIPLE"]).nullable().optional(),
 inverseFieldId: z.string().nullable().optional(),
 isSystemManagedInverse: z.boolean().default(false),
-relationSchema: z.array(relationSchemaFieldSchema).nullable().optional(),
+relationSchema: relationSchemaConfigSchema.nullable().optional(),
 ```
 
 - [ ] **Step 3: 跑类型检查**

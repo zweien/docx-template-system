@@ -545,6 +545,7 @@ export async function getRecord(
 
 // ── Create record ──
 
+/** @deprecated 使用 data-record.service.createRecord 替代 */
 export async function createRecord(
   userId: string,
   tableId: string,
@@ -580,6 +581,7 @@ export async function createRecord(
 
 // ── Update record ──
 
+/** @deprecated 使用 data-record.service.updateRecord 替代 */
 export async function updateRecord(
   recordId: string,
   data: Record<string, unknown>
@@ -616,6 +618,7 @@ export async function updateRecord(
 
 // ── Delete record ──
 
+/** @deprecated 使用 data-record.service.deleteRecord 替代 */
 export async function deleteRecord(
   recordId: string
 ): Promise<ServiceResult<{ id: string }>> {

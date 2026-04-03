@@ -1,6 +1,32 @@
-import { FieldType } from "@/generated/prisma/enums";
+import {
+  FieldType as PrismaFieldType,
+  RelationCardinality as PrismaRelationCardinality,
+} from "@/generated/prisma/enums";
 
 // ========== Field Types ==========
+
+export type FieldType = PrismaFieldType;
+export type RelationCardinality = PrismaRelationCardinality;
+
+export interface RelationSchemaField {
+  key: string;
+  label: string;
+  type: Exclude<FieldType, "RELATION" | "RELATION_SUBTABLE">;
+  required: boolean;
+  options?: string[];
+  sortOrder: number;
+}
+
+export interface RelationSubtableValueItem {
+  targetRecordId: string;
+  displayValue?: string;
+  attributes: Record<string, unknown>;
+  sortOrder: number;
+}
+
+export interface BusinessKeyConfig {
+  fieldKeys: string[];
+}
 
 export interface DataFieldItem {
   id: string;
@@ -11,6 +37,10 @@ export interface DataFieldItem {
   options?: string[]; // SELECT/MULTISELECT 选项列表
   relationTo?: string; // RELATION 目标表 ID
   displayField?: string; // RELATION 显示字段
+  relationCardinality?: RelationCardinality | null;
+  inverseFieldId?: string | null;
+  isSystemManagedInverse?: boolean;
+  relationSchema?: RelationSchemaField[] | null;
   defaultValue?: string;
   sortOrder: number;
 }
@@ -29,6 +59,7 @@ export interface DataTableListItem {
 
 export interface DataTableDetail extends DataTableListItem {
   fields: DataFieldItem[];
+  businessKeys?: string[];
 }
 
 // ========== Record Types ==========

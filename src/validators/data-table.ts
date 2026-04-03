@@ -1,9 +1,28 @@
 import { z } from "zod";
-import { FieldType } from "@/generated/prisma/enums";
+import {
+  FieldType,
+  RelationCardinality as PrismaRelationCardinality,
+} from "@/generated/prisma/enums";
 
 // ========== Field Type Schema ==========
 
 export const fieldTypeSchema = z.nativeEnum(FieldType);
+
+const relationSchemaFieldSchema = z.object({
+  key: z.string().regex(/^[a-z][a-z0-9_]*$/),
+  label: z.string().min(1).max(100),
+  type: fieldTypeSchema.refine(
+    (type) => type !== FieldType.RELATION && type !== FieldType.RELATION_SUBTABLE,
+    "边属性子字段不允许嵌套关系字段"
+  ),
+  required: z.boolean().default(false),
+  options: z.array(z.string()).nullable().optional(),
+  sortOrder: z.number().int().min(0).default(0),
+});
+
+export const businessKeySchema = z.object({
+  fieldKeys: z.array(z.string()).min(1).max(5),
+});
 
 // ========== Field Schemas ==========
 
@@ -23,6 +42,10 @@ export const dataFieldItemSchema = z.object({
   options: z.array(z.string()).nullable().optional(),
   relationTo: z.string().nullable().optional(),
   displayField: z.string().nullable().optional(),
+  relationCardinality: z.nativeEnum(PrismaRelationCardinality).nullable().optional(),
+  inverseFieldId: z.string().nullable().optional(),
+  isSystemManagedInverse: z.boolean().default(false),
+  relationSchema: z.array(relationSchemaFieldSchema).nullable().optional(),
   defaultValue: z.string().nullable().optional(),
   sortOrder: z.number().int().min(0).default(0),
 });

@@ -207,13 +207,36 @@ function buildFieldUpdateData(
   return updateData;
 }
 
-function getInverseCardinality(): "MULTIPLE" {
-  return "MULTIPLE";
+function isJsonEqual(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
+}
+
+function assertLockedRelationFieldInput(existing: FieldRow, next: DataFieldInput): void {
+  if (existing.required !== (next.required ?? false)) {
+    throw new FieldServiceError("RELATION_FIELD_LOCKED", `字段 "${existing.label}" 的 required 已锁定，不能修改`);
+  }
+
+  if (!isJsonEqual(existing.options, next.options)) {
+    throw new FieldServiceError("RELATION_FIELD_LOCKED", `字段 "${existing.label}" 的 options 已锁定，不能修改`);
+  }
+
+  if ((existing.defaultValue ?? null) !== (next.defaultValue ?? null)) {
+    throw new FieldServiceError("RELATION_FIELD_LOCKED", `字段 "${existing.label}" 的 defaultValue 已锁定，不能修改`);
+  }
+
+  if (existing.sortOrder !== (next.sortOrder ?? existing.sortOrder)) {
+    throw new FieldServiceError("RELATION_FIELD_LOCKED", `字段 "${existing.label}" 的 sortOrder 已锁定，不能修改`);
+  }
+
+  if ((next.inverseFieldId ?? null) !== (existing.inverseFieldId ?? null)) {
+    throw new FieldServiceError("RELATION_FIELD_LOCKED", `字段 "${existing.label}" 的 inverseFieldId 已锁定，不能修改`);
+  }
 }
 
 function buildInverseDefaults(
   field: DataFieldInput,
-  sourceTableId: string
+  sourceTableId: string,
+  displayField: string
 ): Pick<
   Prisma.DataFieldUncheckedCreateInput,
   "label" | "type" | "required" | "options" | "relationTo" | "displayField" | "relationCardinality" | "isSystemManagedInverse" | "relationSchema" | "defaultValue"
@@ -224,12 +247,28 @@ function buildInverseDefaults(
     required: field.required ?? false,
     options: toJsonInput(field.options),
     relationTo: sourceTableId,
-    displayField: field.displayField ?? null,
-    relationCardinality: getInverseCardinality(),
+    displayField,
+    relationCardinality: field.relationCardinality ?? null,
     isSystemManagedInverse: true,
     relationSchema: relationSchemaToJson(field.relationSchema),
     defaultValue: field.defaultValue ?? null,
   };
+}
+
+function getDefaultInverseDisplayField(sourceFields: FieldRow[]): string {
+  const firstNonRelationField = sourceFields.find(
+    (field) => field.type !== FieldType.RELATION && field.type !== FieldType.RELATION_SUBTABLE
+  );
+
+  if (firstNonRelationField) {
+    return firstNonRelationField.key;
+  }
+
+  if (sourceFields.length > 0) {
+    return sourceFields[0].key;
+  }
+
+  return "id";
 }
 
 async function loadTableFieldKeys(
@@ -272,7 +311,8 @@ async function createInverseFieldPair(
   tableKeyCache: Map<string, Set<string>>,
   sourceTableId: string,
   sourceField: DataFieldInput,
-  sourceFieldId: string
+  sourceFieldId: string,
+  sourceFields: FieldRow[]
 ): Promise<string> {
   if (!sourceField.relationTo) {
     throw new FieldServiceError("MISSING_RELATION_TO", `字段 "${sourceField.label}" 缺少关联表`);
@@ -292,7 +332,7 @@ async function createInverseFieldPair(
     data: {
       tableId: sourceField.relationTo,
       key: inverseKey,
-      ...buildInverseDefaults(sourceField, sourceTableId),
+      ...buildInverseDefaults(sourceField, sourceTableId, getDefaultInverseDisplayField(sourceFields)),
       inverseFieldId: sourceFieldId,
     },
   });
@@ -386,6 +426,7 @@ export async function saveTableFieldsWithRelations(input: {
         const matched = field.id ? existingById.get(field.id) : existingByKey.get(field.key);
         if (matched) {
           ensureForwardAndInverseAreCompatible(matched, field);
+          assertLockedRelationFieldInput(matched, field);
           const nextSchema = field.relationSchema ?? (matched.relationSchema as DataFieldInput["relationSchema"] | null | undefined);
           assertNonDestructiveRelationSchema(matched.relationSchema, nextSchema, field.label);
 
@@ -420,7 +461,14 @@ export async function saveTableFieldsWithRelations(input: {
               keptIds.add(inverse.id);
             }
           } else {
-            const inverseId = await createInverseFieldPair(tx, tableKeyCache, input.tableId, field, matched.id);
+            const inverseId = await createInverseFieldPair(
+              tx,
+              tableKeyCache,
+              input.tableId,
+              field,
+              matched.id,
+              existingFields
+            );
             keptIds.add(inverseId);
           }
           continue;
@@ -432,7 +480,14 @@ export async function saveTableFieldsWithRelations(input: {
         });
         keptIds.add(sourceField.id);
 
-        const inverseId = await createInverseFieldPair(tx, tableKeyCache, input.tableId, field, sourceField.id);
+        const inverseId = await createInverseFieldPair(
+          tx,
+          tableKeyCache,
+          input.tableId,
+          field,
+          sourceField.id,
+          existingFields
+        );
         keptIds.add(inverseId);
 
         // 新建字段时，关系 schema 直接按输入落库，不做破坏性约束判断。

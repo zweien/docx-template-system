@@ -81,10 +81,10 @@ model DataTable {
   name          String       @unique
   description   String?
   icon          String?
+  /// JSON 结构约定: { version: 1, fieldKeys: string[] }
   businessKeys  Json?
   fields        DataField[]
   records       DataRecord[]
-  relationRows  DataRelationRow[] @relation("RelationRowsByTable")
   templates        Template[]
   batchGenerations BatchGeneration[]
   templateVersions TemplateVersion[]
@@ -111,8 +111,9 @@ model DataField {
   relationCardinality    RelationCardinality?
   inverseFieldId         String?
   inverseField           DataField?   @relation("InverseRelationField", fields: [inverseFieldId], references: [id], onDelete: SetNull)
-  inverseOf              DataField[]  @relation("InverseRelationField")
+  inverseOf              DataField?   @relation("InverseRelationField")
   isSystemManagedInverse Boolean      @default(false)
+  /// JSON 结构约定: { version: 1, fields: RelationSchemaField[] }
   relationSchema         Json?
   defaultValue           String?
   sortOrder              Int          @default(0)
@@ -128,8 +129,6 @@ model DataRelationRow {
   id             String     @id @default(cuid())
   fieldId        String
   field          DataField  @relation("RelationRowsByField", fields: [fieldId], references: [id], onDelete: Cascade)
-  sourceTableId  String
-  sourceTable    DataTable  @relation("RelationRowsByTable", fields: [sourceTableId], references: [id], onDelete: Cascade)
   sourceRecordId String
   sourceRecord   DataRecord @relation("RelationRowsAsSource", fields: [sourceRecordId], references: [id], onDelete: Cascade)
   targetRecordId String
@@ -138,6 +137,9 @@ model DataRelationRow {
   sortOrder      Int        @default(0)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
+
+  /// SINGLE 基数的同源唯一性约束由 Task 4 的 service 事务校验保证。
+  /// Prisma 无法在通用单表模型中表达基于字段元数据的条件唯一索引。
 
   @@unique([fieldId, sourceRecordId, targetRecordId])
   @@index([sourceRecordId, fieldId, sortOrder])
@@ -168,12 +170,12 @@ model DataRecord {
 
 Run: `npx prisma generate`
 
-Expected: `src/generated/prisma` 重新生成且无 schema 解析错误。
+Expected: 本地 Prisma Client 重新生成且无 schema 解析错误；`src/generated/prisma/**` 保持不纳入 git 提交，遵循仓库 `.gitignore` 约定。
 
 - [ ] **Step 3: 提交**
 
 ```bash
-git add "prisma/schema.prisma" "src/generated/prisma"
+git add "prisma/schema.prisma"
 git commit -m "feat: add relation subtable schema"
 ```
 

@@ -3,6 +3,67 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import type { ServiceResult } from "@/types/data-table";
 
+// ── SQL helpers ──
+
+// 字段名白名单校验：防止 SQL 注入
+function isSafeIdentifier(name: string): boolean {
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
+}
+
+// 将 FilterCondition[] 转换为原生 SQL WHERE 子句
+function buildSqlWhereClause(
+  tableId: string,
+  filters: Array<{ field: string; operator: string; value: unknown }>,
+  fields: Array<{ key: string; type: string }>
+): { sql: string; params: unknown[] } {
+  const params: unknown[] = [];
+  const conditions: string[] = [`"tableId" = $${params.push(tableId)}`];
+
+  for (const filter of filters) {
+    const field = fields.find(f => f.key === filter.field);
+    if (!field || !isSafeIdentifier(filter.field)) continue;
+
+    const paramIdx = params.push(filter.value);
+    const jsonPath = `data->>'${filter.field}'`;
+
+    switch (filter.operator) {
+      case "eq":
+        conditions.push(`${jsonPath} = $${paramIdx}`);
+        break;
+      case "ne":
+        conditions.push(`${jsonPath} != $${paramIdx}`);
+        break;
+      case "contains":
+        conditions.push(`${jsonPath} LIKE '%' || $${paramIdx} || '%'`);
+        break;
+      case "gt":
+      case "gte":
+      case "lt":
+      case "lte": {
+        if (field.type === "NUMBER") {
+          const op = { gt: ">", gte: ">=", lt: "<", lte: "<=" }[filter.operator];
+          conditions.push(`CAST(${jsonPath} AS NUMERIC) ${op} $${paramIdx}`);
+        } else if (field.type === "DATE") {
+          const op = { gt: ">", gte: ">=", lt: "<", lte: "<=" }[filter.operator];
+          conditions.push(`CAST(${jsonPath} AS DATE) ${op} CAST($${paramIdx} AS DATE)`);
+        }
+        break;
+      }
+      case "in":
+        if (Array.isArray(filter.value)) {
+          const placeholders: string[] = [];
+          for (const v of filter.value) {
+            placeholders.push(`$${params.push(v)}`);
+          }
+          conditions.push(`${jsonPath} IN (${placeholders.join(", ")})`);
+        }
+        break;
+    }
+  }
+
+  return { sql: conditions.join(" AND "), params };
+}
+
 // ── List all data tables ──
 
 export async function listTables(): Promise<
@@ -337,72 +398,79 @@ export async function aggregateRecords(params: {
       };
     }
 
-    const where: Record<string, unknown> = { tableId };
-
-    if (filters.length > 0) {
-      const tableFields = await db.dataField.findMany({
-        where: { tableId },
-      });
-      const typedFilters: FilterCondition[] = filters.map((f) => ({
-        field: f.field,
-        operator: f.operator as FilterCondition["operator"],
-        value: f.value,
-      }));
-      const filterConditions = buildFilterConditions(
-        typedFilters,
-        tableFields.map((f) => ({ key: f.key, type: f.type }))
-      );
-      if (filterConditions.length > 0) {
-        where.AND = filterConditions;
-      }
-    }
-
+    // count 仍用 Prisma（已足够高效）
     if (operation === "count") {
+      const where: Record<string, unknown> = { tableId };
+
+      if (filters.length > 0) {
+        const tableFields = await db.dataField.findMany({
+          where: { tableId },
+        });
+        const typedFilters = filters.map((f) => ({
+          field: f.field,
+          operator: f.operator as "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "in",
+          value: f.value,
+        }));
+        const filterConditions = buildFilterConditions(
+          typedFilters,
+          tableFields.map((f) => ({ key: f.key, type: f.type }))
+        );
+        if (filterConditions.length > 0) {
+          where.AND = filterConditions;
+        }
+      }
+
       const count = await db.dataRecord.count({ where });
       return { success: true, data: { value: count, field, operation } };
     }
 
-    // sum/avg/min/max: fetch records and compute in JS
-    const records = await db.dataRecord.findMany({
-      where,
-      select: { data: true },
+    // sum/avg/min/max: 原生 SQL
+    if (!isSafeIdentifier(field)) {
+      return {
+        success: false,
+        error: { code: "INVALID_FIELD", message: "无效字段名" },
+      };
+    }
+
+    const tableFields = await db.dataField.findMany({
+      where: { tableId },
     });
+    const targetField = tableFields.find((f) => f.key === field);
 
-    const values: number[] = [];
-    for (const record of records) {
-      const data = record.data as Record<string, unknown>;
-      const value = data[field];
-      if (typeof value === "number" && !isNaN(value)) {
-        values.push(value);
-      } else if (typeof value === "string") {
-        const num = Number(value);
-        if (!isNaN(num)) values.push(num);
-      }
+    if (!targetField) {
+      return {
+        success: false,
+        error: { code: "NOT_FOUND", message: "聚合字段不存在" },
+      };
     }
 
-    let result: number;
-    if (values.length === 0) {
-      result = 0;
-    } else {
-      switch (operation) {
-        case "sum":
-          result = values.reduce((a, b) => a + b, 0);
-          break;
-        case "avg":
-          result = values.reduce((a, b) => a + b, 0) / values.length;
-          break;
-        case "min":
-          result = Math.min(...values);
-          break;
-        case "max":
-          result = Math.max(...values);
-          break;
-        default:
-          result = 0;
-      }
+    const castType = targetField.type === "DATE" ? "DATE" : "NUMERIC";
+    const sqlOperation = {
+      sum: "SUM",
+      avg: "AVG",
+      min: "MIN",
+      max: "MAX",
+    }[operation];
+
+    if (!sqlOperation) {
+      return {
+        success: false,
+        error: { code: "INVALID_OPERATION", message: "无效聚合操作" },
+      };
     }
 
-    return { success: true, data: { value: result, field, operation } };
+    const { sql: whereSql, params: whereParams } = buildSqlWhereClause(
+      tableId, filters, tableFields
+    );
+
+    const result = await db.$queryRawUnsafe<Array<{ value: number }>>(
+      `SELECT COALESCE(${sqlOperation}(CAST(data->>'${field}' AS ${castType})), 0) as value
+       FROM "DataRecord"
+       WHERE ${whereSql}`,
+      ...whereParams
+    );
+
+    return { success: true, data: { value: Number(result[0].value), field, operation } };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "聚合统计失败";

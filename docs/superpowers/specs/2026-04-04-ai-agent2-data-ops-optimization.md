@@ -87,9 +87,16 @@ case "deleteRecord": {
 ```typescript
 import { db } from "@/lib/db";
 
+// 字段名白名单校验：只允许安全字符，防止 SQL 注入
+function isSafeIdentifier(name: string): boolean {
+  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
+}
+
 /**
  * 将 FilterCondition[] 转换为原生 SQL WHERE 子句
  * 根据字段类型选择正确的 CAST 方式
+ *
+ * 安全策略：字段名通过白名单校验（isSafeIdentifier）+ 字段存在性双重保护
  */
 function buildSqlWhereClause(
   tableId: string,
@@ -101,9 +108,10 @@ function buildSqlWhereClause(
 
   for (const filter of filters) {
     const field = fields.find(f => f.key === filter.field);
-    if (!field) continue;
+    if (!field || !isSafeIdentifier(filter.field)) continue;
 
     const paramIdx = params.push(filter.value);
+    // 字段名已通过 isSafeIdentifier 校验，可安全拼接
     const jsonPath = `data->>'${filter.field}'`;
 
     switch (filter.operator) {
@@ -132,7 +140,6 @@ function buildSqlWhereClause(
       case "in":
         if (Array.isArray(filter.value)) {
           const placeholders = filter.value.map(() => `$${params.push(null)}`);
-          // fill params backward
           let i = params.length - filter.value.length;
           for (const v of filter.value) {
             params[i++] = v;
@@ -172,6 +179,11 @@ export async function aggregateRecords(params) {
     min: "MIN",
     max: "MAX",
   }[operation];
+
+  // 字段名白名单校验
+  if (!isSafeIdentifier(field)) {
+    return { success: false, error: { code: "INVALID_FIELD", message: "无效字段名" } };
+  }
 
   const { sql: whereSql, params: whereParams } = buildSqlWhereClause(
     tableId, filters, tableFields
@@ -216,17 +228,24 @@ if (hasAdvancedFilters) {
   );
   const total = Number(countResult[0].count);
 
-  // 分页查询
-  const offset = (page - 1) * pageSize;
-  const orderClause = sortBy
-    ? `ORDER BY data->>'${sortBy}' ${sortOrder === "asc" ? "ASC" : "DESC"}`
+  // 构建 ORDER BY — sortBy 需通过白名单校验
+  const safeSortBy = sortBy && table.fields.find(f => f.key === sortBy) && isSafeIdentifier(sortBy)
+    ? sortBy
+    : null;
+  const direction = sortOrder === "asc" ? "ASC" : "DESC";
+  const orderClause = safeSortBy
+    ? `ORDER BY data->>'${safeSortBy}' ${direction}`
     : `ORDER BY "createdAt" DESC`;
+
+  // LIMIT/OFFSET 通过参数化传入，防止注入
+  const limitParamIdx = whereParams.push(pageSize);
+  const offsetParamIdx = whereParams.push((page - 1) * pageSize);
 
   const records = await db.$queryRawUnsafe<Array<{ id: string; data: unknown }>>(
     `SELECT id, data FROM "DataRecord"
      WHERE ${whereSql}
      ${orderClause}
-     LIMIT ${pageSize} OFFSET ${offset}`,
+     LIMIT $${limitParamIdx} OFFSET $${offsetParamIdx}`,
     ...whereParams
   );
 
@@ -324,9 +343,9 @@ fields: table.fields.map(f => ({
   required: f.required,
   options: f.options as string[] | undefined,
   // 新增
-  relationTo: f.relationTo ?? undefined,       // 关联目标表 ID
-  displayField: f.displayField ?? undefined,   // 显示字段 key
-  cardinality: f.cardinality ?? undefined,     // SINGLE | MULTIPLE
+  relationTo: f.relationTo ?? undefined,               // 关联目标表 ID
+  displayField: f.displayField ?? undefined,           // 显示字段 key
+  cardinality: f.relationCardinality ?? undefined,     // SINGLE | MULTIPLE（注意：Prisma schema 中字段名为 relationCardinality）
 }))
 ```
 
@@ -393,6 +412,8 @@ ${tableContext}
 
 调用链上游适配：`buildSystemPrompt()` 变为 async，所有调用处需加 `await`。
 
+**性能考量**：每次调用最多触发 6 次数据库查询（1 次 listTables + 最多 5 次 getTableSchema）。对于高频聊天场景，可引入短时内存缓存（30 秒 TTL）避免重复查询。实现时使用模块级变量缓存结果即可，无需额外依赖。
+
 ### 2.2 generateDocument 对接
 
 **现状**：`tool-executor.ts` 中返回占位符 "文档生成功能尚未实现"
@@ -404,14 +425,19 @@ case "generateDocument": {
   const templateId = toolInput.templateId as string;
   const formData = toolInput.formData as Record<string, unknown>;
 
-  // 获取模板文件路径
+  // 获取模板，验证状态
   const template = await db.template.findUnique({
     where: { id: templateId },
-    select: { filePath: true, name: true },
+    select: { filePath: true, name: true, status: true },
   });
 
   if (!template) {
     return { success: false, error: "模板不存在" };
+  }
+
+  // 检查模板状态是否可用（PUBLISHED）
+  if (template.status !== "PUBLISHED") {
+    return { success: false, error: "模板未发布，无法生成文档" };
   }
 
   // 调用 Python 服务
@@ -478,3 +504,21 @@ case "isnotempty":
 | `src/lib/agent2/context-builder.ts` | — | — | 动态提示 |
 | `src/lib/agent2/confirm-store.ts` | — | — | — |
 | `src/lib/services/data-record.service.ts` | 被委托调用 | — | — |
+
+## 安全考量
+
+所有原生 SQL 查询中的字段名通过 `isSafeIdentifier()` 白名单校验（只允许 `[a-zA-Z_][a-zA-Z0-9_]*`），防止 SQL 注入。值通过参数化查询传入。
+
+`LIMIT`/`OFFSET` 使用参数化而非直接拼接。
+
+## 测试策略
+
+- P0：SQL 注入防护测试（字段名包含特殊字符的场景）
+- P0：CRUD 委托后的返回格式适配测试
+- P1：数字/日期过滤的正确性测试
+- P1：关系字段解析的批量测试
+- P2：动态提示在表结构变化时的刷新测试
+
+## 回滚策略
+
+P0 删除 `tool-helpers.ts` 中的 CRUD 函数时，先保留旧函数标记为 `@deprecated`，验证委托调用无问题后再在下个版本中删除。

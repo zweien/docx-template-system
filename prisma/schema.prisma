@@ -273,58 +273,96 @@ enum FieldType {
   PHONE
   FILE          // 附件
   RELATION      // 关联字段
+  RELATION_SUBTABLE
+}
+
+enum RelationCardinality {
+  SINGLE
+  MULTIPLE
 }
 
 model DataTable {
-  id          String       @id @default(cuid())
-  name        String       @unique
-  description String?
-  icon        String?
-  fields      DataField[]
-  records     DataRecord[]
+  id               String            @id @default(cuid())
+  name             String            @unique
+  description      String?
+  icon             String?
+  businessKeys     Json?
+  fields           DataField[]
+  records          DataRecord[]
+  relationRows     DataRelationRow[]  @relation("RelationRowsByTable")
   templates        Template[]
   batchGenerations BatchGeneration[]
   templateVersions TemplateVersion[]
-  views        DataView[]
-  createdBy   User         @relation(fields: [createdById], references: [id])
-  createdById String
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  views            DataView[]
+  createdBy        User              @relation(fields: [createdById], references: [id])
+  createdById      String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   @@index([createdById])
 }
 
 model DataField {
-  id           String       @id @default(cuid())
-  tableId      String
-  table        DataTable    @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  key          String
-  label        String
-  type         FieldType    @default(TEXT)
-  required     Boolean      @default(false)
-  options      Json?
-  relationTo   String?
-  displayField String?
-  defaultValue String?
-  sortOrder    Int          @default(0)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id                     String                 @id @default(cuid())
+  tableId                String
+  table                  DataTable              @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  key                    String
+  label                  String
+  type                   FieldType              @default(TEXT)
+  required               Boolean                @default(false)
+  options                Json?
+  relationTo             String?
+  displayField           String?
+  relationCardinality    RelationCardinality?
+  inverseFieldId         String?
+  inverseField           DataField?             @relation("InverseRelationField", fields: [inverseFieldId], references: [id], onDelete: SetNull)
+  inverseOf              DataField[]            @relation("InverseRelationField")
+  isSystemManagedInverse Boolean                @default(false)
+  relationSchema         Json?
+  defaultValue           String?
+  sortOrder              Int                    @default(0)
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  relationRows           DataRelationRow[]      @relation("RelationRowsByField")
   @@unique([tableId, key])
+  @@index([inverseFieldId])
 }
 
 model DataRecord {
-  id          String   @id @default(cuid())
-  tableId     String
-  table       DataTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  data        Json
-  records     Record[]
-  createdBy   User     @relation(fields: [createdById], references: [id])
-  createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id               String            @id @default(cuid())
+  tableId          String
+  table            DataTable         @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  data             Json
+  relationRowsFrom DataRelationRow[] @relation("RelationRowsAsSource")
+  relationRowsTo   DataRelationRow[] @relation("RelationRowsAsTarget")
+  records          Record[]
+  createdBy        User              @relation(fields: [createdById], references: [id])
+  createdById      String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
   @@index([tableId])
   @@index([createdById])
   @@index([tableId, createdAt(sort: Desc)])  // 复合索引加速列表查询
   @@index([tableId, createdById])             // 复合索引加速用户记录查询
+}
+
+model DataRelationRow {
+  id             String     @id @default(cuid())
+  fieldId        String
+  field          DataField  @relation("RelationRowsByField", fields: [fieldId], references: [id], onDelete: Cascade)
+  sourceTableId  String
+  sourceTable    DataTable  @relation("RelationRowsByTable", fields: [sourceTableId], references: [id], onDelete: Cascade)
+  sourceRecordId String
+  sourceRecord   DataRecord @relation("RelationRowsAsSource", fields: [sourceRecordId], references: [id], onDelete: Cascade)
+  targetRecordId String
+  targetRecord   DataRecord @relation("RelationRowsAsTarget", fields: [targetRecordId], references: [id], onDelete: Cascade)
+  attributes     Json?
+  sortOrder      Int        @default(0)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([fieldId, sourceRecordId, targetRecordId])
+  @@index([sourceRecordId, fieldId, sortOrder])
+  @@index([targetRecordId])
 }
 
 model DataView {

@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { FieldType } from "@/generated/prisma/enums";
-import { Prisma } from "@/generated/prisma/client";
 import type {
   DataTableListItem,
   DataTableDetail,
@@ -9,12 +8,7 @@ import type {
 } from "@/types/data-table";
 import type { CreateTableInput, UpdateTableInput, DataFieldInput } from "@/validators/data-table";
 import { withCache, invalidateCache, CACHE_TTL } from "@/lib/cache";
-
-// Helper to convert to Prisma JSON input
-function toJsonInput(value: unknown): Prisma.InputJsonValue | undefined {
-  if (value === null || value === undefined) return undefined;
-  return JSON.parse(JSON.stringify(value));
-}
+import { saveTableFieldsWithRelations } from "./data-field.service";
 
 // ── Helpers ──
 
@@ -261,38 +255,18 @@ export async function updateFields(
   fields: DataFieldInput[]
 ): Promise<ServiceResult<DataFieldItem[]>> {
   try {
-    // Validate fields
-    const validationResult = validateFields(fields);
-    if (!validationResult.success) {
-      return validationResult;
+    const saveResult = await saveTableFieldsWithRelations({
+      tableId,
+      fields,
+    });
+
+    if (!saveResult.success) {
+      return saveResult;
     }
 
-    // Use transaction to replace all fields
-    const result = await db.$transaction(async (tx) => {
-      // Delete existing fields
-      await tx.dataField.deleteMany({ where: { tableId } });
-
-      // Create new fields
-      await tx.dataField.createMany({
-        data: fields.map((f, index) => ({
-          tableId,
-          key: f.key,
-          label: f.label,
-          type: f.type as FieldType,
-          required: f.required ?? false,
-          options: toJsonInput(f.options),
-          relationTo: f.relationTo ?? null,
-          displayField: f.displayField ?? null,
-          defaultValue: f.defaultValue ?? null,
-          sortOrder: f.sortOrder ?? index,
-        })),
-      });
-
-      // Fetch created fields
-      return tx.dataField.findMany({
-        where: { tableId },
-        orderBy: { sortOrder: "asc" },
-      });
+    const result = await db.dataField.findMany({
+      where: { tableId },
+      orderBy: { sortOrder: "asc" },
     });
 
     // Invalidate cache AFTER transaction commits to prevent stale cache

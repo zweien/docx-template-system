@@ -51,7 +51,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const validated = updateFieldsSchema.parse(body);
 
-    const result = await updateFields(id, validated.fields);
+    const result = await updateFields(id, validated.fields, validated.businessKeys);
 
     if (!result.success) {
       return NextResponse.json(

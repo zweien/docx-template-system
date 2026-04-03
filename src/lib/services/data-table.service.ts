@@ -294,9 +294,19 @@ export async function deleteTable(id: string): Promise<ServiceResult<null>> {
 
 export async function updateFields(
   tableId: string,
-  fields: DataFieldInput[]
+  fields: DataFieldInput[],
+  businessKeys?: string[]
 ): Promise<ServiceResult<DataFieldItem[]>> {
   try {
+    // Save business keys if provided
+    if (businessKeys !== undefined) {
+      invalidateCache(`table:${tableId}`);
+      await db.dataTable.update({
+        where: { id: tableId },
+        data: { businessKeys },
+      });
+    }
+
     const saveResult = await saveTableFieldsWithRelations({
       tableId,
       fields,

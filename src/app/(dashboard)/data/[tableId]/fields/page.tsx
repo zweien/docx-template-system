@@ -98,6 +98,7 @@ export default async function FieldsPage({ params }: PageProps) {
         tableId={tableId}
         fields={table.fields}
         availableTables={availableTables}
+        businessKeys={table.businessKeys}
       />
     </div>
   );

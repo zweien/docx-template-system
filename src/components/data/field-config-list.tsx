@@ -21,6 +21,7 @@ interface FieldConfigListProps {
   tableId: string;
   fields: DataFieldItem[];
   availableTables: DataTableListItem[];
+  businessKeys?: string[];
 }
 
 const FIELD_TYPE_LABELS: Record<FieldType, string> = {
@@ -88,6 +89,7 @@ export function FieldConfigList({
   tableId,
   fields: initialFields,
   availableTables,
+  businessKeys: initialBusinessKeys,
 }: FieldConfigListProps) {
   const router = useRouter();
   const [fields, setFields] = useState<DataFieldItem[]>(
@@ -109,6 +111,9 @@ export function FieldConfigList({
       defaultValue: f.defaultValue,
       sortOrder: f.sortOrder,
     }))
+  );
+  const [businessKeys, setBusinessKeys] = useState<string[]>(
+    initialBusinessKeys ?? []
   );
   const [editingField, setEditingField] = useState<DataFieldItem | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -141,7 +146,7 @@ export function FieldConfigList({
       const response = await fetch(`/api/data-tables/${tableId}/fields`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fields }),
+        body: JSON.stringify({ fields, businessKeys }),
       });
 
       const result = await response.json();
@@ -207,6 +212,51 @@ export function FieldConfigList({
           <Button size="sm" onClick={handleSaveAll} disabled={isSaving}>
             {isSaving ? "保存中..." : "保存全部"}
           </Button>
+        </div>
+      </div>
+
+      {/* 业务唯一键配置 */}
+      <div className="rounded-md border p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium">业务唯一键</h3>
+          <span className="text-xs text-zinc-400">
+            用于导入时匹配已有记录（最多 5 个字段）
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {fields
+            .filter((f) => f.type !== "RELATION" && f.type !== "RELATION_SUBTABLE")
+            .map((f) => {
+              const isSelected = businessKeys.includes(f.key);
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() =>
+                    setBusinessKeys((prev) =>
+                      isSelected
+                        ? prev.filter((k) => k !== f.key)
+                        : prev.length < 5
+                          ? [...prev, f.key]
+                          : prev
+                    )
+                  }
+                  className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors ${
+                    isSelected
+                      ? "bg-zinc-900 text-white border-zinc-900"
+                      : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
+                  }`}
+                >
+                  {f.label}
+                  <span className="opacity-60 font-mono">({f.key})</span>
+                </button>
+              );
+            })}
+          {businessKeys.length === 0 && (
+            <span className="text-xs text-zinc-400 py-1">
+              未选择 — 导入时需手动指定唯一字段
+            </span>
+          )}
         </div>
       </div>
 

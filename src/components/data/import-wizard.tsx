@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
-import type { DataFieldItem, ImportPreview, ImportResult } from "@/types/data-table";
+import type { DataFieldItem, ImportPreview, ImportResult, DataTableDetail } from "@/types/data-table";
 import {
   CreateFieldDialog,
   type CreateFieldFormData,
@@ -24,12 +24,15 @@ import {
 interface ImportWizardProps {
   tableId?: string;
   fields: DataFieldItem[];
+  table?: DataTableDetail;
 }
 
+type ImportMode = "normal" | "relation";
 type Step = "upload" | "mapping" | "options" | "result";
 
-export function ImportWizard({ tableId, fields }: ImportWizardProps) {
+export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
   const router = useRouter();
+  const [importMode, setImportMode] = useState<ImportMode>("normal");
   const [step, setStep] = useState<Step>("upload");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
@@ -43,6 +46,14 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
   // 创建字段相关 state
   const [localFields, setLocalFields] = useState<DataFieldItem[]>(fields);
   const [createFieldForColumn, setCreateFieldForColumn] = useState<string | null>(null);
+
+  // 关系明细导入 state
+  const [selectedRelationField, setSelectedRelationField] = useState<string>("");
+  const [sourceMapping, setSourceMapping] = useState<Record<string, string>>({});
+  const [targetMapping, setTargetMapping] = useState<Record<string, string>>({});
+  const [attributeMapping, setAttributeMapping] = useState<Record<string, string>>({});
+  const [targetTableFields, setTargetTableFields] = useState<DataFieldItem[]>([]);
+  const [targetTableId, setTargetTableId] = useState<string>("");
 
   // Step 1: Upload
   const handleUpload = useCallback(async () => {
@@ -169,37 +180,109 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
     try {
       const formData = new FormData();
       formData.append("file", file!);
-      formData.append(
-        "config",
-        JSON.stringify({
-          mapping,
-          options: {
-            uniqueField,
-            strategy,
-          },
-        })
-      );
 
-      const response = await fetch(`/api/data-tables/${tableId}/import`, {
-        method: "POST",
-        body: formData,
-      });
+      if (importMode === "relation") {
+        // 关系明细导入
+        const relationField = localFields.find((f) => f.id === selectedRelationField);
+        if (!relationField || !tableId) {
+          setError("请选择关系字段");
+          return;
+        }
 
-      const data = await response.json();
+        const sourceBusinessKeys = table?.businessKeys ?? [];
+        const targetBusinessKeys = (() => {
+          const keys: string[] = [];
+          for (const fieldKey of Object.values(targetMapping)) {
+            if (fieldKey) keys.push(fieldKey);
+          }
+          return keys;
+        })();
 
-      if (!response.ok) {
-        setError(data.error || "导入失败");
-        return;
+        if (sourceBusinessKeys.length === 0) {
+          setError("当前表未配置业务唯一键，请先在字段配置中设置");
+          return;
+        }
+
+        formData.append(
+          "config",
+          JSON.stringify({
+            relationFieldKey: relationField.key,
+            sourceMapping,
+            targetMapping,
+            attributeMapping,
+            sourceBusinessKeys,
+            targetBusinessKeys,
+            targetTableId,
+          })
+        );
+
+        const response = await fetch(`/api/data-tables/${tableId}/relation-import`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || "导入失败");
+          return;
+        }
+
+        setResult(data);
+      } else {
+        // 普通导入
+        formData.append(
+          "config",
+          JSON.stringify({
+            mapping,
+            options: {
+              uniqueField,
+              strategy,
+            },
+          })
+        );
+
+        const response = await fetch(`/api/data-tables/${tableId}/import`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || "导入失败");
+          return;
+        }
+
+        setResult(data);
       }
 
-      setResult(data);
       setStep("result");
     } catch (_err) {
       setError("导入失败，请稍后重试");
     } finally {
       setIsLoading(false);
     }
-  }, [file, preview, mapping, uniqueField, strategy, tableId]);
+  }, [file, preview, mapping, uniqueField, strategy, tableId, importMode, selectedRelationField, sourceMapping, targetMapping, attributeMapping, targetTableId, localFields, table]);
+
+  // 关系明细导入：加载目标表字段
+  const handleRelationFieldChange = useCallback(async (fieldId: string | null) => {
+    if (!fieldId) return;
+    setSelectedRelationField(fieldId);
+    const field = localFields.find((f) => f.id === fieldId);
+    if (!field?.relationTo) return;
+
+    setTargetTableId(field.relationTo);
+    try {
+      const response = await fetch(`/api/data-tables/${field.relationTo}`);
+      if (response.ok) {
+        const data = await response.json();
+        setTargetTableFields(data.fields ?? []);
+      }
+    } catch {
+      // ignore
+    }
+  }, [localFields]);
 
   // Render steps
   const renderUploadStep = () => (
@@ -210,6 +293,30 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
           支持 .xlsx 格式，最大 5MB，最多 1000 行
         </p>
       </div>
+
+      {/* 导入模式选择 */}
+      {table && (
+        <div className="space-y-2">
+          <Label>导入模式</Label>
+          <RadioGroup
+            value={importMode}
+            onValueChange={(v) => setImportMode(v as ImportMode)}
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="normal" id="mode-normal" />
+              <label htmlFor="mode-normal" className="text-sm">
+                主表数据导入
+              </label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="relation" id="mode-relation" />
+              <label htmlFor="mode-relation" className="text-sm">
+                关系明细导入（按唯一键匹配主记录与关联记录）
+              </label>
+            </div>
+          </RadioGroup>
+        </div>
+      )}
 
       <div className="border-2 border-dashed border-zinc-200 rounded-lg p-8 text-center">
         <Input
@@ -264,6 +371,164 @@ export function ImportWizard({ tableId, fields }: ImportWizardProps) {
   const renderMappingStep = () => {
     if (!preview) return null;
 
+    // 关系明细导入映射
+    if (importMode === "relation") {
+      const relationFields = localFields.filter(
+        (f) => f.type === "RELATION_SUBTABLE" && f.relationTo
+      );
+
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-medium">关系明细映射</h2>
+            <p className="text-zinc-500 text-sm mt-1">
+              选择关系字段，将 Excel 列映射到源表唯一键、目标表唯一键和边属性
+            </p>
+          </div>
+
+          {/* 选择关系字段 */}
+          <div className="space-y-2">
+            <Label>关系字段</Label>
+            <Select value={selectedRelationField} onValueChange={handleRelationFieldChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="选择关系字段" />
+              </SelectTrigger>
+              <SelectContent>
+                {relationFields.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {f.label} ({f.key})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedRelationField && (
+            <>
+              {/* 源表唯一键映射 */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h3 className="font-medium text-sm">源表唯一键列映射</h3>
+                {table?.businessKeys?.map((bk) => {
+                  const field = localFields.find((f) => f.key === bk);
+                  return (
+                    <div key={bk} className="flex items-center gap-4">
+                      <div className="w-1/3 text-sm">{field?.label ?? bk}</div>
+                      <div className="text-zinc-400">→</div>
+                      <Select
+                        value={sourceMapping[bk] ?? ""}
+                        onValueChange={(v) =>
+                          setSourceMapping((prev) => ({ ...prev, [bk]: v ?? "" }))
+                        }
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="选择 Excel 列" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {preview.columns.map((col) => (
+                            <SelectItem key={col} value={col}>
+                              {col}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 目标表唯一键映射 */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h3 className="font-medium text-sm">目标表唯一键列映射</h3>
+                {targetTableFields
+                  .filter((f) => f.type === "TEXT" || f.type === "NUMBER" || f.type === "SELECT")
+                  .map((f) => (
+                    <div key={f.key} className="flex items-center gap-4">
+                      <div className="w-1/3 text-sm">
+                        {f.label} ({f.key})
+                      </div>
+                      <div className="text-zinc-400">→</div>
+                      <Select
+                        value={targetMapping[f.key] ?? ""}
+                        onValueChange={(v) =>
+                          setTargetMapping((prev) => ({ ...prev, [f.key]: v ?? "" }))
+                        }
+                      >
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="选择 Excel 列" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">不导入</SelectItem>
+                          {preview.columns.map((col) => (
+                            <SelectItem key={col} value={col}>
+                              {col}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+              </div>
+
+              {/* 边属性列映射 */}
+              {(() => {
+                const relationField = localFields.find((f) => f.id === selectedRelationField);
+                const attrFields = relationField?.relationSchema?.fields ?? [];
+                if (attrFields.length === 0) return null;
+                return (
+                  <div className="border rounded-lg p-4 space-y-3">
+                    <h3 className="font-medium text-sm">边属性列映射</h3>
+                    {attrFields.map((f) => (
+                      <div key={f.key} className="flex items-center gap-4">
+                        <div className="w-1/3 text-sm">{f.label}</div>
+                        <div className="text-zinc-400">→</div>
+                        <Select
+                          value={attributeMapping[f.key] ?? ""}
+                          onValueChange={(v) =>
+                            setAttributeMapping((prev) => ({ ...prev, [f.key]: v ?? "" }))
+                          }
+                        >
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="选择 Excel 列" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">不导入</SelectItem>
+                            {preview.columns.map((col) => (
+                              <SelectItem key={col} value={col}>
+                                {col}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </>
+          )}
+
+          <div className="text-sm text-zinc-500">
+            预览：共 {preview.totalRows} 行数据
+          </div>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep("upload")}>
+              上一步
+            </Button>
+            <Button
+              onClick={() => setStep("options")}
+              disabled={!selectedRelationField}
+            >
+              下一步
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // 普通导入映射
     return (
       <div className="space-y-6">
         <div>

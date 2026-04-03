@@ -72,7 +72,7 @@ export default async function ImportPage({ params }: PageProps) {
       </div>
 
       {/* Import Wizard */}
-      <ImportWizard tableId={tableId} fields={table.fields} />
+      <ImportWizard tableId={tableId} fields={table.fields} table={table} />
     </div>
   );
 }

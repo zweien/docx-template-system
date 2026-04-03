@@ -68,6 +68,7 @@ export const updateTableSchema = createTableSchema.partial();
 
 export const updateFieldsSchema = z.object({
   fields: z.array(dataFieldItemSchema).max(50, "单表最多50个字段"),
+  businessKeys: z.array(z.string()).max(5).optional(),
 });
 
 // ========== Record Schemas ==========

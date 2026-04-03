@@ -68,6 +68,7 @@ describe("data-table.service", () => {
           defaultValue: null,
           sortOrder: 0,
           inverseField: {
+            key: "paper_authors_inverse",
             relationCardinality: "MULTIPLE",
           },
         },
@@ -81,13 +82,14 @@ describe("data-table.service", () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.businessKeys).toEqual(["title"]);
-      expect(result.data.fields[0]).toMatchObject({
-        relationCardinality: "SINGLE",
-        inverseFieldId: "inverse-1",
-        inverseRelationCardinality: "MULTIPLE",
-        isSystemManagedInverse: false,
-        relationSchema: {
-          version: 1,
+        expect(result.data.fields[0]).toMatchObject({
+          relationCardinality: "SINGLE",
+          inverseFieldId: "inverse-1",
+          inverseRelationCardinality: "MULTIPLE",
+          inverseFieldKey: "paper_authors_inverse",
+          isSystemManagedInverse: false,
+          relationSchema: {
+            version: 1,
           fields: [{ key: "author_order", label: "作者顺序", type: "NUMBER", required: true, sortOrder: 0 }],
         },
       });
@@ -133,6 +135,7 @@ describe("data-table.service", () => {
           defaultValue: null,
           sortOrder: 0,
           inverseField: {
+            key: "paper_authors_inverse",
             relationCardinality: "MULTIPLE",
           },
         },
@@ -154,6 +157,7 @@ describe("data-table.service", () => {
       expect(updated.data.businessKeys).toEqual(["title"]);
       expect(updated.data.fields[0]).toMatchObject({
         inverseRelationCardinality: "MULTIPLE",
+        inverseFieldKey: "paper_authors_inverse",
       });
     }
   });
@@ -180,6 +184,7 @@ describe("data-table.service", () => {
         defaultValue: null,
         sortOrder: 0,
         inverseField: {
+          key: "paper_authors_inverse",
           relationCardinality: "MULTIPLE",
         },
       },

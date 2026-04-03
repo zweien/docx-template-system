@@ -45,6 +45,7 @@ export interface DataFieldItem {
   relationCardinality?: RelationCardinality | null;
   inverseRelationCardinality?: RelationCardinality | null;
   inverseFieldId?: string | null;
+  inverseFieldKey?: string | null;
   isSystemManagedInverse?: boolean;
   relationSchema?: RelationSchemaConfig | null;
   defaultValue?: string;

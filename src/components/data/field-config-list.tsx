@@ -41,13 +41,44 @@ function buildInverseFieldPreview(key: string): string {
   return `${baseKey}_inverse`;
 }
 
+function toFieldItem(
+  data: DataFieldInput,
+  fallbackSortOrder: number,
+  existing?: DataFieldItem
+): DataFieldItem {
+  return {
+    id: data.id ?? existing?.id ?? "",
+    key: data.key,
+    label: data.label,
+    type: data.type,
+    required: data.required ?? false,
+    options: data.options ?? undefined,
+    relationTo: data.relationTo ?? undefined,
+    displayField: data.displayField ?? undefined,
+    relationCardinality: (data.relationCardinality ?? undefined) as
+      | DataFieldItem["relationCardinality"]
+      | undefined,
+    inverseRelationCardinality: (data.inverseRelationCardinality ?? undefined) as
+      | DataFieldItem["inverseRelationCardinality"]
+      | undefined,
+    inverseFieldId: data.inverseFieldId ?? existing?.inverseFieldId ?? null,
+    inverseFieldKey: existing?.inverseFieldKey ?? null,
+    isSystemManagedInverse: data.isSystemManagedInverse ?? existing?.isSystemManagedInverse,
+    relationSchema: (data.relationSchema ?? existing?.relationSchema ?? null) as
+      | DataFieldItem["relationSchema"]
+      | null,
+    defaultValue: data.defaultValue ?? undefined,
+    sortOrder: data.sortOrder ?? existing?.sortOrder ?? fallbackSortOrder,
+  };
+}
+
 export function FieldConfigList({
   tableId,
   fields: initialFields,
   availableTables,
 }: FieldConfigListProps) {
   const router = useRouter();
-  const [fields, setFields] = useState<DataFieldInput[]>(
+  const [fields, setFields] = useState<DataFieldItem[]>(
     initialFields.map((f) => ({
       id: f.id,
       key: f.key,
@@ -60,6 +91,7 @@ export function FieldConfigList({
       relationCardinality: f.relationCardinality,
       inverseRelationCardinality: f.inverseRelationCardinality,
       inverseFieldId: f.inverseFieldId,
+      inverseFieldKey: f.inverseFieldKey,
       isSystemManagedInverse: f.isSystemManagedInverse,
       relationSchema: f.relationSchema,
       defaultValue: f.defaultValue,
@@ -71,7 +103,7 @@ export function FieldConfigList({
   const [isSaving, setIsSaving] = useState(false);
 
   const handleAddField = (data: DataFieldInput) => {
-    setFields([...fields, { ...data, sortOrder: fields.length }]);
+    setFields([...fields, toFieldItem(data, fields.length)]);
     setIsFormOpen(false);
   };
 
@@ -79,7 +111,7 @@ export function FieldConfigList({
     if (!editingField) return;
     setFields(
       fields.map((f) =>
-        f.id === editingField.id ? { ...data, id: editingField.id } : f
+        f.id === editingField.id ? toFieldItem(data, f.sortOrder, f) : f
       )
     );
     setEditingField(null);
@@ -219,7 +251,7 @@ export function FieldConfigList({
                         </div>
                         <div>本侧基数: {field.relationCardinality ?? "-"}</div>
                         <div>
-                          反向字段: {field.isSystemManagedInverse ? field.key : buildInverseFieldPreview(field.key)}
+                          反向字段: {field.inverseFieldKey ?? buildInverseFieldPreview(field.key)}
                           {" / "}
                           {field.inverseRelationCardinality ?? "-"}
                         </div>

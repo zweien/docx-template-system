@@ -28,6 +28,7 @@ function mapFieldToItem(row: {
   defaultValue: string | null;
   sortOrder: number;
   inverseField?: {
+    key: string;
     relationCardinality: string | null;
   } | null;
 }): DataFieldItem {
@@ -43,6 +44,7 @@ function mapFieldToItem(row: {
     relationCardinality: row.relationCardinality as DataFieldItem["relationCardinality"],
     inverseFieldId: row.inverseFieldId ?? null,
     inverseRelationCardinality: (row.inverseField?.relationCardinality ?? null) as DataFieldItem["relationCardinality"],
+    inverseFieldKey: row.inverseField?.key ?? null,
     isSystemManagedInverse: row.isSystemManagedInverse,
     relationSchema: row.relationSchema === null ? null : (row.relationSchema as DataFieldItem["relationSchema"]),
     defaultValue: row.defaultValue ?? undefined,
@@ -100,6 +102,7 @@ export async function getTable(id: string): Promise<ServiceResult<DataTableDetai
               include: {
                 inverseField: {
                   select: {
+                    key: true,
                     relationCardinality: true,
                   },
                 },
@@ -231,6 +234,7 @@ export async function updateTable(
           include: {
             inverseField: {
               select: {
+                key: true,
                 relationCardinality: true,
               },
             },
@@ -307,11 +311,12 @@ export async function updateFields(
       where: { tableId },
       orderBy: { sortOrder: "asc" },
       include: {
-        inverseField: {
-          select: {
-            relationCardinality: true,
-          },
+      inverseField: {
+        select: {
+          key: true,
+          relationCardinality: true,
         },
+      },
       },
     });
 

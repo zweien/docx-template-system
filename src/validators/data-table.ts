@@ -20,6 +20,11 @@ const relationSchemaFieldSchema = z.object({
   sortOrder: z.number().int().min(0).default(0),
 });
 
+const relationSchemaConfigSchema = z.object({
+  version: z.literal(1),
+  fields: z.array(relationSchemaFieldSchema),
+});
+
 export const businessKeySchema = z.object({
   fieldKeys: z.array(z.string()).min(1).max(5),
 });
@@ -45,7 +50,7 @@ export const dataFieldItemSchema = z.object({
   relationCardinality: z.nativeEnum(PrismaRelationCardinality).nullable().optional(),
   inverseFieldId: z.string().nullable().optional(),
   isSystemManagedInverse: z.boolean().default(false),
-  relationSchema: z.array(relationSchemaFieldSchema).nullable().optional(),
+  relationSchema: relationSchemaConfigSchema.nullable().optional(),
   defaultValue: z.string().nullable().optional(),
   sortOrder: z.number().int().min(0).default(0),
 });
@@ -97,7 +102,7 @@ export const importSchema = z.object({
 export type CreateTableInput = z.infer<typeof createTableSchema>;
 export type UpdateTableInput = z.infer<typeof updateTableSchema>;
 export type UpdateFieldsInput = z.infer<typeof updateFieldsSchema>;
-export type DataFieldInput = z.infer<typeof dataFieldItemSchema>;
+export type DataFieldInput = z.input<typeof dataFieldItemSchema>;
 export type RecordQueryInput = z.infer<typeof recordQuerySchema>;
 export type CreateRecordInput = z.infer<typeof createRecordSchema>;
 export type UpdateRecordInput = z.infer<typeof updateRecordSchema>;

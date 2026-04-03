@@ -28,6 +28,11 @@ export interface BusinessKeyConfig {
   fieldKeys: string[];
 }
 
+export interface RelationSchemaConfig {
+  version: 1;
+  fields: RelationSchemaField[];
+}
+
 export interface DataFieldItem {
   id: string;
   key: string;
@@ -40,7 +45,7 @@ export interface DataFieldItem {
   relationCardinality?: RelationCardinality | null;
   inverseFieldId?: string | null;
   isSystemManagedInverse?: boolean;
-  relationSchema?: RelationSchemaField[] | null;
+  relationSchema?: RelationSchemaConfig | null;
   defaultValue?: string;
   sortOrder: number;
 }

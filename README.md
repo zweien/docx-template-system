@@ -129,6 +129,28 @@ npx prisma generate  # 生成 Prisma Client
 npx prisma studio    # 数据库可视化工具
 ```
 
+### 数据迁移
+
+#### 关系子表格字段迁移
+
+如果数据库中存在旧的 `RELATION` 类型字段，需运行迁移脚本将其升级为 `RELATION_SUBTABLE` 模式：
+
+```bash
+# 预览迁移（不写入数据库）
+npx tsx scripts/migrate-relation-fields.ts --dry-run
+
+# 执行迁移
+npx tsx scripts/migrate-relation-fields.ts
+```
+
+迁移内容：
+1. 将 `RELATION` 字段类型改为 `RELATION_SUBTABLE`
+2. 为缺失反向字段的字段自动生成系统反向字段
+3. 从 `DataRecord.data` 中回填 `DataRelationRow` 关系行
+4. 刷新正反 JSONB 快照
+
+**注意：** 执行前务必先运行 `--dry-run` 检查数据完整性。
+
 ## 文档索引
 
 - [认证接入说明](./docs/authentication.md)

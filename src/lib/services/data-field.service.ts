@@ -304,28 +304,18 @@ function getDefaultInverseDisplayField(candidateKeys: string[]): string {
   return "id";
 }
 
-function buildSourceDisplayFieldCandidates(existingFields: FieldRow[]): string[] {
+function buildSourceDisplayFieldCandidates(fields: DataFieldInput[]): string[] {
   const candidates: string[] = [];
   const seen = new Set<string>();
 
-  for (const field of existingFields) {
-    if (field.isSystemManagedInverse) continue;
-    if (field.type === FieldType.RELATION || field.type === FieldType.RELATION_SUBTABLE) continue;
+  for (const field of fields) {
+    if (isRelationSubtable(field)) continue;
     if (seen.has(field.key)) continue;
     seen.add(field.key);
     candidates.push(field.key);
   }
 
   return candidates;
-}
-
-function recordSourceDisplayFieldCandidate(
-  candidates: string[],
-  field: DataFieldInput
-): void {
-  if (isRelationSubtable(field)) return;
-  if (candidates.includes(field.key)) return;
-  candidates.push(field.key);
 }
 
 async function loadTableFieldKeys(
@@ -449,7 +439,7 @@ export async function saveTableFieldsWithRelations(input: {
       const existingById = new Map(existingFields.map((field) => [field.id, field]));
       const existingByKey = new Map(existingFields.map((field) => [field.key, field]));
       const desiredIdOrKey = new Set(input.fields.map(getFieldIdentity));
-      const sourceDisplayFieldCandidates = buildSourceDisplayFieldCandidates(existingFields);
+      const sourceDisplayFieldCandidates = buildSourceDisplayFieldCandidates(input.fields);
       const tableKeyCache = new Map<string, Set<string>>();
       tableKeyCache.set(input.tableId, new Set(existingFields.map((field) => field.key)));
 
@@ -472,17 +462,15 @@ export async function saveTableFieldsWithRelations(input: {
           const matched = field.id ? existingById.get(field.id) : existingByKey.get(field.key);
           if (matched) {
             keptIds.add(matched.id);
-            await tx.dataField.update({
-              where: { id: matched.id },
-              data: buildFieldUpdateData(field, matched),
-            });
-            recordSourceDisplayFieldCandidate(sourceDisplayFieldCandidates, field);
+          await tx.dataField.update({
+            where: { id: matched.id },
+            data: buildFieldUpdateData(field, matched),
+          });
           } else {
             const created = await tx.dataField.create({
               data: buildFieldCreateData(input.tableId, field, existingFields.length),
             });
             keptIds.add(created.id);
-            recordSourceDisplayFieldCandidate(sourceDisplayFieldCandidates, field);
           }
           continue;
         }
@@ -573,7 +561,6 @@ export async function saveTableFieldsWithRelations(input: {
           data: buildFieldCreateData(input.tableId, field, existingFields.length),
         });
         keptIds.add(sourceField.id);
-        recordSourceDisplayFieldCandidate(sourceDisplayFieldCandidates, field);
 
         const nextInverseRelationCardinality = resolveInverseRelationCardinality(field);
         const inverseId = await createInverseFieldPair(

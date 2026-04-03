@@ -116,7 +116,10 @@ describe("saveTableFieldsWithRelations", () => {
 
     const result = await saveTableFieldsWithRelations({
       tableId: "paper_table_id",
-      fields: [buildRelationInput({ inverseRelationCardinality: "MULTIPLE" })],
+      fields: [
+        buildTextField("title") as never,
+        buildRelationInput({ inverseRelationCardinality: "MULTIPLE" }),
+      ],
     });
 
     expect(result.success).toBe(true);
@@ -195,7 +198,10 @@ describe("saveTableFieldsWithRelations", () => {
 
     const result = await saveTableFieldsWithRelations({
       tableId: "paper_table_id",
-      fields: [buildRelationInput({ inverseRelationCardinality: "MULTIPLE" })],
+      fields: [
+        buildTextField("title") as never,
+        buildRelationInput({ inverseRelationCardinality: "MULTIPLE" }),
+      ],
     });
 
     expect(result.success).toBe(true);
@@ -235,6 +241,33 @@ describe("saveTableFieldsWithRelations", () => {
         }),
       })
     );
+  });
+
+  it("ignores deleted source fields when choosing inverse displayField", async () => {
+    setupTransaction({
+      currentFields: [buildTextField("title"), buildTextField("summary")],
+    });
+
+    const result = await saveTableFieldsWithRelations({
+      tableId: "paper_table_id",
+      fields: [
+        buildTextField("name") as never,
+        buildRelationInput({ inverseRelationCardinality: "MULTIPLE" }),
+      ],
+    });
+
+    expect(result.success).toBe(true);
+    expect(dbMock.dataField.create).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          tableId: "author_table_id",
+          relationTo: "paper_table_id",
+          displayField: "name",
+        }),
+      })
+    );
+    expect(dbMock.dataField.deleteMany).toHaveBeenCalledWith({ where: { id: "title-id" } });
   });
 
   it.each([

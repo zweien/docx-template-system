@@ -1,5 +1,6 @@
 // src/lib/agent2/tool-executor.ts
 import * as helpers from "./tool-helpers";
+import * as recordService from "@/lib/services/data-record.service";
 
 type ExecuteResult = {
   success: boolean;
@@ -14,7 +15,7 @@ export async function executeToolAction(
 ): Promise<ExecuteResult> {
   switch (toolName) {
     case "createRecord": {
-      const result = await helpers.createRecord(
+      const result = await recordService.createRecord(
         userId,
         toolInput.tableId as string,
         toolInput.data as Record<string, unknown>
@@ -25,7 +26,7 @@ export async function executeToolAction(
     }
 
     case "updateRecord": {
-      const result = await helpers.updateRecord(
+      const result = await recordService.updateRecord(
         toolInput.recordId as string,
         toolInput.data as Record<string, unknown>
       );
@@ -35,12 +36,13 @@ export async function executeToolAction(
     }
 
     case "deleteRecord": {
-      const result = await helpers.deleteRecord(
+      const result = await recordService.deleteRecord(
         toolInput.recordId as string
       );
       if (!result.success)
         return { success: false, error: result.error.message };
-      return { success: true, data: result.data };
+      // data-record.service.deleteRecord 返回 null，但下游期望 { id } 格式
+      return { success: true, data: { id: toolInput.recordId as string } };
     }
 
     case "generateDocument": {

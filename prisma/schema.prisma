@@ -17,6 +17,11 @@ enum Role {
   USER
 }
 
+enum DocumentCollectionTaskStatus {
+  ACTIVE
+  CLOSED
+}
+
 model User {
   id            String    @id @default(cuid())
   name          String
@@ -36,12 +41,92 @@ model User {
   aiConversations AiConversation[]
   aiAttachments   AiAttachment[]
   agent2Conversations Agent2Conversation[]
+  createdCollectionTasks       DocumentCollectionTask[]              @relation("CreatedCollectionTasks")
+  assignedCollectionTasks      DocumentCollectionAssignee[]          @relation("AssignedCollectionTasks")
+  collectionAttachments        DocumentCollectionAttachment[]        @relation("CollectionAttachments")
+  collectionSubmissionVersions DocumentCollectionSubmissionVersion[] @relation("CollectionSubmissionVersions")
 }
 
 enum TemplateStatus {
   DRAFT
   PUBLISHED
   ARCHIVED
+}
+
+model DocumentCollectionTask {
+  id              String                         @id @default(cuid())
+  title           String
+  instruction     String
+  dueAt           DateTime
+  status          DocumentCollectionTaskStatus   @default(ACTIVE)
+  renameRule      String
+  renameVariables Json?
+  createdById     String
+  createdBy       User                           @relation("CreatedCollectionTasks", fields: [createdById], references: [id])
+  attachments     DocumentCollectionAttachment[]
+  assignees       DocumentCollectionAssignee[]
+  createdAt       DateTime                       @default(now())
+  updatedAt       DateTime                       @updatedAt
+
+  @@index([createdById, createdAt(sort: Desc)])
+  @@index([dueAt])
+}
+
+model DocumentCollectionAttachment {
+  id               String                 @id @default(cuid())
+  taskId           String
+  task             DocumentCollectionTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fileName         String
+  originalFileName String
+  storagePath      String
+  fileSize         Int
+  mimeType         String
+  uploadedById     String
+  uploadedBy       User                   @relation("CollectionAttachments", fields: [uploadedById], references: [id])
+  createdAt        DateTime               @default(now())
+
+  @@index([taskId])
+}
+
+model DocumentCollectionAssignee {
+  id              String                                @id @default(cuid())
+  taskId          String
+  task            DocumentCollectionTask                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User                                  @relation("AssignedCollectionTasks", fields: [userId], references: [id])
+  latestVersionId String?                               @unique
+  latestVersion   DocumentCollectionSubmissionVersion?  @relation("LatestCollectionSubmissionVersion", fields: [latestVersionId, id], references: [id, assigneeId])
+  submittedAt     DateTime?
+  createdAt       DateTime                              @default(now())
+  updatedAt       DateTime                              @updatedAt
+  versions        DocumentCollectionSubmissionVersion[]
+
+  @@unique([taskId, userId])
+  @@unique([latestVersionId, id])
+  @@index([taskId])
+  @@index([userId])
+}
+
+model DocumentCollectionSubmissionVersion {
+  id                 String                      @id @default(cuid())
+  assigneeId         String
+  assignee           DocumentCollectionAssignee  @relation(fields: [assigneeId], references: [id], onDelete: Cascade)
+  version            Int
+  fileName           String
+  originalFileName   String
+  storagePath        String
+  fileSize           Int
+  mimeType           String
+  submittedById      String
+  submittedBy        User                        @relation("CollectionSubmissionVersions", fields: [submittedById], references: [id])
+  submittedAt        DateTime                    @default(now())
+  note               String?
+  isLate             Boolean                     @default(false)
+  currentForAssignee DocumentCollectionAssignee? @relation("LatestCollectionSubmissionVersion")
+
+  @@unique([assigneeId, version])
+  @@unique([id, assigneeId])
+  @@index([assigneeId, submittedAt(sort: Desc)])
 }
 
 model Category {
@@ -99,8 +184,6 @@ model Template {
   currentVersionId String?  @unique
   currentVersion   TemplateVersion? @relation("CurrentVersion", fields: [currentVersionId], references: [id])
   versions         TemplateVersion[] @relation("TemplateVersions")
-
-
   @@index([status, createdAt(sort: Desc)])
   @@index([categoryId])
 }

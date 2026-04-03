@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   LayoutDashboard,
   FileOutput,
@@ -16,6 +16,7 @@ import {
   PanelLeftOpen,
   Bot,
   Sparkles,
+  FolderInput,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNav } from "@/components/layout/user-nav";
@@ -42,6 +43,11 @@ const navItems: NavItem[] = [
     title: "模板管理",
     href: "/templates",
     icon: <FileText className="h-4 w-4" />,
+  },
+  {
+    title: "文档收集",
+    href: "/collections",
+    icon: <FolderInput className="h-4 w-4" />,
   },
   {
     title: "主数据",
@@ -83,12 +89,13 @@ const STORAGE_KEY = "sidebar-collapsed";
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
 
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored !== null) setCollapsed(stored === "true");
-  }, []);
+    return localStorage.getItem(STORAGE_KEY) === "true";
+  });
 
   const toggle = useCallback(() => {
     setCollapsed((prev) => {

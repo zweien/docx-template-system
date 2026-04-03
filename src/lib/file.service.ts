@@ -1,12 +1,46 @@
 import { writeFile, mkdir, copyFile, unlink, rm } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
-import { UPLOAD_DIR } from "@/lib/constants/upload";
+import {
+  COLLECTION_UPLOAD_DIR,
+  UPLOAD_DIR,
+} from "@/lib/constants/upload";
 
 export interface FilePathMeta {
   fileName: string; // stored filename: {id}.docx
   filePath: string; // absolute path: {cwd}/public/uploads/templates/{id}.docx
   urlPath: string; // web-accessible path: /uploads/templates/{id}.docx
+}
+
+function getPublicUrlBase(): string {
+  return UPLOAD_DIR.startsWith("public/") ? UPLOAD_DIR.slice("public".length) : `/${UPLOAD_DIR}`;
+}
+
+async function ensureDirectory(dirPath: string): Promise<void> {
+  if (!existsSync(dirPath)) await mkdir(dirPath, { recursive: true });
+}
+
+async function saveFileToDirectory(
+  buffer: Buffer,
+  dirPath: string,
+  relativePath: string,
+  fileName: string,
+  options?: {
+    extension?: string;
+  }
+): Promise<FilePathMeta> {
+  await ensureDirectory(dirPath);
+
+  const ext = options?.extension || "docx";
+  const storedFileName = fileName.endsWith(`.${ext}`) ? fileName : `${fileName}.${ext}`;
+  const filePath = join(dirPath, storedFileName);
+  await writeFile(filePath, buffer);
+
+  return {
+    fileName: storedFileName,
+    filePath,
+    urlPath: `${getPublicUrlBase()}/${relativePath}/${storedFileName}`.replace(/\/+/g, "/"),
+  };
 }
 
 export async function saveUploadedFile(
@@ -16,18 +50,8 @@ export async function saveUploadedFile(
   id: string
 ): Promise<FilePathMeta> {
   const targetDir = join(process.cwd(), UPLOAD_DIR, dir);
-  if (!existsSync(targetDir)) await mkdir(targetDir, { recursive: true });
-
   const ext = originalName.split(".").pop() || "docx";
-  const fileName = `${id}.${ext}`;
-  const filePath = join(targetDir, fileName);
-  await writeFile(filePath, buffer);
-
-  return {
-    fileName,
-    filePath,
-    urlPath: `/${UPLOAD_DIR}/${dir}/${fileName}`,
-  };
+  return saveFileToDirectory(buffer, targetDir, dir, id, { extension: ext });
 }
 
 export async function copyTemplateToDocument(
@@ -44,7 +68,7 @@ export async function copyTemplateToDocument(
   return {
     fileName: newFileName,
     filePath,
-    urlPath: `/${UPLOAD_DIR}/documents/${newFileName}`,
+    urlPath: `${getPublicUrlBase()}/documents/${newFileName}`.replace(/\/+/g, "/"),
   };
 }
 
@@ -58,17 +82,10 @@ export async function saveTemplateDraft(
   originalName: string
 ): Promise<FilePathMeta> {
   const dir = join(process.cwd(), UPLOAD_DIR, "templates", templateId);
-  if (!existsSync(dir)) await mkdir(dir, { recursive: true });
-
-  const fileName = "draft.docx";
-  const filePath = join(dir, fileName);
-  await writeFile(filePath, buffer);
-
-  return {
-    fileName,
-    filePath,
-    urlPath: `/${UPLOAD_DIR}/templates/${templateId}/${fileName}`,
-  };
+  void originalName;
+  return saveFileToDirectory(buffer, dir, `templates/${templateId}`, "draft", {
+    extension: "docx",
+  });
 }
 
 export async function copyToVersion(
@@ -89,11 +106,53 @@ export async function copyToVersion(
   return {
     fileName,
     filePath: versionPath,
-    urlPath: `/${UPLOAD_DIR}/templates/${templateId}/${fileName}`,
+    urlPath: `${getPublicUrlBase()}/templates/${templateId}/${fileName}`.replace(/\/+/g, "/"),
   };
 }
 
 export async function deleteTemplateDir(templateId: string): Promise<void> {
   const dir = join(process.cwd(), UPLOAD_DIR, "templates", templateId);
   if (existsSync(dir)) await rm(dir, { recursive: true, force: true });
+}
+
+export async function saveCollectionTaskAttachment(
+  buffer: Buffer,
+  originalName: string,
+  taskId: string,
+  attachmentId: string
+): Promise<FilePathMeta> {
+  const dir = join(process.cwd(), COLLECTION_UPLOAD_DIR, "collections", "tasks", taskId);
+  const ext = originalName.split(".").pop() || "docx";
+  return saveFileToDirectory(buffer, dir, `collections/tasks/${taskId}`, attachmentId, {
+    extension: ext,
+  });
+}
+
+export async function saveCollectionSubmissionFile(
+  buffer: Buffer,
+  originalName: string,
+  versionId: string
+): Promise<FilePathMeta> {
+  const dir = join(process.cwd(), COLLECTION_UPLOAD_DIR, "collections", "submissions");
+  const ext = originalName.split(".").pop() || "docx";
+  return saveFileToDirectory(buffer, dir, "collections/submissions", versionId, {
+    extension: ext,
+  });
+}
+
+export function resolveStoredFilePath(storagePath: string): string {
+  const publicUrlBase = getPublicUrlBase();
+
+  if (storagePath.startsWith(`${publicUrlBase}/`)) {
+    const relativePath = storagePath.slice(publicUrlBase.length + 1);
+    if (relativePath.startsWith("collections/")) {
+      const privatePath = join(process.cwd(), COLLECTION_UPLOAD_DIR, relativePath);
+      if (existsSync(privatePath)) {
+        return privatePath;
+      }
+    }
+    return join(process.cwd(), UPLOAD_DIR, relativePath);
+  }
+
+  return storagePath;
 }

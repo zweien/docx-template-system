@@ -58,4 +58,15 @@ __pycache__/
 
 # Playwright browser automation logs
 .playwright-cli/
+.playwright-mcp/
 .gstack/
+
+# Local agent/runtime state
+.claude/
+.superpowers/
+.data/
+test-results/
+
+# Local debug screenshots
+/sidebar-test.png
+/tool-error.png

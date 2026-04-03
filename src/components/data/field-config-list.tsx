@@ -36,6 +36,11 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   [FieldType.RELATION_SUBTABLE]: "关系子表格",
 };
 
+function buildInverseFieldPreview(key: string): string {
+  const baseKey = key.trim() || "field";
+  return `${baseKey}_inverse`;
+}
+
 export function FieldConfigList({
   tableId,
   fields: initialFields,
@@ -52,6 +57,11 @@ export function FieldConfigList({
       options: f.options,
       relationTo: f.relationTo,
       displayField: f.displayField,
+      relationCardinality: f.relationCardinality,
+      inverseRelationCardinality: f.inverseRelationCardinality,
+      inverseFieldId: f.inverseFieldId,
+      isSystemManagedInverse: f.isSystemManagedInverse,
+      relationSchema: f.relationSchema,
       defaultValue: f.defaultValue,
       sortOrder: f.sortOrder,
     }))
@@ -199,6 +209,22 @@ export function FieldConfigList({
                         {field.options?.slice(0, 3).join(", ")}
                         {field.options && field.options.length > 3 && "..."}
                       </span>
+                    ) : field.type === FieldType.RELATION_SUBTABLE ? (
+                      <div className="space-y-1 text-sm text-zinc-500">
+                        <div>
+                          关联目标:
+                          {availableTables.find((t) => t.id === field.relationTo)?.name ??
+                            field.relationTo ??
+                            "-"}
+                        </div>
+                        <div>本侧基数: {field.relationCardinality ?? "-"}</div>
+                        <div>
+                          反向字段: {field.isSystemManagedInverse ? field.key : buildInverseFieldPreview(field.key)}
+                          {" / "}
+                          {field.inverseRelationCardinality ?? "-"}
+                        </div>
+                        <div>边属性: {field.relationSchema?.fields?.length ?? 0}</div>
+                      </div>
                     ) : field.type === FieldType.RELATION ? (
                       <span className="text-sm text-zinc-500">
                         关联表 / 显示: {field.displayField}

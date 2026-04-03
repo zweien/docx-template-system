@@ -3,12 +3,17 @@ import { Prisma } from "@/generated/prisma/client";
 import type {
   DataRecordItem,
   PaginatedRecords,
+  RelationSubtableValueItem,
   ServiceResult,
   DataFieldItem,
   SortConfig,
   FilterCondition,
 } from "@/types/data-table";
 import { getTable } from "./data-table.service";
+import {
+  removeAllRelationsForRecord,
+  syncRelationSubtableValues,
+} from "./data-relation.service";
 
 // Helper to convert Record<string, unknown> to Prisma JSON input
 function toJsonInput(data: Record<string, unknown>): Prisma.InputJsonValue {
@@ -89,6 +94,38 @@ function mapRecordToItem(row: {
     updatedAt: row.updatedAt,
     createdByName: row.createdBy.name,
   };
+}
+
+function splitRecordDataByFieldType(
+  data: Record<string, unknown>,
+  fields: DataFieldItem[]
+): {
+  scalarData: Record<string, unknown>;
+  relationData: Record<
+    string,
+    RelationSubtableValueItem[] | RelationSubtableValueItem | null
+  >;
+} {
+  const fieldTypeByKey = new Map(fields.map((field) => [field.key, field.type]));
+  const scalarData: Record<string, unknown> = {};
+  const relationData: Record<
+    string,
+    RelationSubtableValueItem[] | RelationSubtableValueItem | null
+  > = {};
+
+  for (const [fieldKey, value] of Object.entries(data)) {
+    if (fieldTypeByKey.get(fieldKey) === "RELATION_SUBTABLE") {
+      relationData[fieldKey] = value as
+        | RelationSubtableValueItem[]
+        | RelationSubtableValueItem
+        | null;
+      continue;
+    }
+
+    scalarData[fieldKey] = value;
+  }
+
+  return { scalarData, relationData };
 }
 
 // ── Record Management ──
@@ -305,16 +342,49 @@ export async function createRecord(
       return validation;
     }
 
-    const record = await db.dataRecord.create({
-      data: {
-        tableId,
-        data: toJsonInput(data),
-        createdById: userId,
-      },
-      include: {
-        createdBy: { select: { name: true } },
-      },
+    const { scalarData, relationData } = splitRecordDataByFieldType(
+      data,
+      tableResult.data.fields
+    );
+
+    const record = await db.$transaction(async (tx) => {
+      const createdRecord = await tx.dataRecord.create({
+        data: {
+          tableId,
+          data: toJsonInput(scalarData),
+          createdById: userId,
+        },
+        include: {
+          createdBy: { select: { name: true } },
+        },
+      });
+
+      if (Object.keys(relationData).length > 0) {
+        const relationResult = await syncRelationSubtableValues({
+          tx,
+          sourceRecordId: createdRecord.id,
+          tableId,
+          relationPayload: relationData,
+        });
+        if (!relationResult.success) {
+          throw new Error(`${relationResult.error.code}:${relationResult.error.message}`);
+        }
+      }
+
+      return tx.dataRecord.findUnique({
+        where: { id: createdRecord.id },
+        include: {
+          createdBy: { select: { name: true } },
+        },
+      });
     });
+
+    if (!record) {
+      return {
+        success: false,
+        error: { code: "NOT_FOUND", message: "记录不存在" },
+      };
+    }
 
     return { success: true, data: mapRecordToItem(record) };
   } catch (error) {
@@ -351,14 +421,49 @@ export async function updateRecord(
       return validation;
     }
 
-    const record = await db.dataRecord.update({
-      where: { id },
-      // 合并更新：保留原有数据，只更新传入的字段
-      data: { data: toJsonInput({ ...(existingRecord.data as Record<string, unknown>), ...data }) },
-      include: {
-        createdBy: { select: { name: true } },
-      },
+    const { scalarData, relationData } = splitRecordDataByFieldType(
+      data,
+      tableResult.data.fields
+    );
+
+    const record = await db.$transaction(async (tx) => {
+      await tx.dataRecord.update({
+        where: { id },
+        // 合并更新：保留原有数据，只更新普通字段；关系字段快照由 relation service 统一重建
+        data: {
+          data: toJsonInput({
+            ...(existingRecord.data as Record<string, unknown>),
+            ...scalarData,
+          }),
+        },
+      });
+
+      if (Object.keys(relationData).length > 0) {
+        const relationResult = await syncRelationSubtableValues({
+          tx,
+          sourceRecordId: id,
+          tableId: existingRecord.tableId,
+          relationPayload: relationData,
+        });
+        if (!relationResult.success) {
+          throw new Error(`${relationResult.error.code}:${relationResult.error.message}`);
+        }
+      }
+
+      return tx.dataRecord.findUnique({
+        where: { id },
+        include: {
+          createdBy: { select: { name: true } },
+        },
+      });
     });
+
+    if (!record) {
+      return {
+        success: false,
+        error: { code: "NOT_FOUND", message: "记录不存在" },
+      };
+    }
 
     return { success: true, data: mapRecordToItem(record) };
   } catch (error) {
@@ -378,7 +483,17 @@ export async function deleteRecord(id: string): Promise<ServiceResult<null>> {
       };
     }
 
-    await db.dataRecord.delete({ where: { id } });
+    await db.$transaction(async (tx) => {
+      const relationResult = await removeAllRelationsForRecord({
+        tx,
+        recordId: id,
+      });
+      if (!relationResult.success) {
+        throw new Error(`${relationResult.error.code}:${relationResult.error.message}`);
+      }
+
+      await tx.dataRecord.delete({ where: { id } });
+    });
 
     return { success: true, data: null };
   } catch (error) {

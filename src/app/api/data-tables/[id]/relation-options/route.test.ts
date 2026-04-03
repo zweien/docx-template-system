@@ -22,7 +22,7 @@ describe("api/data-tables/[id]/relation-options route", () => {
     vi.clearAllMocks();
   });
 
-  it("filters options by NUMBER displayField string values", async () => {
+  function mockScoreTable() {
     getRouteSessionUserMock.mockResolvedValue({ id: "user-1", role: "ADMIN" });
     getTableMock.mockResolvedValue({
       success: true,
@@ -41,6 +41,10 @@ describe("api/data-tables/[id]/relation-options route", () => {
         ],
       },
     });
+  }
+
+  it("filters options by NUMBER displayField string values", async () => {
+    mockScoreTable();
     listRecordsMock.mockResolvedValue({
       success: true,
       data: {
@@ -69,5 +73,53 @@ describe("api/data-tables/[id]/relation-options route", () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual([{ id: "record-1", label: "1024" }]);
+  });
+
+  it("does not miss matches after the first 100 records", async () => {
+    mockScoreTable();
+    listRecordsMock
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          records: Array.from({ length: 100 }, (_, index) => ({
+            id: `record-${index + 1}`,
+            data: { score: index + 1 },
+          })),
+          totalPages: 2,
+        },
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          records: [
+            {
+              id: "record-101",
+              data: { score: 10001 },
+            },
+          ],
+          totalPages: 2,
+        },
+      });
+
+    const { GET } = await import("./route");
+
+    const response = await GET(
+      new NextRequest(
+        "http://localhost/api/data-tables/table-1/relation-options?displayField=score&search=10001"
+      ),
+      { params: Promise.resolve({ id: "table-1" }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(listRecordsMock).toHaveBeenNthCalledWith(1, "table-1", {
+      page: 1,
+      pageSize: 100,
+    });
+    expect(listRecordsMock).toHaveBeenNthCalledWith(2, "table-1", {
+      page: 2,
+      pageSize: 100,
+    });
+    expect(body).toEqual([{ id: "record-101", label: "10001" }]);
   });
 });

@@ -7,6 +7,9 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+const RELATION_OPTION_PAGE_SIZE = 100;
+const MAX_RELATION_OPTION_COUNT = 100;
+
 function resolveDisplayFieldKey(
   fields: Array<{ key: string; type: string }>,
   displayFieldParam?: string
@@ -49,33 +52,45 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     displayFieldParam
   );
 
-  const result = await listRecords(id, {
-    page: 1,
-    pageSize: 100,
-  });
-
-  if (!result.success) {
-    return NextResponse.json(
-      { error: result.error.message },
-      { status: result.error.code === "NOT_FOUND" ? 404 : 400 }
-    );
-  }
-
   const normalizedSearch = (search ?? "").trim().toLowerCase();
+  const options: Array<{ id: string; label: string }> = [];
+  let page = 1;
+  let totalPages = 1;
 
-  const options = result.data.records
-    .map((record) => ({
-      id: record.id,
-      label: String(
+  while (page <= totalPages && options.length < MAX_RELATION_OPTION_COUNT) {
+    const result = await listRecords(id, {
+      page,
+      pageSize: RELATION_OPTION_PAGE_SIZE,
+    });
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error.message },
+        { status: result.error.code === "NOT_FOUND" ? 404 : 400 }
+      );
+    }
+
+    totalPages = result.data.totalPages ?? 1;
+
+    for (const record of result.data.records) {
+      const label = String(
         (displayField ? record.data[displayField] : null) ??
           record.id
-      ),
-    }))
-    .filter((option) =>
-      normalizedSearch
-        ? option.label.toLowerCase().includes(normalizedSearch)
-        : true
-    );
+      );
+      const matchesSearch =
+        !normalizedSearch ||
+        label.toLowerCase().includes(normalizedSearch);
+
+      if (
+        matchesSearch &&
+        options.length < MAX_RELATION_OPTION_COUNT
+      ) {
+        options.push({ id: record.id, label });
+      }
+    }
+
+    page += 1;
+  }
 
   return NextResponse.json(options);
 }

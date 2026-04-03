@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import type {
   DataFieldItem,
+  RelationSubtableValueItem,
   PaginatedRecords,
   FilterCondition,
   SortConfig,
@@ -333,6 +334,41 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
         const displayValue =
           (value as Record<string, unknown>)?.display ?? value;
         return <Badge variant="outline">{String(displayValue)}</Badge>;
+      case FieldType.RELATION_SUBTABLE: {
+        const items = (Array.isArray(value) ? value : [value])
+          .filter((item): item is RelationSubtableValueItem =>
+            Boolean(item) &&
+            typeof item === "object" &&
+            "targetRecordId" in item
+          )
+          .sort((left, right) => left.sortOrder - right.sortOrder);
+
+        if (items.length === 0) {
+          return <span className="text-zinc-400">-</span>;
+        }
+
+        const visibleItems = items.slice(0, 3);
+        const hiddenCount = items.length - visibleItems.length;
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {visibleItems.map((item) => (
+              <Badge
+                key={`${item.targetRecordId}-${item.sortOrder}`}
+                variant="outline"
+                className="text-xs"
+              >
+                {item.displayValue ?? item.targetRecordId}
+              </Badge>
+            ))}
+            {hiddenCount > 0 && (
+              <Badge variant="secondary" className="text-xs">
+                +{hiddenCount}
+              </Badge>
+            )}
+          </div>
+        );
+      }
       default:
         return String(value);
     }

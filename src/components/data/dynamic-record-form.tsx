@@ -16,7 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
+import type { RelationSubtableValueItem } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
+import { RelationSubtableEditor } from "./relation-subtable-editor";
 import { RelationSelect } from "./relation-select";
 
 interface DynamicRecordFormProps {
@@ -25,6 +27,99 @@ interface DynamicRecordFormProps {
   initialData?: DataRecordItem | null;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
   submitLabel?: string;
+}
+
+const relationSubtableItemSchema = z.object({
+  targetRecordId: z.string(),
+  displayValue: z.string().optional(),
+  attributes: z.record(z.string(), z.unknown()),
+  sortOrder: z.number().int().nonnegative(),
+});
+
+function normalizeRelationSubtableValues(
+  field: DataFieldItem,
+  rawValue: unknown
+): RelationSubtableValueItem[] {
+  const items = rawValue == null
+    ? []
+    : Array.isArray(rawValue)
+      ? rawValue
+      : [rawValue];
+
+  return items
+    .filter((item): item is RelationSubtableValueItem =>
+      Boolean(item) &&
+      typeof item === "object" &&
+      "targetRecordId" in item
+    )
+    .map((item, index) => ({
+      targetRecordId:
+        typeof item.targetRecordId === "string"
+          ? item.targetRecordId
+          : "",
+      displayValue:
+        typeof item.displayValue === "string"
+          ? item.displayValue
+          : undefined,
+      attributes:
+        item.attributes &&
+        typeof item.attributes === "object" &&
+        !Array.isArray(item.attributes)
+          ? { ...(item.attributes as Record<string, unknown>) }
+          : {},
+      sortOrder: Number.isInteger(item.sortOrder)
+        ? item.sortOrder
+        : index,
+    }))
+    .sort((left, right) => left.sortOrder - right.sortOrder)
+    .map((item, index) => ({
+      ...item,
+      sortOrder: index,
+    }))
+    .slice(0, field.relationCardinality === "SINGLE" ? 1 : undefined);
+}
+
+function buildRelationSubtableFieldSchema(
+  field: DataFieldItem
+): z.ZodTypeAny {
+  const valueSchema = z
+    .union([
+      relationSubtableItemSchema,
+      z.array(relationSubtableItemSchema),
+    ])
+    .nullable()
+    .optional();
+
+  if (!field.required) {
+    return valueSchema;
+  }
+
+  return valueSchema.refine(
+    (value) => {
+      const items = value == null
+        ? []
+        : Array.isArray(value)
+          ? value
+          : [value];
+      return items.some((item) => item.targetRecordId);
+    },
+    { message: `${field.label}不能为空` }
+  );
+}
+
+function serializeRelationSubtableValue(
+  field: DataFieldItem,
+  rawValue: unknown
+): RelationSubtableValueItem[] | RelationSubtableValueItem | null {
+  const items = normalizeRelationSubtableValues(field, rawValue).filter(
+    (item) => item.targetRecordId
+  );
+
+  if (field.relationCardinality === "SINGLE") {
+    return items[0] ?? null;
+  }
+
+  return items;
 }
 
 export function DynamicRecordForm({
@@ -69,6 +164,9 @@ export function DynamicRecordForm({
           case FieldType.RELATION:
             fieldSchema = z.string().nullable().optional();
             break;
+          case FieldType.RELATION_SUBTABLE:
+            fieldSchema = buildRelationSubtableFieldSchema(field);
+            break;
           default:
             fieldSchema = z.string().nullable().optional();
         }
@@ -78,6 +176,8 @@ export function DynamicRecordForm({
             fieldSchema = z.coerce.number({ message: `${field.label}必须是数字` });
           } else if (field.type === FieldType.MULTISELECT) {
             fieldSchema = z.array(z.string()).min(1, { message: `${field.label}至少选择一项` });
+          } else if (field.type === FieldType.RELATION_SUBTABLE) {
+            fieldSchema = buildRelationSubtableFieldSchema(field);
           } else {
             fieldSchema = z.string().min(1, { message: `${field.label}不能为空` });
           }
@@ -89,10 +189,22 @@ export function DynamicRecordForm({
   );
 
   const defaultValues = Object.fromEntries(
-    fields.map((field) => [
-      field.key,
-      initialData?.data[field.key] ?? field.defaultValue ?? null,
-    ])
+    fields.map((field) => {
+      if (field.type === FieldType.RELATION_SUBTABLE) {
+        return [
+          field.key,
+          normalizeRelationSubtableValues(
+            field,
+            initialData?.data[field.key] ?? null
+          ),
+        ];
+      }
+
+      return [
+        field.key,
+        initialData?.data[field.key] ?? field.defaultValue ?? null,
+      ];
+    })
   );
 
   const {
@@ -113,10 +225,20 @@ export function DynamicRecordForm({
     try {
       // Clean up null/empty values
       const cleanedData = Object.fromEntries(
-        Object.entries(data).map(([k, v]) => [
-          k,
-          v === "" ? null : v,
-        ])
+        fields.map((field) => {
+          const value = data[field.key];
+          if (field.type === FieldType.RELATION_SUBTABLE) {
+            return [
+              field.key,
+              serializeRelationSubtableValue(field, value),
+            ];
+          }
+
+          return [
+            field.key,
+            value === "" ? null : value,
+          ];
+        })
       );
 
       await onSubmit(cleanedData);
@@ -209,6 +331,18 @@ export function DynamicRecordForm({
             relationTableId={field.relationTo ?? ""}
             displayField={field.displayField ?? "id"}
             placeholder={`选择${field.label}`}
+          />
+        );
+
+      case FieldType.RELATION_SUBTABLE:
+        return (
+          <RelationSubtableEditor
+            field={field}
+            value={normalizeRelationSubtableValues(
+              field,
+              watch(field.key)
+            )}
+            onChange={(nextValue) => setValue(field.key, nextValue)}
           />
         );
 

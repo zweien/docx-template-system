@@ -115,6 +115,19 @@ function emptyRelationSchemaFieldDraft(): RelationSchemaFieldDraft {
   };
 }
 
+function hasDuplicateRelationSchemaKeys(fields: RelationSchemaFieldDraft[]): boolean {
+  const seen = new Set<string>();
+
+  for (const field of fields) {
+    const key = field.key.trim();
+    if (!key) continue;
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+
+  return false;
+}
+
 export function FieldConfigForm({
   open,
   onOpenChange,
@@ -144,7 +157,10 @@ export function FieldConfigForm({
   const isRelationType =
     fieldType === FieldType.RELATION || fieldType === FieldType.RELATION_SUBTABLE;
   const isRelationSubtableType = fieldType === FieldType.RELATION_SUBTABLE;
+  const isPersistedField = Boolean(field?.id);
   const isSystemManagedInverse = Boolean(field?.isSystemManagedInverse);
+  const isRelationTargetLocked = isPersistedField || isSystemManagedInverse;
+  const isRelationSchemaLocked = isSystemManagedInverse;
 
   const selectedTableName =
     availableTables.find((table) => table.id === selectedTableId)?.name ?? "";
@@ -273,6 +289,20 @@ export function FieldConfigForm({
     );
   };
 
+  const moveRelationSchemaField = (index: number, direction: -1 | 1) => {
+    setRelationSchemaFields((current) => {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= current.length) {
+        return current;
+      }
+
+      const next = [...current];
+      const [moved] = next.splice(index, 1);
+      next.splice(targetIndex, 0, moved);
+      return next;
+    });
+  };
+
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     setError("");
@@ -294,6 +324,11 @@ export function FieldConfigForm({
 
     if (isRelationSubtableType && !selectedTableId) {
       setError("请选择关联表");
+      return;
+    }
+
+    if (isRelationSubtableType && hasDuplicateRelationSchemaKeys(relationSchemaFields)) {
+      setError("边属性子字段标识不能重复");
       return;
     }
 
@@ -335,10 +370,6 @@ export function FieldConfigForm({
     onOpenChange(false);
   };
 
-  const canEditRelationCardinality = !isSystemManagedInverse;
-  const canEditInverseRelationCardinality =
-    !isSystemManagedInverse && relationCardinality !== "MULTIPLE";
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-[560px]">
@@ -358,7 +389,7 @@ export function FieldConfigForm({
                 placeholder="例如：project_name"
                 value={key}
                 onChange={(event) => setKey(event.target.value)}
-                disabled={Boolean(field && isSystemManagedInverse)}
+                disabled={isPersistedField}
               />
               <p className="text-xs text-zinc-500">英文字母开头，仅支持小写字母、数字、下划线</p>
             </div>
@@ -383,7 +414,7 @@ export function FieldConfigForm({
               >
                 <SelectTrigger
                   id="field-type-select"
-                  disabled={Boolean(field && isSystemManagedInverse)}
+                  disabled={isPersistedField}
                 >
                   <SelectValue placeholder="选择类型">
                     {getFieldTypeLabel(fieldType)}
@@ -431,7 +462,7 @@ export function FieldConfigForm({
                   >
                     <SelectTrigger
                       id="relation-table-select"
-                      disabled={Boolean(field && isSystemManagedInverse)}
+                      disabled={isRelationTargetLocked}
                     >
                       <SelectValue placeholder="选择关联表">
                         {selectedTableId ? selectedTableName || "选择关联表" : null}
@@ -456,7 +487,7 @@ export function FieldConfigForm({
                     >
                       <SelectTrigger
                         id="relation-display-field-select"
-                        disabled={Boolean(field && isSystemManagedInverse)}
+                        disabled={isSystemManagedInverse}
                       >
                         <SelectValue
                           placeholder={loadingFields ? "加载中..." : "选择显示字段"}
@@ -502,7 +533,7 @@ export function FieldConfigForm({
                       >
                         <SelectTrigger
                           id="relation-cardinality-select"
-                          disabled={!canEditRelationCardinality}
+                          disabled={isRelationTargetLocked}
                         >
                           <SelectValue>{relationCardinality}</SelectValue>
                         </SelectTrigger>
@@ -523,7 +554,7 @@ export function FieldConfigForm({
                       >
                         <SelectTrigger
                           id="inverse-relation-cardinality-select"
-                          disabled={!canEditInverseRelationCardinality}
+                          disabled={isRelationTargetLocked}
                         >
                           <SelectValue>{inverseRelationCardinality}</SelectValue>
                         </SelectTrigger>
@@ -555,7 +586,7 @@ export function FieldConfigForm({
                           variant="outline"
                           size="sm"
                           onClick={addRelationSchemaField}
-                          disabled={Boolean(field && isSystemManagedInverse)}
+                          disabled={isRelationSchemaLocked}
                         >
                           添加边属性
                         </Button>
@@ -582,35 +613,58 @@ export function FieldConfigForm({
                                     variant="ghost"
                                     size="sm"
                                     onClick={() => removeRelationSchemaField(index)}
-                                    disabled={Boolean(field && isSystemManagedInverse)}
+                                    disabled={isRelationSchemaLocked}
                                   >
                                     删除
                                   </Button>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moveRelationSchemaField(index, -1)}
+                                      disabled={isRelationSchemaLocked || index === 0}
+                                    >
+                                      上移
+                                    </Button>
+                                      <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => moveRelationSchemaField(index, 1)}
+                                      disabled={
+                                        isRelationSchemaLocked ||
+                                        index === relationSchemaFields.length - 1
+                                      }
+                                    >
+                                      下移
+                                    </Button>
+                                  </div>
                                 </div>
 
                                 <div className="mt-3 grid gap-3">
                                   <div className="grid gap-2">
                                     <Label htmlFor={keyId}>子字段标识</Label>
-                                    <Input
-                                      id={keyId}
-                                      value={schemaField.key}
-                                      onChange={(event) =>
-                                        updateRelationSchemaField(index, { key: event.target.value })
-                                      }
-                                      disabled={Boolean(field && isSystemManagedInverse)}
-                                    />
+                                      <Input
+                                        id={keyId}
+                                        value={schemaField.key}
+                                        onChange={(event) =>
+                                          updateRelationSchemaField(index, { key: event.target.value })
+                                        }
+                                      disabled={isRelationSchemaLocked}
+                                      />
                                   </div>
 
                                   <div className="grid gap-2">
                                     <Label htmlFor={labelId}>子字段名称</Label>
-                                    <Input
-                                      id={labelId}
-                                      value={schemaField.label}
-                                      onChange={(event) =>
-                                        updateRelationSchemaField(index, { label: event.target.value })
-                                      }
-                                      disabled={Boolean(field && isSystemManagedInverse)}
-                                    />
+                                      <Input
+                                        id={labelId}
+                                        value={schemaField.label}
+                                        onChange={(event) =>
+                                          updateRelationSchemaField(index, { label: event.target.value })
+                                        }
+                                      disabled={isRelationSchemaLocked}
+                                      />
                                   </div>
 
                                   <div className="grid gap-2">
@@ -625,7 +679,7 @@ export function FieldConfigForm({
                                     >
                                       <SelectTrigger
                                         id={typeId}
-                                        disabled={Boolean(field && isSystemManagedInverse)}
+                                        disabled={isRelationSchemaLocked}
                                       >
                                         <SelectValue>{getFieldTypeLabel(schemaField.type)}</SelectValue>
                                       </SelectTrigger>
@@ -641,13 +695,13 @@ export function FieldConfigForm({
 
                                   <div className="flex items-center justify-between">
                                     <Label htmlFor={`relation-schema-required-${index}`}>是否必填</Label>
-                                    <Switch
-                                      checked={schemaField.required}
-                                      onCheckedChange={(checked) =>
-                                        updateRelationSchemaField(index, { required: checked })
-                                      }
-                                      disabled={Boolean(field && isSystemManagedInverse)}
-                                    />
+                                      <Switch
+                                        checked={schemaField.required}
+                                        onCheckedChange={(checked) =>
+                                          updateRelationSchemaField(index, { required: checked })
+                                        }
+                                      disabled={isRelationSchemaLocked}
+                                      />
                                   </div>
 
                                   {(schemaField.type === FieldType.SELECT ||
@@ -663,7 +717,7 @@ export function FieldConfigForm({
                                           })
                                         }
                                         rows={3}
-                                        disabled={Boolean(field && isSystemManagedInverse)}
+                                        disabled={isRelationSchemaLocked}
                                       />
                                     </div>
                                   )}

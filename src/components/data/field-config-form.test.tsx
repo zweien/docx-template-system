@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FieldType } from "@/generated/prisma/enums";
 import type { DataFieldItem } from "@/types/data-table";
 import { FieldConfigForm } from "./field-config-form";
@@ -177,17 +177,76 @@ function buildRelationField(overrides: Partial<DataFieldItem> = {}): DataFieldIt
   };
 }
 
+const availableTables = [
+  {
+    id: "paper_table_id",
+    name: "论文",
+    fields: [
+      {
+        id: "title-id",
+        key: "title",
+        label: "标题",
+        type: FieldType.TEXT,
+        required: false,
+        sortOrder: 0,
+      } as DataFieldItem,
+    ],
+  },
+  {
+    id: "author_table_id",
+    name: "作者",
+    fields: [
+      {
+        id: "name-id",
+        key: "name",
+        label: "姓名",
+        type: FieldType.TEXT,
+        required: false,
+        sortOrder: 0,
+      } as DataFieldItem,
+    ],
+  },
+];
+
 describe("FieldConfigForm", () => {
-  it("renders relation subtable config and locks structural fields for inverse fields", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("已持久化字段会锁定 key、type 和关系结构字段", () => {
+    render(
+      <FieldConfigForm
+        open
+        onOpenChange={onOpenChangeMock}
+        field={buildRelationField({ id: "field-1" })}
+        availableTables={availableTables}
+        onSubmit={onSubmitMock}
+      />
+    );
+
+    expect(screen.getByPlaceholderText("例如：project_name")).toBeDisabled();
+    expect(screen.getByTestId("field-type-select")).toBeDisabled();
+    expect(screen.getByTestId("relation-table-select")).toBeDisabled();
+    expect(screen.getByTestId("relation-cardinality-select")).toBeDisabled();
+    expect(screen.getByTestId("inverse-relation-cardinality-select")).toBeDisabled();
+    expect(screen.getByTestId("relation-display-field-select")).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "添加边属性" })).not.toBeDisabled();
+  });
+
+  it("系统反向字段提交时保持原结构性值", () => {
     render(
       <FieldConfigForm
         open
         onOpenChange={onOpenChangeMock}
         field={buildRelationField({
+          id: "field-1",
           key: "paper_authors_inverse",
           label: "论文作者（反向）",
+          relationTo: "paper_table_id",
+          displayField: "title",
           relationCardinality: "MULTIPLE",
           inverseRelationCardinality: "MULTIPLE",
+          inverseFieldId: "field-2",
           isSystemManagedInverse: true,
           relationSchema: {
             version: 1,
@@ -202,95 +261,11 @@ describe("FieldConfigForm", () => {
             ],
           },
         })}
-        availableTables={[
-          {
-            id: "paper_table_id",
-            name: "论文",
-            fields: [
-              {
-                id: "title-id",
-                key: "title",
-                label: "标题",
-                type: FieldType.TEXT,
-                required: false,
-                sortOrder: 0,
-              } as DataFieldItem,
-            ],
-          },
-          {
-            id: "author_table_id",
-            name: "作者",
-            fields: [
-              {
-                id: "name-id",
-                key: "name",
-                label: "姓名",
-                type: FieldType.TEXT,
-                required: false,
-                sortOrder: 0,
-              } as DataFieldItem,
-            ],
-          },
-        ]}
+        availableTables={availableTables}
         onSubmit={onSubmitMock}
       />
     );
 
-    expect(screen.getByText("边属性")).toBeInTheDocument();
-    expect(screen.getByTestId("relation-table-select")).toBeDisabled();
-    expect(screen.getByTestId("relation-cardinality-select")).toBeDisabled();
-    expect(screen.getByTestId("inverse-relation-cardinality-select")).toBeDisabled();
-    const previewInputs = screen.getAllByDisplayValue("paper_authors_inverse");
-    expect(previewInputs.some((element) => element.id === "inverse-field-preview")).toBe(true);
-  });
-
-  it("allows editing relation schema subfields for forward relation fields", () => {
-    render(
-      <FieldConfigForm
-        open
-        onOpenChange={onOpenChangeMock}
-        field={buildRelationField()}
-        availableTables={[
-          {
-            id: "paper_table_id",
-            name: "论文",
-            fields: [
-              {
-                id: "title-id",
-                key: "title",
-                label: "标题",
-                type: FieldType.TEXT,
-                required: false,
-                sortOrder: 0,
-              } as DataFieldItem,
-            ],
-          },
-          {
-            id: "author_table_id",
-            name: "作者",
-            fields: [
-              {
-                id: "name-id",
-                key: "name",
-                label: "姓名",
-                type: FieldType.TEXT,
-                required: false,
-                sortOrder: 0,
-              } as DataFieldItem,
-            ],
-          },
-        ]}
-        onSubmit={onSubmitMock}
-      />
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "添加边属性" }));
-    fireEvent.change(screen.getByLabelText("子字段标识"), {
-      target: { value: "author_name" },
-    });
-    fireEvent.change(screen.getByLabelText("子字段名称"), {
-      target: { value: "作者姓名" },
-    });
     fireEvent.click(screen.getByRole("button", { name: "保存" }));
 
     expect(onSubmitMock).toHaveBeenCalledTimes(1);
@@ -298,8 +273,10 @@ describe("FieldConfigForm", () => {
       expect.objectContaining({
         type: FieldType.RELATION_SUBTABLE,
         relationTo: "paper_table_id",
-        relationCardinality: "SINGLE",
+        relationCardinality: "MULTIPLE",
         inverseRelationCardinality: "MULTIPLE",
+        inverseFieldId: "field-2",
+        isSystemManagedInverse: true,
         relationSchema: {
           version: 1,
           fields: [
@@ -307,7 +284,7 @@ describe("FieldConfigForm", () => {
               key: "author_name",
               label: "作者姓名",
               type: FieldType.TEXT,
-              required: false,
+              required: true,
               sortOrder: 0,
             }),
           ],
@@ -315,5 +292,87 @@ describe("FieldConfigForm", () => {
       })
     );
     expect(onOpenChangeMock).toHaveBeenCalledWith(false);
+  });
+
+  it("正向字段边属性重复 key 会阻止提交", () => {
+    render(
+      <FieldConfigForm
+        open
+        onOpenChange={onOpenChangeMock}
+        field={buildRelationField({ id: "", relationSchema: { version: 1, fields: [] } })}
+        availableTables={availableTables}
+        onSubmit={onSubmitMock}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "添加边属性" }));
+    fireEvent.click(screen.getByRole("button", { name: "添加边属性" }));
+
+    const keyInputs = screen.getAllByLabelText("子字段标识");
+    const labelInputs = screen.getAllByLabelText("子字段名称");
+
+    fireEvent.change(keyInputs[0], { target: { value: "author_name" } });
+    fireEvent.change(labelInputs[0], { target: { value: "作者姓名" } });
+    fireEvent.change(keyInputs[1], { target: { value: "author_name" } });
+    fireEvent.change(labelInputs[1], { target: { value: "作者姓名2" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(onSubmitMock).not.toHaveBeenCalled();
+    expect(screen.getByText("边属性子字段标识不能重复")).toBeInTheDocument();
+  });
+
+  it("边属性上移下移会改变提交顺序", () => {
+    render(
+      <FieldConfigForm
+        open
+        onOpenChange={onOpenChangeMock}
+        field={buildRelationField({
+          id: "",
+          relationSchema: {
+            version: 1,
+            fields: [
+              {
+                key: "author_name",
+                label: "作者姓名",
+                type: FieldType.TEXT,
+                required: false,
+                sortOrder: 0,
+              },
+              {
+                key: "author_role",
+                label: "作者角色",
+                type: FieldType.TEXT,
+                required: false,
+                sortOrder: 1,
+              },
+            ],
+          },
+        })}
+        availableTables={availableTables}
+        onSubmit={onSubmitMock}
+      />
+    );
+
+    fireEvent.click(screen.getAllByRole("button", { name: "下移" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(onSubmitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        relationSchema: {
+          version: 1,
+          fields: [
+            expect.objectContaining({
+              key: "author_role",
+              sortOrder: 0,
+            }),
+            expect.objectContaining({
+              key: "author_name",
+              sortOrder: 1,
+            }),
+          ],
+        },
+      })
+    );
   });
 });

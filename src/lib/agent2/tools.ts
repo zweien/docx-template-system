@@ -196,6 +196,8 @@ export function createTools(
                 "lte",
                 "contains",
                 "in",
+                "isempty",
+                "isnotempty",
               ]),
               value: z.unknown(),
             })
@@ -249,6 +251,8 @@ export function createTools(
                 "lte",
                 "contains",
                 "in",
+                "isempty",
+                "isnotempty",
               ]),
               value: z.unknown(),
             })

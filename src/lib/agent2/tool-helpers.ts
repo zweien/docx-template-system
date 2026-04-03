@@ -58,10 +58,67 @@ function buildSqlWhereClause(
           conditions.push(`${jsonPath} IN (${placeholders.join(", ")})`);
         }
         break;
+      case "isempty":
+        conditions.push(`(${jsonPath} IS NULL OR ${jsonPath} = '')`);
+        break;
+      case "isnotempty":
+        conditions.push(`(${jsonPath} IS NOT NULL AND ${jsonPath} != '')`);
+        break;
     }
   }
 
   return { sql: conditions.join(" AND "), params };
+}
+
+// 解析关系字段：批量查询关联记录并替换为 display 值
+async function resolveRelationFields(
+  table: { fields: Array<{ key: string; type: string; relationTo: string | null; displayField: string | null }> },
+  resultRecords: Array<Record<string, unknown>>
+): Promise<void> {
+  const relationFields = table.fields.filter(
+    (f) => f.type === "RELATION" && f.relationTo && f.displayField
+  );
+
+  if (relationFields.length === 0 || resultRecords.length === 0) return;
+
+  // 收集关联 ID
+  const relationIdsByTable = new Map<string, Set<string>>();
+  for (const field of relationFields) {
+    if (!relationIdsByTable.has(field.relationTo!)) {
+      relationIdsByTable.set(field.relationTo!, new Set());
+    }
+    const ids = relationIdsByTable.get(field.relationTo!)!;
+    for (const record of resultRecords) {
+      const relId = record[field.key];
+      if (typeof relId === "string" && relId) ids.add(relId);
+    }
+  }
+
+  // 批量查询
+  const relatedMap = new Map<string, Record<string, unknown>>();
+  for (const [, ids] of relationIdsByTable) {
+    if (ids.size > 0) {
+      const related = await db.dataRecord.findMany({
+        where: { id: { in: Array.from(ids) } },
+      });
+      for (const r of related) {
+        relatedMap.set(r.id, r.data as Record<string, unknown>);
+      }
+    }
+  }
+
+  // 替换为 display 值
+  for (const record of resultRecords) {
+    for (const field of relationFields) {
+      const relId = record[field.key];
+      if (typeof relId === "string" && relId) {
+        const data = relatedMap.get(relId);
+        if (data && field.displayField) {
+          record[field.key] = { id: relId, display: data[field.displayField] ?? relId };
+        }
+      }
+    }
+  }
 }
 
 // ── List all data tables ──
@@ -119,6 +176,9 @@ export async function getTableSchema(tableId: string): Promise<
       type: string;
       required: boolean;
       options?: string[];
+      relationTo?: string | null;
+      displayField?: string | null;
+      cardinality?: string | null;
     }>;
   }>
 > {
@@ -149,6 +209,9 @@ export async function getTableSchema(tableId: string): Promise<
           type: f.type,
           required: f.required,
           options: f.options as string[] | undefined,
+          relationTo: f.relationTo ?? undefined,
+          displayField: f.displayField ?? undefined,
+          cardinality: f.relationCardinality ?? undefined,
         })),
       },
     };
@@ -163,7 +226,7 @@ export async function getTableSchema(tableId: string): Promise<
 
 interface FilterCondition {
   field: string;
-  operator: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "in";
+  operator: "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "in" | "isempty" | "isnotempty";
   value: unknown;
 }
 
@@ -210,42 +273,28 @@ function buildFilterConditions(
           });
         }
         break;
+      case "isempty":
+        conditions.push({
+          OR: [
+            { data: { path: [filter.field], equals: null } },
+            { data: { path: [filter.field], equals: "" } },
+          ],
+        });
+        break;
+      case "isnotempty":
+        conditions.push({
+          NOT: {
+            OR: [
+              { data: { path: [filter.field], equals: null } },
+              { data: { path: [filter.field], equals: "" } },
+            ],
+          },
+        });
+        break;
     }
   }
 
   return conditions;
-}
-
-function extractNumericComparisons(
-  filters: FilterCondition[]
-): FilterCondition[] {
-  return filters.filter((f) =>
-    ["gt", "gte", "lt", "lte"].includes(f.operator)
-  );
-}
-
-function applyNumericFilters(
-  records: Array<Record<string, unknown>>,
-  numericFilters: FilterCondition[]
-): Array<Record<string, unknown>> {
-  if (numericFilters.length === 0) return records;
-
-  return records.filter((record) => {
-    return numericFilters.every((filter) => {
-      const rawValue = record[filter.field];
-      const numValue = typeof rawValue === "number" ? rawValue : Number(rawValue);
-      const filterNum = typeof filter.value === "number" ? filter.value : Number(filter.value);
-      if (isNaN(numValue) || isNaN(filterNum)) return true; // skip non-numeric
-
-      switch (filter.operator) {
-        case "gt": return numValue > filterNum;
-        case "gte": return numValue >= filterNum;
-        case "lt": return numValue < filterNum;
-        case "lte": return numValue <= filterNum;
-        default: return true;
-      }
-    });
-  });
 }
 
 export async function searchRecords(params: {
@@ -290,9 +339,57 @@ export async function searchRecords(params: {
       value: f.value,
     }));
 
-    const numericFilters = extractNumericComparisons(typedFilters);
-    const hasNumericFilters = numericFilters.length > 0;
+    const hasAdvancedFilters = typedFilters.some((f) =>
+      ["gt", "gte", "lt", "lte"].includes(f.operator)
+    );
 
+    if (hasAdvancedFilters) {
+      // 高级过滤：所有条件统一走原生 SQL
+      const { sql: whereSql, params: whereParams } = buildSqlWhereClause(
+        tableId, typedFilters, table.fields.map((f) => ({ key: f.key, type: f.type }))
+      );
+
+      // 获取总数
+      const countResult = await db.$queryRawUnsafe<Array<{ count: bigint }>>(
+        `SELECT COUNT(*) as count FROM "DataRecord" WHERE ${whereSql}`,
+        ...whereParams
+      );
+      const total = Number(countResult[0].count);
+
+      // 排序
+      const safeSortBy = sortBy && table.fields.find((f) => f.key === sortBy) && isSafeIdentifier(sortBy)
+        ? sortBy : null;
+      const direction = sortOrder === "asc" ? "ASC" : "DESC";
+      const orderClause = safeSortBy
+        ? `ORDER BY data->>'${safeSortBy}' ${direction}`
+        : `ORDER BY "createdAt" DESC`;
+
+      // 参数化 LIMIT/OFFSET
+      const limitIdx = whereParams.push(pageSize);
+      const offsetIdx = whereParams.push((page - 1) * pageSize);
+
+      const rawRecords = await db.$queryRawUnsafe<Array<{ id: string; data: unknown }>>(
+        `SELECT id, data FROM "DataRecord" WHERE ${whereSql} ${orderClause} LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+        ...whereParams
+      );
+
+      const resultRecords = rawRecords.map((r) => ({ id: r.id, ...(r.data as Record<string, unknown>) }));
+
+      // 解析关系字段
+      await resolveRelationFields(table, resultRecords);
+
+      return {
+        success: true,
+        data: {
+          records: resultRecords as Array<{ id: string; [key: string]: unknown }>,
+          total,
+          page,
+          pageSize,
+        },
+      };
+    }
+
+    // 普通过滤：使用 Prisma
     if (filters.length > 0) {
       const filterConditions = buildFilterConditions(
         typedFilters,
@@ -301,36 +398,6 @@ export async function searchRecords(params: {
       if (filterConditions.length > 0) {
         where.AND = filterConditions;
       }
-    }
-
-    if (hasNumericFilters) {
-      // Fetch all matching records, apply numeric filters in JS, then paginate
-      const allRecords = await db.dataRecord.findMany({
-        where,
-        orderBy: sortBy
-          ? { [sortBy]: sortOrder }
-          : { createdAt: "desc" },
-      });
-
-      const expanded = allRecords.map((r) => ({
-        id: r.id,
-        ...(r.data as Record<string, unknown>),
-      }));
-
-      const filtered = applyNumericFilters(expanded, numericFilters);
-      const total = filtered.length;
-      const skip = (page - 1) * pageSize;
-      const paged = filtered.slice(skip, skip + pageSize);
-
-      return {
-        success: true,
-        data: {
-          records: paged as Array<{ id: string; [key: string]: unknown }>,
-          total,
-          page,
-          pageSize,
-        },
-      };
     }
 
     const skip = (page - 1) * pageSize;
@@ -347,13 +414,18 @@ export async function searchRecords(params: {
       db.dataRecord.count({ where }),
     ]);
 
+    const resultRecords = records.map((r) => ({
+      id: r.id,
+      ...(r.data as Record<string, unknown>),
+    }));
+
+    // 解析关系字段
+    await resolveRelationFields(table, resultRecords);
+
     return {
       success: true,
       data: {
-        records: records.map((r) => ({
-          id: r.id,
-          ...(r.data as Record<string, unknown>),
-        })),
+        records: resultRecords as Array<{ id: string; [key: string]: unknown }>,
         total,
         page,
         pageSize,

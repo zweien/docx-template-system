@@ -284,7 +284,7 @@ function buildInverseDefaults(
 > {
   return {
     label: `${field.label}（反向）`,
-    type: field.type as FieldType,
+    type: "RELATION_SUBTABLE" as FieldType,
     required: field.required ?? false,
     options: toJsonInput(field.options),
     relationTo: sourceTableId,

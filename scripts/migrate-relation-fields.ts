@@ -129,20 +129,31 @@ async function main() {
           where: { id: value },
         });
         if (!targetRecord) {
-          report.warnings.push({
+          report.errors.push({
             fieldId: field.id,
             fieldKey: field.key,
             message: `记录 ${record.id} 引用了不存在的目标记录 ${value}`,
           });
         }
       } else if (Array.isArray(value)) {
+        // 检测重复关系
+        const seen = new Set<string>();
         for (const itemId of value) {
           if (typeof itemId === "string") {
+            if (seen.has(itemId)) {
+              report.errors.push({
+                fieldId: field.id,
+                fieldKey: field.key,
+                message: `记录 ${record.id} 存在重复的目标记录引用 ${itemId}`,
+              });
+            }
+            seen.add(itemId);
+
             const targetRecord = await db.dataRecord.findUnique({
               where: { id: itemId },
             });
             if (!targetRecord) {
-              report.warnings.push({
+              report.errors.push({
                 fieldId: field.id,
                 fieldKey: field.key,
                 message: `记录 ${record.id} 引用了不存在的目标记录 ${itemId}`,
@@ -150,8 +161,16 @@ async function main() {
             }
           }
         }
+        // 检测单值脏数组：RELATION 类型在迁移前是单值，如果存成数组长度 > 1 则为脏数据
+        if (value.length > 1) {
+          report.errors.push({
+            fieldId: field.id,
+            fieldKey: field.key,
+            message: `记录 ${record.id} 的 RELATION 字段值为数组（长度 ${value.length}），预期应为单值`,
+          });
+        }
       } else {
-        report.warnings.push({
+        report.errors.push({
           fieldId: field.id,
           fieldKey: field.key,
           message: `记录 ${record.id} 的字段值类型异常: ${typeof value}`,

@@ -658,10 +658,12 @@ export async function refreshSnapshotsForTargetRecord(input: {
       },
     });
 
-    await refreshRelationSnapshotsForRecords(
-      tx,
-      new Set(incomingRows.map((row) => row.sourceRecordId))
-    );
+    // Include the target record itself — it may also be a source in other relations,
+    // and its snapshots need displayValue refreshes when its scalar fields change.
+    const affectedIds = new Set(incomingRows.map((row) => row.sourceRecordId));
+    affectedIds.add(input.recordId);
+
+    await refreshRelationSnapshotsForRecords(tx, affectedIds);
 
     return { success: true, data: null };
   } catch (error) {

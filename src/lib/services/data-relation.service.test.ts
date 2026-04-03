@@ -11,6 +11,7 @@ type FakeFieldRow = {
   displayField: string | null;
   relationCardinality: RelationCardinality | null;
   inverseFieldId: string | null;
+  isSystemManagedInverse?: boolean;
   inverseField: {
     id: string;
     key: string;

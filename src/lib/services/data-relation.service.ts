@@ -13,6 +13,7 @@ type RelationFieldRow = {
   displayField: string | null;
   relationCardinality: RelationCardinality | null;
   inverseFieldId: string | null;
+  isSystemManagedInverse: boolean;
   inverseField?: {
     id: string;
     key?: string;
@@ -227,7 +228,7 @@ async function loadRelationFields(
         },
       },
     },
-  });
+  }) as Promise<RelationFieldRow[]>;
 }
 
 function assertPayloadKeysAreKnownRelationFields(
@@ -281,27 +282,48 @@ async function assertInverseSingleRelationAvailable(
   field: RelationFieldRow,
   items: RelationSubtableValueItem[]
 ): Promise<void> {
-  if (field.inverseField?.relationCardinality !== "SINGLE" || items.length === 0) {
-    return;
-  }
+  if (items.length === 0) return;
 
-  const occupiedRows = await tx.dataRelationRow.findMany({
-    where: {
-      fieldId: field.id,
-      targetRecordId: {
-        in: items.map((item) => item.targetRecordId),
-      },
-      NOT: {
-        sourceRecordId,
-      },
-    },
-  });
+  if (field.isSystemManagedInverse) {
+    // Inverse field editing: check if the FORWARD field's SINGLE cardinality is violated.
+    // Each target the user picks (a forward-side record) can only be source for one relation row.
+    if (field.inverseField?.relationCardinality !== "SINGLE") return;
 
-  if (occupiedRows.length > 0) {
-    throw new RelationServiceError(
-      "INVERSE_RELATION_CARDINALITY_VIOLATION",
-      `字段 "${field.key}" 的对端单值关系已被其它记录占用`
-    );
+    const forwardFieldId = field.inverseFieldId;
+    if (!forwardFieldId) return;
+
+    const occupiedRows = await tx.dataRelationRow.findMany({
+      where: {
+        fieldId: forwardFieldId,
+        sourceRecordId: { in: items.map((item) => item.targetRecordId) },
+        NOT: { targetRecordId: sourceRecordId },
+      },
+    });
+
+    if (occupiedRows.length > 0) {
+      throw new RelationServiceError(
+        "INVERSE_RELATION_CARDINALITY_VIOLATION",
+        `字段 "${field.key}" 的正向单值关系已被其它记录占用`
+      );
+    }
+  } else {
+    // Forward field editing: check if the INVERSE field's SINGLE cardinality is violated.
+    if (field.inverseField?.relationCardinality !== "SINGLE") return;
+
+    const occupiedRows = await tx.dataRelationRow.findMany({
+      where: {
+        fieldId: field.id,
+        targetRecordId: { in: items.map((item) => item.targetRecordId) },
+        NOT: { sourceRecordId },
+      },
+    });
+
+    if (occupiedRows.length > 0) {
+      throw new RelationServiceError(
+        "INVERSE_RELATION_CARDINALITY_VIOLATION",
+        `字段 "${field.key}" 的对端单值关系已被其它记录占用`
+      );
+    }
   }
 }
 
@@ -495,6 +517,37 @@ export async function syncRelationSubtableValues(input: {
 
     await lockRelationRecords(tx, lockedRecordIds);
 
+    // Build per-field "storage perspective" — inverse fields store rows
+    // with flipped source/target and use the forward field ID.
+    type StoragePerspective = {
+      storageFieldId: string;
+      storageSourceId: string;        // sourceRecordId in the relation row
+      isInverse: boolean;
+      oppositeRecordId: (targetId: string) => string;
+    };
+    const perspectiveByFieldId = new Map<string, StoragePerspective>();
+
+    for (const [fieldId, payload] of relationPayloadByFieldId.entries()) {
+      const isInverse = payload.field.isSystemManagedInverse;
+      if (isInverse && payload.field.inverseFieldId) {
+        // Inverse field: relation rows use forward field ID,
+        // and source ↔ target are flipped.
+        perspectiveByFieldId.set(fieldId, {
+          storageFieldId: payload.field.inverseFieldId,
+          storageSourceId: "",   // per-item (the target picked by the user)
+          isInverse: true,
+          oppositeRecordId: (targetId: string) => targetId,  // target becomes source
+        });
+      } else {
+        perspectiveByFieldId.set(fieldId, {
+          storageFieldId: fieldId,
+          storageSourceId: input.sourceRecordId,
+          isInverse: false,
+          oppositeRecordId: () => input.sourceRecordId,
+        });
+      }
+    }
+
     for (const payload of relationPayloadByFieldId.values()) {
       await assertInverseSingleRelationAvailable(
         tx,
@@ -504,49 +557,62 @@ export async function syncRelationSubtableValues(input: {
       );
     }
 
-    const existingRows = await tx.dataRelationRow.findMany({
-      where: {
-        sourceRecordId: input.sourceRecordId,
-        fieldId: {
-          in: [...relationPayloadByFieldId.keys()],
-        },
-      },
-    });
-    const existingRowsByFieldId = new Map<string, Map<string, RelationRow>>();
+    // Query existing rows using the storage perspective.
+    // For forward fields: { sourceRecordId, fieldId }
+    // For inverse fields: { targetRecordId, fieldId=inverseFieldId }
+    const existingRows: RelationRow[] = [];
+    for (const [fieldId, persp] of perspectiveByFieldId.entries()) {
+      const rows = await tx.dataRelationRow.findMany({
+        where: persp.isInverse
+          ? { targetRecordId: input.sourceRecordId, fieldId: persp.storageFieldId }
+          : { sourceRecordId: input.sourceRecordId, fieldId: persp.storageFieldId },
+      });
+      existingRows.push(...rows);
+    }
+
+    // Key existing rows by (storageFieldId, the "other" record id relative to sourceRecordId)
+    // For forward: other = targetRecordId
+    // For inverse: other = sourceRecordId
+    const existingRowsByKey = new Map<string, Map<string, RelationRow>>();
     for (const row of existingRows) {
-      const rowsByTargetId = existingRowsByFieldId.get(row.fieldId) ?? new Map<string, RelationRow>();
-      rowsByTargetId.set(row.targetRecordId, row);
-      existingRowsByFieldId.set(row.fieldId, rowsByTargetId);
+      const rowsByOtherId = existingRowsByKey.get(row.fieldId) ?? new Map<string, RelationRow>();
+      const otherId = row.targetRecordId === input.sourceRecordId
+        ? row.sourceRecordId
+        : row.targetRecordId;
+      rowsByOtherId.set(otherId, row);
+      existingRowsByKey.set(row.fieldId, rowsByOtherId);
     }
 
     const affectedRecordIds = new Set<string>([input.sourceRecordId]);
 
     for (const [fieldId, payload] of relationPayloadByFieldId.entries()) {
-      const existingByTargetId = existingRowsByFieldId.get(fieldId) ?? new Map<string, RelationRow>();
-      const nextByTargetId = new Map(payload.items.map((item) => [item.targetRecordId, item]));
+      const persp = perspectiveByFieldId.get(fieldId)!;
+      const storageFieldId = persp.storageFieldId;
+      const isInverse = persp.isInverse;
+      const existingByOtherId = existingRowsByKey.get(storageFieldId) ?? new Map<string, RelationRow>();
+      // "otherId" from the payload = targetRecordId the user selected
+      const nextByOtherId = new Map(payload.items.map((item) => [item.targetRecordId, item]));
 
-      for (const [targetRecordId, existingRow] of existingByTargetId.entries()) {
-        affectedRecordIds.add(targetRecordId);
-        if (!nextByTargetId.has(targetRecordId)) {
+      // Delete rows removed from payload
+      for (const [otherId, existingRow] of existingByOtherId.entries()) {
+        affectedRecordIds.add(otherId);
+        if (!nextByOtherId.has(otherId)) {
           await tx.dataRelationRow.deleteMany({
-            where: {
-              fieldId,
-              sourceRecordId: input.sourceRecordId,
-              targetRecordId,
-            },
+            where: { id: existingRow.id },
           });
         }
       }
 
+      // Create or update rows
       for (const item of payload.items) {
         affectedRecordIds.add(item.targetRecordId);
-        const existingRow = existingByTargetId.get(item.targetRecordId);
+        const existingRow = existingByOtherId.get(item.targetRecordId);
         if (!existingRow) {
           await tx.dataRelationRow.create({
             data: {
-              fieldId,
-              sourceRecordId: input.sourceRecordId,
-              targetRecordId: item.targetRecordId,
+              fieldId: storageFieldId,
+              sourceRecordId: isInverse ? item.targetRecordId : input.sourceRecordId,
+              targetRecordId: isInverse ? input.sourceRecordId : item.targetRecordId,
               attributes: toVersionedAttributes(item.attributes),
               sortOrder: item.sortOrder,
             },

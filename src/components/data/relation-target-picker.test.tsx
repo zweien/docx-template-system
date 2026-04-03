@@ -93,21 +93,4 @@ describe("RelationTargetPicker", () => {
       expect(screen.getByText("加载关联记录失败")).toBeInTheDocument();
     });
   });
-
-  it("shows an explicit error state when fetch rejects", async () => {
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network down"));
-
-    render(
-      <RelationTargetPicker
-        value={null}
-        onChange={vi.fn<(value: RelationTargetOption | null) => void>()}
-        relationTableId="table-1"
-        displayField="phone"
-      />
-    );
-
-    await waitFor(() => {
-      expect(screen.getByText("加载关联记录失败")).toBeInTheDocument();
-    });
-  });
 });

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { FieldType } from "@/generated/prisma/enums";
+import { FieldType, RelationCardinality as PrismaRelationCardinality } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import type { DataFieldInput } from "@/validators/data-table";
 import type { ServiceResult } from "@/types/data-table";
@@ -48,6 +48,20 @@ function isRelationSubtable(field: DataFieldInput): boolean {
   return field.type === "RELATION_SUBTABLE";
 }
 
+function resolveInverseRelationCardinality(field: DataFieldInput): PrismaRelationCardinality {
+  if (field.relationCardinality === "MULTIPLE") {
+    if (field.inverseRelationCardinality && field.inverseRelationCardinality !== "MULTIPLE") {
+      throw new FieldServiceError(
+        "INVALID_INVERSE_RELATION_CARDINALITY",
+        `字段 "${field.label}" 的反向关系基数必须是 MULTIPLE`
+      );
+    }
+    return "MULTIPLE";
+  }
+
+  return field.inverseRelationCardinality ?? "SINGLE";
+}
+
 function validateInputFields(fields: DataFieldInput[]): void {
   const keys = new Set<string>();
   const ids = new Set<string>();
@@ -81,6 +95,8 @@ function validateInputFields(fields: DataFieldInput[]): void {
         `字段 "${field.label}" 是关系子表格类型，必须指定关系基数`
       );
     }
+
+    resolveInverseRelationCardinality(field);
 
     if (field.relationSchema) {
       if (field.relationSchema.version !== 1) {
@@ -231,12 +247,24 @@ function assertLockedRelationFieldInput(existing: FieldRow, next: DataFieldInput
   if ((next.inverseFieldId ?? null) !== (existing.inverseFieldId ?? null)) {
     throw new FieldServiceError("RELATION_FIELD_LOCKED", `字段 "${existing.label}" 的 inverseFieldId 已锁定，不能修改`);
   }
+
+  const existingInverseCardinality = existing.inverseField?.relationCardinality ?? null;
+  if (existingInverseCardinality !== null) {
+    const nextInverseCardinality = next.inverseRelationCardinality ?? existingInverseCardinality;
+    if (nextInverseCardinality !== existingInverseCardinality) {
+      throw new FieldServiceError(
+        "RELATION_FIELD_LOCKED",
+        `字段 "${existing.label}" 的 inverseRelationCardinality 已锁定，不能修改`
+      );
+    }
+  }
 }
 
 function buildInverseDefaults(
   field: DataFieldInput,
   sourceTableId: string,
-  displayField: string
+  displayField: string,
+  inverseRelationCardinality: PrismaRelationCardinality
 ): Pick<
   Prisma.DataFieldUncheckedCreateInput,
   "label" | "type" | "required" | "options" | "relationTo" | "displayField" | "relationCardinality" | "isSystemManagedInverse" | "relationSchema" | "defaultValue"
@@ -248,7 +276,7 @@ function buildInverseDefaults(
     options: toJsonInput(field.options),
     relationTo: sourceTableId,
     displayField,
-    relationCardinality: field.relationCardinality ?? null,
+    relationCardinality: inverseRelationCardinality,
     isSystemManagedInverse: true,
     relationSchema: relationSchemaToJson(field.relationSchema),
     defaultValue: field.defaultValue ?? null,
@@ -312,7 +340,8 @@ async function createInverseFieldPair(
   sourceTableId: string,
   sourceField: DataFieldInput,
   sourceFieldId: string,
-  sourceFields: FieldRow[]
+  sourceFields: FieldRow[],
+  inverseRelationCardinality: PrismaRelationCardinality
 ): Promise<string> {
   if (!sourceField.relationTo) {
     throw new FieldServiceError("MISSING_RELATION_TO", `字段 "${sourceField.label}" 缺少关联表`);
@@ -332,7 +361,12 @@ async function createInverseFieldPair(
     data: {
       tableId: sourceField.relationTo,
       key: inverseKey,
-      ...buildInverseDefaults(sourceField, sourceTableId, getDefaultInverseDisplayField(sourceFields)),
+      ...buildInverseDefaults(
+        sourceField,
+        sourceTableId,
+        getDefaultInverseDisplayField(sourceFields),
+        inverseRelationCardinality
+      ),
       inverseFieldId: sourceFieldId,
     },
   });
@@ -445,6 +479,14 @@ export async function saveTableFieldsWithRelations(input: {
           if (matched.inverseFieldId) {
             const inverse = existingById.get(matched.inverseFieldId);
             if (inverse) {
+              const nextInverseRelationCardinality = resolveInverseRelationCardinality(field);
+              if (inverse.relationCardinality !== nextInverseRelationCardinality) {
+                throw new FieldServiceError(
+                  "RELATION_FIELD_LOCKED",
+                  `字段 "${matched.label}" 的 inverseRelationCardinality 已锁定，不能修改`
+                );
+              }
+
               await tx.dataField.update({
                 where: { id: inverse.id },
                 data: {
@@ -455,19 +497,22 @@ export async function saveTableFieldsWithRelations(input: {
                   displayField: inverse.displayField,
                   defaultValue: inverse.defaultValue,
                   sortOrder: inverse.sortOrder,
+                  relationCardinality: nextInverseRelationCardinality,
                   relationSchema: relationSchemaToJson(nextSchema),
                 },
               });
               keptIds.add(inverse.id);
             }
           } else {
+            const nextInverseRelationCardinality = resolveInverseRelationCardinality(field);
             const inverseId = await createInverseFieldPair(
               tx,
               tableKeyCache,
               input.tableId,
               field,
               matched.id,
-              existingFields
+              existingFields,
+              nextInverseRelationCardinality
             );
             keptIds.add(inverseId);
           }
@@ -480,13 +525,15 @@ export async function saveTableFieldsWithRelations(input: {
         });
         keptIds.add(sourceField.id);
 
+        const nextInverseRelationCardinality = resolveInverseRelationCardinality(field);
         const inverseId = await createInverseFieldPair(
           tx,
           tableKeyCache,
           input.tableId,
           field,
           sourceField.id,
-          existingFields
+          existingFields,
+          nextInverseRelationCardinality
         );
         keptIds.add(inverseId);
 

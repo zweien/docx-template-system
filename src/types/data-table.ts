@@ -43,6 +43,7 @@ export interface DataFieldItem {
   relationTo?: string; // RELATION 目标表 ID
   displayField?: string; // RELATION 显示字段
   relationCardinality?: RelationCardinality | null;
+  inverseRelationCardinality?: RelationCardinality | null;
   inverseFieldId?: string | null;
   isSystemManagedInverse?: boolean;
   relationSchema?: RelationSchemaConfig | null;

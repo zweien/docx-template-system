@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { DataFieldInput } from "@/validators/data-table";
 import { saveTableFieldsWithRelations } from "./data-field.service";
 
 const dbMock = vi.hoisted(() => ({
@@ -18,7 +19,7 @@ vi.mock("@/lib/db", () => ({
   db: dbMock,
 }));
 
-function buildFieldRow(overrides: Record<string, unknown>) {
+function buildCurrentField(overrides: Record<string, unknown> = {}) {
   return {
     id: "field-1",
     tableId: "paper_table_id",
@@ -30,14 +31,21 @@ function buildFieldRow(overrides: Record<string, unknown>) {
     relationTo: "author_table_id",
     displayField: "name",
     relationCardinality: "MULTIPLE",
-    inverseFieldId: null,
+    inverseFieldId: "inverse-1",
     isSystemManagedInverse: false,
     relationSchema: null,
     defaultValue: null,
     sortOrder: 0,
-    inverseField: null,
+    inverseField: {
+      id: "inverse-1",
+      relationCardinality: "MULTIPLE",
+    },
     ...overrides,
   };
+}
+
+function buildTextField(key: string) {
+  return { id: `${key}-id`, key, type: "TEXT" };
 }
 
 function setupTransaction({
@@ -68,6 +76,32 @@ function setupTransaction({
   dbMock.dataField.deleteMany.mockResolvedValue({ count: 0 });
 }
 
+function buildRelationInput(overrides: Partial<DataFieldInput> = {}): DataFieldInput {
+  return {
+    key: "authors",
+    label: "作者",
+    type: "RELATION_SUBTABLE" as never,
+    required: false,
+    relationTo: "author_table_id",
+    displayField: "name",
+    relationCardinality: "SINGLE",
+    relationSchema: {
+      version: 1,
+      fields: [
+        {
+          key: "author_order",
+          label: "作者顺序",
+          type: "NUMBER" as never,
+          required: true,
+          sortOrder: 0,
+        },
+      ],
+    },
+    sortOrder: 0,
+    ...overrides,
+  } as DataFieldInput;
+}
+
 describe("saveTableFieldsWithRelations", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -75,38 +109,12 @@ describe("saveTableFieldsWithRelations", () => {
 
   it("creates forward and inverse relation subtable fields as a locked pair", async () => {
     setupTransaction({
-      currentFields: [
-        { id: "title-1", key: "title", type: "TEXT" },
-        { id: "summary-1", key: "summary", type: "TEXT" },
-      ],
+      currentFields: [buildTextField("title"), buildTextField("summary")],
     });
 
     const result = await saveTableFieldsWithRelations({
       tableId: "paper_table_id",
-      fields: [
-        {
-          key: "authors",
-          label: "作者",
-          type: "RELATION_SUBTABLE" as never,
-          required: false,
-          relationTo: "author_table_id",
-          displayField: "name",
-          relationCardinality: "SINGLE",
-          relationSchema: {
-            version: 1,
-            fields: [
-              {
-                key: "author_order",
-                label: "作者顺序",
-                type: "NUMBER" as never,
-                required: true,
-                sortOrder: 0,
-              },
-            ],
-          },
-          sortOrder: 0,
-        },
-      ],
+      fields: [buildRelationInput({ inverseRelationCardinality: "MULTIPLE" })],
     });
 
     expect(result.success).toBe(true);
@@ -128,7 +136,7 @@ describe("saveTableFieldsWithRelations", () => {
         data: expect.objectContaining({
           tableId: "author_table_id",
           relationTo: "paper_table_id",
-          relationCardinality: "SINGLE",
+          relationCardinality: "MULTIPLE",
           displayField: "title",
           isSystemManagedInverse: true,
         }),
@@ -136,40 +144,56 @@ describe("saveTableFieldsWithRelations", () => {
     );
   });
 
-  it("derives inverse displayField from the source table instead of reusing the target field", async () => {
+  it("creates SINGLE to SINGLE as a one-to-one relation pair", async () => {
     setupTransaction({
-      currentFields: [
-        { id: "title-1", key: "title", type: "TEXT" },
-        { id: "summary-1", key: "summary", type: "TEXT" },
-      ],
+      currentFields: [buildTextField("title")],
+    });
+
+    const result = await saveTableFieldsWithRelations({
+      tableId: "paper_table_id",
+      fields: [buildRelationInput({ inverseRelationCardinality: "SINGLE" })],
+    });
+
+    expect(result.success).toBe(true);
+    expect(dbMock.dataField.create).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          relationCardinality: "SINGLE",
+        }),
+      })
+    );
+  });
+
+  it("rejects MULTIPLE with inverse SINGLE", async () => {
+    setupTransaction({
+      currentFields: [buildTextField("title")],
     });
 
     const result = await saveTableFieldsWithRelations({
       tableId: "paper_table_id",
       fields: [
-        {
-          key: "authors",
-          label: "作者",
-          type: "RELATION_SUBTABLE" as never,
-          required: false,
-          relationTo: "author_table_id",
-          displayField: "name",
+        buildRelationInput({
           relationCardinality: "MULTIPLE",
-          relationSchema: {
-            version: 1,
-            fields: [
-              {
-                key: "author_order",
-                label: "作者顺序",
-                type: "NUMBER" as never,
-                required: true,
-                sortOrder: 0,
-              },
-            ],
-          },
-          sortOrder: 0,
-        },
+          inverseRelationCardinality: "SINGLE",
+        }),
       ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("INVALID_INVERSE_RELATION_CARDINALITY");
+    }
+  });
+
+  it("derives inverse displayField from the source table instead of reusing the target field", async () => {
+    setupTransaction({
+      currentFields: [buildTextField("title"), buildTextField("summary")],
+    });
+
+    const result = await saveTableFieldsWithRelations({
+      tableId: "paper_table_id",
+      fields: [buildRelationInput({ inverseRelationCardinality: "MULTIPLE" })],
     });
 
     expect(result.success).toBe(true);
@@ -186,38 +210,20 @@ describe("saveTableFieldsWithRelations", () => {
   });
 
   it.each([
-    { field: "required", value: true, error: "RELATION_FIELD_LOCKED" },
-    { field: "defaultValue", value: "changed", error: "RELATION_FIELD_LOCKED" },
-    { field: "sortOrder", value: 9, error: "RELATION_FIELD_LOCKED" },
-  ])("rejects changes to existing relation field %s", async ({ field, value, error }) => {
+    { field: "required", value: true },
+    { field: "defaultValue", value: "changed" },
+    { field: "sortOrder", value: 9 },
+  ])("rejects changes to existing relation field %s", async ({ field, value }) => {
     setupTransaction({
-      currentFields: [buildFieldRow({ inverseFieldId: "inverse-1" })],
+      currentFields: [buildCurrentField()],
     });
 
-    const input: Record<string, unknown> = {
-      key: "authors",
-      label: "作者",
-      type: "RELATION_SUBTABLE" as never,
-      required: false,
-      relationTo: "author_table_id",
-      displayField: "name",
+    const input: Record<string, unknown> = buildRelationInput({
       relationCardinality: "MULTIPLE",
-      relationSchema: {
-        version: 1,
-        fields: [
-          {
-            key: "author_order",
-            label: "作者顺序",
-            type: "NUMBER" as never,
-            required: true,
-            sortOrder: 0,
-          },
-        ],
-      },
-      sortOrder: 0,
+      inverseRelationCardinality: "MULTIPLE",
       defaultValue: null,
       options: null,
-    };
+    });
     input[field] = value;
 
     const result = await saveTableFieldsWithRelations({
@@ -227,47 +233,50 @@ describe("saveTableFieldsWithRelations", () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.code).toBe(error);
+      expect(result.error.code).toBe("RELATION_FIELD_LOCKED");
     }
   });
 
   it("rejects changing inverseFieldId on an existing relation field", async () => {
     setupTransaction({
-      currentFields: [buildFieldRow({ inverseFieldId: "inverse-1" })],
+      currentFields: [buildCurrentField()],
     });
 
     const result = await saveTableFieldsWithRelations({
       tableId: "paper_table_id",
       fields: [
-        {
-          key: "authors",
-          label: "作者",
-          type: "RELATION_SUBTABLE" as never,
-          required: false,
-          relationTo: "author_table_id",
-          displayField: "name",
+        buildRelationInput({
           relationCardinality: "MULTIPLE",
-          relationSchema: {
-            version: 1,
-            fields: [
-              {
-                key: "author_order",
-                label: "作者顺序",
-                type: "NUMBER" as never,
-                required: true,
-                sortOrder: 0,
-              },
-            ],
-          },
+          inverseRelationCardinality: "MULTIPLE",
           inverseFieldId: "inverse-2",
-          sortOrder: 0,
-        },
+        }),
       ],
     });
 
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.code).toBe("RELATION_FIELD_LOCKED");
+    }
+  });
+
+  it("rejects tampering inverseRelationCardinality on an existing relation field", async () => {
+    setupTransaction({
+      currentFields: [buildCurrentField({ inverseField: { id: "inverse-1", relationCardinality: "MULTIPLE" } })],
+    });
+
+    const result = await saveTableFieldsWithRelations({
+      tableId: "paper_table_id",
+      fields: [
+        buildRelationInput({
+          relationCardinality: "MULTIPLE",
+          inverseRelationCardinality: "SINGLE",
+        }),
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("INVALID_INVERSE_RELATION_CARDINALITY");
     }
   });
 });

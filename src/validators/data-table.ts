@@ -48,6 +48,7 @@ export const dataFieldItemSchema = z.object({
   relationTo: z.string().nullable().optional(),
   displayField: z.string().nullable().optional(),
   relationCardinality: z.nativeEnum(PrismaRelationCardinality).nullable().optional(),
+  inverseRelationCardinality: z.nativeEnum(PrismaRelationCardinality).nullable().optional(),
   inverseFieldId: z.string().nullable().optional(),
   isSystemManagedInverse: z.boolean().default(false),
   relationSchema: relationSchemaConfigSchema.nullable().optional(),

@@ -41,6 +41,18 @@ function buildInverseFieldPreview(key: string): string {
   return `${baseKey}_inverse`;
 }
 
+function getInverseFieldLabel(field: DataFieldItem): string {
+  if (field.inverseFieldKey) {
+    return field.inverseFieldKey;
+  }
+
+  if (!field.id) {
+    return buildInverseFieldPreview(field.key);
+  }
+
+  return "-";
+}
+
 function toFieldItem(
   data: DataFieldInput,
   fallbackSortOrder: number,
@@ -251,7 +263,7 @@ export function FieldConfigList({
                         </div>
                         <div>本侧基数: {field.relationCardinality ?? "-"}</div>
                         <div>
-                          反向字段: {field.inverseFieldKey ?? buildInverseFieldPreview(field.key)}
+                          反向字段: {getInverseFieldLabel(field)}
                           {" / "}
                           {field.inverseRelationCardinality ?? "-"}
                         </div>

@@ -314,7 +314,8 @@ model DataField {
   displayField           String?
   relationCardinality    RelationCardinality?
   inverseFieldId         String?                @unique
-  inverseField           DataField?             @relation("InverseRelationField", fields: [inverseFieldId], references: [id], onDelete: SetNull)
+  /// 反向字段删除采用 NoAction，避免 Prisma 对 SetNull 的 warning；解绑后再删由上层流程负责。
+  inverseField           DataField?             @relation("InverseRelationField", fields: [inverseFieldId], references: [id], onDelete: NoAction)
   inverseOf              DataField?             @relation("InverseRelationField")
   isSystemManagedInverse Boolean                @default(false)
   /// JSON 结构约定: { version: 1, fields: RelationSchemaField[] }
@@ -325,7 +326,6 @@ model DataField {
   updatedAt              DateTime               @updatedAt
   relationRows           DataRelationRow[]      @relation("RelationRowsByField")
   @@unique([tableId, key])
-  @@index([inverseFieldId])
 }
 
 model DataRecord {
@@ -350,6 +350,9 @@ model DataRelationRow {
   id             String     @id @default(cuid())
   fieldId        String
   field          DataField  @relation("RelationRowsByField", fields: [fieldId], references: [id], onDelete: Cascade)
+  /// JSON 结构约定: { version: 1, values: Record<string, unknown> }
+  /// sourceRecordId/targetRecordId 的跨表不变量由 Task 4 的 relation service 在事务内校验，且 Task 4 需覆盖测试。
+  /// 应用层删除记录/字段必须经 relation service 刷新快照；schema 级 cascade 仅作最终兜底，Task 4/Task 8 需补删除路径测试/迁移校验。
   sourceRecordId String
   sourceRecord   DataRecord @relation("RelationRowsAsSource", fields: [sourceRecordId], references: [id], onDelete: Cascade)
   targetRecordId String
@@ -359,9 +362,8 @@ model DataRelationRow {
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
-  /// SINGLE 基数的同源唯一性约束由 Task 4 的 service 事务校验保证。
+  /// SINGLE 基数的同源唯一性约束由 Task 4 的 relation service 在事务内校验，并需覆盖测试。
   /// Prisma 无法在通用单表模型中表达基于字段元数据的条件唯一索引。
-
   @@unique([fieldId, sourceRecordId, targetRecordId])
   @@index([sourceRecordId, fieldId, sortOrder])
   @@index([targetRecordId])

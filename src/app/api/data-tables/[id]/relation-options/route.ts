@@ -7,6 +7,24 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+function resolveDisplayFieldKey(
+  fields: Array<{ key: string; type: string }>,
+  displayFieldParam?: string
+): string | undefined {
+  if (displayFieldParam && displayFieldParam !== "id") {
+    return displayFieldParam;
+  }
+
+  return (
+    fields.find(
+      (field) =>
+        field.type !== "RELATION" &&
+        field.type !== "RELATION_SUBTABLE"
+    )?.key ??
+    fields[0]?.key
+  );
+}
+
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const user = await getRouteSessionUser(request);
   if (!user) {
@@ -26,20 +44,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const fallbackField = tableResult.data.fields.find(
-    (field) =>
-      field.type !== "RELATION" &&
-      field.type !== "RELATION_SUBTABLE"
+  const displayField = resolveDisplayFieldKey(
+    tableResult.data.fields,
+    displayFieldParam
   );
-  const displayField =
-    displayFieldParam && displayFieldParam !== "id"
-      ? displayFieldParam
-      : fallbackField?.key;
 
   const result = await listRecords(id, {
     page: 1,
-    pageSize: 20,
-    search,
+    pageSize: 100,
   });
 
   if (!result.success) {
@@ -49,13 +61,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const options = result.data.records.map((record) => ({
-    id: record.id,
-    label: String(
-      (displayField ? record.data[displayField] : null) ??
-        record.id
-    ),
-  }));
+  const normalizedSearch = (search ?? "").trim().toLowerCase();
+
+  const options = result.data.records
+    .map((record) => ({
+      id: record.id,
+      label: String(
+        (displayField ? record.data[displayField] : null) ??
+          record.id
+      ),
+    }))
+    .filter((option) =>
+      normalizedSearch
+        ? option.label.toLowerCase().includes(normalizedSearch)
+        : true
+    );
 
   return NextResponse.json(options);
 }

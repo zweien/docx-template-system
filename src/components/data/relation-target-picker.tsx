@@ -37,10 +37,12 @@ export function RelationTargetPicker({
   const [options, setOptions] = useState<RelationTargetOption[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     if (!relationTableId) {
       setOptions([]);
+      setErrorMessage("");
       return;
     }
 
@@ -64,17 +66,21 @@ export function RelationTargetPicker({
 
         if (!response.ok) {
           setOptions([]);
+          setErrorMessage("加载关联记录失败");
           return;
         }
 
         const result = (await response.json()) as RelationTargetOption[];
         setOptions(Array.isArray(result) ? result : []);
+        setErrorMessage("");
       } catch (error) {
         if (
           error instanceof Error &&
           error.name !== "AbortError"
         ) {
           console.error("加载目标记录失败:", error);
+          setOptions([]);
+          setErrorMessage("加载关联记录失败");
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -136,6 +142,10 @@ export function RelationTargetPicker({
           {isLoading ? (
             <div className="p-2 text-center text-sm text-zinc-500">
               加载中...
+            </div>
+          ) : errorMessage ? (
+            <div className="p-2 text-center text-sm text-red-500">
+              {errorMessage}
             </div>
           ) : options.length === 0 ? (
             <div className="p-2 text-center text-sm text-zinc-500">

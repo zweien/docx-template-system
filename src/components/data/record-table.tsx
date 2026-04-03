@@ -335,13 +335,15 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
           (value as Record<string, unknown>)?.display ?? value;
         return <Badge variant="outline">{String(displayValue)}</Badge>;
       case FieldType.RELATION_SUBTABLE: {
-        const items = (Array.isArray(value) ? value : [value])
-          .filter((item): item is RelationSubtableValueItem =>
+        const relationItems = (Array.isArray(value) ? [...value] : [value]).filter(
+          (item): item is RelationSubtableValueItem =>
             Boolean(item) &&
             typeof item === "object" &&
             "targetRecordId" in item
-          )
-          .sort((left, right) => left.sortOrder - right.sortOrder);
+        );
+        const items = [...relationItems].sort(
+          (left, right) => left.sortOrder - right.sortOrder
+        );
 
         if (items.length === 0) {
           return <span className="text-zinc-400">-</span>;
@@ -358,7 +360,7 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
                 variant="outline"
                 className="text-xs"
               >
-                {item.displayValue ?? item.targetRecordId}
+                {String(item.displayValue ?? item.targetRecordId)}
               </Badge>
             ))}
             {hiddenCount > 0 && (

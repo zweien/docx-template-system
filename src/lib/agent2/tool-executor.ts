@@ -1,6 +1,7 @@
 // src/lib/agent2/tool-executor.ts
 import * as helpers from "./tool-helpers";
 import * as recordService from "@/lib/services/data-record.service";
+import { db } from "@/lib/db";
 
 type ExecuteResult = {
   success: boolean;
@@ -46,11 +47,39 @@ export async function executeToolAction(
     }
 
     case "generateDocument": {
-      // Placeholder: document generation will be implemented later
-      return {
-        success: false,
-        error: "文档生成功能尚未实现",
-      };
+      const templateId = toolInput.templateId as string;
+      const formData = toolInput.formData as Record<string, unknown>;
+
+      const template = await db.template.findUnique({
+        where: { id: templateId },
+        select: { filePath: true, name: true, status: true },
+      });
+
+      if (!template) {
+        return { success: false, error: "模板不存在" };
+      }
+
+      if (template.status !== "PUBLISHED") {
+        return { success: false, error: "模板未发布，无法生成文档" };
+      }
+
+      const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://localhost:8065";
+      const response = await fetch(`${pythonUrl}/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          template_path: template.filePath,
+          output_filename: `${template.name}-${Date.now()}.docx`,
+          form_data: formData,
+        }),
+      });
+
+      if (!response.ok) {
+        return { success: false, error: "文档生成失败" };
+      }
+
+      const result = await response.json();
+      return { success: true, data: result };
     }
 
     default:

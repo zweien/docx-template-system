@@ -1,6 +1,35 @@
 // src/lib/agent2/context-builder.ts
 
-export function buildSystemPrompt(): string {
+import { listTables, getTableSchema } from "./tool-helpers";
+
+export async function buildSystemPrompt(): Promise<string> {
+  let tableContext = "";
+
+  try {
+    const tablesResult = await listTables();
+    if (tablesResult.success && tablesResult.data.length > 0) {
+      tableContext = "\n## 当前系统数据表概览\n";
+      for (const t of tablesResult.data.slice(0, 5)) {
+        const schema = await getTableSchema(t.id);
+        if (schema.success) {
+          tableContext += `\n### ${t.name}（ID: ${t.id}，${t.recordCount} 条记录）\n`;
+          tableContext += "字段：" + schema.data.fields
+            .map(f => {
+              let desc = `${f.label}(${f.type})`;
+              if (f.required) desc += "[必填]";
+              if (f.options?.length) desc += `[选项: ${f.options.join("/")}]`;
+              if ((f as Record<string, unknown>).relationTo) desc += `[关联→${(f as Record<string, unknown>).relationTo}]`;
+              return desc;
+            })
+            .join("、") + "\n";
+        }
+      }
+      tableContext += "\n提示：使用 getTableSchema(tableId) 可获取完整字段定义。如需查询其他表，先用 listTables() 查看所有表。\n";
+    }
+  } catch {
+    // 动态上下文获取失败时不影响系统正常运行
+  }
+
   return `你是一个系统集成 AI 助手，能够操作本系统的数据表、模板和记录。
 
 ## 能力范围
@@ -15,7 +44,7 @@ export function buildSystemPrompt(): string {
 2. 确认重要操作 — 创建、更新、删除操作需要用户确认
 3. 解释操作结果 — 每次操作后清晰说明结果
 4. 主动提供帮助 — 根据用户意图推荐合适的工具
-
+${tableContext}
 ## 回答语言
 默认使用中文回答，除非用户明确要求其他语言。`;
 }

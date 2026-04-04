@@ -135,8 +135,8 @@ export function ViewSelector({
                   {view.filters.length > 0 && (
                     <Filter className="h-3 w-3 text-muted-foreground" />
                   )}
-                  {view.sortBy && (
-                    view.sortBy.order === "asc" ? (
+                  {view.sortBy.length > 0 && (
+                    view.sortBy[0].order === "asc" ? (
                       <ArrowUp className="h-3 w-3 text-muted-foreground" />
                     ) : (
                       <ArrowDown className="h-3 w-3 text-muted-foreground" />

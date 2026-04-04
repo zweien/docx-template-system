@@ -62,6 +62,8 @@ export function SaveViewDialog({
           sortBy: currentConfig.sortBy,
           visibleFields: currentConfig.visibleFields,
           fieldOrder: currentConfig.fieldOrder,
+          groupBy: currentConfig.groupBy,
+          viewOptions: currentConfig.viewOptions,
         }),
       });
 
@@ -83,10 +85,15 @@ export function SaveViewDialog({
   };
 
   // Build config summary
-  const sortSummary = currentConfig.sortBy
-    ? `${currentConfig.sortBy.fieldKey} ${
-        currentConfig.sortBy.order === "asc" ? "升序" : "降序"
-      }`
+  const sortSummary = currentConfig.sortBy.length > 0
+    ? currentConfig.sortBy
+        .map(
+          (sortItem) =>
+            `${sortItem.fieldKey} ${
+              sortItem.order === "asc" ? "升序" : "降序"
+            }`
+        )
+        .join(", ")
     : "无";
 
   return (

@@ -7,6 +7,7 @@ type ExecuteResult = {
   success: boolean;
   data?: unknown;
   error?: string;
+  errorDetails?: { code: string; message: string };
 };
 
 export async function executeToolAction(
@@ -22,7 +23,7 @@ export async function executeToolAction(
         toolInput.data as Record<string, unknown>
       );
       if (!result.success)
-        return { success: false, error: result.error.message };
+        return { success: false, error: result.error.message, errorDetails: result.error };
       return { success: true, data: result.data };
     }
 
@@ -32,7 +33,7 @@ export async function executeToolAction(
         toolInput.data as Record<string, unknown>
       );
       if (!result.success)
-        return { success: false, error: result.error.message };
+        return { success: false, error: result.error.message, errorDetails: result.error };
       return { success: true, data: result.data };
     }
 
@@ -41,7 +42,7 @@ export async function executeToolAction(
         toolInput.recordId as string
       );
       if (!result.success)
-        return { success: false, error: result.error.message };
+        return { success: false, error: result.error.message, errorDetails: result.error };
       // data-record.service.deleteRecord 返回 null，但下游期望 { id } 格式
       return { success: true, data: { id: toolInput.recordId as string } };
     }
@@ -56,26 +57,31 @@ export async function executeToolAction(
       });
 
       if (!template) {
-        return { success: false, error: "模板不存在" };
+        return { success: false, error: `模板 ${templateId} 不存在` };
       }
 
       if (template.status !== "PUBLISHED") {
-        return { success: false, error: "模板未发布，无法生成文档" };
+        return { success: false, error: `模板未发布，当前状态: ${template.status}，无法生成文档` };
       }
 
       const pythonUrl = process.env.PYTHON_SERVICE_URL || "http://localhost:8065";
-      const response = await fetch(`${pythonUrl}/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          template_path: template.filePath,
-          output_filename: `${template.name}-${Date.now()}.docx`,
-          form_data: formData,
-        }),
-      });
+      let response: Response;
+      try {
+        response = await fetch(`${pythonUrl}/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            template_path: template.filePath,
+            output_filename: `${template.name}-${Date.now()}.docx`,
+            form_data: formData,
+          }),
+        });
+      } catch {
+        return { success: false, error: "文档生成服务不可达，请检查服务是否运行" };
+      }
 
       if (!response.ok) {
-        return { success: false, error: "文档生成失败" };
+        return { success: false, error: `文档生成失败：服务返回错误 (${response.status})` };
       }
 
       const result = await response.json();

@@ -10,6 +10,9 @@ const CONFIRM_REQUIRED_TOOLS = new Set([
   "deleteRecord",
   "generateDocument",
   "executeCode",
+  "batchCreateRecords",
+  "batchUpdateRecords",
+  "batchDeleteRecords",
 ]);
 
 const RISK_MESSAGES: Record<string, string> = {
@@ -18,6 +21,9 @@ const RISK_MESSAGES: Record<string, string> = {
   deleteRecord: "此操作将永久删除记录，不可恢复",
   generateDocument: "此操作将使用模板生成文档",
   executeCode: "此操作将在沙箱中执行代码",
+  batchCreateRecords: "即将批量创建多条记录",
+  batchUpdateRecords: "即将批量更新多条记录",
+  batchDeleteRecords: "⚠️ 即将永久删除多条记录，此操作不可撤销",
 };
 
 export function needsConfirm(toolName: string): boolean {

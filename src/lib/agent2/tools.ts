@@ -372,6 +372,62 @@ export function createTools(
       }
     ),
 
+    // ── Batch operation tools ──
+    batchCreateRecords: wrapConfirm(
+      "batchCreateRecords",
+      "write",
+      z.object({
+        tableId: z.string().describe("目标数据表 ID"),
+        records: z
+          .array(z.record(z.string(), z.unknown()))
+          .max(100)
+          .describe("要创建的记录数组（最多 100 条，不支持关系子表字段）"),
+      }),
+      "批量创建记录（需要确认，最多 100 条）",
+      async (args) => {
+        return { message: "批量创建待确认", args };
+      }
+    ),
+
+    batchUpdateRecords: wrapConfirm(
+      "batchUpdateRecords",
+      "write",
+      z.object({
+        tableId: z.string().describe("目标数据表 ID"),
+        updates: z
+          .array(
+            z.object({
+              recordId: z.string().describe("要更新的记录 ID"),
+              data: z
+                .record(z.string(), z.unknown())
+                .describe("要更新的字段数据"),
+            })
+          )
+          .max(50)
+          .describe("要更新的记录数组（最多 50 条）"),
+      }),
+      "批量更新记录（需要确认，最多 50 条）",
+      async (args) => {
+        return { message: "批量更新待确认", args };
+      }
+    ),
+
+    batchDeleteRecords: wrapConfirm(
+      "batchDeleteRecords",
+      "delete",
+      z.object({
+        tableId: z.string().describe("目标数据表 ID"),
+        recordIds: z
+          .array(z.string())
+          .max(50)
+          .describe("要删除的记录 ID 数组（最多 50 条）"),
+      }),
+      "批量删除记录（需要确认，不可恢复，最多 50 条）",
+      async (args) => {
+        return { message: "批量删除待确认", args };
+      }
+    ),
+
     // ── Auxiliary tools ──
     getCurrentTime: tool({
       description: "获取当前服务器时间和时区信息",

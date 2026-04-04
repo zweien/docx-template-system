@@ -556,6 +556,100 @@ export async function batchCreate(
   }
 }
 
+export async function batchUpdate(
+  tableId: string,
+  updates: Array<{ id: string; data: Record<string, unknown> }>
+): Promise<ServiceResult<{ updated: number; errors: Array<{ recordId: string; message: string }> }>> {
+  try {
+    if (updates.length === 0) {
+      return { success: true, data: { updated: 0, errors: [] } };
+    }
+
+    if (updates.length > 50) {
+      return {
+        success: false,
+        error: { code: "TOO_MANY", message: "单次批量更新最多 50 条" },
+      };
+    }
+
+    const errors: Array<{ recordId: string; message: string }> = [];
+    let updated = 0;
+
+    await db.$transaction(async (tx) => {
+      for (const { id, data } of updates) {
+        try {
+          const existingRecord = await tx.dataRecord.findUnique({ where: { id } });
+          if (!existingRecord) {
+            errors.push({ recordId: id, message: "记录不存在" });
+            throw new Error("SKIP");
+          }
+          if (existingRecord.tableId !== tableId) {
+            errors.push({ recordId: id, message: "记录不属于目标表" });
+            throw new Error("SKIP");
+          }
+          await doUpdateRecord(tx, id, data, existingRecord);
+          updated++;
+        } catch (e) {
+          if (e instanceof Error && e.message === "SKIP") continue;
+          throw e; // Non-skip errors trigger transaction rollback
+        }
+      }
+    });
+
+    return { success: true, data: { updated, errors } };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "批量更新失败";
+    return { success: false, error: { code: "BATCH_UPDATE_FAILED", message } };
+  }
+}
+
+export async function batchDelete(
+  tableId: string,
+  ids: string[]
+): Promise<ServiceResult<{ deleted: number; errors: Array<{ recordId: string; message: string }> }>> {
+  try {
+    if (ids.length === 0) {
+      return { success: true, data: { deleted: 0, errors: [] } };
+    }
+
+    if (ids.length > 50) {
+      return {
+        success: false,
+        error: { code: "TOO_MANY", message: "单次批量删除最多 50 条" },
+      };
+    }
+
+    const errors: Array<{ recordId: string; message: string }> = [];
+    let deleted = 0;
+
+    await db.$transaction(async (tx) => {
+      for (const id of ids) {
+        try {
+          const record = await tx.dataRecord.findUnique({ where: { id } });
+          if (!record) {
+            errors.push({ recordId: id, message: "记录不存在" });
+            throw new Error("SKIP");
+          }
+          if (record.tableId !== tableId) {
+            errors.push({ recordId: id, message: "记录不属于目标表" });
+            throw new Error("SKIP");
+          }
+          await doDeleteRecord(tx, id);
+          deleted++;
+        } catch (e) {
+          if (e instanceof Error && e.message === "SKIP") continue;
+          throw e;
+        }
+      }
+    });
+
+    return { success: true, data: { deleted, errors } };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "批量删除失败";
+    return { success: false, error: { code: "BATCH_DELETE_FAILED", message } };
+  }
+}
+
 export async function findByUniqueField(
   tableId: string,
   fieldKey: string,

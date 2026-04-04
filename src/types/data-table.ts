@@ -1,12 +1,14 @@
 import {
   FieldType as PrismaFieldType,
   RelationCardinality as PrismaRelationCardinality,
+  ViewType as PrismaViewType,
 } from "@/generated/prisma/enums";
 
 // ========== Field Types ==========
 
 export type FieldType = PrismaFieldType;
 export type RelationCardinality = PrismaRelationCardinality;
+export type ViewType = PrismaViewType;
 
 export interface RelationSchemaField {
   key: string;
@@ -129,20 +131,25 @@ export interface SortConfig {
 
 export interface DataViewConfig {
   filters: FilterCondition[];
-  sortBy: SortConfig | null;
+  sortBy: SortConfig[];
   visibleFields: string[];
   fieldOrder: string[];
+  groupBy: string | null;
+  viewOptions: Record<string, unknown>;
 }
 
 export interface DataViewItem {
   id: string;
   tableId: string;
   name: string;
+  type: ViewType;
   isDefault: boolean;
   filters: FilterCondition[];
-  sortBy: SortConfig | null;
+  sortBy: SortConfig[];
   visibleFields: string[];
   fieldOrder: string[];
+  groupBy: string | null;
+  viewOptions: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
 }

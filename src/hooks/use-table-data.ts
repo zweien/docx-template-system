@@ -1,0 +1,405 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import type {
+  DataFieldItem,
+  DataRecordItem,
+  DataViewConfig,
+  DataViewItem,
+  FilterCondition,
+  PaginatedRecords,
+  SortConfig,
+} from "@/types/data-table";
+import { useDebouncedCallback } from "@/hooks/use-debounce";
+
+export interface UseTableDataOptions {
+  tableId: string;
+  fields: DataFieldItem[];
+  pageSize?: number;
+}
+
+export interface UseTableDataReturn {
+  records: DataRecordItem[];
+  totalCount: number;
+  totalPages: number;
+  isLoading: boolean;
+  page: number;
+  setPage: (p: number) => void;
+  search: string;
+  searchInput: string;
+  setSearchInput: (v: string) => void;
+  viewId: string | null;
+  views: DataViewItem[];
+  currentView: DataViewItem | null;
+  switchView: (viewId: string | null) => void;
+  refreshViews: () => Promise<void>;
+  currentConfig: DataViewConfig;
+  setFilters: (filters: FilterCondition[]) => void;
+  setSorts: (sorts: SortConfig[]) => void;
+  setVisibleFields: (fields: string[]) => void;
+  setFieldOrder: (order: string[]) => void;
+  setGroupBy: (fieldKey: string | null) => void;
+  deleteRecord: (recordId: string) => Promise<void>;
+  deletingIds: Set<string>;
+  refresh: () => void;
+}
+
+function parsePageValue(value: string | null): number {
+  const page = Number.parseInt(value ?? "1", 10);
+  return Number.isFinite(page) && page > 0 ? page : 1;
+}
+
+function buildTablePath(tableId: string, params: URLSearchParams): string {
+  const query = params.toString();
+  return query ? `/data/${tableId}?${query}` : `/data/${tableId}`;
+}
+
+export function useTableData({
+  tableId,
+  fields,
+  pageSize = 20,
+}: UseTableDataOptions): UseTableDataReturn {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const defaultFieldKeys = useMemo(() => fields.map((field) => field.key), [fields]);
+
+  const [recordsData, setRecordsData] = useState<PaginatedRecords | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [searchInputState, setSearchInputState] = useState(
+    searchParams.get("search") ?? ""
+  );
+  const [viewId, setViewId] = useState<string | null>(
+    searchParams.get("viewId") ?? null
+  );
+  const [page, setPageState] = useState(() =>
+    parsePageValue(searchParams.get("page"))
+  );
+  const [views, setViews] = useState<DataViewItem[]>([]);
+  const [filters, setFiltersState] = useState<FilterCondition[]>([]);
+  const [sorts, setSortsState] = useState<SortConfig[]>([]);
+  const [visibleFields, setVisibleFieldsState] = useState<string[]>(() => [
+    ...defaultFieldKeys,
+  ]);
+  const [fieldOrder, setFieldOrderState] = useState<string[]>(() => [
+    ...defaultFieldKeys,
+  ]);
+  const [groupBy, setGroupByState] = useState<string | null>(null);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  const syncUrlQuery = useCallback(
+    (
+      nextQuery: Partial<{
+        page: number;
+        search: string;
+        viewId: string | null;
+      }>,
+      mode: "push" | "replace"
+    ) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      if (Object.hasOwn(nextQuery, "search")) {
+        const nextSearch = nextQuery.search ?? "";
+        if (nextSearch) {
+          params.set("search", nextSearch);
+        } else {
+          params.delete("search");
+        }
+      }
+
+      if (Object.hasOwn(nextQuery, "viewId")) {
+        const nextViewId = nextQuery.viewId;
+        if (nextViewId) {
+          params.set("viewId", nextViewId);
+        } else {
+          params.delete("viewId");
+        }
+      }
+
+      if (Object.hasOwn(nextQuery, "page")) {
+        const nextPage = nextQuery.page ?? 1;
+        if (nextPage > 1) {
+          params.set("page", String(nextPage));
+        } else {
+          params.delete("page");
+        }
+      }
+
+      const href = buildTablePath(tableId, params);
+      if (mode === "replace") {
+        router.replace(href, { scroll: false });
+        return;
+      }
+      router.push(href, { scroll: false });
+    },
+    [router, searchParams, tableId]
+  );
+
+  const setPage = useCallback(
+    (nextPage: number) => {
+      const normalizedPage = Number.isFinite(nextPage)
+        ? Math.max(1, Math.trunc(nextPage))
+        : 1;
+      setPageState(normalizedPage);
+      syncUrlQuery({ page: normalizedPage }, "push");
+    },
+    [syncUrlQuery]
+  );
+
+  const debouncedSyncSearch = useDebouncedCallback((value: unknown) => {
+    const nextSearch = String(value ?? "");
+    setSearch(nextSearch);
+    setPageState(1);
+    syncUrlQuery({ search: nextSearch, page: 1 }, "replace");
+  }, 300);
+
+  const setSearchInput = useCallback(
+    (value: string) => {
+      setSearchInputState(value);
+      debouncedSyncSearch(value);
+    },
+    [debouncedSyncSearch]
+  );
+
+  const switchView = useCallback(
+    (nextViewId: string | null) => {
+      setViewId(nextViewId);
+      setPageState(1);
+      syncUrlQuery({ viewId: nextViewId, page: 1 }, "push");
+    },
+    [syncUrlQuery]
+  );
+
+  const refreshViews = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/data-tables/${tableId}/views`);
+      if (!response.ok) return;
+
+      const result = (await response.json()) as {
+        success?: boolean;
+        data?: DataViewItem[];
+      };
+      if (result.success && Array.isArray(result.data)) {
+        setViews(result.data);
+      }
+    } catch {
+      // 视图列表加载失败时沿用已有状态
+    }
+  }, [tableId]);
+
+  const refresh = useCallback(() => {
+    setRefreshTick((value) => value + 1);
+  }, []);
+
+  const setFilters = useCallback((nextFilters: FilterCondition[]) => {
+    setFiltersState(nextFilters);
+  }, []);
+
+  const setSorts = useCallback((nextSorts: SortConfig[]) => {
+    setSortsState(nextSorts);
+  }, []);
+
+  const setVisibleFields = useCallback((nextFields: string[]) => {
+    setVisibleFieldsState(nextFields);
+  }, []);
+
+  const setFieldOrder = useCallback((nextOrder: string[]) => {
+    setFieldOrderState(nextOrder);
+  }, []);
+
+  const setGroupBy = useCallback((nextGroupBy: string | null) => {
+    setGroupByState(nextGroupBy);
+  }, []);
+
+  useEffect(() => {
+    setSearch(searchParams.get("search") ?? "");
+    setSearchInputState(searchParams.get("search") ?? "");
+    setViewId(searchParams.get("viewId") ?? null);
+    setPageState(parsePageValue(searchParams.get("page")));
+  }, [searchParams]);
+
+  useEffect(() => {
+    void refreshViews();
+  }, [refreshViews]);
+
+  useEffect(() => {
+    if (!viewId) {
+      setFiltersState([]);
+      setSortsState([]);
+      setVisibleFieldsState([...defaultFieldKeys]);
+      setFieldOrderState([...defaultFieldKeys]);
+      setGroupByState(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadView() {
+      try {
+        const response = await fetch(
+          `/api/data-tables/${tableId}/views/${viewId}`
+        );
+        if (!response.ok) return;
+
+        const result = (await response.json()) as {
+          success?: boolean;
+          data?: DataViewItem;
+        };
+
+        if (cancelled || !result.success || !result.data) return;
+
+        const view = result.data;
+        setFiltersState(view.filters ?? []);
+        setSortsState(view.sortBy ?? []);
+        setVisibleFieldsState(
+          view.visibleFields?.length ? view.visibleFields : [...defaultFieldKeys]
+        );
+        setFieldOrderState(
+          view.fieldOrder?.length ? view.fieldOrder : [...defaultFieldKeys]
+        );
+        setGroupByState(view.groupBy ?? null);
+      } catch {
+        // 视图配置加载失败时保留当前配置
+      }
+    }
+
+    void loadView();
+    return () => {
+      cancelled = true;
+    };
+  }, [defaultFieldKeys, tableId, viewId]);
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: String(pageSize),
+      });
+
+      if (search) params.set("search", search);
+      if (viewId) params.set("viewId", viewId);
+      if (filters.length > 0) {
+        params.set("filterConditions", JSON.stringify(filters));
+      }
+      if (sorts.length > 0) {
+        params.set("sortBy", JSON.stringify(sorts));
+      }
+
+      const response = await fetch(
+        `/api/data-tables/${tableId}/records?${params.toString()}`
+      );
+      const result = (await response.json()) as PaginatedRecords;
+
+      if (response.ok) {
+        setRecordsData(result);
+      }
+    } catch (error) {
+      console.error("获取记录失败:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters, page, pageSize, search, sorts, tableId, viewId]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData, refreshTick]);
+
+  const deleteRecord = useCallback(
+    async (recordId: string) => {
+      if (!confirm("确定要删除这条记录吗？")) return;
+      if (deletingIds.has(recordId)) return;
+
+      const recordToDelete =
+        recordsData?.records.find((record) => record.id === recordId) ?? null;
+      if (!recordToDelete) return;
+
+      setDeletingIds((prev) => new Set(prev).add(recordId));
+      setRecordsData((prev) =>
+        prev
+          ? {
+              ...prev,
+              records: prev.records.filter((record) => record.id !== recordId),
+              total: prev.total - 1,
+            }
+          : null
+      );
+
+      try {
+        const response = await fetch(
+          `/api/data-tables/${tableId}/records/${recordId}`,
+          { method: "DELETE" }
+        );
+
+        if (!response.ok) {
+          throw new Error("删除失败");
+        }
+      } catch (error) {
+        setRecordsData((prev) =>
+          prev
+            ? {
+                ...prev,
+                records: [...prev.records, recordToDelete],
+                total: prev.total + 1,
+              }
+            : null
+        );
+        console.error("删除失败:", error);
+        alert("删除失败，请重试");
+      } finally {
+        setDeletingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(recordId);
+          return next;
+        });
+      }
+    },
+    [deletingIds, recordsData?.records, tableId]
+  );
+
+  const currentConfig = useMemo<DataViewConfig>(
+    () => ({
+      filters,
+      sortBy: sorts,
+      visibleFields,
+      fieldOrder,
+      groupBy,
+      viewOptions: {},
+    }),
+    [fieldOrder, filters, groupBy, sorts, visibleFields]
+  );
+
+  const currentView = useMemo(
+    () => views.find((view) => view.id === viewId) ?? null,
+    [viewId, views]
+  );
+
+  return {
+    records: recordsData?.records ?? [],
+    totalCount: recordsData?.total ?? 0,
+    totalPages: recordsData?.totalPages ?? 1,
+    isLoading,
+    page,
+    setPage,
+    search,
+    searchInput: searchInputState,
+    setSearchInput,
+    viewId,
+    views,
+    currentView,
+    switchView,
+    refreshViews,
+    currentConfig,
+    setFilters,
+    setSorts,
+    setVisibleFields,
+    setFieldOrder,
+    setGroupBy,
+    deleteRecord,
+    deletingIds,
+    refresh,
+  };
+}

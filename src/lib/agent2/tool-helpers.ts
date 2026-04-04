@@ -28,15 +28,22 @@ function buildSqlWhereClause(
   tableId: string,
   filters: Array<{ field: string; operator: string; value: unknown }>,
   fields: Array<{ key: string; type: string; label?: string }>
-): { sql: string; params: unknown[] } {
+): { sql: string; params: unknown[]; warnings: string[] } {
+  const warnings: string[] = [];
   const params: unknown[] = [];
   const conditions: string[] = [`"tableId" = $${params.push(tableId)}`];
 
   for (const filter of filters) {
     const resolvedKey = resolveFieldKey(filter.field, fields);
-    if (!resolvedKey) continue;
+    if (!resolvedKey) {
+      warnings.push(`过滤字段 '${filter.field}' 在表中不存在，已跳过`);
+      continue;
+    }
     const field = fields.find(f => f.key === resolvedKey)!;
-    if (!isSafeIdentifier(resolvedKey)) continue;
+    if (!isSafeIdentifier(resolvedKey)) {
+      warnings.push(`过滤字段 '${filter.field}' 不是有效的标识符，已跳过`);
+      continue;
+    }
 
     const paramIdx = params.push(filter.value);
     const jsonPath = `data->>'${resolvedKey}'`;
@@ -82,7 +89,7 @@ function buildSqlWhereClause(
     }
   }
 
-  return { sql: conditions.join(" AND "), params };
+  return { sql: conditions.join(" AND "), params, warnings };
 }
 
 // 解析关系字段：批量查询关联记录并替换为 display 值
@@ -360,7 +367,7 @@ export async function searchRecords(params: {
 
     if (hasAdvancedFilters) {
       // 高级过滤：所有条件统一走原生 SQL
-      const { sql: whereSql, params: whereParams } = buildSqlWhereClause(
+      const { sql: whereSql, params: whereParams, warnings } = buildSqlWhereClause(
         tableId, typedFilters, table.fields.map((f) => ({ key: f.key, type: f.type, label: f.label }))
       );
 
@@ -400,6 +407,7 @@ export async function searchRecords(params: {
           total,
           page,
           pageSize,
+          ...(warnings.length > 0 ? { _warnings: warnings } : {}),
         },
       };
     }
@@ -488,14 +496,22 @@ export async function aggregateRecords(params: {
     // count: 也走原生 SQL，避免 Prisma JSONB 类型匹配问题
     if (operation === "count") {
       const tableFields = await db.dataField.findMany({ where: { tableId } });
-      const { sql: whereSql, params: whereParams } = buildSqlWhereClause(
+      const { sql: whereSql, params: whereParams, warnings } = buildSqlWhereClause(
         tableId, filters, tableFields
       );
       const countResult = await db.$queryRawUnsafe<Array<{ count: bigint }>>(
         `SELECT COUNT(*) as count FROM "DataRecord" WHERE ${whereSql}`,
         ...whereParams
       );
-      return { success: true, data: { value: Number(countResult[0].count), field, operation } };
+      return {
+        success: true,
+        data: {
+          value: Number(countResult[0].count),
+          field,
+          operation,
+          ...(warnings.length > 0 ? { _warnings: warnings } : {}),
+        },
+      };
     }
 
     // sum/avg/min/max: 原生 SQL
@@ -518,6 +534,26 @@ export async function aggregateRecords(params: {
       };
     }
 
+    // 校验字段类型是否支持该聚合操作
+    if (["sum", "avg"].includes(operation) && targetField.type !== "NUMBER") {
+      return {
+        success: false,
+        error: {
+          code: "INVALID_FIELD_TYPE",
+          message: `字段 '${field}' 类型为 ${targetField.type}，不支持 ${operation} 操作（仅支持 NUMBER 类型）`,
+        },
+      };
+    }
+    if (["min", "max"].includes(operation) && !["NUMBER", "DATE"].includes(targetField.type)) {
+      return {
+        success: false,
+        error: {
+          code: "INVALID_FIELD_TYPE",
+          message: `字段 '${field}' 类型为 ${targetField.type}，不支持 ${operation} 操作（支持 NUMBER 和 DATE 类型）`,
+        },
+      };
+    }
+
     const castType = targetField.type === "DATE" ? "DATE" : "NUMERIC";
     const sqlOperation = {
       sum: "SUM",
@@ -533,7 +569,7 @@ export async function aggregateRecords(params: {
       };
     }
 
-    const { sql: whereSql, params: whereParams } = buildSqlWhereClause(
+    const { sql: whereSql, params: whereParams, warnings } = buildSqlWhereClause(
       tableId, filters, tableFields
     );
 
@@ -544,7 +580,15 @@ export async function aggregateRecords(params: {
       ...whereParams
     );
 
-    return { success: true, data: { value: Number(result[0].value), field, operation } };
+    return {
+      success: true,
+      data: {
+        value: Number(result[0].value),
+        field,
+        operation,
+        ...(warnings.length > 0 ? { _warnings: warnings } : {}),
+      },
+    };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "聚合统计失败";

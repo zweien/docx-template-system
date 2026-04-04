@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type {
   DataFieldItem,
@@ -55,6 +55,24 @@ function buildTablePath(tableId: string, params: URLSearchParams): string {
   return query ? `/data/${tableId}?${query}` : `/data/${tableId}`;
 }
 
+function buildQueryKey(
+  page: number,
+  pageSize: number,
+  search: string,
+  viewId: string | null,
+  filters: FilterCondition[],
+  sorts: SortConfig[]
+): string {
+  return JSON.stringify({
+    page,
+    pageSize,
+    search,
+    viewId,
+    filters,
+    sorts,
+  });
+}
+
 export function useTableData({
   tableId,
   fields,
@@ -77,6 +95,9 @@ export function useTableData({
     parsePageValue(searchParams.get("page"))
   );
   const [views, setViews] = useState<DataViewItem[]>([]);
+  const [isViewConfigReady, setIsViewConfigReady] = useState(
+    () => searchParams.get("viewId") === null
+  );
   const [filters, setFiltersState] = useState<FilterCondition[]>([]);
   const [sorts, setSortsState] = useState<SortConfig[]>([]);
   const [visibleFields, setVisibleFieldsState] = useState<string[]>(() => [
@@ -86,8 +107,20 @@ export function useTableData({
     ...defaultFieldKeys,
   ]);
   const [groupBy, setGroupByState] = useState<string | null>(null);
+  const [viewOptions, setViewOptionsState] = useState<Record<string, unknown>>({});
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [refreshTick, setRefreshTick] = useState(0);
+  const latestFetchIdRef = useRef(0);
+
+  const currentQueryKey = useMemo(
+    () => buildQueryKey(page, pageSize, search, viewId, filters, sorts),
+    [filters, page, pageSize, search, sorts, viewId]
+  );
+  const latestQueryKeyRef = useRef(currentQueryKey);
+
+  useEffect(() => {
+    latestQueryKeyRef.current = currentQueryKey;
+  }, [currentQueryKey]);
 
   const syncUrlQuery = useCallback(
     (
@@ -165,6 +198,9 @@ export function useTableData({
 
   const switchView = useCallback(
     (nextViewId: string | null) => {
+      latestFetchIdRef.current += 1;
+      setIsViewConfigReady(nextViewId === null);
+      setIsLoading(true);
       setViewId(nextViewId);
       setPageState(1);
       syncUrlQuery({ viewId: nextViewId, page: 1 }, "push");
@@ -214,9 +250,18 @@ export function useTableData({
   }, []);
 
   useEffect(() => {
+    const nextViewId = searchParams.get("viewId") ?? null;
+
     setSearch(searchParams.get("search") ?? "");
     setSearchInputState(searchParams.get("search") ?? "");
-    setViewId(searchParams.get("viewId") ?? null);
+    if (nextViewId !== viewId) {
+      latestFetchIdRef.current += 1;
+    }
+    setIsViewConfigReady(nextViewId === null);
+    if (nextViewId) {
+      setIsLoading(true);
+    }
+    setViewId(nextViewId);
     setPageState(parsePageValue(searchParams.get("page")));
   }, [searchParams]);
 
@@ -231,10 +276,21 @@ export function useTableData({
       setVisibleFieldsState([...defaultFieldKeys]);
       setFieldOrderState([...defaultFieldKeys]);
       setGroupByState(null);
+      setViewOptionsState({});
+      setIsViewConfigReady(true);
       return;
     }
 
     let cancelled = false;
+    latestFetchIdRef.current += 1;
+    setIsViewConfigReady(false);
+    setIsLoading(true);
+    setFiltersState([]);
+    setSortsState([]);
+    setVisibleFieldsState([...defaultFieldKeys]);
+    setFieldOrderState([...defaultFieldKeys]);
+    setGroupByState(null);
+    setViewOptionsState({});
 
     async function loadView() {
       try {
@@ -260,8 +316,13 @@ export function useTableData({
           view.fieldOrder?.length ? view.fieldOrder : [...defaultFieldKeys]
         );
         setGroupByState(view.groupBy ?? null);
+        setViewOptionsState(view.viewOptions ?? {});
       } catch {
         // 视图配置加载失败时保留当前配置
+      } finally {
+        if (!cancelled) {
+          setIsViewConfigReady(true);
+        }
       }
     }
 
@@ -272,6 +333,10 @@ export function useTableData({
   }, [defaultFieldKeys, tableId, viewId]);
 
   const fetchData = useCallback(async () => {
+    if (!isViewConfigReady) return;
+
+    const fetchId = latestFetchIdRef.current + 1;
+    latestFetchIdRef.current = fetchId;
     setIsLoading(true);
 
     try {
@@ -294,15 +359,26 @@ export function useTableData({
       );
       const result = (await response.json()) as PaginatedRecords;
 
-      if (response.ok) {
+      if (response.ok && fetchId === latestFetchIdRef.current) {
         setRecordsData(result);
       }
     } catch (error) {
       console.error("获取记录失败:", error);
     } finally {
-      setIsLoading(false);
+      if (fetchId === latestFetchIdRef.current) {
+        setIsLoading(false);
+      }
     }
-  }, [filters, page, pageSize, search, sorts, tableId, viewId]);
+  }, [
+    filters,
+    isViewConfigReady,
+    page,
+    pageSize,
+    search,
+    sorts,
+    tableId,
+    viewId,
+  ]);
 
   useEffect(() => {
     void fetchData();
@@ -316,6 +392,9 @@ export function useTableData({
       const recordToDelete =
         recordsData?.records.find((record) => record.id === recordId) ?? null;
       if (!recordToDelete) return;
+
+      const rollbackSnapshot = recordsData;
+      const rollbackQueryKey = latestQueryKeyRef.current;
 
       setDeletingIds((prev) => new Set(prev).add(recordId));
       setRecordsData((prev) =>
@@ -338,15 +417,11 @@ export function useTableData({
           throw new Error("删除失败");
         }
       } catch (error) {
-        setRecordsData((prev) =>
-          prev
-            ? {
-                ...prev,
-                records: [...prev.records, recordToDelete],
-                total: prev.total + 1,
-              }
-            : null
-        );
+        if (latestQueryKeyRef.current === rollbackQueryKey) {
+          setRecordsData(rollbackSnapshot);
+        } else {
+          refresh();
+        }
         console.error("删除失败:", error);
         alert("删除失败，请重试");
       } finally {
@@ -357,7 +432,7 @@ export function useTableData({
         });
       }
     },
-    [deletingIds, recordsData?.records, tableId]
+    [deletingIds, recordsData, refresh, tableId]
   );
 
   const currentConfig = useMemo<DataViewConfig>(
@@ -367,9 +442,9 @@ export function useTableData({
       visibleFields,
       fieldOrder,
       groupBy,
-      viewOptions: {},
+      viewOptions,
     }),
-    [fieldOrder, filters, groupBy, sorts, visibleFields]
+    [fieldOrder, filters, groupBy, sorts, viewOptions, visibleFields]
   );
 
   const currentView = useMemo(

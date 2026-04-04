@@ -72,7 +72,7 @@ function getPaperFields(authorTableId: string): DataFieldInput[] {
     { key: "pages", label: "页码", type: FieldType.TEXT, required: false, sortOrder: 17 },
     { key: "impact_factor", label: "影响因子", type: FieldType.TEXT, required: false, sortOrder: 18 },
     { key: "ccf_category_std", label: "CCF分类", type: FieldType.SELECT, required: false, options: ["A", "B", "C", "无"], sortOrder: 19 },
-    { key: "cas_partition_std", label: "中科院分区", type: FieldType.SELECT, required: false, options: ["一区", "二区", "三区", "四区", "无"], sortOrder: 20 },
+    { key: "cas_partition_std", label: "中科院分区", type: FieldType.SELECT, required: false, options: ["一区TOP", "一区", "二区", "三区", "四区", "无"], sortOrder: 20 },
     { key: "jcr_partition_std", label: "JCR分区", type: FieldType.SELECT, required: false, options: ["一区", "二区", "三区", "四区", "无"], sortOrder: 21 },
     { key: "sci_partition_std", label: "SCI分区", type: FieldType.SELECT, required: false, options: ["一区", "二区", "三区", "四区", "无"], sortOrder: 22 },
     { key: "paper_link", label: "论文链接", type: FieldType.TEXT, required: false, sortOrder: 23 },

@@ -99,6 +99,40 @@ export const importSchema = z.object({
   options: importOptionsSchema,
 });
 
+// ========== View Schemas ==========
+
+export const viewTypeNameSchema = z.enum(["GRID", "KANBAN", "GALLERY", "TIMELINE"]);
+
+export const patchFieldSchema = z.object({
+  fieldKey: z.string().regex(/^[a-z][a-z0-9_]*$/),
+  value: z.unknown(),
+});
+
+export const sortConfigSchema = z.object({
+  fieldKey: z.string(),
+  order: z.enum(["asc", "desc"]),
+});
+
+export const filterConditionSchema = z.object({
+  fieldKey: z.string(),
+  op: z.enum([
+    "eq",
+    "ne",
+    "gt",
+    "lt",
+    "gte",
+    "lte",
+    "contains",
+    "isempty",
+    "isnotempty",
+  ]),
+  value: z.union([z.string(), z.number()]),
+});
+
+export const reorderSchema = z.object({
+  recordIds: z.array(z.string()).min(1).max(200),
+});
+
 // ========== Type Exports ==========
 
 export type CreateTableInput = z.infer<typeof createTableSchema>;
@@ -111,3 +145,5 @@ export type UpdateRecordInput = z.infer<typeof updateRecordSchema>;
 export type FieldMappingInput = z.infer<typeof fieldMappingSchema>;
 export type ImportOptionsInput = z.infer<typeof importOptionsSchema>;
 export type ImportInput = z.infer<typeof importSchema>;
+export type PatchFieldInput = z.infer<typeof patchFieldSchema>;
+export type ReorderInput = z.infer<typeof reorderSchema>;

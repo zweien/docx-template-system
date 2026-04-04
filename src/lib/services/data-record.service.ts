@@ -129,6 +129,29 @@ function splitRecordDataByFieldType(
   return { scalarData, relationData };
 }
 
+function getComparableValue(value: unknown): unknown {
+  if (typeof value === "object" && value !== null && "display" in value) {
+    return (value as { display: unknown }).display;
+  }
+
+  return value;
+}
+
+function compareRecordValues(aValue: unknown, bValue: unknown, order: SortConfig["order"]): number {
+  const aDisplay = getComparableValue(aValue);
+  const bDisplay = getComparableValue(bValue);
+  const aNum = Number(aDisplay);
+  const bNum = Number(bDisplay);
+
+  if (!Number.isNaN(aNum) && !Number.isNaN(bNum)) {
+    return order === "asc" ? aNum - bNum : bNum - aNum;
+  }
+
+  const aStr = String(aDisplay ?? "");
+  const bStr = String(bDisplay ?? "");
+  return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+}
+
 // ── Record Management ──
 
 export async function listRecords(
@@ -139,7 +162,7 @@ export async function listRecords(
     search?: string;
     // P2: 新增字段筛选
     fieldFilters?: FieldFilters;
-    sortBy?: SortConfig | null;
+    sortBy?: SortConfig[] | null;
     filterConditions?: FilterCondition[];
   }
 ): Promise<ServiceResult<PaginatedRecords>> {
@@ -206,30 +229,19 @@ export async function listRecords(
 
     // 对于简单字段类型的排序，保持内存排序（JSONB 排序在 Prisma 中支持有限）
     // 但仅在明确需要排序时执行
-    if (filters.sortBy) {
-      const { fieldKey, order } = filters.sortBy;
-      const fieldDef = tableResult.data.fields.find(f => f.key === fieldKey);
-      if (fieldDef) {
+    if (filters.sortBy && filters.sortBy.length > 0) {
+      const sortableFields = filters.sortBy.filter((sortConfig) =>
+        tableResult.data.fields.some((field) => field.key === sortConfig.fieldKey)
+      );
+
+      if (sortableFields.length > 0) {
         processedRecords = [...processedRecords].sort((a, b) => {
-          const aVal = a.data[fieldKey];
-          const bVal = b.data[fieldKey];
-
-          // 处理 { id, display } 对象格式（关联字段）
-          const aDisplay = typeof aVal === "object" && aVal !== null && "display" in aVal
-            ? (aVal as { display: unknown }).display
-            : aVal;
-          const bDisplay = typeof bVal === "object" && bVal !== null && "display" in bVal
-            ? (bVal as { display: unknown }).display
-            : bVal;
-
-          const aNum = Number(aDisplay);
-          const bNum = Number(bDisplay);
-          if (!isNaN(aNum) && !isNaN(bNum)) {
-            return order === "asc" ? aNum - bNum : bNum - aNum;
+          for (const { fieldKey, order } of sortableFields) {
+            const result = compareRecordValues(a.data[fieldKey], b.data[fieldKey], order);
+            if (result !== 0) return result;
           }
-          const aStr = String(aDisplay ?? "");
-          const bStr = String(bDisplay ?? "");
-          return order === "asc" ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+
+          return 0;
         });
       }
     }

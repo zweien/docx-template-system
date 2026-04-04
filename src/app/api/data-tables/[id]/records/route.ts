@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRouteSessionUser } from "@/lib/auth";
 import { listRecords, createRecord } from "@/lib/services/data-record.service";
-import { createRecordSchema } from "@/validators/data-table";
+import {
+  createRecordSchema,
+  filterConditionSchema,
+  sortConfigSchema,
+} from "@/validators/data-table";
 import type { FieldFilters } from "@/lib/services/data-record.service";
 import type { SortConfig, FilterCondition } from "@/types/data-table";
 
@@ -45,14 +49,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   // View-level parameters
   const viewId = searchParams.get("viewId") || undefined;
   let viewFilters: FilterCondition[] | undefined;
-  let viewSortBy: SortConfig | null | undefined;
+  let viewSortBy: SortConfig[] | null | undefined;
 
   if (viewId) {
     const { getView } = await import("@/lib/services/data-view.service");
     const viewResult = await getView(viewId);
     if (viewResult.success) {
       viewFilters = viewResult.data.filters.length > 0 ? viewResult.data.filters : undefined;
-      viewSortBy = viewResult.data.sortBy;
+      viewSortBy =
+        viewResult.data.sortBy.length > 0 ? viewResult.data.sortBy : undefined;
     }
   }
 
@@ -60,14 +65,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const sortByParam = searchParams.get("sortBy");
   if (sortByParam) {
     try {
-      viewSortBy = JSON.parse(sortByParam);
+      viewSortBy = zodParseSortBy(sortByParam);
     } catch { /* ignore */ }
   }
 
   const filterConditionsParam = searchParams.get("filterConditions");
   if (filterConditionsParam) {
     try {
-      viewFilters = JSON.parse(filterConditionsParam);
+      viewFilters = filterConditionSchema.array().parse(JSON.parse(filterConditionsParam));
     } catch { /* ignore */ }
   }
 
@@ -91,6 +96,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   return NextResponse.json(result.data);
+}
+
+function zodParseSortBy(sortByParam: string): SortConfig[] {
+  return sortConfigSchema.array().parse(JSON.parse(sortByParam));
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {

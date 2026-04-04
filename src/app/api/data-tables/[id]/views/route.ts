@@ -2,21 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { getRouteSessionUser } from "@/lib/auth";
 import { z } from "zod";
 import { listViews, createView } from "@/lib/services/data-view.service";
+import {
+  filterConditionSchema,
+  sortConfigSchema,
+  viewTypeNameSchema,
+} from "@/validators/data-table";
 
 const createViewSchema = z.object({
   name: z.string().min(1, "视图名称不能为空"),
+  type: viewTypeNameSchema.optional(),
   isDefault: z.boolean().optional(),
-  filters: z.array(z.object({
-    fieldKey: z.string(),
-    op: z.enum(["eq", "ne", "gt", "lt", "gte", "lte", "contains", "isempty", "isnotempty"]),
-    value: z.union([z.string(), z.number()]),
-  })).optional(),
-  sortBy: z.object({
-    fieldKey: z.string(),
-    order: z.enum(["asc", "desc"]),
-  }).nullable().optional(),
+  filters: z.array(filterConditionSchema).optional(),
+  sortBy: z.array(sortConfigSchema).nullable().optional(),
   visibleFields: z.array(z.string()).optional(),
   fieldOrder: z.array(z.string()).optional(),
+  groupBy: z.string().nullable().optional(),
+  viewOptions: z.record(z.string(), z.unknown()).optional(),
 });
 
 interface RouteParams {

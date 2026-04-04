@@ -389,11 +389,12 @@ export function useTableData({
       if (!confirm("确定要删除这条记录吗？")) return;
       if (deletingIds.has(recordId)) return;
 
+      const recordIndex =
+        recordsData?.records.findIndex((record) => record.id === recordId) ?? -1;
       const recordToDelete =
-        recordsData?.records.find((record) => record.id === recordId) ?? null;
+        recordIndex >= 0 ? recordsData?.records[recordIndex] ?? null : null;
       if (!recordToDelete) return;
 
-      const rollbackSnapshot = recordsData;
       const rollbackQueryKey = latestQueryKeyRef.current;
 
       setDeletingIds((prev) => new Set(prev).add(recordId));
@@ -418,7 +419,25 @@ export function useTableData({
         }
       } catch (error) {
         if (latestQueryKeyRef.current === rollbackQueryKey) {
-          setRecordsData(rollbackSnapshot);
+          setRecordsData((prev) => {
+            if (!prev) return prev;
+            if (prev.records.some((record) => record.id === recordToDelete.id)) {
+              return prev;
+            }
+
+            const nextRecords = [...prev.records];
+            nextRecords.splice(
+              Math.min(Math.max(recordIndex, 0), nextRecords.length),
+              0,
+              recordToDelete
+            );
+
+            return {
+              ...prev,
+              records: nextRecords,
+              total: prev.total + 1,
+            };
+          });
         } else {
           refresh();
         }

@@ -72,15 +72,20 @@ interface UseTableDataReturn {
 }
 ```
 
-### New Hook Files
+### Hook Files
 
 ```
-src/lib/hooks/
-  ├─ use-table-data.ts          # Main hook
-  ├─ use-inline-edit.ts         # Inline editing logic
-  ├─ use-view-config.ts         # View config management
-  └─ use-optimistic-mutation.ts # Optimistic update wrapper
+src/hooks/                              # Use existing hooks directory
+  ├─ use-table-data.ts                  # Main hook
+  ├─ use-inline-edit.ts                 # Inline editing logic
+  ├─ use-view-config.ts                 # View config management
+  └─ use-optimistic-mutation.ts         # Optimistic update wrapper
 ```
+
+**Internal organization:**
+- `use-table-data.ts` calls fetch wrappers for records, views, and record CRUD; owns URL sync (`searchParams` ↔ state) and search debounce (`useDebouncedCallback`)
+- `use-optimistic-mutation.ts` provides a generic `useOptimisticMutation<T>` that wraps any async mutation with rollback, replacing the current ad-hoc `deletingIds` pattern in `record-table.tsx`
+- `formatCellValue` utility extracted to `src/lib/format-cell.ts` (shared across views)
 
 ## Data Model Changes
 
@@ -120,14 +125,22 @@ model DataView {
 }
 ```
 
-**DataRecord model change:**
+**No changes to DataRecord model.** Manual sort order is stored per-view (see below).
 
-```prisma
-model DataRecord {
-  // ... existing fields unchanged
-  manualSortOrder Int @default(0)  // NEW: manual ordering
+### Manual Sort Design
+
+Manual sort order is **per-view**, not per-record. The `manualSortOrder` for records within a specific view is stored in `DataView.viewOptions`:
+
+```typescript
+// Inside viewOptions for grid/kanban views
+interface ManualSortConfig {
+  enabled: boolean;
+  // Sparse order map: recordId -> position (uses gap algorithm: 0, 1000, 2000...)
+  orders: Record<string, number>;
 }
 ```
+
+**Trade-off:** This means manual sort is isolated per view and not shared across views. If manual sort is needed globally, consider migrating to `DataRecord` field in a future iteration. For now, per-view is correct because Airtable also stores manual sort per-view.
 
 ### View Options Per Type
 
@@ -154,19 +167,84 @@ interface TimelineViewOptions {
   colorField?: string;        // Color grouping field
 }
 
-// Grid (no extra options)
-interface GridViewOptions {}
+// Grid (includes manual sort config)
+interface GridViewOptions {
+  manualSort?: ManualSortConfig;
+}
 ```
 
 ### Sort Config Change
 
 ```typescript
 // Before: single field
-// sortBy: SortConfig
+// sortBy: { fieldKey: string; order: "asc" | "desc" }
 
 // After: multi-field (priority high to low)
-// sortBy: SortConfig[]
-type SortConfigs = SortConfig[];
+// sortBy: Array<{ fieldKey: string; order: "asc" | "desc" }>
+```
+
+**Migration strategy:** Existing `DataView` rows store `sortBy` as `SortConfig` (single object). After schema migration, the `mapViewItem` function in `data-view.service.ts` will normalize legacy data:
+
+```typescript
+function normalizeSortBy(raw: unknown): SortConfig[] | null {
+  if (!raw) return null;
+  if (Array.isArray(raw)) return raw;
+  // Legacy format: single SortConfig object → wrap in array
+  return [raw as SortConfig];
+}
+```
+
+This is applied at read time in `mapViewItem`, so no one-time data migration script is needed.
+
+### Type Changes in `src/types/data-table.ts`
+
+```typescript
+// Updated DataViewConfig
+interface DataViewConfig {
+  filters: FilterCondition[];
+  sortBy: SortConfig[];       // Changed: was SortConfig | null
+  visibleFields: string[];
+  fieldOrder: string[];
+  groupBy: string | null;     // NEW
+  viewOptions: Record<string, unknown>; // NEW
+}
+
+// Updated DataViewItem
+interface DataViewItem {
+  id: string;
+  tableId: string;
+  name: string;
+  type: ViewType;             // NEW
+  isDefault: boolean;
+  config: DataViewConfig;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+### Validator Changes in `src/validators/data-table.ts`
+
+```typescript
+// New: partial field update schema
+const patchFieldSchema = z.object({
+  fieldKey: z.string().regex(/^[a-z][a-z0-9_]*$/),
+  value: z.unknown(),
+});
+
+// Updated: view create/update schema now includes type, viewOptions, groupBy
+const viewConfigSchema = z.object({
+  filters: z.array(filterConditionSchema).optional(),
+  sortBy: z.array(sortConfigSchema).optional(),   // Changed: array
+  visibleFields: z.array(z.string()).optional(),
+  fieldOrder: z.array(z.string()).optional(),
+  groupBy: z.string().nullable().optional(),       // NEW
+  viewOptions: z.record(z.unknown()).optional(),   // NEW
+});
+
+// New: reorder schema
+const reorderSchema = z.object({
+  recordIds: z.array(z.string()).min(1).max(200),
+});
 ```
 
 ## Grid View Enhancements
@@ -193,27 +271,37 @@ type SortConfigs = SortConfig[];
 | FILE | File upload button | 100px |
 | RELATION | Relation select dropdown | Auto |
 
+**RELATION_SUBTABLE:** Not editable inline; requires opening the subtable editor (preserves current behavior).
+
 **Implementation:**
 - `useInlineEdit` hook manages editing state (active cell, original value, dirty state)
 - Each `CellEditor` component handles specific field type editing UI
-- Save calls `updateRecord` API with optimistic UI update
+- Save calls `PATCH /records/[id]` API with optimistic UI update via `useOptimisticMutation`
 
 **New API: `PATCH /api/data-tables/[id]/records/[recordId]`**
 
-Single-field partial update for inline editing (reduces payload):
+Route file: `src/app/api/data-tables/[id]/records/[recordId]/route.ts` (add PATCH handler)
 
 ```typescript
-// Request body
+// Request body (validated by patchFieldSchema)
 { fieldKey: string; value: unknown }
 
-// Server validates field exists and type matches, updates only that field
+// Response: updated record
 ```
+
+Server-side validation:
+1. `fieldKey` must exist in table's field definitions
+2. If field is `required` and value is null/empty, reject
+3. Type-specific validation (email format, number coercion, SELECT option membership)
+4. Validation uses existing `validateRecordData` logic in `data-record.service.ts`
 
 ### 2. Multi-Field Sorting
 
 **UI:** Sort configuration panel (from column header popover) with ability to add multiple sort conditions and drag to reorder priority.
 
 **Backend:** `sortBy` in DataView changes from `SortConfig` to `SortConfig[]`. Service layer applies sorts in priority order. For JSONB fields, memory-based sorting applies all criteria in sequence.
+
+**Unsupported for grouping/sorting:** RELATION and RELATION_SUBTABLE fields show a disabled "Group by" / "Sort by" option with tooltip explaining they don't support these operations. RELATION fields support sorting by display value only.
 
 ### 3. Grouping (Group By)
 
@@ -227,27 +315,34 @@ Single-field partial update for inline editing (reduces payload):
 
 **Supported group field types:** TEXT, NUMBER, DATE, SELECT, EMAIL, PHONE.
 
+**RELATION/RELATION_SUBTABLE fields:** Show disabled "Group by" option with tooltip. These complex types don't have meaningful group values.
+
 ### 4. Column Drag Reorder
 
-- Uses `@dnd-kit` for column header drag-and-drop
+- Uses `@dnd-kit/react` for column header drag-and-drop
 - On drop, updates `DataView.fieldOrder`
 - Grid view only
 
 ### 5. Record Drag-and-Drop Sort
 
-- Row drag updates `manualSortOrder`
+- Row drag updates manual sort order in view's `viewOptions.manualSort.orders`
 - Only active when no sort conditions are set (manual sort mode)
-- Uses `@dnd-kit/sortable` for smooth reordering
+- Uses `@dnd-kit/react` for smooth reordering
 - Visual feedback during drag with drop indicator
+- Gap algorithm for order values (0, 1000, 2000...) to minimize reorder operations
 
 **New API: `POST /api/data-tables/[id]/records/reorder`**
 
-```typescript
-// Request body
-{ orders: Array<{ id: string; manualSortOrder: number }> }
+Route file: `src/app/api/data-tables/[id]/records/reorder/route.ts` (new file)
 
-// Batch updates manual sort order in transaction
+```typescript
+// Request body (validated by reorderSchema)
+{ recordIds: string[] }
+
+// Server assigns manualSortOrder using gap algorithm and updates view config
 ```
+
+Server computes actual sort values from the ordered ID list, then updates `DataView.viewOptions` with the new order map. This is idempotent — same input always produces same order.
 
 ## Kanban View
 
@@ -259,14 +354,15 @@ Columns (swimlanes) = each option of the configured SELECT field. Cards = record
 
 1. **Columns** map to SELECT field options; "No value" column for records with null/empty
 2. **Cards** show configured fields; primary field as card title
-3. **Drag between columns** updates the SELECT field value automatically
-4. **Drag within column** reorders records (updates manualSortOrder)
+3. **Drag between columns** updates the SELECT field value automatically (via PATCH)
+4. **Drag within column** reorders records (updates manual sort in view config)
 5. **Add record button** per column pre-sets the SELECT field value
 
 ### Data Loading
 
 - Full fetch (no pagination) for kanban; group client-side by SELECT field value
 - Warning when record count > 500 suggesting grid view
+- Future optimization: server-side grouping API for large datasets (not in this iteration)
 
 ### Components
 
@@ -320,11 +416,19 @@ Gantt-chart style: left panel shows record labels, right panel shows horizontal 
 
 ### Technical Choice
 
-**`frappe-gantt`** (recommended):
-- Lightweight (< 10KB)
-- SVG rendering
-- Good customizability
-- Friendly interactions (drag to resize bars, click to view)
+**Custom SVG Gantt component** (recommended over `frappe-gantt`):
+
+Rationale:
+- `frappe-gantt` has low maintenance (last commit Feb 2025), no official React wrapper, no TypeScript types
+- Project already uses `@xyflow/react` (SVG-based), team is familiar with SVG rendering patterns
+- A lightweight custom SVG gantt (~200 lines) gives full control over interactions and styling
+- No additional dependency needed
+
+Implementation approach:
+- React component renders SVG directly
+- `useRef` + `useEffect` for scroll/resize handling
+- Standard React event handlers for click/hover
+- View mode (day/week/month) changes SVG scale
 
 ### Data Loading
 
@@ -336,7 +440,7 @@ Gantt-chart style: left panel shows record labels, right panel shows horizontal 
 ```
 src/components/data/views/
   ├─ timeline-view.tsx         # Main container
-  ├─ timeline-gantt.tsx        # Gantt chart renderer
+  ├─ timeline-gantt.tsx        # Gantt chart renderer (custom SVG)
   └─ timeline-options.tsx      # Timeline config panel
 ```
 
@@ -344,44 +448,47 @@ src/components/data/views/
 
 ### Modified Endpoints
 
-| Endpoint | Change |
-|----------|--------|
-| `POST/PUT /views` | Add `type` (ViewType), `viewOptions` (JSON), `groupBy` (string?) fields |
-| `GET /records` | Support `manualSortOrder` sorting |
-| `PUT /records/[id]` | Support single-field partial update |
+| Endpoint | File | Change |
+|----------|------|--------|
+| `POST/PUT /views` | `views/route.ts` | Add `type` (ViewType), `viewOptions` (JSON), `groupBy` (string?) fields |
+| `GET /records` | `records/route.ts` | Support `manualSortOrder` sorting from view config |
+| `PUT /records/[id]` | `[recordId]/route.ts` | No change (PATCH handles inline editing) |
 
 ### New Endpoints
 
-| Endpoint | Purpose |
-|----------|---------|
-| `PATCH /records/[id]` | Single-field partial update (inline editing) |
-| `POST /records/reorder` | Batch update `manualSortOrder` |
+| Endpoint | File | Purpose |
+|----------|------|---------|
+| `PATCH /records/[id]` | `[recordId]/route.ts` (add handler) | Single-field partial update (inline editing) |
+| `POST /records/reorder` | `reorder/route.ts` (new file) | Batch update manual sort order |
 
 ## New Dependencies
 
 | Package | Purpose |
 |---------|---------|
-| `@dnd-kit/core` + `@dnd-kit/sortable` | Drag-and-drop (kanban, column reorder, row reorder) |
-| `frappe-gantt` | Timeline gantt chart |
+| `@dnd-kit/react` | Drag-and-drop for React 19 (kanban, column reorder, row reorder) |
+
+Note: No gantt chart library needed — using custom SVG implementation.
 
 ## File Structure Summary
 
 ```
 src/
+├─ hooks/                              # EXISTING directory, add new hooks
+│   ├─ use-debounce.ts                 # EXISTING
+│   ├─ use-table-data.ts               # NEW: main hook
+│   ├─ use-inline-edit.ts              # NEW: inline editing logic
+│   ├─ use-view-config.ts              # NEW: view config management
+│   └─ use-optimistic-mutation.ts      # NEW: optimistic update wrapper
 ├─ lib/
-│   ├─ hooks/                          # NEW: unified data layer
-│   │   ├─ use-table-data.ts
-│   │   ├─ use-inline-edit.ts
-│   │   ├─ use-view-config.ts
-│   │   └─ use-optimistic-mutation.ts
+│   ├─ format-cell.ts                  # NEW: shared cell formatting utility
 │   └─ services/                       # EXISTING, minor changes
-│       └─ data-record.service.ts      # + reorderRecords, patchField
-│       └─ data-view.service.ts        # + viewOptions, multi-sort, groupBy
+│       ├─ data-record.service.ts      # + patchField, reorderRecords (view-based)
+│       └─ data-view.service.ts        # + viewOptions, multi-sort, groupBy, mapViewItem updates
 ├─ components/
 │   └─ data/
 │       ├─ view-switcher.tsx           # NEW: view type switcher
 │       ├─ record-detail-drawer.tsx    # NEW: shared record detail drawer
-│       ├─ record-table.tsx            # REFACTOR: use useTableData
+│       ├─ record-table.tsx            # REFACTOR: extract hooks, keep URL sync + layout
 │       ├─ cell-editors/               # NEW: field-type editors
 │       │   ├─ text-cell-editor.tsx
 │       │   ├─ number-cell-editor.tsx
@@ -394,19 +501,47 @@ src/
 │       │   └─ relation-cell-editor.tsx
 │       └─ views/                      # NEW: view components
 │           ├─ grid-view.tsx
-│           ├─ kanban-view.tsx
+│           ├─ kanban/
+│           │   ├─ kanban-view.tsx
 │           │   ├─ kanban-column.tsx
 │           │   └─ kanban-card.tsx
-│           ├─ gallery-view.tsx
+│           ├─ gallery/
+│           │   ├─ gallery-view.tsx
 │           │   └─ gallery-card.tsx
-│           └─ timeline-view.tsx
+│           └─ timeline/
+│               ├─ timeline-view.tsx
 │               ├─ timeline-gantt.tsx
 │               └─ timeline-options.tsx
 ├─ types/
-│   └─ data-table.ts                   # EXTEND: ViewType, viewOptions types
+│   └─ data-table.ts                   # EXTEND: ViewType, updated DataViewConfig/DataViewItem
 └─ validators/
-    └─ data-table.ts                   # EXTEND: new field validation
+    └─ data-table.ts                   # EXTEND: patchFieldSchema, reorderSchema, updated view schemas
 ```
+
+### Refactoring Path for `record-table.tsx`
+
+The existing `record-table.tsx` (575 lines) will be refactored as follows:
+
+**Move to hooks:**
+- Data fetching + URL sync → `use-table-data.ts`
+- Search debounce → `use-table-data.ts`
+- CRUD + optimistic updates → `use-optimistic-mutation.ts` + `use-table-data.ts`
+
+**Move to shared utils:**
+- `formatCellValue` → `src/lib/format-cell.ts`
+
+**Keep in component:**
+- Grid layout/rendering logic
+- Column header interactions (sort/filter popovers)
+- Row action buttons
+
+## Migration Plan
+
+1. Add `ViewType` enum and new `DataView` columns (`type`, `groupBy`, `viewOptions`) via `prisma db push`
+2. PostgreSQL `@default(GRID)` automatically applies to existing rows — all existing views become GRID type
+3. `sortBy` normalization handled at read time in `mapViewItem` (no data migration needed)
+4. Existing `DataViewItem` and `DataViewConfig` types updated with new fields
+5. Backward compatible: old clients that don't send `type` default to GRID
 
 ## Out of Scope
 

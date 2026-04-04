@@ -486,6 +486,140 @@ async function incrementalImport() {
 
   // 5. 补充作者关系（有 DOI + 无 DOI）
   await importPaperAuthorRelations(paperTableId, authorTableId, workbook);
+
+  // 6. 修复反向关系字段的 displayField 并刷新快照
+  await fixInverseDisplayField(authorTableId, paperTableId);
+}
+
+// ── 主流程 ──
+
+// ── 修复反向关系字段的 displayField 并刷新快照 ──
+
+async function fixInverseDisplayField(authorTableId: string, paperTableId: string) {
+  log("修复反向关系 displayField...");
+
+  // 查找作者表上的反向关系字段
+  const inverseField = await db.dataField.findFirst({
+    where: { tableId: authorTableId, key: "authors_inverse", type: "RELATION_SUBTABLE" },
+  });
+  if (!inverseField) {
+    log("未找到反向关系字段，跳过");
+    return;
+  }
+
+  // 更新 displayField 为 paper_title（如果还不是）
+  if (inverseField.displayField !== "paper_title") {
+    await db.dataField.update({
+      where: { id: inverseField.id },
+      data: { displayField: "paper_title" },
+    });
+    log("反向字段 displayField 已更新为 paper_title");
+  }
+
+  // 刷新所有作者记录的关系快照
+  const authorRecords = await db.dataRecord.findMany({
+    where: { tableId: authorTableId },
+    select: { id: true },
+  });
+
+  log(`刷新 ${authorRecords.length} 条作者记录的关系快照...`);
+
+  for (const record of authorRecords) {
+    await db.$transaction(async (tx) => {
+      // 收集所有相关的记录 ID
+      const incomingRows = await tx.dataRelationRow.findMany({
+        where: { targetRecordId: record.id },
+        include: { field: true },
+      });
+
+      const affectedIds = new Set(incomingRows.map((row: { sourceRecordId: string }) => row.sourceRecordId));
+      affectedIds.add(record.id);
+
+      const records = await tx.dataRecord.findMany({
+        where: { id: { in: [...affectedIds] } },
+      });
+
+      const tableIds = [...new Set(records.map((r: { tableId: string }) => r.tableId))];
+      const relationFields = await tx.dataField.findMany({
+        where: { tableId: { in: tableIds }, type: "RELATION_SUBTABLE" },
+      });
+
+      const relationFieldById = new Map(relationFields.map((f: { id: string }) => [f.id, f]));
+      const relationFieldsByTableId = new Map<string, { id: string; key: string; displayField: string | null; relationCardinality: string | null }[]>();
+      for (const f of relationFields) {
+        const list = relationFieldsByTableId.get(f.tableId) ?? [];
+        list.push(f as { id: string; key: string; displayField: string | null; relationCardinality: string | null });
+        relationFieldsByTableId.set(f.tableId, list);
+      }
+
+      const relationRows = await tx.dataRelationRow.findMany({
+        where: {
+          OR: [
+            { sourceRecordId: { in: [...affectedIds] } },
+            { targetRecordId: { in: [...affectedIds] } },
+          ],
+        },
+        include: { field: true },
+      });
+
+      const relatedIds = new Set<string>();
+      for (const row of relationRows) {
+        if (affectedIds.has(row.sourceRecordId)) relatedIds.add(row.targetRecordId);
+        if (affectedIds.has(row.targetRecordId) && row.field?.inverseFieldId) relatedIds.add(row.sourceRecordId);
+      }
+
+      const relatedRecords = relatedIds.size > 0
+        ? await tx.dataRecord.findMany({ where: { id: { in: [...relatedIds] } } })
+        : [];
+      const relatedById = new Map(relatedRecords.map((r: { id: string; data: Record<string, unknown> }) => [r.id, r.data]));
+
+      for (const rec of records) {
+        const nextData = { ...(rec.data as Record<string, unknown>) };
+        for (const field of relationFieldsByTableId.get(rec.tableId) ?? []) {
+          const fieldRows = relationRows.filter(
+            (r: { sourceRecordId: string; fieldId: string }) => r.sourceRecordId === rec.id && r.fieldId === field.id
+          );
+          const items = fieldRows.map((row: { targetRecordId: string; attributes: unknown; sortOrder: number }) => {
+            const relatedData = (relatedById.get(row.targetRecordId) ?? {}) as Record<string, unknown>;
+            return {
+              targetRecordId: row.targetRecordId,
+              displayValue: field.displayField
+                ? String(relatedData[field.displayField] ?? row.targetRecordId)
+                : row.targetRecordId,
+              attributes: row.attributes,
+              sortOrder: row.sortOrder,
+            };
+          });
+
+          const invRows = relationRows.filter(
+            (r: { targetRecordId: string; field?: { inverseFieldId?: string } | null }) =>
+              r.targetRecordId === rec.id && r.field?.inverseFieldId === field.id
+          );
+          for (const row of invRows) {
+            const sourceData = (relatedById.get(row.sourceRecordId) ?? {}) as Record<string, unknown>;
+            items.push({
+              targetRecordId: row.sourceRecordId,
+              displayValue: field.displayField
+                ? String(sourceData[field.displayField] ?? row.sourceRecordId)
+                : row.sourceRecordId,
+              attributes: row.attributes,
+              sortOrder: row.sortOrder,
+            });
+          }
+
+          nextData[field.key] = field.relationCardinality === "SINGLE"
+            ? (items[0] ?? null)
+            : items;
+        }
+        await tx.dataRecord.update({
+          where: { id: rec.id },
+          data: { data: nextData },
+        });
+      }
+    });
+  }
+
+  log("关系快照刷新完成");
 }
 
 // ── 主流程 ──

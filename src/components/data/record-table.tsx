@@ -13,23 +13,21 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import type {
   DataFieldItem,
-  RelationSubtableValueItem,
   PaginatedRecords,
   FilterCondition,
   SortConfig,
   DataViewConfig,
 } from "@/types/data-table";
-import { FieldType } from "@/generated/prisma/enums";
 import { ColumnHeader } from "@/components/data/column-header";
 import { FieldConfigPopover } from "@/components/data/field-config-popover";
 import { ViewSelector } from "@/components/data/view-selector";
 import { SaveViewDialog } from "@/components/data/save-view-dialog";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
+import { formatCellValue } from "@/lib/format-cell";
 
 interface RecordTableProps {
   tableId: string;
@@ -281,98 +279,6 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
         next.delete(recordId);
         return next;
       });
-    }
-  };
-
-  const formatCellValue = (
-    field: DataFieldItem,
-    value: unknown
-  ): React.ReactNode => {
-    if (value === null || value === undefined || value === "") {
-      return <span className="text-zinc-400">-</span>;
-    }
-
-    switch (field.type) {
-      case FieldType.NUMBER:
-        return typeof value === "number"
-          ? value.toLocaleString()
-          : String(value);
-      case FieldType.DATE:
-        try {
-          const date = new Date(value as string);
-          return date.toLocaleDateString("zh-CN");
-        } catch {
-          return String(value);
-        }
-      case FieldType.SELECT:
-        return <Badge variant="secondary">{String(value)}</Badge>;
-      case FieldType.MULTISELECT:
-        if (Array.isArray(value)) {
-          return (
-            <div className="flex flex-wrap gap-1">
-              {value.map((v, i) => (
-                <Badge key={i} variant="secondary" className="text-xs">
-                  {v}
-                </Badge>
-              ))}
-            </div>
-          );
-        }
-        return String(value);
-      case FieldType.EMAIL:
-        return (
-          <a
-            href={`mailto:${value}`}
-            className="text-blue-600 hover:underline"
-          >
-            {String(value)}
-          </a>
-        );
-      case FieldType.PHONE:
-        return <span className="font-mono">{String(value)}</span>;
-      case FieldType.RELATION:
-        const displayValue =
-          (value as Record<string, unknown>)?.display ?? value;
-        return <Badge variant="outline">{String(displayValue)}</Badge>;
-      case FieldType.RELATION_SUBTABLE: {
-        const relationItems = (Array.isArray(value) ? [...value] : [value]).filter(
-          (item): item is RelationSubtableValueItem =>
-            Boolean(item) &&
-            typeof item === "object" &&
-            "targetRecordId" in item
-        );
-        const items = [...relationItems].sort(
-          (left, right) => left.sortOrder - right.sortOrder
-        );
-
-        if (items.length === 0) {
-          return <span className="text-zinc-400">-</span>;
-        }
-
-        const visibleItems = items.slice(0, 3);
-        const hiddenCount = items.length - visibleItems.length;
-
-        return (
-          <div className="flex flex-wrap gap-1">
-            {visibleItems.map((item) => (
-              <Badge
-                key={`${item.targetRecordId}-${item.sortOrder}`}
-                variant="outline"
-                className="text-xs"
-              >
-                {String(item.displayValue ?? item.targetRecordId)}
-              </Badge>
-            ))}
-            {hiddenCount > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                +{hiddenCount}
-              </Badge>
-            )}
-          </div>
-        );
-      }
-      default:
-        return String(value);
     }
   };
 

@@ -276,6 +276,13 @@ enum FieldType {
   RELATION_SUBTABLE
 }
 
+enum ViewType {
+  GRID
+  KANBAN
+  GALLERY
+  TIMELINE
+}
+
 enum RelationCardinality {
   SINGLE
   MULTIPLE
@@ -373,11 +380,14 @@ model DataView {
   id            String   @id @default(cuid())
   tableId       String
   name          String
+  type          ViewType @default(GRID)
   isDefault     Boolean  @default(false)
   filters       Json?    // FilterCondition[]
   sortBy        Json?    // SortConfig | null
   visibleFields Json?    // string[]
   fieldOrder    Json?    // string[]
+  groupBy       String?
+  viewOptions   Json?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   table         DataTable @relation(fields: [tableId], references: [id], onDelete: Cascade)

@@ -394,118 +394,113 @@ export async function createRecord(
   }
 }
 
+// 内部函数：在事务中执行更新（供 updateRecord 和 batchUpdate 调用）
+async function doUpdateRecord(
+  tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
+  id: string,
+  data: Record<string, unknown>,
+  existingRecord: { id: string; tableId: string; data: unknown }
+): Promise<DataRecordItem> {
+  const tableResult = await getTable(existingRecord.tableId);
+  if (!tableResult.success) {
+    throw new Error(`${tableResult.error.code}:${tableResult.error.message}`);
+  }
+
+  const validation = validateRecordData(data, tableResult.data.fields);
+  if (!validation.success) {
+    throw new Error(`${validation.error.code}:${validation.error.message}`);
+  }
+
+  const { scalarData, relationData } = splitRecordDataByFieldType(
+    data,
+    tableResult.data.fields
+  );
+
+  await tx.dataRecord.update({
+    where: { id },
+    data: {
+      data: toJsonInput({
+        ...(existingRecord.data as Record<string, unknown>),
+        ...scalarData,
+      }),
+    },
+  });
+
+  if (Object.keys(scalarData).length > 0) {
+    const refreshResult = await refreshSnapshotsForTargetRecord({
+      tx,
+      recordId: id,
+    });
+    if (!refreshResult.success) {
+      throw new Error(`${refreshResult.error.code}:${refreshResult.error.message}`);
+    }
+  }
+
+  if (Object.keys(relationData).length > 0) {
+    const relationResult = await syncRelationSubtableValues({
+      tx,
+      sourceRecordId: id,
+      tableId: existingRecord.tableId,
+      relationPayload: relationData,
+    });
+    if (!relationResult.success) {
+      throw new Error(`${relationResult.error.code}:${relationResult.error.message}`);
+    }
+  }
+
+  const record = await tx.dataRecord.findUnique({
+    where: { id },
+    include: { createdBy: { select: { name: true } } },
+  });
+
+  if (!record) throw new Error("NOT_FOUND:记录不存在");
+  return mapRecordToItem(record);
+}
+
 export async function updateRecord(
   id: string,
   data: Record<string, unknown>
 ): Promise<ServiceResult<DataRecordItem>> {
   try {
-    // Get existing record to find tableId
-    const existingRecord = await db.dataRecord.findUnique({
-      where: { id },
-    });
-
+    const existingRecord = await db.dataRecord.findUnique({ where: { id } });
     if (!existingRecord) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "记录不存在" },
-      };
+      return { success: false, error: { code: "NOT_FOUND", message: "记录不存在" } };
     }
 
-    // Get table and validate data against fields
-    const tableResult = await getTable(existingRecord.tableId);
-    if (!tableResult.success) {
-      return { success: false, error: tableResult.error };
-    }
-
-    const validation = validateRecordData(data, tableResult.data.fields);
-    if (!validation.success) {
-      return validation;
-    }
-
-    const { scalarData, relationData } = splitRecordDataByFieldType(
-      data,
-      tableResult.data.fields
+    const result = await db.$transaction(tx =>
+      doUpdateRecord(tx, id, data, existingRecord)
     );
-
-    const record = await db.$transaction(async (tx) => {
-      await tx.dataRecord.update({
-        where: { id },
-        // 合并更新：保留原有数据，只更新普通字段；关系字段快照由 relation service 统一重建
-        data: {
-          data: toJsonInput({
-            ...(existingRecord.data as Record<string, unknown>),
-            ...scalarData,
-          }),
-        },
-      });
-
-      if (Object.keys(scalarData).length > 0) {
-        const refreshResult = await refreshSnapshotsForTargetRecord({
-          tx,
-          recordId: id,
-        });
-        if (!refreshResult.success) {
-          throw new Error(`${refreshResult.error.code}:${refreshResult.error.message}`);
-        }
-      }
-
-      if (Object.keys(relationData).length > 0) {
-        const relationResult = await syncRelationSubtableValues({
-          tx,
-          sourceRecordId: id,
-          tableId: existingRecord.tableId,
-          relationPayload: relationData,
-        });
-        if (!relationResult.success) {
-          throw new Error(`${relationResult.error.code}:${relationResult.error.message}`);
-        }
-      }
-
-      return tx.dataRecord.findUnique({
-        where: { id },
-        include: {
-          createdBy: { select: { name: true } },
-        },
-      });
-    });
-
-    if (!record) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "记录不存在" },
-      };
-    }
-
-    return { success: true, data: mapRecordToItem(record) };
+    return { success: true, data: result };
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新记录失败";
     return { success: false, error: { code: "UPDATE_FAILED", message } };
   }
 }
 
+// 内部函数：在事务中执行删除（供 deleteRecord 和 batchDelete 调用）
+async function doDeleteRecord(
+  tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
+  id: string
+): Promise<void> {
+  const relationResult = await removeAllRelationsForRecord({
+    tx,
+    recordId: id,
+  });
+  if (!relationResult.success) {
+    throw new Error(`${relationResult.error.code}:${relationResult.error.message}`);
+  }
+
+  await tx.dataRecord.delete({ where: { id } });
+}
+
 export async function deleteRecord(id: string): Promise<ServiceResult<null>> {
   try {
     const record = await db.dataRecord.findUnique({ where: { id } });
-
     if (!record) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "记录不存在" },
-      };
+      return { success: false, error: { code: "NOT_FOUND", message: "记录不存在" } };
     }
 
-    await db.$transaction(async (tx) => {
-      const relationResult = await removeAllRelationsForRecord({
-        tx,
-        recordId: id,
-      });
-      if (!relationResult.success) {
-        throw new Error(`${relationResult.error.code}:${relationResult.error.message}`);
-      }
-
-      await tx.dataRecord.delete({ where: { id } });
-    });
-
+    await db.$transaction(tx => doDeleteRecord(tx, id));
     return { success: true, data: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : "删除记录失败";

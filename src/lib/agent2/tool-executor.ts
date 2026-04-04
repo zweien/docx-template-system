@@ -88,6 +88,37 @@ export async function executeToolAction(
       return { success: true, data: result };
     }
 
+    case "batchCreateRecords": {
+      const result = await recordService.batchCreate(
+        toolInput.tableId as string,
+        userId,
+        toolInput.records as Record<string, unknown>[]
+      );
+      if (!result.success)
+        return { success: false, error: result.error.message, errorDetails: result.error };
+      return { success: true, data: result.data };
+    }
+
+    case "batchUpdateRecords": {
+      const result = await recordService.batchUpdate(
+        toolInput.tableId as string,
+        toolInput.updates as Array<{ id: string; data: Record<string, unknown> }>
+      );
+      if (!result.success)
+        return { success: false, error: result.error.message, errorDetails: result.error };
+      return { success: true, data: result.data };
+    }
+
+    case "batchDeleteRecords": {
+      const result = await recordService.batchDelete(
+        toolInput.tableId as string,
+        toolInput.recordIds as string[]
+      );
+      if (!result.success)
+        return { success: false, error: result.error.message, errorDetails: result.error };
+      return { success: true, data: result.data };
+    }
+
     default:
       return { success: false, error: `Unknown tool: ${toolName}` };
   }

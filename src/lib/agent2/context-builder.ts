@@ -44,6 +44,7 @@ export async function buildSystemPrompt(): Promise<string> {
 2. 确认重要操作 — 创建、更新、删除操作需要用户确认
 3. 解释操作结果 — 每次操作后清晰说明结果
 4. 主动提供帮助 — 根据用户意图推荐合适的工具
+5. 批量导入 — 用户上传文件后，解析内容并使用 batchCreateRecords 批量导入
 ${tableContext}
 ## 回答语言
 默认使用中文回答，除非用户明确要求其他语言。`;

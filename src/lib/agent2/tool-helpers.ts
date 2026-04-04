@@ -7,24 +7,39 @@ import type { ServiceResult } from "@/types/data-table";
 
 // 字段名白名单校验：防止 SQL 注入
 function isSafeIdentifier(name: string): boolean {
-  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
+  // 允许 Unicode 字母（含中文）、数字、下划线；阻止 SQL 注入字符（引号、分号、空格等）
+  return /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name);
+}
+
+// 将 filter.field 解析为实际的字段 key（支持 key 和 label 两种输入）
+function resolveFieldKey(
+  filterField: string,
+  fields: Array<{ key: string; label?: string }>
+): string | null {
+  // 优先精确匹配 key
+  if (fields.some(f => f.key === filterField)) return filterField;
+  // 回退匹配 label
+  const byLabel = fields.find(f => f.label === filterField);
+  return byLabel ? byLabel.key : null;
 }
 
 // 将 FilterCondition[] 转换为原生 SQL WHERE 子句
 function buildSqlWhereClause(
   tableId: string,
   filters: Array<{ field: string; operator: string; value: unknown }>,
-  fields: Array<{ key: string; type: string }>
+  fields: Array<{ key: string; type: string; label?: string }>
 ): { sql: string; params: unknown[] } {
   const params: unknown[] = [];
   const conditions: string[] = [`"tableId" = $${params.push(tableId)}`];
 
   for (const filter of filters) {
-    const field = fields.find(f => f.key === filter.field);
-    if (!field || !isSafeIdentifier(filter.field)) continue;
+    const resolvedKey = resolveFieldKey(filter.field, fields);
+    if (!resolvedKey) continue;
+    const field = fields.find(f => f.key === resolvedKey)!;
+    if (!isSafeIdentifier(resolvedKey)) continue;
 
     const paramIdx = params.push(filter.value);
-    const jsonPath = `data->>'${filter.field}'`;
+    const jsonPath = `data->>'${resolvedKey}'`;
 
     switch (filter.operator) {
       case "eq":
@@ -346,7 +361,7 @@ export async function searchRecords(params: {
     if (hasAdvancedFilters) {
       // 高级过滤：所有条件统一走原生 SQL
       const { sql: whereSql, params: whereParams } = buildSqlWhereClause(
-        tableId, typedFilters, table.fields.map((f) => ({ key: f.key, type: f.type }))
+        tableId, typedFilters, table.fields.map((f) => ({ key: f.key, type: f.type, label: f.label }))
       );
 
       // 获取总数
@@ -470,30 +485,17 @@ export async function aggregateRecords(params: {
       };
     }
 
-    // count 仍用 Prisma（已足够高效）
+    // count: 也走原生 SQL，避免 Prisma JSONB 类型匹配问题
     if (operation === "count") {
-      const where: Record<string, unknown> = { tableId };
-
-      if (filters.length > 0) {
-        const tableFields = await db.dataField.findMany({
-          where: { tableId },
-        });
-        const typedFilters = filters.map((f) => ({
-          field: f.field,
-          operator: f.operator as "eq" | "ne" | "gt" | "gte" | "lt" | "lte" | "contains" | "in",
-          value: f.value,
-        }));
-        const filterConditions = buildFilterConditions(
-          typedFilters,
-          tableFields.map((f) => ({ key: f.key, type: f.type }))
-        );
-        if (filterConditions.length > 0) {
-          where.AND = filterConditions;
-        }
-      }
-
-      const count = await db.dataRecord.count({ where });
-      return { success: true, data: { value: count, field, operation } };
+      const tableFields = await db.dataField.findMany({ where: { tableId } });
+      const { sql: whereSql, params: whereParams } = buildSqlWhereClause(
+        tableId, filters, tableFields
+      );
+      const countResult = await db.$queryRawUnsafe<Array<{ count: bigint }>>(
+        `SELECT COUNT(*) as count FROM "DataRecord" WHERE ${whereSql}`,
+        ...whereParams
+      );
+      return { success: true, data: { value: Number(countResult[0].count), field, operation } };
     }
 
     // sum/avg/min/max: 原生 SQL

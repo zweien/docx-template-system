@@ -59,16 +59,18 @@ export function ViewSwitcher({
 
           return (
             <Tooltip key={type}>
-              <TooltipTrigger>
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant={active ? "secondary" : "ghost"}
-                  onClick={() => onTypeChange(type)}
-                  aria-label={label}
-                >
-                  <Icon className="h-4 w-4" />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant={active ? "secondary" : "ghost"}
+                    onClick={() => onTypeChange(type)}
+                    aria-label={label}
+                  />
+                }
+              >
+                <Icon className="h-4 w-4" />
               </TooltipTrigger>
               <TooltipContent>
                 <p>{label}</p>

@@ -3,6 +3,29 @@ import { db } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
 import type { ServiceResult } from "@/types/data-table";
 
+// ── TTL 缓存（进程内、单实例、best-effort）──
+// 局限性：Serverless 冷启动/开发模式热重载会清空；TTL 仅 30 秒
+const TTL_MS = 30_000;
+const cacheMap = new Map<string, { data: unknown; expiresAt: number }>();
+
+function cacheGet<T>(key: string): T | null {
+  const entry = cacheMap.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    cacheMap.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+function cacheSet(key: string, data: unknown): void {
+  cacheMap.set(key, { data, expiresAt: Date.now() + TTL_MS });
+}
+
+export function invalidateSchemaCache(tableId: string): void {
+  cacheMap.delete(`schema:${tableId}`);
+}
+
 // ── SQL helpers ──
 
 // 字段名白名单校验：防止 SQL 注入
@@ -204,6 +227,10 @@ export async function getTableSchema(tableId: string): Promise<
     }>;
   }>
 > {
+  const cacheKey = `schema:${tableId}`;
+  const cached = cacheGet<Awaited<ReturnType<typeof getTableSchema>>>(cacheKey);
+  if (cached) return cached;
+
   try {
     const table = await db.dataTable.findUnique({
       where: { id: tableId },
@@ -219,7 +246,7 @@ export async function getTableSchema(tableId: string): Promise<
       };
     }
 
-    return {
+    const result = {
       success: true,
       data: {
         id: table.id,
@@ -236,7 +263,10 @@ export async function getTableSchema(tableId: string): Promise<
           cardinality: f.relationCardinality ?? undefined,
         })),
       },
-    };
+    } as const;
+
+    cacheSet(cacheKey, result);
+    return result;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "获取表结构失败";

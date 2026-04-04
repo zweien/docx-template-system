@@ -77,18 +77,20 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
     setFilters(nextFilters);
   };
 
-  const handleSortChange = (sort: SortConfig | null) => {
+  const handleSortChange = (
+    fieldKey: string,
+    sort: SortConfig | null
+  ) => {
+    const nextSorts = currentConfig.sortBy.filter(
+      (sortItem) => sortItem.fieldKey !== fieldKey
+    );
+
     if (!sort) {
-      setSorts([]);
+      setSorts(nextSorts);
       return;
     }
 
-    setSorts([
-      ...currentConfig.sortBy.filter(
-        (sortItem) => sortItem.fieldKey !== sort.fieldKey
-      ),
-      sort,
-    ]);
+    setSorts([...nextSorts, sort]);
   };
 
   const handleFieldConfigChange = (
@@ -196,7 +198,9 @@ export function RecordTable({ tableId, fields, isAdmin }: RecordTableProps) {
                     onFilterChange={(filter) =>
                       handleFilterChange(filter, field.key)
                     }
-                    onSortChange={handleSortChange}
+                    onSortChange={(sort) =>
+                      handleSortChange(field.key, sort)
+                    }
                   />
                 </TableHead>
               ))}

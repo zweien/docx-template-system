@@ -251,19 +251,22 @@ export function useTableData({
 
   useEffect(() => {
     const nextViewId = searchParams.get("viewId") ?? null;
+    const isViewChanged = nextViewId !== viewId;
 
     setSearch(searchParams.get("search") ?? "");
     setSearchInputState(searchParams.get("search") ?? "");
-    if (nextViewId !== viewId) {
+    if (isViewChanged) {
       latestFetchIdRef.current += 1;
     }
-    setIsViewConfigReady(nextViewId === null);
-    if (nextViewId) {
+    if (nextViewId === null) {
+      setIsViewConfigReady(true);
+    } else if (isViewChanged) {
+      setIsViewConfigReady(false);
       setIsLoading(true);
     }
     setViewId(nextViewId);
     setPageState(parsePageValue(searchParams.get("page")));
-  }, [searchParams]);
+  }, [searchParams, viewId]);
 
   useEffect(() => {
     void refreshViews();

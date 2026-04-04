@@ -10,9 +10,6 @@ function isEmptyCell(value: unknown): boolean {
 function formatDateValue(value: unknown): string {
   try {
     const date = new Date(value as string);
-    if (Number.isNaN(date.getTime())) {
-      return String(value);
-    }
     return date.toLocaleDateString("zh-CN");
   } catch {
     return String(value);

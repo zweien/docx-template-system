@@ -2,7 +2,20 @@
 
 import { listTables, getTableSchema } from "./tool-helpers";
 
+// 系统提示缓存（30 秒 TTL）
+let syspromptCache: { text: string; expiresAt: number } | null = null;
+const SYSPROMPT_TTL = 30_000;
+
+export function invalidateSyspromptCache(): void {
+  syspromptCache = null;
+}
+
 export async function buildSystemPrompt(): Promise<string> {
+  // Check cache
+  if (syspromptCache && Date.now() < syspromptCache.expiresAt) {
+    return syspromptCache.text;
+  }
+
   let tableContext = "";
 
   try {
@@ -30,7 +43,7 @@ export async function buildSystemPrompt(): Promise<string> {
     // 动态上下文获取失败时不影响系统正常运行
   }
 
-  return `你是一个系统集成 AI 助手，能够操作本系统的数据表、模板和记录。
+  const text = `你是一个系统集成 AI 助手，能够操作本系统的数据表、模板和记录。
 
 ## 能力范围
 - 查询和管理数据表（查看、搜索、聚合）
@@ -48,6 +61,9 @@ export async function buildSystemPrompt(): Promise<string> {
 ${tableContext}
 ## 回答语言
 默认使用中文回答，除非用户明确要求其他语言。`;
+
+  syspromptCache = { text, expiresAt: Date.now() + SYSPROMPT_TTL };
+  return text;
 }
 
 export function truncateMessages<T extends { role: string; content: string }>(

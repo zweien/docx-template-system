@@ -1,5 +1,7 @@
 // src/lib/agent2/tool-executor.ts
 import * as helpers from "./tool-helpers";
+import { invalidateSchemaCache } from "./tool-helpers";
+import { invalidateSyspromptCache } from "./context-builder";
 import * as recordService from "@/lib/services/data-record.service";
 import { db } from "@/lib/db";
 
@@ -24,6 +26,8 @@ export async function executeToolAction(
       );
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };
+      invalidateSchemaCache(toolInput.tableId as string);
+      invalidateSyspromptCache();
       return { success: true, data: result.data };
     }
 
@@ -34,15 +38,23 @@ export async function executeToolAction(
       );
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };
+      invalidateSchemaCache((result.data as { tableId: string }).tableId);
+      invalidateSyspromptCache();
       return { success: true, data: result.data };
     }
 
     case "deleteRecord": {
+      // Get tableId before deletion for cache invalidation
+      const existingResult = await helpers.getRecord(toolInput.recordId as string);
       const result = await recordService.deleteRecord(
         toolInput.recordId as string
       );
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };
+      if (existingResult.success) {
+        invalidateSchemaCache(existingResult.data.tableId as string);
+      }
+      invalidateSyspromptCache();
       // data-record.service.deleteRecord 返回 null，但下游期望 { id } 格式
       return { success: true, data: { id: toolInput.recordId as string } };
     }
@@ -96,6 +108,8 @@ export async function executeToolAction(
       );
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };
+      invalidateSchemaCache(toolInput.tableId as string);
+      invalidateSyspromptCache();
       return { success: true, data: result.data };
     }
 
@@ -106,6 +120,8 @@ export async function executeToolAction(
       );
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };
+      invalidateSchemaCache(toolInput.tableId as string);
+      invalidateSyspromptCache();
       return { success: true, data: result.data };
     }
 
@@ -116,6 +132,8 @@ export async function executeToolAction(
       );
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };
+      invalidateSchemaCache(toolInput.tableId as string);
+      invalidateSyspromptCache();
       return { success: true, data: result.data };
     }
 

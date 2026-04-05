@@ -2,7 +2,10 @@
 
 import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Trash2 } from "lucide-react";
+import { BatchActionBar } from "@/components/data/batch-action-bar";
+import { BatchEditDialog } from "@/components/data/batch-edit-dialog";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { FieldType } from "@/generated/prisma/enums";
@@ -31,6 +34,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { ColumnResizer } from "@/components/data/column-resizer";
 
 const DEFAULT_COL_WIDTH = 160;
+const CHECKBOX_COL_WIDTH = 40;
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -106,7 +110,7 @@ function getFrozenStyle(
   widths: Record<string, number>
 ): React.CSSProperties | undefined {
   if (frozenFieldCount <= 0 || index >= frozenFieldCount) return undefined;
-  let left = 0;
+  let left = CHECKBOX_COL_WIDTH;
   for (let i = 0; i < index; i++) {
     left += widths[orderedFields[i].key] ?? DEFAULT_COL_WIDTH;
   }
@@ -219,6 +223,10 @@ export function GridView({
     () => sorts.length === 0 && !groupBy && !!viewId && isAdmin,
     [sorts, groupBy, viewId, isAdmin]
   );
+
+  // ── Batch selection state ────────────────────────────────────────────────
+  const [batchEditOpen, setBatchEditOpen] = useState(false);
+
   // ── Collapsed groups state ──────────────────────────────────────────────
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
@@ -236,6 +244,50 @@ export function GridView({
       return next;
     });
   }, []);
+
+  // ── Batch toggle handlers ─────────────────────────────────────────────
+  // selectedIds is scoped to current page; we store {page, ids} so page
+  // changes automatically clear the selection.
+  const [selectionState, setSelectionState] = useState<{
+    page: number | undefined;
+    ids: Set<string>;
+  }>({ page, ids: new Set() });
+
+  // Keep in sync with prop changes
+  const currentSelectedIds =
+    selectionState.page === page ? selectionState.ids : new Set<string>();
+  const updateSelectedIds = useCallback(
+    (updater: (prev: Set<string>) => Set<string>) => {
+      setSelectionState((prev) => ({
+        page,
+        ids: updater(prev.page === page ? prev.ids : new Set()),
+      }));
+    },
+    [page]
+  );
+
+  const toggleAll = useCallback(() => {
+    const current =
+      selectionState.page === page ? selectionState.ids : new Set<string>();
+    if (current.size === records.length) {
+      updateSelectedIds(() => new Set());
+    } else {
+      updateSelectedIds(() => new Set(records.map((r) => r.id)));
+    }
+  }, [records, page, selectionState, updateSelectedIds]);
+
+  const toggleRow = useCallback(
+    (recordId: string) => {
+      updateSelectedIds((prev) => {
+        const next = new Set(prev);
+        next.has(recordId) ? next.delete(recordId) : next.add(recordId);
+        return next;
+      });
+    },
+    [updateSelectedIds]
+  );
+
+  const selectedIdsSet = currentSelectedIds;
 
   // ── Ordered visible fields ──────────────────────────────────────────────
   const fieldMap = useMemo(
@@ -266,17 +318,61 @@ export function GridView({
       if (!table) return;
       const colIndex = orderedVisibleFields.findIndex((f) => f.key === fieldKey);
       if (colIndex === -1) return;
+      // +1 for checkbox column offset
+      const domColIndex = colIndex + 1;
       let maxContentWidth = 80;
       const rows = table.querySelectorAll("tbody tr");
       rows.forEach((row) => {
-        const cell = row.children[colIndex] as HTMLElement | undefined;
+        const cell = row.children[domColIndex] as HTMLElement | undefined;
         if (cell) maxContentWidth = Math.max(maxContentWidth, cell.scrollWidth);
       });
-      const headerCell = table.querySelector(`thead th:nth-child(${colIndex + 1})`) as HTMLElement | undefined;
+      const headerCell = table.querySelector(`thead th:nth-child(${domColIndex + 1})`) as HTMLElement | undefined;
       if (headerCell) maxContentWidth = Math.max(maxContentWidth, headerCell.scrollWidth);
       handleWidthChange(fieldKey, Math.min(600, maxContentWidth));
     },
     [orderedVisibleFields, handleWidthChange]
+  );
+
+  // ── Batch delete handler ──────────────────────────────────────────────
+  const handleBatchDelete = useCallback(async () => {
+    if (!confirm(`确定删除 ${selectedIdsSet.size} 条记录？`)) return;
+    const ids = [...selectedIdsSet];
+    updateSelectedIds(() => new Set());
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        fetch(`/api/data-tables/${tableId}/records/${id}`, {
+          method: "DELETE",
+        })
+      )
+    );
+    const failedCount = results.filter((r) => r.status === "rejected").length;
+    if (failedCount > 0) {
+      alert(`${failedCount} 条记录删除失败，请重试`);
+    }
+    onRefresh();
+  }, [selectedIdsSet, tableId, onRefresh, updateSelectedIds]);
+
+  // ── Batch edit handler ────────────────────────────────────────────────
+  const handleBatchEdit = useCallback(
+    async (fieldKey: string, value: unknown) => {
+      const ids = [...selectedIdsSet];
+      updateSelectedIds(() => new Set());
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < ids.length; i += BATCH_SIZE) {
+        const batch = ids.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map((id) =>
+            fetch(`/api/data-tables/${tableId}/records/${id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ fieldKey, value }),
+            })
+          )
+        );
+      }
+      onRefresh();
+    },
+    [selectedIdsSet, tableId, onRefresh, updateSelectedIds]
   );
 
   // ── Column drag end handler ──────────────────────────────────────
@@ -495,6 +591,12 @@ export function GridView({
     (record: DataRecordItem, index: number) => {
       const rowContent = (
         <>
+          <td className="w-10 sticky left-0 z-[5] bg-background border-r px-1">
+            <Checkbox
+              checked={selectedIdsSet.has(record.id)}
+              onCheckedChange={() => toggleRow(record.id)}
+            />
+          </td>
           {canDragSort && (
             <td className="w-8 px-1 text-muted-foreground cursor-grab active:cursor-grabbing">
               <GripVertical className="h-4 w-4 mx-auto" />
@@ -573,18 +675,35 @@ export function GridView({
       frozenFieldCountValue,
       columnWidths,
       canDragSort,
+      selectedIdsSet,
+      toggleRow,
     ]
   );
 
   // ── Column count ────────────────────────────────────────────────────────
-  const colCount = orderedVisibleFields.length + 1 + (canDragSort ? 1 : 0);
+  const colCount = orderedVisibleFields.length + 1 + (canDragSort ? 1 : 0) + 1; // +1 for checkbox col
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="rounded-md border flex-1 min-h-0 flex flex-col overflow-hidden">
+    <div className="rounded-md border flex-1 min-h-0 flex flex-col overflow-hidden gap-0">
+      {selectedIdsSet.size > 0 && (
+        <BatchActionBar
+          selectedCount={selectedIdsSet.size}
+          onBatchDelete={handleBatchDelete}
+          onBatchEdit={() => setBatchEditOpen(true)}
+          onClearSelection={() => updateSelectedIds(() => new Set())}
+        />
+      )}
+      <BatchEditDialog
+        open={batchEditOpen}
+        onOpenChange={setBatchEditOpen}
+        fields={orderedVisibleFields}
+        onApply={handleBatchEdit}
+      />
       <div className="flex-1 min-h-0 overflow-auto">
         <table className="w-full caption-bottom text-sm" style={{ tableLayout: "fixed" }} ref={tableRef}>
           <colgroup>
+            <col style={{ width: CHECKBOX_COL_WIDTH }} />
             {canDragSort && <col style={{ width: 32 }} />}
             {orderedVisibleFields.map((field) => (
               <col key={field.key} style={{ width: columnWidths[field.key] ?? DEFAULT_COL_WIDTH }} />
@@ -594,6 +713,17 @@ export function GridView({
           <DragDropProvider onDragEnd={handleColumnDragEnd}>
             <thead className="[&_tr]:border-b">
               <tr className="border-b transition-colors hover:bg-muted/50 sticky top-0 z-10 bg-background">
+              <th className="w-10 h-10 sticky left-0 z-[13] bg-background border-r px-1">
+                <Checkbox
+                  checked={records.length > 0 && selectedIdsSet.size === records.length}
+                  ref={(el) => {
+                    if (el) {
+                      (el as HTMLButtonElement & { indeterminate: boolean }).indeterminate = !!(selectedIdsSet.size > 0 && selectedIdsSet.size < records.length);
+                    }
+                  }}
+                  onCheckedChange={toggleAll}
+                />
+              </th>
               {canDragSort && (
                 <th className="h-10 px-1 w-8" />
               )}

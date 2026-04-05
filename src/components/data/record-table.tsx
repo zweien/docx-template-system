@@ -252,7 +252,7 @@ export function RecordTable({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col flex-1 min-h-0 gap-4">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -296,27 +296,17 @@ export function RecordTable({
       {renderView()}
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-zinc-500">
-          <span>共 {totalCount} 条记录</span>
-          <div className="flex gap-2">
-            {page > 1 && (
-              <Link href={buildPageHref(page - 1)}>
-                <Button variant="outline" size="sm">
-                  上一页
-                </Button>
-              </Link>
-            )}
-            {page < totalPages && (
-              <Link href={buildPageHref(page + 1)}>
-                <Button variant="outline" size="sm">
-                  下一页
-                </Button>
-              </Link>
-            )}
-          </div>
+      <div className="flex items-center justify-between text-sm text-zinc-500 flex-shrink-0">
+        <span>共 {totalCount} 条，第 {page}/{Math.max(totalPages, 1)} 页</span>
+        <div className="flex gap-2">
+          <Link href={buildPageHref(page - 1)}>
+            <Button variant="outline" size="sm" disabled={page <= 1}>上一页</Button>
+          </Link>
+          <Link href={buildPageHref(page + 1)}>
+            <Button variant="outline" size="sm" disabled={page >= totalPages}>下一页</Button>
+          </Link>
         </div>
-      )}
+      </div>
 
       {/* Save View Dialog */}
       <SaveViewDialog

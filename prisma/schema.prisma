@@ -45,6 +45,7 @@ model User {
   assignedCollectionTasks      DocumentCollectionAssignee[]          @relation("AssignedCollectionTasks")
   collectionAttachments        DocumentCollectionAttachment[]        @relation("CollectionAttachments")
   collectionSubmissionVersions DocumentCollectionSubmissionVersion[] @relation("CollectionSubmissionVersions")
+  notifications                 Notification[]                       @relation("UserNotifications")
 }
 
 enum TemplateStatus {
@@ -65,6 +66,7 @@ model DocumentCollectionTask {
   createdBy       User                           @relation("CreatedCollectionTasks", fields: [createdById], references: [id])
   attachments     DocumentCollectionAttachment[]
   assignees       DocumentCollectionAssignee[]
+  notifications Notification[]
   createdAt       DateTime                       @default(now())
   updatedAt       DateTime                       @updatedAt
 
@@ -622,3 +624,27 @@ model Agent2UserSettings {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
+
+enum NotificationType {
+  TASK_ASSIGNED
+  DUE_TODAY
+  OVERDUE
+  MANUAL_REMIND
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  type        NotificationType
+  title       String
+  content     String
+  taskId      String?
+  task        DocumentCollectionTask? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  recipientId String
+  recipient   User                    @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([recipientId, isRead, createdAt])
+  @@map("notifications")
+}
+

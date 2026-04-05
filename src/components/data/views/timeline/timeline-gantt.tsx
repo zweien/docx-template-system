@@ -73,9 +73,14 @@ export function TimelineGantt({ items, scale, onOpenRecord }: TimelineGanttProps
 
           return (
             <g key={item.record.id}>
-              <text x={16} y={y + 16} fontSize="12" fill="currentColor">
-                {item.label}
-              </text>
+              <foreignObject x={4} y={y} width={208} height={24}>
+                <div
+                  className="h-full flex items-center text-xs truncate"
+                  title={item.label}
+                >
+                  {item.label}
+                </div>
+              </foreignObject>
               <rect
                 data-testid={`timeline-bar-${item.record.id}`}
                 x={x}

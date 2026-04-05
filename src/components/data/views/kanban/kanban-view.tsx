@@ -73,7 +73,7 @@ export function KanbanView({
     for (const record of records) {
       const rawValue = record.data[groupField.key];
       const groupKey = typeof rawValue === "string" && rawValue.length > 0 ? rawValue : "无值";
-      const bucket = groupedRecords.get(groupKey) ?? groupedRecords.get("无值");
+      const bucket = groups.get(groupKey) ?? groups.get("无值");
       bucket?.push(record);
     }
     return groups;

@@ -49,10 +49,8 @@ export function TimelineView({
         const startDate = toDateValue(record.data[startDateField]);
         if (!startDate) return null;
 
-        const resolvedEndDate =
-          endDateField && toDateValue(record.data[endDateField])
-            ? toDateValue(record.data[endDateField])!
-            : startDate;
+        const endValue = endDateField ? toDateValue(record.data[endDateField]) : null;
+        const resolvedEndDate = endValue ?? startDate;
 
         return {
           record,

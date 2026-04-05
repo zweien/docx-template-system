@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,7 +85,10 @@ export function RecordTable({
     refresh,
   } = useTableData({ tableId, fields });
 
-  const activeView = currentView ?? buildFallbackView(tableId, fields);
+  const activeView = useMemo(() => {
+    const base = currentView ?? buildFallbackView(tableId, fields);
+    return { ...base, viewOptions: currentConfig.viewOptions };
+  }, [currentConfig.viewOptions, currentView, tableId, fields]);
 
   // ── Patch single field (for Kanban drag-and-drop) ────────────────────────
   const handlePatchRecord = useCallback(

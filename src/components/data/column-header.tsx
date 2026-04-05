@@ -31,6 +31,8 @@ interface ColumnHeaderProps {
   sort: SortConfig | null;
   onFilterChange: (filter: FilterCondition | null) => void;
   onSortChange: (sort: SortConfig | null) => void;
+  groupBy?: string | null;
+  onGroupByChange?: (fieldKey: string | null) => void;
 }
 
 type FilterOperator = FilterCondition["op"];
@@ -78,6 +80,8 @@ export function ColumnHeader({
   sort,
   onFilterChange,
   onSortChange,
+  groupBy,
+  onGroupByChange,
 }: ColumnHeaderProps) {
   const [open, setOpen] = useState(false);
   const [filterOp, setFilterOp] = useState<FilterOperator>(
@@ -203,6 +207,34 @@ export function ColumnHeader({
             </Button>
           </div>
         </div>
+
+        {onGroupByChange &&
+          ([
+            FieldType.TEXT,
+            FieldType.NUMBER,
+            FieldType.DATE,
+            FieldType.SELECT,
+            FieldType.EMAIL,
+            FieldType.PHONE,
+          ] as FieldType[]).includes(field.type) && (
+            <>
+              <Separator />
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-muted-foreground mb-1">分组</Label>
+                <Button
+                  variant={groupBy === field.key ? "secondary" : "ghost"}
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => {
+                    onGroupByChange(groupBy === field.key ? null : field.key);
+                    setOpen(false);
+                  }}
+                >
+                  {groupBy === field.key ? "取消分组" : "按此字段分组"}
+                </Button>
+              </div>
+            </>
+          )}
 
         <Separator />
 

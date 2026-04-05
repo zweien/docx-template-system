@@ -201,7 +201,7 @@ describe("notification.service", () => {
   describe("checkAndGenerateDueReminders", () => {
     // 2026-04-06 is the "today" for all tests in this describe block
     const todayStart = new Date("2026-04-06T00:00:00.000Z");
-    const todayEnd = new Date("2026-04-06T23:59:59.999Z");
+    const _todayEnd = new Date("2026-04-06T23:59:59.999Z");
 
     it("应为今日到期的未提交任务生成 DUE_TODAY 通知", async () => {
       dbMock.documentCollectionAssignee.findMany.mockResolvedValue([
@@ -367,7 +367,7 @@ describe("notification.service", () => {
 
       // The service uses local date components from `now`, so compute expected range the same way
       const nowDate = new Date(todayStart);
-      const expectedStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0);
+      const _expectedStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0);
       const expectedEnd = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 23, 59, 59, 999);
 
       expect(dbMock.documentCollectionAssignee.findMany).toHaveBeenCalledWith({
@@ -410,7 +410,7 @@ describe("notification.service", () => {
 
       // The service uses local date components from `now`, so compute expected range the same way
       const nowDate = new Date(todayStart);
-      const expectedStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0);
+      const _expectedStart = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 0, 0, 0, 0);
       const expectedEnd = new Date(nowDate.getFullYear(), nowDate.getMonth(), nowDate.getDate(), 23, 59, 59, 999);
 
       expect(dbMock.notification.findFirst).toHaveBeenCalledWith({
@@ -418,7 +418,7 @@ describe("notification.service", () => {
           recipientId: "user-1",
           taskId: "task-1",
           type: "DUE_TODAY",
-          createdAt: { gte: expectedStart, lt: expectedEnd },
+          createdAt: { gte: _expectedStart, lt: expectedEnd },
         },
       });
     });

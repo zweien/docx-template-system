@@ -5,6 +5,7 @@ import {
   deriveDocumentCollectionSubmissionStatus,
   getDocumentCollectionViewerRole,
 } from "@/lib/services/document-collection-permission.service";
+import { createNotifications } from "@/lib/services/notification.service";
 import type { ServiceResult } from "@/types/data-table";
 import type {
   DocumentCollectionAssigneeItem,
@@ -271,6 +272,23 @@ export async function createDocumentCollectionTask(
     }
 
     const now = new Date();
+
+    // 生成任务分配通知
+    // 注意：此调用在事务外。通知创建失败不应阻断任务创建，这是有意为之的权衡。
+    try {
+      await createNotifications(
+        input.assigneeIds.map((userId) => ({
+          type: "TASK_ASSIGNED",
+          title: "新收集任务",
+          content: `${task.createdBy?.name ?? "未知用户"} 发起了收集任务「${task.title}」，请在 ${task.dueAt.toLocaleDateString("zh-CN")} 前提交`,
+          taskId: task.id,
+          recipientId: userId,
+        }))
+      );
+    } catch {
+      // 通知创建失败不阻断任务创建
+    }
+
     return {
       success: true,
       data: {

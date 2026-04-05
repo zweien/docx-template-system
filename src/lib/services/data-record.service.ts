@@ -17,7 +17,7 @@ import {
 } from "./data-relation.service";
 
 // Helper to convert Record<string, unknown> to Prisma JSON input
-function toJsonInput(data: Record<string, unknown>): Prisma.InputJsonValue {
+export function toJsonInput(data: Record<string, unknown>): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(data));
 }
 
@@ -486,6 +486,109 @@ export async function updateRecord(
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新记录失败";
     return { success: false, error: { code: "UPDATE_FAILED", message } };
+  }
+}
+
+/**
+ * Patch a single field on a record (for inline editing).
+ * Validates only the patched field, preserves all other fields.
+ */
+export async function patchField(
+  recordId: string,
+  fieldKey: string,
+  value: unknown
+): Promise<ServiceResult<DataRecordItem>> {
+  try {
+    const existingRecord = await db.dataRecord.findUnique({ where: { id: recordId } });
+    if (!existingRecord) {
+      return { success: false, error: { code: "NOT_FOUND", message: "记录不存在" } };
+    }
+
+    const tableResult = await getTable(existingRecord.tableId);
+    if (!tableResult.success) {
+      return { success: false, error: tableResult.error };
+    }
+
+    const field = tableResult.data.fields.find((f) => f.key === fieldKey);
+    if (!field) {
+      return { success: false, error: { code: "VALIDATION_ERROR", message: `字段 "${fieldKey}" 不存在` } };
+    }
+
+    // Validate just this field
+    if (field.required && (value === null || value === undefined || value === "")) {
+      return {
+        success: false,
+        error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 是必填项` },
+      };
+    }
+
+    // Type-specific validation
+    if (value !== null && value !== undefined && value !== "") {
+      switch (field.type) {
+        case "NUMBER":
+          if (typeof value !== "number" && isNaN(Number(value))) {
+            return {
+              success: false,
+              error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 必须是数字` },
+            };
+          }
+          break;
+        case "EMAIL":
+          if (typeof value === "string" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            return {
+              success: false,
+              error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 必须是有效的邮箱地址` },
+            };
+          }
+          break;
+        case "SELECT":
+          if (field.options && !field.options.includes(String(value))) {
+            return {
+              success: false,
+              error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 的值必须是选项之一` },
+            };
+          }
+          break;
+      }
+    }
+
+    // Update only the changed field
+    const currentData = existingRecord.data as Record<string, unknown>;
+    const updatedData = { ...currentData, [fieldKey]: value };
+
+    await db.dataRecord.update({
+      where: { id: recordId },
+      data: { data: toJsonInput(updatedData) },
+    });
+
+    // Refresh snapshots only for relation fields
+    if (field.type === "RELATION" || field.type === "RELATION_SUBTABLE") {
+      try {
+        await db.$transaction(async (tx) => {
+          const refreshResult = await refreshSnapshotsForTargetRecord({ tx, recordId });
+          if (!refreshResult.success) {
+            throw new Error(`${refreshResult.error.code}:${refreshResult.error.message}`);
+          }
+        });
+      } catch {
+        // Snapshot refresh failure should not block the patch
+      }
+    }
+
+    // Fetch updated record with relations
+    const updatedRecord = await db.dataRecord.findUnique({
+      where: { id: recordId },
+      include: { createdBy: { select: { name: true } } },
+    });
+
+    if (!updatedRecord) {
+      return { success: false, error: { code: "NOT_FOUND", message: "记录不存在" } };
+    }
+
+    return { success: true, data: mapRecordToItem(updatedRecord) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新字段失败";
+    return { success: false, error: { code: "PATCH_FAILED", message } };
   }
 }
 

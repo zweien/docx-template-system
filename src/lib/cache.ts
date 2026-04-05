@@ -1,17 +1,29 @@
-interface CacheEntry<T> {
-  data: T;
-  expires: number;
-}
+// Use globalThis to ensure cache is shared across all module instances
+// (e.g., API route handlers and page SSR may have separate module scopes in dev mode)
+const globalForCache = globalThis as unknown as {
+  __appCache: Map<string, { data: unknown; expires: number }> | undefined;
+  __appPending: Map<string, Promise<unknown>> | undefined;
+};
 
 const MAX_CACHE_SIZE = 100;
-const cache = new Map<string, CacheEntry<unknown>>();
 
-// 正在进行的请求，避免缓存穿透
-const pendingRequests = new Map<string, Promise<unknown>>();
+function getCache(): Map<string, { data: unknown; expires: number }> {
+  if (!globalForCache.__appCache) {
+    globalForCache.__appCache = new Map();
+  }
+  return globalForCache.__appCache;
+}
+
+function getPending(): Map<string, Promise<unknown>> {
+  if (!globalForCache.__appPending) {
+    globalForCache.__appPending = new Map();
+  }
+  return globalForCache.__appPending;
+}
 
 function evictIfNeeded(): void {
+  const cache = getCache();
   if (cache.size >= MAX_CACHE_SIZE) {
-    // 删除最早的条目
     const oldestKey = cache.keys().next().value;
     if (oldestKey) cache.delete(oldestKey);
   }
@@ -22,6 +34,8 @@ export function withCache<T>(
   ttl: number,
   fn: () => Promise<T>
 ): Promise<T> {
+  const cache = getCache();
+  const pending = getPending();
   const cached = cache.get(key);
   const now = Date.now();
 
@@ -29,41 +43,41 @@ export function withCache<T>(
     return Promise.resolve(cached.data as T);
   }
 
-  // 检查是否有正在进行的请求，避免缓存穿透
-  const pending = pendingRequests.get(key);
-  if (pending) return pending as Promise<T>;
+  const pendingRequest = pending.get(key);
+  if (pendingRequest) return pendingRequest as Promise<T>;
 
   const promise = fn().then((data) => {
     evictIfNeeded();
     cache.set(key, { data, expires: now + ttl });
-    pendingRequests.delete(key);
+    pending.delete(key);
     return data;
   }).catch((error) => {
-    pendingRequests.delete(key);
+    pending.delete(key);
     throw error;
   });
 
-  pendingRequests.set(key, promise);
+  pending.set(key, promise);
   return promise;
 }
 
 export function invalidateCache(pattern: string): void {
+  const cache = getCache();
+  const pending = getPending();
   for (const key of cache.keys()) {
     if (key.startsWith(pattern)) {
       cache.delete(key);
     }
   }
-  // 同时清除相关的 pending 请求
-  for (const key of pendingRequests.keys()) {
+  for (const key of pending.keys()) {
     if (key.startsWith(pattern)) {
-      pendingRequests.delete(key);
+      pending.delete(key);
     }
   }
 }
 
 export function clearCache(): void {
-  cache.clear();
-  pendingRequests.clear();
+  getCache().clear();
+  getPending().clear();
 }
 
 // 缓存 TTL 常量（毫秒）

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getTable } from "@/lib/services/data-table.service";
-import { listTables } from "@/lib/services/data-table.service";
+import { getTable, listTables } from "@/lib/services/data-table.service";
 import { FieldConfigList } from "@/components/data/field-config-list";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+
+// Always dynamically render to ensure fresh data after field updates
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ tableId: string }>;

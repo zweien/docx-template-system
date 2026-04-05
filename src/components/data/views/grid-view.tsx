@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Expand, Loader2, Trash2 } from "lucide-react";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { FieldType } from "@/generated/prisma/enums";
@@ -209,7 +209,7 @@ export function GridView({
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ data: { [fieldKey]: value } }),
+          body: JSON.stringify({ fieldKey, value }),
         }
       );
       if (!response.ok) {
@@ -338,7 +338,10 @@ export function GridView({
           }`}
           onClick={
             canEdit
-              ? () => startEditing(record.id, field.key)
+              ? (e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  startEditing(record.id, field.key);
+                }
               : undefined
           }
         >
@@ -352,32 +355,31 @@ export function GridView({
   // ── Record row rendering ────────────────────────────────────────────────
   const renderRecordRow = useCallback(
     (record: DataRecordItem) => (
-      <TableRow
-        key={record.id}
-        className={onOpenDetail ? "cursor-pointer" : undefined}
-        onClick={(e) => {
-          // Don't open detail when clicking on a cell (inline edit) or action buttons
-          const target = e.target as HTMLElement;
-          if (target.closest("button") || target.closest("input")) return;
-          onOpenDetail?.(record.id);
-        }}
-      >
+      <TableRow key={record.id}>
         {orderedVisibleFields.map((field) => (
           <TableCell key={field.id} className="max-w-[200px]">
             {renderCell(field, record)}
           </TableCell>
         ))}
-        {isAdmin && (
-          <TableCell>
-            <div className="flex gap-1">
+        <TableCell>
+          <div className="flex gap-1">
+            {onOpenDetail && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => onOpenDetail(record.id)}
+                title="查看详情"
+              >
+                <Expand className="h-3 w-3" />
+              </Button>
+            )}
+            {isAdmin && (
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-8 px-2 text-red-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void onDeleteRecord(record.id);
-                }}
+                onClick={() => void onDeleteRecord(record.id)}
                 disabled={deletingIds.has(record.id)}
               >
                 {deletingIds.has(record.id) ? (
@@ -386,9 +388,9 @@ export function GridView({
                   <Trash2 className="h-3 w-3" />
                 )}
               </Button>
-            </div>
-          </TableCell>
-        )}
+            )}
+          </div>
+        </TableCell>
       </TableRow>
     ),
     [
@@ -402,7 +404,7 @@ export function GridView({
   );
 
   // ── Column count ────────────────────────────────────────────────────────
-  const colCount = orderedVisibleFields.length + (isAdmin ? 1 : 0);
+  const colCount = orderedVisibleFields.length + 1;
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
@@ -430,9 +432,7 @@ export function GridView({
                   />
                 </DraggableColumnHeader>
               ))}
-              {isAdmin && (
-                <TableHead className="w-[80px]">操作</TableHead>
-              )}
+              <TableHead className="w-[80px]">操作</TableHead>
             </TableRow>
           </TableHeader>
         </DragDropProvider>

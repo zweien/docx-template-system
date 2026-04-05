@@ -156,6 +156,11 @@ export function FieldConfigList({
         return;
       }
 
+      // Update local state from API response to ensure consistency with DB
+      if (Array.isArray(result)) {
+        setFields(result as DataFieldItem[]);
+      }
+
       router.refresh();
       alert("字段配置已保存");
     } catch (error) {

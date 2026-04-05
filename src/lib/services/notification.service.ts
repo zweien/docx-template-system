@@ -22,6 +22,12 @@ type CheckDueRemindersInput = {
   now?: Date;
 };
 
+type GetNotificationsInput = {
+  recipientId: string;
+  page: number;
+  pageSize: number;
+};
+
 type SendManualRemindInput = {
   taskId: string;
   senderId: string;
@@ -79,6 +85,52 @@ export async function getUnreadCount(
     return { success: true, data: count };
   } catch (error) {
     const message = error instanceof Error ? error.message : "查询未读数失败";
+    return { success: false, error: { code: "QUERY_FAILED", message } };
+  }
+}
+
+export async function getNotifications(
+  input: GetNotificationsInput
+): Promise<
+  ServiceResult<{
+    items: NotificationItem[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }>
+> {
+  try {
+    const [items, total] = await Promise.all([
+      db.notification.findMany({
+        where: { recipientId: input.recipientId },
+        skip: (input.page - 1) * input.pageSize,
+        take: input.pageSize,
+        orderBy: { createdAt: "desc" },
+      }),
+      db.notification.count({
+        where: { recipientId: input.recipientId },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        items: items.map((item) => ({
+          id: item.id,
+          type: item.type as NotificationType,
+          title: item.title,
+          content: item.content,
+          taskId: item.taskId,
+          isRead: item.isRead,
+          createdAt: item.createdAt,
+        })),
+        total,
+        page: input.page,
+        pageSize: input.pageSize,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "获取通知列表失败";
     return { success: false, error: { code: "QUERY_FAILED", message } };
   }
 }

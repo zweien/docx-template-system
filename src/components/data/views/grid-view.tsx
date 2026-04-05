@@ -1,14 +1,6 @@
 "use client";
 
 import { Fragment, useCallback, useMemo, useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Expand, Loader2, Trash2 } from "lucide-react";
 import { DragDropProvider } from "@dnd-kit/react";
@@ -107,12 +99,12 @@ function DraggableColumnHeader({
 }) {
   const { ref, isDragging } = useSortable({ id, index });
   return (
-    <TableHead
+    <th
       ref={ref}
-      className={isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing"}
+      className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 ${isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing"}`}
     >
       {children}
-    </TableHead>
+    </th>
   );
 }
 
@@ -355,13 +347,13 @@ export function GridView({
   // ── Record row rendering ────────────────────────────────────────────────
   const renderRecordRow = useCallback(
     (record: DataRecordItem) => (
-      <TableRow key={record.id}>
+      <tr key={record.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
         {orderedVisibleFields.map((field) => (
-          <TableCell key={field.id} className="max-w-[200px]">
+          <td key={field.id} className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 max-w-[200px]">
             {renderCell(field, record)}
-          </TableCell>
+          </td>
         ))}
-        <TableCell>
+        <td className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0">
           <div className="flex gap-1">
             {onOpenDetail && (
               <Button
@@ -390,8 +382,8 @@ export function GridView({
               </Button>
             )}
           </div>
-        </TableCell>
-      </TableRow>
+        </td>
+      </tr>
     ),
     [
       orderedVisibleFields,
@@ -408,11 +400,12 @@ export function GridView({
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="rounded-md border">
-      <Table>
-        <DragDropProvider onDragEnd={handleColumnDragEnd}>
-          <TableHeader>
-            <TableRow>
+    <div className="rounded-md border flex-1 min-h-0 flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-auto">
+        <table className="w-full caption-bottom text-sm">
+          <DragDropProvider onDragEnd={handleColumnDragEnd}>
+            <thead className="[&_tr]:border-b">
+              <tr className="border-b transition-colors hover:bg-muted/50 sticky top-0 z-10 bg-background">
               {orderedVisibleFields.map((field, index) => (
                 <DraggableColumnHeader
                   key={field.id}
@@ -432,37 +425,37 @@ export function GridView({
                   />
                 </DraggableColumnHeader>
               ))}
-              <TableHead className="w-[80px]">操作</TableHead>
-            </TableRow>
-          </TableHeader>
+              <th className="h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 w-[80px]">操作</th>
+            </tr>
+          </thead>
         </DragDropProvider>
-        <TableBody>
+        <tbody className="[&_tr:last-child]:border-0">
           {isLoading ? (
-            <TableRow>
-              <TableCell colSpan={colCount} className="p-0 border-0">
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+              <td colSpan={colCount} className="align-middle whitespace-nowrap p-0 border-0">
                 <TableSkeleton
                   rows={5}
                   columns={orderedVisibleFields.length}
                 />
-              </TableCell>
-            </TableRow>
+              </td>
+            </tr>
           ) : records.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={colCount} className="text-center py-8">
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+              <td colSpan={colCount} className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 text-center py-8">
                 暂无记录
-              </TableCell>
-            </TableRow>
+              </td>
+            </tr>
           ) : groupedRecords ? (
             // ── Grouped rendering ────────────────────────────────────────
             groupedRecords.map((group) => {
               const isCollapsed = collapsedGroups.has(group.value);
               return (
                 <Fragment key={`group-${group.value}`}>
-                  <TableRow
-                    className="bg-muted/50 hover:bg-muted/70 cursor-pointer select-none"
+                  <tr
+                    className="border-b transition-colors bg-muted/50 hover:bg-muted/70 cursor-pointer select-none sticky top-[41px] z-[5]"
                     onClick={() => toggleGroup(group.value)}
                   >
-                    <TableCell colSpan={colCount} className="py-2">
+                    <td colSpan={colCount} className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 py-2">
                       <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
                         {isCollapsed ? (
                           <ChevronRight className="h-4 w-4" />
@@ -472,8 +465,8 @@ export function GridView({
                         <span>{group.label}</span>
                         <span className="text-xs">({group.records.length})</span>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                  </tr>
                   {!isCollapsed &&
                     group.records.map((record) => renderRecordRow(record))}
                 </Fragment>
@@ -483,8 +476,9 @@ export function GridView({
             // ── Flat rendering ────────────────────────────────────────────
             records.map((record) => renderRecordRow(record))
           )}
-        </TableBody>
-      </Table>
+        </tbody>
+        </table>
+      </div>
     </div>
   );
 }

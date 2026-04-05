@@ -22,7 +22,7 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
   const [detailOpen, setDetailOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 gap-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>

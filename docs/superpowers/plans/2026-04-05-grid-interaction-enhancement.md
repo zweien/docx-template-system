@@ -277,6 +277,8 @@ const handleColumnWidthsChange = useCallback(
 
 传入 `<GridView columnWidths={columnWidths} onColumnWidthsChange={handleColumnWidthsChange} ... />`
 
+同时在 `record-table.tsx` 中传递 `page={page}` prop 给 GridView（Task 4/5 需要此 prop 来清空选中/activeCell）。
+
 - [ ] **Step 8: 验证列宽调整**
 
 Run: `npm run dev`
@@ -401,7 +403,7 @@ className={cn(
 
 - [ ] **Step 4: 添加冻结分界线 CSS**
 
-在 `grid-view.tsx` 顶部或全局 CSS 中添加：
+在 `src/app/globals.css` 中添加（与项目中其他全局样式保持一致）：
 
 ```css
 /* 冻结分界线 */
@@ -522,7 +524,7 @@ function DragHandleRow({
 }
 ```
 
-注意：使用 `row-{recordId}` 作为 sortable id 而非直接用 recordId，避免与列拖拽的 id（fieldKey）冲突。
+注意：由于行拖拽使用独立的 DragDropProvider，id 空间天然隔离，无需前缀。record.id (UUID) 与列 fieldKey 不会冲突。
 
 - [ ] **Step 3: 添加 canDragSort 判断**
 
@@ -547,8 +549,39 @@ const canDragSort = useMemo(
 )}
 ```
 
-- [ ] **Step 5: 实现 handleRowDragEnd**
+- [ ] **Step 5: 实现 handleRowDragEnd（乐观更新 + rollback）**
 
+注意：records 是从 props 传入的（来自 useTableData），乐观更新需要在 record-table.tsx 层操作 recordsData state。因此在 record-table.tsx 中新增 `reorderRecords` 函数（仿照 deleteRecord 模式），GridView 通过新的 `onReorderRecords` prop 调用。
+
+**在 record-table.tsx 中新增：**
+```typescript
+const reorderRecords = useCallback(
+  (orderedIds: string[]) => {
+    if (!recordsData || !viewId) return;
+    // 乐观更新：立即重排
+    const reordered = orderedIds
+      .map((id) => recordsData.records.find((r) => r.id === id))
+      .filter((r): r is DataRecordItem => r !== undefined);
+    setRecordsData((prev) => prev ? { ...prev, records: reordered } : prev);
+
+    fetch(`/api/data-tables/${tableId}/records/reorder?viewId=${viewId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recordIds: orderedIds }),
+    }).then(() => {
+      refresh();
+    }).catch(() => {
+      // rollback
+      refresh();
+    });
+  },
+  [recordsData, viewId, tableId, refresh]
+);
+```
+
+传递给 GridView：`<GridView ... onReorderRecords={reorderRecords} />`
+
+**在 GridView 中的 handleRowDragEnd：**
 ```typescript
 const handleRowDragEnd = useCallback(
   (event: { operation: { source: { id: string | number } | null; target: { id: string | number } | null }; canceled: boolean }) => {
@@ -568,21 +601,15 @@ const handleRowDragEnd = useCallback(
     const [moved] = newOrder.splice(oldIndex, 1);
     newOrder.splice(newIndex, 0, moved);
 
-    // 乐观更新 + API
-    onRefresh();
-    fetch(`/api/data-tables/${tableId}/records/reorder?viewId=${viewId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recordIds: newOrder }),
-    }).catch(() => {
-      refresh();
-    });
+    onReorderRecords(newOrder);
   },
-  [records, tableId, viewId, onRefresh]
+  [records, viewId, onReorderRecords]
 );
 ```
 
 - [ ] **Step 6: 用 DragDropProvider 包裹 tbody**
+
+DragDropProvider 是纯 React Context Provider，不产生 DOM 节点，放在 `<tbody>` 内部不会导致无效 HTML。
 
 ```tsx
 <tbody className="[&_tr:last-child]:border-0">
@@ -668,6 +695,8 @@ export function BatchActionBar({
 ```
 
 - [ ] **Step 2: 创建 BatchEditDialog 组件**
+
+注意：base-ui Dialog 的受控模式 API 使用 `open` + `onOpenChange`，与 SaveViewDialog (`src/components/data/save-view-dialog.tsx`) 用法一致，已确认可行。
 
 `src/components/data/batch-edit-dialog.tsx`：
 
@@ -822,6 +851,9 @@ useEffect(() => {
 ```
 
 在表头添加全选 checkbox：
+
+注意：base-ui Checkbox 的 `onCheckedChange` 签名为 `(checked: boolean, eventDetails) => void`。`toggleAll` 不需要读取参数（自行管理 Set），JS 忽略多余参数，所以直接传 `toggleAll` 即可。
+
 ```tsx
 <th className="w-10 h-10 sticky left-0 z-[13] bg-background border-r px-1">
   <Checkbox
@@ -850,12 +882,17 @@ useEffect(() => {
 const handleBatchDelete = useCallback(async () => {
   if (!confirm(`确定删除 ${selectedIds.size} 条记录？`)) return;
   const ids = [...selectedIds];
-  await Promise.all(
+  setSelectedIds(new Set());
+
+  const results = await Promise.allSettled(
     ids.map((id) =>
       fetch(`/api/data-tables/${tableId}/records/${id}`, { method: "DELETE" })
     )
   );
-  setSelectedIds(new Set());
+  const failedCount = results.filter((r) => r.status === "rejected").length;
+  if (failedCount > 0) {
+    alert(`${failedCount} 条记录删除失败，请重试`);
+  }
   refresh();
 }, [selectedIds, tableId, refresh]);
 
@@ -905,7 +942,9 @@ const handleBatchEdit = useCallback(
 
 - [ ] **Step 6: 修改冻结列偏移 — checkbox 列影响**
 
-当 checkbox 列存在时，冻结列的 `left` 偏移需要加上 `CHECKBOX_COL_WIDTH`：
+当 checkbox 列存在时，冻结列的 `left` 偏移需要加上 `CHECKBOX_COL_WIDTH`。
+
+同时需要更新 Task 1 中的 `handleAutoFit` 函数：在计算 `colIndex` 时加 1（checkbox 列在最前面），即 `row.children[colIndex + 1]` 和 `thead th:nth-child(${colIndex + 2})`。
 
 ```typescript
 const CHECKBOX_COL_WIDTH = 40;

@@ -15,6 +15,7 @@ import type {
 import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { cn } from "@/lib/utils";
 import {
   TextCellEditor,
   NumberCellEditor,
@@ -96,6 +97,27 @@ function groupRecords(
   return groups;
 }
 
+// ─── Frozen style helper ──────────────────────────────────────────────────
+
+function getFrozenStyle(
+  index: number,
+  frozenFieldCount: number,
+  orderedFields: DataFieldItem[],
+  widths: Record<string, number>
+): React.CSSProperties | undefined {
+  if (frozenFieldCount <= 0 || index >= frozenFieldCount) return undefined;
+  let left = 0;
+  for (let i = 0; i < index; i++) {
+    left += widths[orderedFields[i].key] ?? DEFAULT_COL_WIDTH;
+  }
+  return {
+    position: "sticky",
+    left,
+    zIndex: index === frozenFieldCount - 1 ? 4 : 3,
+    backgroundColor: "hsl(var(--background))",
+  };
+}
+
 // ─── Draggable column header ────────────────────────────────────────────────
 
 function DraggableColumnHeader({
@@ -106,6 +128,8 @@ function DraggableColumnHeader({
   fieldKey,
   onWidthChange,
   onAutoFit,
+  frozenStyle,
+  frozenFieldCount,
 }: {
   id: string;
   index: number;
@@ -114,13 +138,20 @@ function DraggableColumnHeader({
   fieldKey: string;
   onWidthChange: (fieldKey: string, width: number) => void;
   onAutoFit: (fieldKey: string) => void;
+  frozenStyle?: React.CSSProperties;
+  frozenFieldCount?: number;
 }) {
   const { ref, isDragging } = useSortable({ id, index });
   return (
     <th
       ref={ref}
-      className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 relative ${isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing"}`}
-      style={{ width: columnWidth }}
+      className={cn(
+        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 relative",
+        isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing",
+        frozenStyle && "bg-background",
+        frozenFieldCount && frozenFieldCount > 0 && index === frozenFieldCount - 1 && "frozen-last-col"
+      )}
+      style={{ width: columnWidth, ...(frozenStyle ?? {}) }}
     >
       {children}
       <ColumnResizer fieldKey={fieldKey} currentWidth={columnWidth} onWidthChange={onWidthChange} onDoubleClick={onAutoFit} />
@@ -156,6 +187,7 @@ export function GridView({
   page,
   onReorderRecords,
 }: GridViewProps) {
+  const frozenFieldCountValue = frozenFieldCount ?? 0;
   // ── Collapsed groups state ──────────────────────────────────────────────
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
@@ -229,12 +261,18 @@ export function GridView({
       const newIndex = orderedKeys.indexOf(String(targetId));
       if (oldIndex === -1 || newIndex === -1) return;
 
+      // Freeze zone protection: prevent dragging between frozen and non-frozen zones
+      const frozenCount = frozenFieldCountValue;
+      const sourceInFrozen = oldIndex < frozenCount;
+      const targetInFrozen = newIndex < frozenCount;
+      if (sourceInFrozen !== targetInFrozen) return;
+
       const newOrder = [...orderedKeys];
       const [moved] = newOrder.splice(oldIndex, 1);
       newOrder.splice(newIndex, 0, moved);
       onFieldOrderChange(newOrder);
     },
-    [orderedVisibleFields, onFieldOrderChange]
+    [orderedVisibleFields, onFieldOrderChange, frozenFieldCountValue]
   );
 
   // ── Grouping ─────────────────────────────────────────────────────────────
@@ -403,11 +441,22 @@ export function GridView({
   const renderRecordRow = useCallback(
     (record: DataRecordItem) => (
       <tr key={record.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-        {orderedVisibleFields.map((field) => (
-          <td key={field.id} className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0">
-            {renderCell(field, record)}
-          </td>
-        ))}
+        {orderedVisibleFields.map((field, fieldIndex) => {
+          const frozenTdStyle = getFrozenStyle(fieldIndex, frozenFieldCountValue, orderedVisibleFields, columnWidths);
+          return (
+            <td
+              key={field.id}
+              style={frozenTdStyle}
+              className={cn(
+                "p-2 align-middle whitespace-nowrap",
+                frozenTdStyle && "bg-background",
+                frozenFieldCountValue > 0 && fieldIndex === frozenFieldCountValue - 1 && "frozen-last-col relative"
+              )}
+            >
+              {renderCell(field, record)}
+            </td>
+          );
+        })}
         <td className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0">
           <div className="flex gap-1">
             {onOpenDetail && (
@@ -447,6 +496,8 @@ export function GridView({
       onDeleteRecord,
       deletingIds,
       onOpenDetail,
+      frozenFieldCountValue,
+      columnWidths,
     ]
   );
 
@@ -467,7 +518,9 @@ export function GridView({
           <DragDropProvider onDragEnd={handleColumnDragEnd}>
             <thead className="[&_tr]:border-b">
               <tr className="border-b transition-colors hover:bg-muted/50 sticky top-0 z-10 bg-background">
-              {orderedVisibleFields.map((field, index) => (
+              {orderedVisibleFields.map((field, index) => {
+                const frozenStyle = getFrozenStyle(index, frozenFieldCountValue, orderedVisibleFields, columnWidths);
+                return (
                 <DraggableColumnHeader
                   key={field.id}
                   id={field.key}
@@ -476,6 +529,8 @@ export function GridView({
                   fieldKey={field.key}
                   onWidthChange={handleWidthChange}
                   onAutoFit={handleAutoFit}
+                  frozenStyle={frozenStyle}
+                  frozenFieldCount={frozenFieldCountValue}
                 >
                   <ColumnHeader
                     field={field}
@@ -487,9 +542,13 @@ export function GridView({
                       onFilterChange(filter, field.key)
                     }
                     onSortChange={onSortChange}
+                    frozenFieldCount={frozenFieldCountValue}
+                    index={index}
+                    onFrozenFieldCountChange={onFrozenFieldCountChange}
                   />
                 </DraggableColumnHeader>
-              ))}
+              );
+              })}
               <th className="h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 w-[80px]">操作</th>
             </tr>
           </thead>

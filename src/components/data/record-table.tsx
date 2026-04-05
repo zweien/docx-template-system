@@ -169,6 +169,16 @@ export function RecordTable({
     [currentConfig.viewOptions, setViewOptions]
   );
 
+  // ── Frozen fields ──────────────────────────────────────────────────────
+  const frozenFieldCount = (currentConfig.viewOptions.frozenFieldCount as number) ?? 0;
+
+  const handleFrozenFieldCountChange = useCallback(
+    (count: number) => {
+      setViewOptions({ ...currentConfig.viewOptions, frozenFieldCount: count });
+    },
+    [currentConfig.viewOptions, setViewOptions]
+  );
+
   // ── Pagination href builder ──────────────────────────────────────────────
   const buildPageHref = (nextPage: number) => {
     const params = new URLSearchParams();
@@ -230,6 +240,8 @@ export function RecordTable({
             onOpenDetail={onOpenDetail}
             columnWidths={columnWidths}
             onColumnWidthsChange={handleColumnWidthsChange}
+            frozenFieldCount={frozenFieldCount}
+            onFrozenFieldCountChange={handleFrozenFieldCountChange}
             viewId={viewId}
             page={page}
           />

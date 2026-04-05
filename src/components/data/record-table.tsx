@@ -156,6 +156,19 @@ export function RecordTable({
     [setVisibleFields, setFieldOrder]
   );
 
+  // ── Column widths ──────────────────────────────────────────────────────
+  const columnWidths = useMemo(
+    () => (currentConfig.viewOptions.columnWidths as Record<string, number>) ?? {},
+    [currentConfig.viewOptions.columnWidths]
+  );
+
+  const handleColumnWidthsChange = useCallback(
+    (next: Record<string, number>) => {
+      setViewOptions({ ...currentConfig.viewOptions, columnWidths: next });
+    },
+    [currentConfig.viewOptions, setViewOptions]
+  );
+
   // ── Pagination href builder ──────────────────────────────────────────────
   const buildPageHref = (nextPage: number) => {
     const params = new URLSearchParams();
@@ -215,6 +228,10 @@ export function RecordTable({
             deletingIds={deletingIds}
             onRefresh={refresh}
             onOpenDetail={onOpenDetail}
+            columnWidths={columnWidths}
+            onColumnWidthsChange={handleColumnWidthsChange}
+            viewId={viewId}
+            page={page}
           />
         );
       case "KANBAN":

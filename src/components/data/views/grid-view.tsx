@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Expand, Loader2, Trash2 } from "lucide-react";
 import { DragDropProvider } from "@dnd-kit/react";
@@ -27,6 +27,9 @@ import {
   RelationCellEditor,
 } from "@/components/data/cell-editors";
 import { TableSkeleton } from "@/components/ui/skeleton";
+import { ColumnResizer } from "@/components/data/column-resizer";
+
+const DEFAULT_COL_WIDTH = 160;
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -50,6 +53,13 @@ interface GridViewProps {
   deletingIds: Set<string>;
   onRefresh: () => void;
   onOpenDetail?: (recordId: string) => void;
+  columnWidths: Record<string, number>;
+  onColumnWidthsChange: (widths: Record<string, number>) => void;
+  frozenFieldCount?: number;
+  onFrozenFieldCountChange?: (count: number) => void;
+  viewId?: string | null;
+  page?: number;
+  onReorderRecords?: (orderedIds: string[]) => void;
 }
 
 // ─── Grouping helpers ───────────────────────────────────────────────────────
@@ -92,18 +102,28 @@ function DraggableColumnHeader({
   id,
   index,
   children,
+  columnWidth,
+  fieldKey,
+  onWidthChange,
+  onAutoFit,
 }: {
   id: string;
   index: number;
   children: React.ReactNode;
+  columnWidth: number;
+  fieldKey: string;
+  onWidthChange: (fieldKey: string, width: number) => void;
+  onAutoFit: (fieldKey: string) => void;
 }) {
   const { ref, isDragging } = useSortable({ id, index });
   return (
     <th
       ref={ref}
-      className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 ${isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing"}`}
+      className={`h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 relative ${isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing"}`}
+      style={{ width: columnWidth }}
     >
       {children}
+      <ColumnResizer fieldKey={fieldKey} currentWidth={columnWidth} onWidthChange={onWidthChange} onDoubleClick={onAutoFit} />
     </th>
   );
 }
@@ -128,11 +148,19 @@ export function GridView({
   deletingIds,
   onRefresh,
   onOpenDetail,
+  columnWidths,
+  onColumnWidthsChange,
+  frozenFieldCount,
+  onFrozenFieldCountChange,
+  viewId,
+  page,
+  onReorderRecords,
 }: GridViewProps) {
   // ── Collapsed groups state ──────────────────────────────────────────────
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
   );
+  const tableRef = useRef<HTMLTableElement>(null);
 
   const toggleGroup = useCallback((groupValue: string) => {
     setCollapsedGroups((prev) => {
@@ -159,6 +187,33 @@ export function GridView({
         .map((key) => fieldMap.get(key))
         .filter((f): f is DataFieldItem => f !== undefined),
     [fieldOrder, visibleFields, fieldMap]
+  );
+
+  // ── Column width handlers ──────────────────────────────────────────────
+  const handleWidthChange = useCallback(
+    (fieldKey: string, newWidth: number) => {
+      onColumnWidthsChange({ ...columnWidths, [fieldKey]: newWidth });
+    },
+    [columnWidths, onColumnWidthsChange]
+  );
+
+  const handleAutoFit = useCallback(
+    (fieldKey: string) => {
+      const table = tableRef.current;
+      if (!table) return;
+      const colIndex = orderedVisibleFields.findIndex((f) => f.key === fieldKey);
+      if (colIndex === -1) return;
+      let maxContentWidth = 80;
+      const rows = table.querySelectorAll("tbody tr");
+      rows.forEach((row) => {
+        const cell = row.children[colIndex] as HTMLElement | undefined;
+        if (cell) maxContentWidth = Math.max(maxContentWidth, cell.scrollWidth);
+      });
+      const headerCell = table.querySelector(`thead th:nth-child(${colIndex + 1})`) as HTMLElement | undefined;
+      if (headerCell) maxContentWidth = Math.max(maxContentWidth, headerCell.scrollWidth);
+      handleWidthChange(fieldKey, Math.min(600, maxContentWidth));
+    },
+    [orderedVisibleFields, handleWidthChange]
   );
 
   // ── Column drag end handler ──────────────────────────────────────
@@ -325,7 +380,7 @@ export function GridView({
 
       return (
         <span
-          className={`block truncate max-w-[200px] ${
+          className={`block truncate ${
             canEdit ? "cursor-pointer hover:bg-muted/30 rounded px-1" : ""
           }`}
           onClick={
@@ -349,7 +404,7 @@ export function GridView({
     (record: DataRecordItem) => (
       <tr key={record.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
         {orderedVisibleFields.map((field) => (
-          <td key={field.id} className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 max-w-[200px]">
+          <td key={field.id} className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0">
             {renderCell(field, record)}
           </td>
         ))}
@@ -402,7 +457,13 @@ export function GridView({
   return (
     <div className="rounded-md border flex-1 min-h-0 flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 overflow-auto">
-        <table className="w-full caption-bottom text-sm">
+        <table className="w-full caption-bottom text-sm" style={{ tableLayout: "fixed" }} ref={tableRef}>
+          <colgroup>
+            {orderedVisibleFields.map((field) => (
+              <col key={field.key} style={{ width: columnWidths[field.key] ?? DEFAULT_COL_WIDTH }} />
+            ))}
+            <col style={{ width: 80 }} />
+          </colgroup>
           <DragDropProvider onDragEnd={handleColumnDragEnd}>
             <thead className="[&_tr]:border-b">
               <tr className="border-b transition-colors hover:bg-muted/50 sticky top-0 z-10 bg-background">
@@ -411,6 +472,10 @@ export function GridView({
                   key={field.id}
                   id={field.key}
                   index={index}
+                  columnWidth={columnWidths[field.key] ?? DEFAULT_COL_WIDTH}
+                  fieldKey={field.key}
+                  onWidthChange={handleWidthChange}
+                  onAutoFit={handleAutoFit}
                 >
                   <ColumnHeader
                     field={field}

@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 const routeTitles: Record<string, string> = {
   "/": "仪表盘",
@@ -25,6 +26,8 @@ export function Header() {
       <div className="flex flex-1 items-center min-w-0">
         <h1 className="text-base sm:text-lg font-semibold truncate">{title}</h1>
       </div>
+
+      <NotificationBell />
     </header>
   );
 }

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CollectionAssigneeTable } from "@/components/collections/collection-assignee-table";
 import { CollectionCloseTaskButton } from "@/components/collections/collection-close-task-button";
+import { CollectionRemindButton } from "@/components/collections/collection-remind-button";
 import { CollectionStatusBadge } from "@/components/collections/collection-status-badge";
 import { CollectionSubmissionUpload } from "@/components/collections/collection-submission-upload";
 import { CollectionVersionHistory } from "@/components/collections/collection-version-history";
@@ -84,6 +85,7 @@ export default async function CollectionDetailPage({
         {task.viewerRole === "creator" ? (
           <div className="flex flex-wrap gap-2">
             {task.status === "ACTIVE" ? <CollectionCloseTaskButton taskId={task.id} /> : null}
+            {task.status === "ACTIVE" ? <CollectionRemindButton taskId={task.id} /> : null}
             <Button
               nativeButton={false}
               render={<Link href={`/api/collections/${task.id}/download`} />}

@@ -78,6 +78,7 @@ export function RecordTable({
     setVisibleFields,
     setFieldOrder,
     setGroupBy,
+    setViewOptions,
     deleteRecord,
     deletingIds,
     switchView,
@@ -240,6 +241,7 @@ export function RecordTable({
             records={records}
             view={activeView}
             onOpenRecord={onOpenDetail ?? (() => {})}
+            onViewOptionsChange={setViewOptions}
           />
         );
       default:

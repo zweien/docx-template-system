@@ -40,6 +40,7 @@ export interface UseTableDataReturn {
   setVisibleFields: (fields: string[]) => void;
   setFieldOrder: (order: string[]) => void;
   setGroupBy: (fieldKey: string | null) => void;
+  setViewOptions: (options: Record<string, unknown>) => void;
   deleteRecord: (recordId: string) => Promise<void>;
   deletingIds: Set<string>;
   refresh: () => void;
@@ -495,6 +496,7 @@ export function useTableData({
     setVisibleFields,
     setFieldOrder,
     setGroupBy,
+    setViewOptions: setViewOptionsState,
     deleteRecord,
     deletingIds,
     refresh,

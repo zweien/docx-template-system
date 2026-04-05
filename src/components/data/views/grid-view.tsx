@@ -236,6 +236,7 @@ export function GridView({
 
   // ── Keyboard nav: active cell state (for rendering) ──────────────────────
   const [activeCell, setActiveCellState] = useState<ActiveCell | null>(null);
+  const [activeCellPage, setActiveCellPage] = useState(page);
 
   const toggleGroup = useCallback((groupValue: string) => {
     setCollapsedGroups((prev) => {
@@ -284,7 +285,11 @@ export function GridView({
     (recordId: string) => {
       updateSelectedIds((prev) => {
         const next = new Set(prev);
-        next.has(recordId) ? next.delete(recordId) : next.add(recordId);
+        if (next.has(recordId)) {
+          next.delete(recordId);
+        } else {
+          next.add(recordId);
+        }
         return next;
       });
     },
@@ -490,7 +495,7 @@ export function GridView({
     [tableId, onRefresh]
   );
 
-  const { editingCell, startEditing, commitEdit, cancelEdit, isCommitting } =
+  const { editingCell, startEditing, commitEdit, cancelEdit } =
     useInlineEdit({ tableId, onCommit: handleCommit });
 
   // ── Keyboard navigation ──────────────────────────────────────────────────
@@ -554,23 +559,23 @@ export function GridView({
     (cell: ActiveCell | null) => {
       setActiveCellRef(cell);
       setActiveCellState(cell);
+      if (cell) setActiveCellPage(page);
     },
-    [setActiveCellRef]
+    [setActiveCellRef, page]
   );
 
-  // Auto-scroll on activeCell change
+  // When activeCell is set, remember which page it was on.
+  // If page changed, activeCell becomes stale — use derived value instead.
+  const stableActiveCell = activeCell && activeCellPage === page ? activeCell : null;
+
+  // Auto-scroll on stableActiveCell change
   useEffect(() => {
-    if (!activeCell || !tableRef.current) return;
+    if (!stableActiveCell || !tableRef.current) return;
     const el = tableRef.current.querySelector(
-      `[data-row="${activeCell.rowIndex}"][data-col="${activeCell.colIndex}"]`
+      `[data-row="${stableActiveCell.rowIndex}"][data-col="${stableActiveCell.colIndex}"]`
     ) as HTMLElement | null;
     el?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [activeCell]);
-
-  // Clear activeCell on page change
-  useEffect(() => {
-    setActiveCell(null);
-  }, [page]);
+  }, [stableActiveCell]);
 
   // Click handler to set activeCell
   const handleCellClick = useCallback(
@@ -731,8 +736,8 @@ export function GridView({
           {orderedVisibleFields.map((field, fieldIndex) => {
             const frozenTdStyle = getFrozenStyle(fieldIndex, frozenFieldCountValue, orderedVisibleFields, columnWidths);
             const isActive =
-              activeCell?.rowIndex === flatRowIndex &&
-              activeCell?.colIndex === fieldIndex;
+              stableActiveCell?.rowIndex === flatRowIndex &&
+              stableActiveCell?.colIndex === fieldIndex;
             return (
               <td
                 key={field.id}
@@ -812,7 +817,7 @@ export function GridView({
       canDragSort,
       selectedIdsSet,
       toggleRow,
-      activeCell,
+      stableActiveCell,
       handleCellClick,
     ]
   );
@@ -927,7 +932,6 @@ export function GridView({
             (() => {
               let flatIdx = 0;
               return groupedRecords.map((group) => {
-                const groupHeaderFlatIdx = flatIdx;
                 const isCollapsed = collapsedGroups.has(group.value);
                 flatIdx += 1; // group header row
                 const startRecordFlatIdx = flatIdx;

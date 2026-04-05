@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import { DragDropProvider } from "@dnd-kit/react";
+import { useSortable } from "@dnd-kit/react/sortable";
 import { FieldType } from "@/generated/prisma/enums";
 import type {
   DataFieldItem,
@@ -92,6 +94,28 @@ function groupRecords(
   return groups;
 }
 
+// ─── Draggable column header ────────────────────────────────────────────────
+
+function DraggableColumnHeader({
+  id,
+  index,
+  children,
+}: {
+  id: string;
+  index: number;
+  children: React.ReactNode;
+}) {
+  const { ref, isDragging } = useSortable({ id, index });
+  return (
+    <TableHead
+      ref={ref}
+      className={isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing"}
+    >
+      {children}
+    </TableHead>
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function GridView({
@@ -107,6 +131,7 @@ export function GridView({
   groupBy,
   onFilterChange,
   onSortChange,
+  onFieldOrderChange,
   onDeleteRecord,
   deletingIds,
   onRefresh,
@@ -144,7 +169,28 @@ export function GridView({
     [fieldOrder, visibleFields, fieldMap]
   );
 
-  // ── Grouping ────────────────────────────────────────────────────────────
+  // ── Column drag end handler ──────────────────────────────────────
+  const handleColumnDragEnd = useCallback(
+    (event: { operation: { source: { id: string | number } | null; target: { id: string | number } | null }; canceled: boolean }) => {
+      if (event.canceled) return;
+      const sourceId = event.operation.source?.id;
+      const targetId = event.operation.target?.id;
+      if (!sourceId || !targetId || sourceId === targetId) return;
+
+      const orderedKeys = orderedVisibleFields.map((f) => f.key);
+      const oldIndex = orderedKeys.indexOf(String(sourceId));
+      const newIndex = orderedKeys.indexOf(String(targetId));
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const newOrder = [...orderedKeys];
+      const [moved] = newOrder.splice(oldIndex, 1);
+      newOrder.splice(newIndex, 0, moved);
+      onFieldOrderChange(newOrder);
+    },
+    [orderedVisibleFields, onFieldOrderChange]
+  );
+
+  // ── Grouping ─────────────────────────────────────────────────────────────
   const groupField = useMemo(
     () => (groupBy ? fieldMap.get(groupBy) ?? null : null),
     [groupBy, fieldMap]
@@ -362,28 +408,34 @@ export function GridView({
   return (
     <div className="rounded-md border">
       <Table>
-        <TableHeader>
-          <TableRow>
-            {orderedVisibleFields.map((field) => (
-              <TableHead key={field.id}>
-                <ColumnHeader
-                  field={field}
-                  filter={
-                    filters.find((f) => f.fieldKey === field.key) ?? null
-                  }
-                  sort={sorts.find((s) => s.fieldKey === field.key) ?? null}
-                  onFilterChange={(filter) =>
-                    onFilterChange(filter, field.key)
-                  }
-                  onSortChange={onSortChange}
-                />
-              </TableHead>
-            ))}
-            {isAdmin && (
-              <TableHead className="w-[80px]">操作</TableHead>
-            )}
-          </TableRow>
-        </TableHeader>
+        <DragDropProvider onDragEnd={handleColumnDragEnd}>
+          <TableHeader>
+            <TableRow>
+              {orderedVisibleFields.map((field, index) => (
+                <DraggableColumnHeader
+                  key={field.id}
+                  id={field.key}
+                  index={index}
+                >
+                  <ColumnHeader
+                    field={field}
+                    filter={
+                      filters.find((f) => f.fieldKey === field.key) ?? null
+                    }
+                    sort={sorts.find((s) => s.fieldKey === field.key) ?? null}
+                    onFilterChange={(filter) =>
+                      onFilterChange(filter, field.key)
+                    }
+                    onSortChange={onSortChange}
+                  />
+                </DraggableColumnHeader>
+              ))}
+              {isAdmin && (
+                <TableHead className="w-[80px]">操作</TableHead>
+              )}
+            </TableRow>
+          </TableHeader>
+        </DragDropProvider>
         <TableBody>
           {isLoading ? (
             <TableRow>

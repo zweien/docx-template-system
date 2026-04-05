@@ -28,7 +28,7 @@ model Notification {
   taskId      String?
   task        DocumentCollectionTask? @relation(fields: [taskId], references: [id], onDelete: Cascade)
   recipientId String
-  recipient   User                    @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+  recipient   User                    @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
 
@@ -49,6 +49,14 @@ enum NotificationType {
 - `taskId` 直接关联到收集任务，点击通知可跳转
 - 索引覆盖 `[recipientId, isRead, createdAt]` 支持高效查询未读通知
 - 不预留通用通知，YAGNI
+
+**User 模型需添加反向关联：**
+```prisma
+// 在 User 模型中添加：
+notifications Notification[] @relation("UserNotifications")
+```
+
+**注意：** `DocumentCollectionTask.dueAt` 是必填字段（`DateTime` 不带 `?`），所有收集任务都有截止日期，无需处理无截止日期的情况。
 
 ## 通知生成逻辑
 
@@ -164,7 +172,7 @@ enum NotificationType {
 | 任务已关闭 | 不再生成到期/逾期通知，催办按钮隐藏 |
 | 参与人已提交 | 催办时跳过已提交的参与人 |
 | 同一天重复检查 | 按 recipientId + taskId + type + 当天日期去重 |
-| 任务无截止日期 | 不生成到期/逾期通知 |
+| 任务无截止日期 | 不会发生（dueAt 是必填字段） |
 | 大量未读通知 | 分页加载，默认每页 20 条 |
 
 ## 非目标（MVP 不做）

@@ -7,15 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Plus } from "lucide-react";
 import type {
   DataFieldItem,
+  DataViewItem,
   FilterCondition,
   SortConfig,
+  ViewType,
 } from "@/types/data-table";
-import type { ViewType } from "@/types/data-table";
 import { FieldConfigPopover } from "@/components/data/field-config-popover";
 import { ViewSelector } from "@/components/data/view-selector";
 import { SaveViewDialog } from "@/components/data/save-view-dialog";
 import { useTableData } from "@/hooks/use-table-data";
 import { GridView } from "@/components/data/views/grid-view";
+import { KanbanView } from "@/components/data/views/kanban/kanban-view";
+import { GalleryView } from "@/components/data/views/gallery/gallery-view";
+import { TimelineView } from "@/components/data/views/timeline/timeline-view";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -27,14 +31,24 @@ interface RecordTableProps {
   onOpenDetail?: (recordId: string) => void;
 }
 
-// ─── Placeholder for unsupported views ──────────────────────────────────────
+// ─── Fallback view when no saved view is selected ────────────────────────────
 
-function PlaceholderView({ label }: { label: string }) {
-  return (
-    <div className="rounded-md border flex items-center justify-center py-20 text-zinc-400 text-sm">
-      {label} 视图即将支持
-    </div>
-  );
+function buildFallbackView(tableId: string, fields: DataFieldItem[]): DataViewItem {
+  return {
+    id: "fallback",
+    tableId,
+    name: "默认",
+    type: "GRID",
+    isDefault: true,
+    filters: [],
+    sortBy: [],
+    visibleFields: fields.map((f) => f.key),
+    fieldOrder: fields.map((f) => f.key),
+    groupBy: null,
+    viewOptions: {},
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
@@ -57,6 +71,7 @@ export function RecordTable({
     searchInput,
     setSearchInput,
     viewId,
+    currentView,
     currentConfig,
     setFilters,
     setSorts,
@@ -68,6 +83,28 @@ export function RecordTable({
     switchView,
     refresh,
   } = useTableData({ tableId, fields });
+
+  const activeView = currentView ?? buildFallbackView(tableId, fields);
+
+  // ── Patch single field (for Kanban drag-and-drop) ────────────────────────
+  const handlePatchRecord = useCallback(
+    async (recordId: string, fieldKey: string, value: unknown) => {
+      const res = await fetch(
+        `/api/data-tables/${tableId}/records/${recordId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fieldKey, value }),
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error ?? "保存失败");
+      }
+      refresh();
+    },
+    [tableId, refresh]
+  );
 
   // ── Filter change handler ────────────────────────────────────────────────
   const handleFilterChange = useCallback(
@@ -177,13 +214,40 @@ export function RecordTable({
           />
         );
       case "KANBAN":
-        return <PlaceholderView label="看板" />;
+        return (
+          <KanbanView
+            fields={fields}
+            records={records}
+            view={activeView}
+            isAdmin={isAdmin}
+            onPatchRecord={handlePatchRecord}
+            onOpenRecord={onOpenDetail ?? (() => {})}
+          />
+        );
       case "GALLERY":
-        return <PlaceholderView label="画廊" />;
+        return (
+          <GalleryView
+            fields={fields}
+            records={records}
+            view={activeView}
+            onOpenRecord={onOpenDetail ?? (() => {})}
+          />
+        );
       case "TIMELINE":
-        return <PlaceholderView label="时间线" />;
+        return (
+          <TimelineView
+            fields={fields}
+            records={records}
+            view={activeView}
+            onOpenRecord={onOpenDetail ?? (() => {})}
+          />
+        );
       default:
-        return <PlaceholderView label="未知" />;
+        return (
+          <div className="rounded-md border flex items-center justify-center py-20 text-zinc-400 text-sm">
+            未知视图类型
+          </div>
+        );
     }
   }
 

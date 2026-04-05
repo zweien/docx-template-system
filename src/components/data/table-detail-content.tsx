@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Bot } from "lucide-react";
 import { RecordTable } from "@/components/data/record-table";
-import type { DataTableDetail } from "@/types/data-table";
+import { ViewSwitcher } from "@/components/data/view-switcher";
+import { RecordDetailDrawer } from "@/components/data/record-detail-drawer";
+import type { DataTableDetail, ViewType } from "@/types/data-table";
 
 interface TableDetailContentProps {
   tableId: string;
@@ -14,6 +17,10 @@ interface TableDetailContentProps {
 }
 
 export function TableDetailContent({ tableId, table, isAdmin }: TableDetailContentProps) {
+  const [viewType, setViewType] = useState<ViewType>("GRID");
+  const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -89,51 +96,78 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="flex gap-4 text-sm">
-        <div className="flex items-center gap-1 text-zinc-500">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect width="18" height="18" x="3" y="3" rx="2" />
-            <line x1="3" x2="21" y1="9" y2="9" />
-            <line x1="9" x2="9" y1="21" y2="9" />
-          </svg>
-          {table.fieldCount} 个字段
+      {/* Stats & View Switcher */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-4 text-sm">
+          <div className="flex items-center gap-1 text-zinc-500">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect width="18" height="18" x="3" y="3" rx="2" />
+              <line x1="3" x2="21" y1="9" y2="9" />
+              <line x1="9" x2="9" y1="21" y2="9" />
+            </svg>
+            {table.fieldCount} 个字段
+          </div>
+          <div className="flex items-center gap-1 text-zinc-500">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 3v18h18" />
+              <path d="M18 17V9" />
+              <path d="M13 17V5" />
+              <path d="M8 17v-3" />
+            </svg>
+            {table.recordCount} 条记录
+          </div>
         </div>
-        <div className="flex items-center gap-1 text-zinc-500">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M3 3v18h18" />
-            <path d="M18 17V9" />
-            <path d="M13 17V5" />
-            <path d="M8 17v-3" />
-          </svg>
-          {table.recordCount} 条记录
-        </div>
+        <ViewSwitcher currentType={viewType} onTypeChange={setViewType} />
       </div>
 
       <Separator />
 
       {/* Record Table */}
-      <RecordTable tableId={tableId} fields={table.fields} isAdmin={isAdmin} />
+      <RecordTable
+        tableId={tableId}
+        fields={table.fields}
+        isAdmin={isAdmin}
+        viewType={viewType}
+        onOpenDetail={(recordId) => {
+          setDetailRecordId(recordId);
+          setDetailOpen(true);
+        }}
+      />
+
+      {/* Record Detail Drawer */}
+      <RecordDetailDrawer
+        open={detailOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDetailOpen(false);
+            setDetailRecordId(null);
+          }
+        }}
+        recordId={detailRecordId}
+        tableId={tableId}
+        fields={table.fields}
+        isAdmin={isAdmin}
+      />
     </div>
   );
 }

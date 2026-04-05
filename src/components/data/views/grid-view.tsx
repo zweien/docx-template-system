@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronRight, Expand, Loader2, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Trash2 } from "lucide-react";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { FieldType } from "@/generated/prisma/enums";
@@ -159,6 +159,31 @@ function DraggableColumnHeader({
   );
 }
 
+// ─── Draggable row wrapper (drag handle) ─────────────────────────────────────
+
+function DragHandleRow({
+  record,
+  index,
+  children,
+}: {
+  record: DataRecordItem;
+  index: number;
+  children: React.ReactNode;
+}) {
+  const { ref, isDragging } = useSortable({ id: record.id, index });
+  return (
+    <tr
+      ref={ref}
+      className={cn(
+        "border-b transition-colors hover:bg-muted/50",
+        isDragging && "opacity-50 bg-muted"
+      )}
+    >
+      {children}
+    </tr>
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function GridView({
@@ -188,6 +213,12 @@ export function GridView({
   onReorderRecords,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
+
+  // ── Can drag-sort rows? (only when no sorts, no grouping, has viewId, and admin) ──
+  const canDragSort = useMemo(
+    () => sorts.length === 0 && !groupBy && !!viewId && isAdmin,
+    [sorts, groupBy, viewId, isAdmin]
+  );
   // ── Collapsed groups state ──────────────────────────────────────────────
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     new Set()
@@ -273,6 +304,28 @@ export function GridView({
       onFieldOrderChange(newOrder);
     },
     [orderedVisibleFields, onFieldOrderChange, frozenFieldCountValue]
+  );
+
+  // ── Row drag end handler ──────────────────────────────────────────────
+  const handleRowDragEnd = useCallback(
+    (event: { operation: { source: { id: string | number } | null; target: { id: string | number } | null }; canceled: boolean }) => {
+      if (event.canceled) return;
+      const sourceId = event.operation.source?.id;
+      const targetId = event.operation.target?.id;
+      if (!sourceId || !targetId || sourceId === targetId) return;
+
+      const orderedIds = records.map((r) => r.id);
+      const oldIndex = orderedIds.indexOf(String(sourceId));
+      const newIndex = orderedIds.indexOf(String(targetId));
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const newOrder = [...orderedIds];
+      const [moved] = newOrder.splice(oldIndex, 1);
+      newOrder.splice(newIndex, 0, moved);
+
+      onReorderRecords?.(newOrder);
+    },
+    [records, onReorderRecords]
   );
 
   // ── Grouping ─────────────────────────────────────────────────────────────
@@ -439,56 +492,77 @@ export function GridView({
 
   // ── Record row rendering ────────────────────────────────────────────────
   const renderRecordRow = useCallback(
-    (record: DataRecordItem) => (
-      <tr key={record.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
-        {orderedVisibleFields.map((field, fieldIndex) => {
-          const frozenTdStyle = getFrozenStyle(fieldIndex, frozenFieldCountValue, orderedVisibleFields, columnWidths);
-          return (
-            <td
-              key={field.id}
-              style={frozenTdStyle}
-              className={cn(
-                "p-2 align-middle whitespace-nowrap",
-                frozenTdStyle && "bg-background",
-                frozenFieldCountValue > 0 && fieldIndex === frozenFieldCountValue - 1 && "frozen-last-col relative"
-              )}
-            >
-              {renderCell(field, record)}
+    (record: DataRecordItem, index: number) => {
+      const rowContent = (
+        <>
+          {canDragSort && (
+            <td className="w-8 px-1 text-muted-foreground cursor-grab active:cursor-grabbing">
+              <GripVertical className="h-4 w-4 mx-auto" />
             </td>
-          );
-        })}
-        <td className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0">
-          <div className="flex gap-1">
-            {onOpenDetail && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2"
-                onClick={() => onOpenDetail(record.id)}
-                title="查看详情"
-              >
-                <Expand className="h-3 w-3" />
-              </Button>
-            )}
-            {isAdmin && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 px-2 text-red-600"
-                onClick={() => void onDeleteRecord(record.id)}
-                disabled={deletingIds.has(record.id)}
-              >
-                {deletingIds.has(record.id) ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <Trash2 className="h-3 w-3" />
+          )}
+          {orderedVisibleFields.map((field, fieldIndex) => {
+            const frozenTdStyle = getFrozenStyle(fieldIndex, frozenFieldCountValue, orderedVisibleFields, columnWidths);
+            return (
+              <td
+                key={field.id}
+                style={frozenTdStyle}
+                className={cn(
+                  "p-2 align-middle whitespace-nowrap",
+                  frozenTdStyle && "bg-background",
+                  frozenFieldCountValue > 0 && fieldIndex === frozenFieldCountValue - 1 && "frozen-last-col relative"
                 )}
-              </Button>
-            )}
-          </div>
-        </td>
-      </tr>
-    ),
+              >
+                {renderCell(field, record)}
+              </td>
+            );
+          })}
+          <td className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0">
+            <div className="flex gap-1">
+              {onOpenDetail && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2"
+                  onClick={() => onOpenDetail(record.id)}
+                  title="查看详情"
+                >
+                  <Expand className="h-3 w-3" />
+                </Button>
+              )}
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-2 text-red-600"
+                  onClick={() => void onDeleteRecord(record.id)}
+                  disabled={deletingIds.has(record.id)}
+                >
+                  {deletingIds.has(record.id) ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
+                </Button>
+              )}
+            </div>
+          </td>
+        </>
+      );
+
+      if (canDragSort) {
+        return (
+          <DragHandleRow key={record.id} record={record} index={index}>
+            {rowContent}
+          </DragHandleRow>
+        );
+      }
+
+      return (
+        <tr key={record.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+          {rowContent}
+        </tr>
+      );
+    },
     [
       orderedVisibleFields,
       renderCell,
@@ -498,11 +572,12 @@ export function GridView({
       onOpenDetail,
       frozenFieldCountValue,
       columnWidths,
+      canDragSort,
     ]
   );
 
   // ── Column count ────────────────────────────────────────────────────────
-  const colCount = orderedVisibleFields.length + 1;
+  const colCount = orderedVisibleFields.length + 1 + (canDragSort ? 1 : 0);
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
@@ -510,6 +585,7 @@ export function GridView({
       <div className="flex-1 min-h-0 overflow-auto">
         <table className="w-full caption-bottom text-sm" style={{ tableLayout: "fixed" }} ref={tableRef}>
           <colgroup>
+            {canDragSort && <col style={{ width: 32 }} />}
             {orderedVisibleFields.map((field) => (
               <col key={field.key} style={{ width: columnWidths[field.key] ?? DEFAULT_COL_WIDTH }} />
             ))}
@@ -518,6 +594,9 @@ export function GridView({
           <DragDropProvider onDragEnd={handleColumnDragEnd}>
             <thead className="[&_tr]:border-b">
               <tr className="border-b transition-colors hover:bg-muted/50 sticky top-0 z-10 bg-background">
+              {canDragSort && (
+                <th className="h-10 px-1 w-8" />
+              )}
               {orderedVisibleFields.map((field, index) => {
                 const frozenStyle = getFrozenStyle(index, frozenFieldCountValue, orderedVisibleFields, columnWidths);
                 return (
@@ -554,6 +633,7 @@ export function GridView({
           </thead>
         </DragDropProvider>
         <tbody className="[&_tr:last-child]:border-0">
+          <DragDropProvider onDragEnd={canDragSort ? handleRowDragEnd : undefined}>
           {isLoading ? (
             <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
               <td colSpan={colCount} className="align-middle whitespace-nowrap p-0 border-0">
@@ -592,14 +672,15 @@ export function GridView({
                     </td>
                   </tr>
                   {!isCollapsed &&
-                    group.records.map((record) => renderRecordRow(record))}
+                    group.records.map((record, idx) => renderRecordRow(record, idx))}
                 </Fragment>
               );
             })
           ) : (
             // ── Flat rendering ────────────────────────────────────────────
-            records.map((record) => renderRecordRow(record))
+            records.map((record, idx) => renderRecordRow(record, idx))
           )}
+          </DragDropProvider>
         </tbody>
         </table>
       </div>

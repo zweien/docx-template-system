@@ -179,6 +179,27 @@ export function RecordTable({
     [currentConfig.viewOptions, setViewOptions]
   );
 
+  // ── Row reorder ────────────────────────────────────────────────────────
+  const reorderRecords = useCallback(
+    async (orderedIds: string[]) => {
+      if (!viewId) return;
+      try {
+        const res = await fetch(
+          `/api/data-tables/${tableId}/records/reorder?viewId=${viewId}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ recordIds: orderedIds }),
+          }
+        );
+        if (res.ok) refresh();
+      } catch {
+        refresh();
+      }
+    },
+    [viewId, tableId, refresh]
+  );
+
   // ── Pagination href builder ──────────────────────────────────────────────
   const buildPageHref = (nextPage: number) => {
     const params = new URLSearchParams();
@@ -244,6 +265,7 @@ export function RecordTable({
             onFrozenFieldCountChange={handleFrozenFieldCountChange}
             viewId={viewId}
             page={page}
+            onReorderRecords={reorderRecords}
           />
         );
       case "KANBAN":

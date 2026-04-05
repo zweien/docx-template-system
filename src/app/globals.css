@@ -8,3 +8,14 @@
 @custom-variant dark (&:is(.dark *));
 
 @source "../../node_modules/streamdown/dist/*.js";
+
+.frozen-last-col::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  box-shadow: inset -4px 0 4px -4px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+}

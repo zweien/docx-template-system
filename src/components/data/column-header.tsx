@@ -33,6 +33,9 @@ interface ColumnHeaderProps {
   onSortChange: (sort: SortConfig | null) => void;
   groupBy?: string | null;
   onGroupByChange?: (fieldKey: string | null) => void;
+  frozenFieldCount?: number;
+  index?: number;
+  onFrozenFieldCountChange?: (count: number) => void;
 }
 
 type FilterOperator = FilterCondition["op"];
@@ -82,6 +85,9 @@ export function ColumnHeader({
   onSortChange,
   groupBy,
   onGroupByChange,
+  frozenFieldCount,
+  index,
+  onFrozenFieldCountChange,
 }: ColumnHeaderProps) {
   const [open, setOpen] = useState(false);
   const [filterOp, setFilterOp] = useState<FilterOperator>(
@@ -235,6 +241,30 @@ export function ColumnHeader({
               </div>
             </>
           )}
+
+        {onFrozenFieldCountChange && typeof index === "number" && (
+          <>
+            <Separator />
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs text-muted-foreground mb-1">冻结</Label>
+              <Button
+                variant={(frozenFieldCount ?? 0) > 0 && typeof index === "number" && (frozenFieldCount ?? 0) > index ? "secondary" : "ghost"}
+                size="sm"
+                className="text-xs"
+                onClick={() => {
+                  if ((frozenFieldCount ?? 0) > 0 && (frozenFieldCount ?? 0) === (index ?? 0) + 1) {
+                    onFrozenFieldCountChange(0);
+                  } else {
+                    onFrozenFieldCountChange((index ?? 0) + 1);
+                  }
+                  setOpen(false);
+                }}
+              >
+                {(frozenFieldCount ?? 0) > 0 && typeof index === "number" && (frozenFieldCount ?? 0) > index ? "取消冻结" : "冻结到此列"}
+              </Button>
+            </div>
+          </>
+        )}
 
         <Separator />
 

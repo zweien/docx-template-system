@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Trash2 } from "lucide-react";
@@ -18,6 +18,7 @@ import type {
 import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { useKeyboardNav, type ActiveCell } from "@/hooks/use-keyboard-nav";
 import { cn } from "@/lib/utils";
 import {
   TextCellEditor,
@@ -233,6 +234,9 @@ export function GridView({
   );
   const tableRef = useRef<HTMLTableElement>(null);
 
+  // ── Keyboard nav: active cell state (for rendering) ──────────────────────
+  const [activeCell, setActiveCellState] = useState<ActiveCell | null>(null);
+
   const toggleGroup = useCallback((groupValue: string) => {
     setCollapsedGroups((prev) => {
       const next = new Set(prev);
@@ -435,6 +439,38 @@ export function GridView({
     return groupRecords(records, groupField);
   }, [groupField, records]);
 
+  // ── Flat records for keyboard nav (maps flat index → record or group) ────
+  const flatRecords = useMemo(() => {
+    if (groupedRecords) {
+      const flat: Array<{
+        type: "group" | "record";
+        record?: DataRecordItem;
+      }> = [];
+      for (const group of groupedRecords) {
+        flat.push({ type: "group" });
+        if (!collapsedGroups.has(group.value)) {
+          for (const r of group.records)
+            flat.push({ type: "record", record: r });
+        }
+      }
+      return flat;
+    }
+    return records.map((r) => ({ type: "record" as const, record: r }));
+  }, [groupedRecords, collapsedGroups, records]);
+
+  // ── Group row indices (for skipping in keyboard nav) ─────────────────────
+  const groupRowIndices = useMemo(() => {
+    if (!groupedRecords) return new Set<number>();
+    const indices = new Set<number>();
+    let flatIndex = 0;
+    for (const group of groupedRecords) {
+      indices.add(flatIndex); // group header row
+      flatIndex +=
+        1 + (collapsedGroups.has(group.value) ? 0 : group.records.length);
+    }
+    return indices;
+  }, [groupedRecords, collapsedGroups]);
+
   // ── Inline editing ─────────────────────────────────────────────────────
   const handleCommit = useCallback(
     async (recordId: string, fieldKey: string, value: unknown) => {
@@ -456,6 +492,96 @@ export function GridView({
 
   const { editingCell, startEditing, commitEdit, cancelEdit, isCommitting } =
     useInlineEdit({ tableId, onCommit: handleCommit });
+
+  // ── Keyboard navigation ──────────────────────────────────────────────────
+  const { handleKeyDown, setActiveCell: setActiveCellRef } = useKeyboardNav({
+    rowCount: flatRecords.length,
+    colCount: orderedVisibleFields.length,
+    editingCell,
+    onMoveTo: (cell) => setActiveCellState(cell),
+    onStartEdit: () => {
+      if (!activeCell) return;
+      const entry = flatRecords[activeCell.rowIndex];
+      if (entry?.type !== "record" || !entry.record) return;
+      const field = orderedVisibleFields[activeCell.colIndex];
+      if (field && field.type !== FieldType.RELATION_SUBTABLE) {
+        startEditing(entry.record.id, field.key);
+      }
+    },
+    onCancelEdit: () => cancelEdit(),
+    onClearCell: () => {
+      if (!activeCell) return;
+      const entry = flatRecords[activeCell.rowIndex];
+      if (entry?.type !== "record" || !entry.record) return;
+      const field = orderedVisibleFields[activeCell.colIndex];
+      if (field && field.type !== FieldType.RELATION_SUBTABLE) {
+        handleCommit(entry.record.id, field.key, null);
+      }
+    },
+    onCopyCell: () => {
+      if (!activeCell) return null;
+      const entry = flatRecords[activeCell.rowIndex];
+      if (entry?.type !== "record" || !entry.record) return null;
+      const field = orderedVisibleFields[activeCell.colIndex];
+      return field ? String(entry.record.data[field.key] ?? "") : null;
+    },
+    onPasteCell: (text: string) => {
+      if (!activeCell) return;
+      const entry = flatRecords[activeCell.rowIndex];
+      if (entry?.type !== "record" || !entry.record) return;
+      const field = orderedVisibleFields[activeCell.colIndex];
+      if (!field) return;
+      // Validate paste
+      if (field.type === FieldType.NUMBER && isNaN(Number(text))) return;
+      if (
+        field.type === FieldType.SELECT &&
+        field.options &&
+        !field.options.includes(text)
+      )
+        return;
+      handleCommit(
+        entry.record.id,
+        field.key,
+        field.type === FieldType.NUMBER ? Number(text) : text
+      );
+    },
+    isGroupRow: (rowIndex: number) =>
+      groupRowIndices.has(rowIndex),
+  });
+
+  // Wrapper that syncs both ref and state
+  const setActiveCell = useCallback(
+    (cell: ActiveCell | null) => {
+      setActiveCellRef(cell);
+      setActiveCellState(cell);
+    },
+    [setActiveCellRef]
+  );
+
+  // Auto-scroll on activeCell change
+  useEffect(() => {
+    if (!activeCell || !tableRef.current) return;
+    const el = tableRef.current.querySelector(
+      `[data-row="${activeCell.rowIndex}"][data-col="${activeCell.colIndex}"]`
+    ) as HTMLElement | null;
+    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeCell]);
+
+  // Clear activeCell on page change
+  useEffect(() => {
+    setActiveCell(null);
+  }, [page]);
+
+  // Click handler to set activeCell
+  const handleCellClick = useCallback(
+    (rowIndex: number, colIndex: number, e: React.MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('button, [role="checkbox"], input, select')) return;
+      setActiveCell({ rowIndex, colIndex });
+      tableRef.current?.focus();
+    },
+    [setActiveCell]
+  );
 
   // ── Editor rendering ────────────────────────────────────────────────────
   const renderEditor = useCallback(
@@ -588,7 +714,7 @@ export function GridView({
 
   // ── Record row rendering ────────────────────────────────────────────────
   const renderRecordRow = useCallback(
-    (record: DataRecordItem, index: number) => {
+    (record: DataRecordItem, index: number, flatRowIndex: number) => {
       const rowContent = (
         <>
           <td className="w-10 sticky left-0 z-[5] bg-background border-r px-1">
@@ -604,15 +730,24 @@ export function GridView({
           )}
           {orderedVisibleFields.map((field, fieldIndex) => {
             const frozenTdStyle = getFrozenStyle(fieldIndex, frozenFieldCountValue, orderedVisibleFields, columnWidths);
+            const isActive =
+              activeCell?.rowIndex === flatRowIndex &&
+              activeCell?.colIndex === fieldIndex;
             return (
               <td
                 key={field.id}
+                data-row={flatRowIndex}
+                data-col={fieldIndex}
                 style={frozenTdStyle}
                 className={cn(
                   "p-2 align-middle whitespace-nowrap",
                   frozenTdStyle && "bg-background",
-                  frozenFieldCountValue > 0 && fieldIndex === frozenFieldCountValue - 1 && "frozen-last-col relative"
+                  frozenFieldCountValue > 0 &&
+                    fieldIndex === frozenFieldCountValue - 1 &&
+                    "frozen-last-col relative",
+                  isActive && "ring-2 ring-primary ring-inset"
                 )}
+                onClick={(e) => handleCellClick(flatRowIndex, fieldIndex, e)}
               >
                 {renderCell(field, record)}
               </td>
@@ -677,6 +812,8 @@ export function GridView({
       canDragSort,
       selectedIdsSet,
       toggleRow,
+      activeCell,
+      handleCellClick,
     ]
   );
 
@@ -701,7 +838,13 @@ export function GridView({
         onApply={handleBatchEdit}
       />
       <div className="flex-1 min-h-0 overflow-auto">
-        <table className="w-full caption-bottom text-sm" style={{ tableLayout: "fixed" }} ref={tableRef}>
+        <table
+          className="w-full caption-bottom text-sm outline-none"
+          style={{ tableLayout: "fixed" }}
+          ref={tableRef}
+          tabIndex={0}
+          onKeyDown={handleKeyDown}
+        >
           <colgroup>
             <col style={{ width: CHECKBOX_COL_WIDTH }} />
             {canDragSort && <col style={{ width: 32 }} />}
@@ -781,34 +924,45 @@ export function GridView({
             </tr>
           ) : groupedRecords ? (
             // ── Grouped rendering ────────────────────────────────────────
-            groupedRecords.map((group) => {
-              const isCollapsed = collapsedGroups.has(group.value);
-              return (
-                <Fragment key={`group-${group.value}`}>
-                  <tr
-                    className="border-b transition-colors bg-muted/50 hover:bg-muted/70 cursor-pointer select-none sticky top-[41px] z-[5]"
-                    onClick={() => toggleGroup(group.value)}
-                  >
-                    <td colSpan={colCount} className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 py-2">
-                      <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-                        {isCollapsed ? (
-                          <ChevronRight className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                        <span>{group.label}</span>
-                        <span className="text-xs">({group.records.length})</span>
-                      </div>
-                    </td>
-                  </tr>
-                  {!isCollapsed &&
-                    group.records.map((record, idx) => renderRecordRow(record, idx))}
-                </Fragment>
-              );
-            })
+            (() => {
+              let flatIdx = 0;
+              return groupedRecords.map((group) => {
+                const groupHeaderFlatIdx = flatIdx;
+                const isCollapsed = collapsedGroups.has(group.value);
+                flatIdx += 1; // group header row
+                const startRecordFlatIdx = flatIdx;
+                if (!isCollapsed) {
+                  flatIdx += group.records.length;
+                }
+                return (
+                  <Fragment key={`group-${group.value}`}>
+                    <tr
+                      className="border-b transition-colors bg-muted/50 hover:bg-muted/70 cursor-pointer select-none sticky top-[41px] z-[5]"
+                      onClick={() => toggleGroup(group.value)}
+                    >
+                      <td colSpan={colCount} className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 py-2">
+                        <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
+                          {isCollapsed ? (
+                            <ChevronRight className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                          <span>{group.label}</span>
+                          <span className="text-xs">({group.records.length})</span>
+                        </div>
+                      </td>
+                    </tr>
+                    {!isCollapsed &&
+                      group.records.map((record, idx) =>
+                        renderRecordRow(record, idx, startRecordFlatIdx + idx)
+                      )}
+                  </Fragment>
+                );
+              });
+            })()
           ) : (
             // ── Flat rendering ────────────────────────────────────────────
-            records.map((record, idx) => renderRecordRow(record, idx))
+            records.map((record, idx) => renderRecordRow(record, idx, idx))
           )}
           </DragDropProvider>
         </tbody>

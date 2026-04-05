@@ -246,7 +246,7 @@ export async function listRecords(
       }
     }
 
-    // Resolve relation fields - batch fetch related records
+    // Resolve RELATION fields - batch fetch related records
     const relationFields = tableResult.data.fields.filter(
       f => f.type === "RELATION" && f.relationTo && f.displayField
     );
@@ -288,12 +288,72 @@ export async function listRecords(
           if (typeof relId === "string" && relId) {
             const relatedData = relatedRecordsMap.get(relId);
             if (relatedData && field.displayField) {
-              // Store display value with special structure for frontend
               record.data[field.key] = {
                 id: relId,
                 display: relatedData[field.displayField] ?? relId,
               };
             }
+          }
+        }
+      }
+    }
+
+    // Resolve RELATION_SUBTABLE display values at read time
+    // Snapshots may be stale or have incorrect displayValue (e.g. wrong displayField config)
+    const subtableFields = tableResult.data.fields.filter(
+      f => f.type === "RELATION_SUBTABLE" && f.relationTo && f.displayField
+    );
+
+    if (subtableFields.length > 0) {
+      // Collect all targetRecordIds across all records for each subtable field
+      const subtableTargetIds = new Set<string>();
+      for (const field of subtableFields) {
+        for (const record of processedRecords) {
+          const snapshot = record.data[field.key];
+          if (Array.isArray(snapshot)) {
+            for (const item of snapshot as RelationSubtableValueItem[]) {
+              if (item.targetRecordId) {
+                subtableTargetIds.add(item.targetRecordId);
+              }
+            }
+          }
+        }
+      }
+
+      // Batch fetch target records
+      let subtableRelatedMap: Map<string, Record<string, unknown>>;
+      if (subtableTargetIds.size > 0) {
+        const subtableRelatedRecords = await db.dataRecord.findMany({
+          where: { id: { in: Array.from(subtableTargetIds) } },
+        });
+        subtableRelatedMap = new Map(
+          subtableRelatedRecords.map((r) => [r.id, r.data as Record<string, unknown>])
+        );
+      } else {
+        subtableRelatedMap = new Map();
+      }
+
+      // Fix displayValue for each snapshot item
+      for (const record of processedRecords) {
+        for (const field of subtableFields) {
+          const snapshot = record.data[field.key];
+          if (!Array.isArray(snapshot)) continue;
+
+          let changed = false;
+          const fixed = (snapshot as RelationSubtableValueItem[]).map((item) => {
+            const targetData = subtableRelatedMap.get(item.targetRecordId);
+            const correctDisplay = targetData && field.displayField
+              ? String(targetData[field.displayField] ?? item.targetRecordId)
+              : item.displayValue ?? item.targetRecordId;
+            if (correctDisplay !== item.displayValue) {
+              changed = true;
+              return { ...item, displayValue: correctDisplay };
+            }
+            return item;
+          });
+
+          if (changed) {
+            record.data[field.key] = fixed;
           }
         }
       }

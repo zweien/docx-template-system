@@ -521,7 +521,11 @@ export async function saveTableFieldsWithRelations(input: {
               );
             }
 
-            const nextInverseDisplayField = field.displayField ?? matched.displayField ?? inverse.displayField ?? null;
+            // Do NOT propagate displayField from forward to inverse field.
+            // Forward displayField points to a column in the TARGET table,
+            // while inverse displayField must point to a column in the SOURCE table.
+            // Keep the inverse's own displayField unless it was never set.
+            const nextInverseDisplayField = inverse.displayField ?? null;
 
             await tx.dataField.update({
               where: { id: inverse.id },

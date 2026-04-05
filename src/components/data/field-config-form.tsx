@@ -372,14 +372,14 @@ export function FieldConfigForm({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="sm:max-w-[560px]">
-        <form onSubmit={handleSubmit}>
+      <SheetContent className="sm:max-w-[560px] overflow-hidden">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
           <SheetHeader>
             <SheetTitle>{field ? "编辑字段" : "添加字段"}</SheetTitle>
             <SheetDescription>配置字段属性，不同类型有不同的配置选项</SheetDescription>
           </SheetHeader>
 
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 overflow-y-auto flex-1 min-h-0 px-4">
             <div className="grid gap-2">
               <Label htmlFor="key">
                 字段标识 <span className="text-red-500">*</span>
@@ -746,7 +746,7 @@ export function FieldConfigForm({
             {error && <p className="text-sm text-red-500">{error}</p>}
           </div>
 
-          <SheetFooter>
+          <SheetFooter className="flex-shrink-0">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               取消
             </Button>

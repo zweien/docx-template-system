@@ -284,29 +284,30 @@ interface FilterCondition {
 
 function buildFilterConditions(
   filters: FilterCondition[],
-  fields: Array<{ key: string; type: string }>
+  fields: Array<{ key: string; type: string; label?: string }>
 ): Record<string, unknown>[] {
   const conditions: Record<string, unknown>[] = [];
 
   for (const filter of filters) {
-    const field = fields.find((f) => f.key === filter.field);
-    if (!field) continue;
+    const resolvedKey = resolveFieldKey(filter.field, fields);
+    if (!resolvedKey) continue;
+    const field = fields.find((f) => f.key === resolvedKey)!;
 
     switch (filter.operator) {
       case "eq":
         conditions.push({
-          data: { path: [filter.field], equals: filter.value },
+          data: { path: [resolvedKey], equals: filter.value },
         });
         break;
       case "ne":
         conditions.push({
-          NOT: { data: { path: [filter.field], equals: filter.value } },
+          NOT: { data: { path: [resolvedKey], equals: filter.value } },
         });
         break;
       case "contains":
         conditions.push({
           data: {
-            path: [filter.field],
+            path: [resolvedKey],
             string_contains: String(filter.value),
           },
         });
@@ -321,15 +322,15 @@ function buildFilterConditions(
       case "in":
         if (Array.isArray(filter.value)) {
           conditions.push({
-            data: { path: [filter.field], equals: filter.value },
+            data: { path: [resolvedKey], equals: filter.value },
           });
         }
         break;
       case "isempty":
         conditions.push({
           OR: [
-            { data: { path: [filter.field], equals: null } },
-            { data: { path: [filter.field], equals: "" } },
+            { data: { path: [resolvedKey], equals: null } },
+            { data: { path: [resolvedKey], equals: "" } },
           ],
         });
         break;
@@ -337,8 +338,8 @@ function buildFilterConditions(
         conditions.push({
           NOT: {
             OR: [
-              { data: { path: [filter.field], equals: null } },
-              { data: { path: [filter.field], equals: "" } },
+              { data: { path: [resolvedKey], equals: null } },
+              { data: { path: [resolvedKey], equals: "" } },
             ],
           },
         });
@@ -446,7 +447,7 @@ export async function searchRecords(params: {
     if (filters.length > 0) {
       const filterConditions = buildFilterConditions(
         typedFilters,
-        table.fields.map((f) => ({ key: f.key, type: f.type }))
+        table.fields.map((f) => ({ key: f.key, type: f.type, label: f.label }))
       );
       if (filterConditions.length > 0) {
         where.AND = filterConditions;

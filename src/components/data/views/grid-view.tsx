@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Redo2, Trash2, Undo2 } from "lucide-react";
 import { BatchActionBar } from "@/components/data/batch-action-bar";
 import { BatchEditDialog } from "@/components/data/batch-edit-dialog";
 import { DragDropProvider } from "@dnd-kit/react";
@@ -22,6 +22,7 @@ import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useKeyboardNav, type ActiveCell } from "@/hooks/use-keyboard-nav";
+import { useUndoManager } from "@/hooks/use-undo-manager";
 import { cn } from "@/lib/utils";
 import { useSummaryRow } from "@/hooks/use-summary-row";
 import {
@@ -242,6 +243,9 @@ export function GridView({
   onColumnAggregationsChange,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
+
+  // ── Undo manager ─────────────────────────────────────────────────────────
+  const undoManager = useUndoManager();
 
   // ── Summary row ──────────────────────────────────────────────────────────
   const { summaryData } = useSummaryRow({
@@ -619,8 +623,25 @@ export function GridView({
     [tableId, onRefresh]
   );
 
+  const handleCommitWithUndo = useCallback(
+    async (recordId: string, fieldKey: string, value: unknown) => {
+      const record = records.find((r) => r.id === recordId);
+      const oldValue = record?.data[fieldKey] ?? null;
+      const field = orderedVisibleFields.find((f) => f.key === fieldKey);
+      const label = field?.label ?? fieldKey;
+
+      await undoManager.execute({
+        type: "UPDATE_CELL",
+        description: `编辑了${label}`,
+        execute: () => handleCommit(recordId, fieldKey, value),
+        undo: () => handleCommit(recordId, fieldKey, oldValue),
+      });
+    },
+    [handleCommit, records, orderedVisibleFields, undoManager]
+  );
+
   const { editingCell, startEditing, commitEdit, cancelEdit } =
-    useInlineEdit({ tableId, onCommit: handleCommit });
+    useInlineEdit({ tableId, onCommit: handleCommitWithUndo });
 
   // ── Keyboard navigation ──────────────────────────────────────────────────
   const { handleKeyDown, setActiveCell: setActiveCellRef } = useKeyboardNav({
@@ -676,6 +697,8 @@ export function GridView({
     },
     isGroupRow: (rowIndex: number) =>
       groupRowIndices.has(rowIndex),
+    onUndo: () => void undoManager.undo(),
+    onRedo: () => void undoManager.redo(),
   });
 
   // Wrapper that syncs both ref and state
@@ -1073,6 +1096,28 @@ export function GridView({
           onQuickFormat?.(fieldKey, value);
         }}
       >
+      <div className="flex items-center gap-1 px-2 py-1 border-b">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          disabled={!undoManager.canUndo || undoManager.isExecuting}
+          onClick={() => void undoManager.undo()}
+          title={undoManager.lastDescription ? `撤销: ${undoManager.lastDescription}` : "撤销"}
+        >
+          <Undo2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          disabled={!undoManager.canRedo || undoManager.isExecuting}
+          onClick={() => void undoManager.redo()}
+          title="重做"
+        >
+          <Redo2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
       <div className="flex-1 min-h-0 overflow-auto">
         <table
           className="w-full caption-bottom text-sm outline-none"

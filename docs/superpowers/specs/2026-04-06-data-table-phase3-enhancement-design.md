@@ -11,42 +11,60 @@ Three-phase enhancement plan to close the gap between the current data table imp
 
 ### P1-A: New Field Types
 
-Add 5 new FieldType enum values:
+Add 5 new FieldType enum values. Note: the existing `DataField` model has an `options Json?` field — all new type-specific metadata will be stored there (not in a separate `meta` field):
+
+```
+DataField.options: {
+  // AUTO_NUMBER
+  nextValue?: number
+
+  // SYSTEM_TIMESTAMP / SYSTEM_USER
+  kind?: "created" | "updated"
+
+  // FORMULA (P3)
+  formula?: string
+}
+```
+
+A TypeScript type `FieldOptions` will be defined to type-narrow the JSON structure.
 
 | Type | Storage | Editable | Display |
 |------|---------|----------|---------|
 | `URL` | `string` | Yes (text input with URL validation) | Clickable `<a>` link |
-| `CHECKBOX` | `boolean` | Yes (single click to toggle) | Green check / gray empty box |
+| `BOOLEAN` | `boolean` | Yes (single click to toggle) | Green check / gray empty box |
 | `AUTO_NUMBER` | `number` | No | Integer text |
 | `SYSTEM_TIMESTAMP` | `DateTime string` | No | Formatted datetime |
 | `SYSTEM_USER` | `string` (user id) | No | Display name |
 
 #### Auto Number
 
-- `DataField.meta.nextValue` tracks the next value (starts at 1)
-- Service layer assigns and increments on record creation
+- `DataField.options.nextValue` tracks the next value (starts at 1)
+- Service layer assigns and increments on record creation within a transaction + row lock (`SELECT ... FOR UPDATE` on the DataField row)
+- Batch create: must iterate records individually (not `createMany`) to ensure sequential number assignment
 - Deleted records do not recycle numbers
 
 #### System Timestamp
 
-- `meta.kind`: `"created"` or `"updated"`
+- `options.kind`: `"created"` or `"updated"`
+- **Do NOT store in DataRecord.data JSONB** — read directly from `DataRecord.createdAt` / `DataRecord.updatedAt`
 - CREATED: set once on `createRecord`, never modified
 - UPDATED: set on `createRecord`, refreshed on every `updateRecord`
 
 #### System User
 
-- `meta.kind`: `"created"` or `"updated"`
-- CREATED_BY: set to `session.user.id` on creation
-- UPDATED_BY: set to `session.user.id` on every update
+- `options.kind`: `"created"` or `"updated"`
+- **Do NOT store in DataRecord.data JSONB** — read directly from `DataRecord.createdById` / map `updatedById` (new field, see below)
+- CREATED_BY: maps to `DataRecord.createdById`
+- UPDATED_BY: requires adding `updatedById String?` to DataRecord model, set on every update
 - Display resolves user id to display name via lookup
 
 #### Changes Required
 
-- `prisma/schema.prisma`: add 5 values to `FieldType` enum
-- `src/types/data-table.ts`: update type guards and helpers
-- `src/components/data/cell-editors/`: add `url-cell-editor.tsx`, `checkbox-cell-editor.tsx`
+- `prisma/schema.prisma`: add 5 values to `FieldType` enum; add `updatedById String?` to DataRecord
+- `src/types/data-table.ts`: update type guards and helpers; define `FieldOptions` type
+- `src/components/data/cell-editors/`: add `url-cell-editor.tsx`, `boolean-cell-editor.tsx`
 - `src/lib/format-cell.tsx`: add formatters for all 5 types
-- `src/lib/services/data-record.service.ts`: inject auto-number and system field values
+- `src/lib/services/data-record.service.ts`: inject auto-number; skip SYSTEM fields in `validateRecordData`; set `updatedById` on updates
 - `src/components/data/field-config-form.tsx`: add new types to creation options
 - `src/components/data/column-header.tsx`: update filter operators per type
 
@@ -60,7 +78,7 @@ Fixed row at the bottom of the grid showing per-column aggregate values.
 |------------|---------|-----------|
 | TEXT / URL / EMAIL / PHONE / SELECT | Count | Count |
 | NUMBER | Sum | Sum / Avg / Min / Max / Count |
-| CHECKBOX | Checked count | Checked / Unchecked / Count |
+| BOOLEAN | Checked count | Checked / Unchecked / Count |
 | DATE / SYSTEM_TIMESTAMP | Earliest | Earliest / Latest / Count |
 | AUTO_NUMBER | Count | Count |
 | FORMULA | Depends on result type | Same as NUMBER or TEXT |
@@ -74,12 +92,14 @@ Fixed row at the bottom of the grid showing per-column aggregate values.
 
 #### Implementation
 
+- **Server-side computation**: add `GET /api/data-tables/[id]/summary` endpoint that computes aggregates over all filtered records using SQL aggregate functions (`SUM`, `AVG`, `COUNT`, `MIN`, `MAX`). Accepts same filter/sort params as the records endpoint.
 - New hook: `use-summary-row.ts`
-  - Input: `filteredRecords`, `fields`, `columnAggregations`
+  - Calls the summary API with current filter state
   - Output: `{ [fieldKey]: { value: number | string, type: AggregateType } }`
-- Computation is client-side (data < 1K)
-- Aggregation preference stored in `DataView.viewOptions.columnAggregations`
+  - Refetch when filters change
+- Aggregation preference stored in `DataView.viewOptions.columnAggregations`, auto-saved on change
   - Format: `{ [fieldKey]: "sum" | "avg" | "count" | "min" | "max" | "earliest" | "latest" | "checked" | "unchecked" }`
+  - Merged with existing viewOptions (conditionalFormatting, etc.) on save
 - UI: summary row rendered at bottom of `grid-view.tsx`, sticky position
 
 ## P2: Session-Level Undo/Redo
@@ -104,12 +124,19 @@ interface Command {
   redoStack: Command[]
   canUndo: boolean
   canRedo: boolean
+  isExecuting: boolean       // true while async undo/redo is in flight
   execute(command): void     // execute + push to undoStack, clear redoStack
   undo(): void               // pop undoStack, call undo(), push to redoStack
   redo(): void               // pop redoStack, call execute(), push to undoStack
   clear(): void              // reset both stacks
 }
 ```
+
+#### Async Error Handling
+
+- `isExecuting` flag disables undo/redo buttons during async operations
+- If `undo()` or `redo()` throws (network error): the command remains in its current stack, show error toast, do NOT modify stack state
+- If `execute()` (initial action) throws: do not push to undo stack, let the calling code handle the error naturally
 
 ### Covered Operations
 
@@ -146,7 +173,14 @@ interface Command {
 
 New `FORMULA` FieldType. Value computed from formula, not manually editable.
 
-Formula stored in `DataField.meta.formula` as a string.
+Formula stored in `DataField.options.formula` as a string.
+
+#### Result Storage
+
+- Formula results are computed client-side and stored in `DataRecord.data[fieldKey]` in JSONB
+- On record create/update, the server recalculates formula values and persists them
+- Result type is dynamic: `number | string | boolean | null`
+- Sorting and filtering on formula fields use the persisted JSONB values
 
 ### Reference Syntax
 
@@ -221,7 +255,7 @@ Field A → Field B → Field C → Field A  ← reject
 
 ## Implementation Order
 
-1. **P1-A**: New field types (URL, CHECKBOX, AUTO_NUMBER, SYSTEM_TIMESTAMP, SYSTEM_USER)
+1. **P1-A**: New field types (URL, BOOLEAN, AUTO_NUMBER, SYSTEM_TIMESTAMP, SYSTEM_USER)
 2. **P1-B**: Bottom summary bar
 3. **P2**: Session-level undo/redo
 4. **P3**: Formula field engine

@@ -14,6 +14,7 @@ import type {
   ViewType,
 } from "@/types/data-table";
 import { FieldConfigPopover } from "@/components/data/field-config-popover";
+import { FilterPanel } from "@/components/data/filter-panel";
 import { ViewSelector } from "@/components/data/view-selector";
 import { SaveViewDialog } from "@/components/data/save-view-dialog";
 import { useTableData } from "@/hooks/use-table-data";
@@ -329,6 +330,11 @@ export function RecordTable({
             currentViewId={viewId}
             onViewChange={switchView}
             onSaveNewView={() => setSaveDialogOpen(true)}
+          />
+          <FilterPanel
+            fields={fields}
+            filters={currentConfig.filters}
+            onChange={setFilters}
           />
           <form
             onSubmit={(event) => event.preventDefault()}

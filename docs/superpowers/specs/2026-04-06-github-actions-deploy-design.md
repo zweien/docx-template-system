@@ -20,7 +20,7 @@
 
 ```
 git tag v1.2.3 push → GitHub Actions → SSH 到 VPS
-    → git pull → docker compose build → docker compose up -d
+    → git pull → docker compose build → docker compose up -d → 健康检查
 ```
 
 ## 文件结构
@@ -38,11 +38,9 @@ Next.js standalone 多阶段构建：
 
 1. **deps 阶段**：`npm ci` 安装依赖
 2. **builder 阶段**：`prisma generate` + `next build`，需要 standalone 输出模式
-3. **runner 阶段**：仅复制 standalone 输出、静态资源和 public 目录，最小化镜像体积
+3. **runner 阶段**：复制 standalone 输出、`.next/static`、`public` 目录。同时复制 `prisma/` 目录（standalone 输出可能不包含 schema），以便在启动时执行 `prisma db push`
 
 需要在 `next.config.ts` 中添加 `output: 'standalone'` 以启用独立输出模式。
-
-Python 服务使用现有的 `python-service/Dockerfile`，无需修改。
 
 ## docker-compose.yml
 
@@ -55,29 +53,49 @@ services:
     env_file: .env.production
     environment:
       - PYTHON_SERVICE_URL=http://python-service:8065
+      - NODE_ENV=production
     restart: unless-stopped
     volumes:
       - uploads:/app/public/uploads
+      - collection-uploads:/app/.data/uploads
 
   python-service:
     build: ./python-service
+    ports:
+      - "127.0.0.1:8065:8065"
+    environment:
+      - PORT=8065
     restart: unless-stopped
+    volumes:
+      - uploads:/app/public/uploads:ro
 
 volumes:
   uploads:
+  collection-uploads:
 ```
 
 关键决策：
 - `app` 只绑定 `127.0.0.1:8060`，由 Nginx 反代，不直接暴露到公网
-- `PYTHON_SERVICE_URL` 使用 Docker 内部网络地址，不再走 localhost
-- `uploads` 用 named volume 持久化，git pull 不会丢失上传文件
+- `PYTHON_SERVICE_URL` 使用 Docker 内部网络地址（`python-service`），不再走 localhost
+- `uploads` 用 named volume 持久化，**同时挂载到 python-service（只读）**，因为 Python 服务需要读取模板文件路径
+- `collection-uploads` 持久化 `.data/uploads`（COLLECTION_UPLOAD_DIR 默认值）
+- Python 服务通过环境变量 `PORT=8065` 覆盖默认端口
 - 数据库连接通过 `.env.production` 中的 `DATABASE_URL` 指向 VPS 已有 PG
+
+## Python 服务适配
+
+现有 `python-service/Dockerfile` 的 `EXPOSE 8000` 与实际运行端口 8065 不一致。不修改 Dockerfile，而是在 `docker-compose.yml` 中通过环境变量 `PORT=8065` 控制，Nginx 配置反代到 8065 即可。
+
+Next.js 通过 HTTP POST 调用 Python 服务的 `/generate` 接口，Python 返回 `FileResponse`（HTTP 文件流），Next.js 端通过 response body 获取文件内容。因此 **OUTPUT_DIR 不需要跨容器共享**，Python 容器内 `/tmp/docx-output` 即可。
+
+但 **template_path 必须共享**：Next.js 将模板上传到 `public/uploads/templates/{id}/`，Python 服务需要读取该路径下的模板文件。因此 `uploads` volume 需要同时挂载到两个容器。
 
 ## .env.production
 
 VPS 上的生产环境变量文件（不在 Git 中），需要包含：
 
 ```env
+NODE_ENV=production
 DATABASE_URL="postgresql://user:pass@host:5432/docx_template_system"
 NEXTAUTH_SECRET="<random-secret>"
 NEXTAUTH_URL="https://doc.idrl.top"
@@ -100,13 +118,17 @@ UPLOAD_DIR="public/uploads"
 
 **步骤**：
 1. 使用 `appleboy/ssh-action` SSH 到 VPS
-2. 在部署目录执行 `git pull`
+2. 在部署目录执行 `git fetch --tags && git checkout $TAG`
 3. `docker compose build` 重新构建镜像
-4. `docker compose up -d --remove-orphans` 启动服务
+4. `docker compose run --rm app npx prisma db push` 同步数据库 schema
+5. `docker compose up -d --remove-orphans` 启动服务
+6. 健康检查：等待 15 秒后 curl 验证服务是否启动成功
 
 **GitHub Secrets（需要配置）**：
 - `VPS_HOST` — `192.227.137.51`
 - `VPS_SSH_KEY` — root 用户的 SSH 私钥
+
+**VPS 上的 Git 认证**：如果仓库是 private，需要在 VPS 上配置 GitHub Deploy Key 或 Personal Access Token。如果仓库是 public，`git clone/pull` 无需认证。
 
 ## VPS 初始化（一次性手动操作）
 
@@ -116,9 +138,13 @@ mkdir -p /opt/docx-template-system
 cd /opt/docx-template-system
 git clone https://github.com/zweien/docx-template-system.git .
 
-# 2. 创建 .env.production（按上述模板填写）
+# 2. 如果仓库是 private，配置 deploy key
+# 将 SSH 公钥添加到 GitHub 仓库 Settings → Deploy Keys
+# 然后改用 SSH URL: git remote set-url origin git@github.com:zweien/docx-template-system.git
 
-# 3. 配置 Nginx 反代
+# 3. 创建 .env.production（按上述模板填写）
+
+# 4. 配置 Nginx 反代
 # /etc/nginx/sites-available/doc.idrl.top
 server {
     listen 80;
@@ -137,13 +163,14 @@ server {
     }
 }
 
-# 4. 启用站点 + SSL
+# 5. 启用站点 + SSL
 ln -sf /etc/nginx/sites-available/doc.idrl.top /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 certbot --nginx -d doc.idrl.top --non-interactive --agree-tos -m admin@idrl.top
 
-# 5. 初始部署
+# 6. 初始部署
 docker compose build
+docker compose run --rm app npx prisma db push
 docker compose up -d
 ```
 

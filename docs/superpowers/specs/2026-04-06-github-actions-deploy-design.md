@@ -58,11 +58,12 @@ services:
     volumes:
       - uploads:/app/public/uploads
       - collection-uploads:/app/.data/uploads
+    networks:
+      - default
+      - sso_net
 
   python-service:
     build: ./python-service
-    ports:
-      - "127.0.0.1:8065:8065"
     environment:
       - PORT=8065
     restart: unless-stopped
@@ -72,6 +73,11 @@ services:
 volumes:
   uploads:
   collection-uploads:
+
+networks:
+  sso_net:
+    external: true
+    name: deploy_sso_net
 ```
 
 关键决策：
@@ -79,8 +85,9 @@ volumes:
 - `PYTHON_SERVICE_URL` 使用 Docker 内部网络地址（`python-service`），不再走 localhost
 - `uploads` 用 named volume 持久化，**同时挂载到 python-service（只读）**，因为 Python 服务需要读取模板文件路径
 - `collection-uploads` 持久化 `.data/uploads`（COLLECTION_UPLOAD_DIR 默认值）
-- Python 服务通过环境变量 `PORT=8065` 覆盖默认端口
-- 数据库连接通过 `.env.production` 中的 `DATABASE_URL` 指向 VPS 已有 PG
+- Python 服务通过环境变量 `PORT=8065` 覆盖默认端口，不需要对外暴露端口
+- **加入外部网络 `deploy_sso_net`**，共用 VPS 已有的 PostgreSQL 容器（`idrl-sso-postgres`），通过容器名连接
+- 数据库连接：`DATABASE_URL` 中 Host 使用 `idrl-sso-postgres`，Port `5432`
 
 ## Python 服务适配
 
@@ -96,7 +103,7 @@ VPS 上的生产环境变量文件（不在 Git 中），需要包含：
 
 ```env
 NODE_ENV=production
-DATABASE_URL="postgresql://user:pass@host:5432/docx_template_system"
+DATABASE_URL="postgresql://docx_user:<password>@idrl-sso-postgres:5432/docx_template_system"
 NEXTAUTH_SECRET="<random-secret>"
 NEXTAUTH_URL="https://doc.idrl.top"
 AUTHENTIK_ISSUER="https://auth.idrl.top/application/o/docx-template-system/"
@@ -111,6 +118,8 @@ AI_MODEL="<model>"
 MODEL_CONFIG_ENCRYPTION_KEY="<key>"
 UPLOAD_DIR="public/uploads"
 ```
+
+`DATABASE_URL` 中的 Host 使用 `idrl-sso-postgres`（Docker 容器名），通过 `deploy_sso_net` 网络直连。
 
 ## GitHub Actions 工作流
 
@@ -133,18 +142,26 @@ UPLOAD_DIR="public/uploads"
 ## VPS 初始化（一次性手动操作）
 
 ```bash
-# 1. 创建部署目录并克隆代码
+# 1. 在已有 PostgreSQL 中创建数据库和用户
+docker exec idrl-sso-postgres psql -U authentik -c "CREATE USER docx_user WITH PASSWORD '<password>';"
+docker exec idrl-sso-postgres psql -U authentik -c "CREATE DATABASE docx_template_system OWNER docx_user;"
+
+# 2. 创建部署目录并克隆代码
 mkdir -p /opt/docx-template-system
 cd /opt/docx-template-system
 git clone https://github.com/zweien/docx-template-system.git .
 
-# 2. 如果仓库是 private，配置 deploy key
+# 3. 如果仓库是 private，配置 deploy key
 # 将 SSH 公钥添加到 GitHub 仓库 Settings → Deploy Keys
 # 然后改用 SSH URL: git remote set-url origin git@github.com:zweien/docx-template-system.git
 
-# 3. 创建 .env.production（按上述模板填写）
+# 4. 创建 .env.production（按上述模板填写）
+# DATABASE_URL 中 Host 用 idrl-sso-postgres（容器名）
 
-# 4. 配置 Nginx 反代
+# 5. 确保 deploy_sso_net 网络存在（Authentik 部署时已创建，可跳过）
+# docker network inspect deploy_sso_net
+
+# 6. 配置 Nginx 反代
 # /etc/nginx/sites-available/doc.idrl.top
 server {
     listen 80;
@@ -163,12 +180,12 @@ server {
     }
 }
 
-# 5. 启用站点 + SSL
+# 7. 启用站点 + SSL
 ln -sf /etc/nginx/sites-available/doc.idrl.top /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 certbot --nginx -d doc.idrl.top --non-interactive --agree-tos -m admin@idrl.top
 
-# 6. 初始部署
+# 8. 初始部署
 docker compose build
 docker compose run --rm app npx prisma db push
 docker compose up -d

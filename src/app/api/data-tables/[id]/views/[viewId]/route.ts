@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { getView, updateView, deleteView } from "@/lib/services/data-view.service";
 import {
-  filterConditionSchema,
+  filterGroupSchema,
   sortConfigSchema,
   viewTypeNameSchema,
 } from "@/validators/data-table";
@@ -12,7 +12,7 @@ const updateViewSchema = z.object({
   name: z.string().min(1).optional(),
   type: viewTypeNameSchema.optional(),
   isDefault: z.boolean().optional(),
-  filters: z.array(filterConditionSchema).optional(),
+  filters: z.array(filterGroupSchema).optional(),
   sortBy: z.array(sortConfigSchema).nullable().optional(),
   visibleFields: z.array(z.string()).optional(),
   fieldOrder: z.array(z.string()).optional(),

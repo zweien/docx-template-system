@@ -129,6 +129,11 @@ export const filterConditionSchema = z.object({
   value: z.union([z.string(), z.number()]),
 });
 
+export const filterGroupSchema = z.object({
+  operator: z.enum(["AND", "OR"]),
+  conditions: z.array(filterConditionSchema),
+});
+
 export const reorderSchema = z.object({
   recordIds: z.array(z.string()).min(1).max(200),
 });

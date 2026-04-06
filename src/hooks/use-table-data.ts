@@ -7,7 +7,7 @@ import type {
   DataRecordItem,
   DataViewConfig,
   DataViewItem,
-  FilterCondition,
+  FilterGroup,
   PaginatedRecords,
   SortConfig,
 } from "@/types/data-table";
@@ -35,7 +35,7 @@ export interface UseTableDataReturn {
   switchView: (viewId: string | null) => void;
   refreshViews: () => Promise<void>;
   currentConfig: DataViewConfig;
-  setFilters: (filters: FilterCondition[]) => void;
+  setFilters: (filters: FilterGroup[]) => void;
   setSorts: (sorts: SortConfig[]) => void;
   setVisibleFields: (fields: string[]) => void;
   setFieldOrder: (order: string[]) => void;
@@ -61,7 +61,7 @@ function buildQueryKey(
   pageSize: number,
   search: string,
   viewId: string | null,
-  filters: FilterCondition[],
+  filters: FilterGroup[],
   sorts: SortConfig[]
 ): string {
   return JSON.stringify({
@@ -99,7 +99,7 @@ export function useTableData({
   const [isViewConfigReady, setIsViewConfigReady] = useState(
     () => searchParams.get("viewId") === null
   );
-  const [filters, setFiltersState] = useState<FilterCondition[]>([]);
+  const [filters, setFiltersState] = useState<FilterGroup[]>([]);
   const [sorts, setSortsState] = useState<SortConfig[]>([]);
   const [visibleFields, setVisibleFieldsState] = useState<string[]>(() => [
     ...defaultFieldKeys,
@@ -230,7 +230,7 @@ export function useTableData({
     setRefreshTick((value) => value + 1);
   }, []);
 
-  const setFilters = useCallback((nextFilters: FilterCondition[]) => {
+  const setFilters = useCallback((nextFilters: FilterGroup[]) => {
     setFiltersState(nextFilters);
   }, []);
 

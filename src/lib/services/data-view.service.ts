@@ -3,7 +3,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { ViewType } from "@/generated/prisma/enums";
 import type {
   DataViewItem,
-  FilterCondition,
+  FilterGroup,
   ServiceResult,
   SortConfig,
 } from "@/types/data-table";
@@ -59,7 +59,7 @@ function mapViewItem(row: {
     name: row.name,
     type: row.type,
     isDefault: row.isDefault,
-    filters: (row.filters as FilterCondition[]) ?? [],
+    filters: (row.filters as FilterGroup[]) ?? [],
     sortBy: normalizeSortBy(row.sortBy),
     visibleFields: (row.visibleFields as string[]) ?? [],
     fieldOrder: (row.fieldOrder as string[]) ?? [],
@@ -105,7 +105,7 @@ export async function createView(
     name: string;
     type?: ViewType;
     isDefault?: boolean;
-    filters?: FilterCondition[];
+    filters?: FilterGroup[];
     sortBy?: SortConfig[] | null;
     visibleFields?: string[];
     fieldOrder?: string[];
@@ -147,7 +147,7 @@ export async function updateView(
     name: string;
     type: ViewType;
     isDefault: boolean;
-    filters: FilterCondition[];
+    filters: FilterGroup[];
     sortBy: SortConfig[] | null;
     visibleFields: string[];
     fieldOrder: string[];

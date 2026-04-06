@@ -9,6 +9,7 @@ import type {
   DataFieldItem,
   DataViewItem,
   FilterCondition,
+  FilterGroup,
   SortConfig,
   ViewType,
 } from "@/types/data-table";
@@ -113,13 +114,24 @@ export function RecordTable({
   // ── Filter change handler ────────────────────────────────────────────────
   const handleFilterChange = useCallback(
     (filter: FilterCondition | null, fieldKey: string) => {
-      const nextFilters = currentConfig.filters.filter(
-        (item) => item.fieldKey !== fieldKey
-      );
+      // Build updated groups: remove existing condition for this field, then add new one
+      const updatedGroups: FilterGroup[] = currentConfig.filters.map((group) => ({
+        ...group,
+        conditions: group.conditions.filter((c) => c.fieldKey !== fieldKey),
+      })).filter((group) => group.conditions.length > 0);
+
       if (filter) {
-        nextFilters.push(filter);
+        // Add to the first group (or create a new AND group if none exist)
+        if (updatedGroups.length > 0) {
+          updatedGroups[0] = {
+            ...updatedGroups[0],
+            conditions: [...updatedGroups[0].conditions, filter],
+          };
+        } else {
+          updatedGroups.push({ operator: "AND", conditions: [filter] });
+        }
       }
-      setFilters(nextFilters);
+      setFilters(updatedGroups);
     },
     [currentConfig.filters, setFilters]
   );

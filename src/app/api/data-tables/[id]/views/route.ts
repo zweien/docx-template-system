@@ -3,7 +3,7 @@ import { getRouteSessionUser } from "@/lib/auth";
 import { z } from "zod";
 import { listViews, createView } from "@/lib/services/data-view.service";
 import {
-  filterConditionSchema,
+  filterGroupSchema,
   sortConfigSchema,
   viewTypeNameSchema,
 } from "@/validators/data-table";
@@ -12,7 +12,7 @@ const createViewSchema = z.object({
   name: z.string().min(1, "视图名称不能为空"),
   type: viewTypeNameSchema.optional(),
   isDefault: z.boolean().optional(),
-  filters: z.array(filterConditionSchema).optional(),
+  filters: z.array(filterGroupSchema).optional(),
   sortBy: z.array(sortConfigSchema).nullable().optional(),
   visibleFields: z.array(z.string()).optional(),
   fieldOrder: z.array(z.string()).optional(),

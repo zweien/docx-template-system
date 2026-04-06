@@ -124,13 +124,31 @@ export interface FilterCondition {
   value: string | number;
 }
 
+export interface FilterGroup {
+  operator: "AND" | "OR"
+  conditions: FilterCondition[]
+}
+
+/** Normalize legacy flat FilterCondition[] to FilterGroup[] */
+export function normalizeFilters(
+  filters: FilterCondition[] | FilterGroup[] | null | undefined
+): FilterGroup[] {
+  if (!filters || filters.length === 0) return []
+  // Detect new format: FilterGroup has "conditions" property
+  if ("conditions" in filters[0]) {
+    return filters as FilterGroup[]
+  }
+  // Legacy format: flat FilterCondition[] — wrap in single AND group
+  return [{ operator: "AND", conditions: filters as FilterCondition[] }]
+}
+
 export interface SortConfig {
   fieldKey: string;
   order: 'asc' | 'desc';
 }
 
 export interface DataViewConfig {
-  filters: FilterCondition[];
+  filters: FilterGroup[];
   sortBy: SortConfig[];
   visibleFields: string[];
   fieldOrder: string[];
@@ -144,7 +162,7 @@ export interface DataViewItem {
   name: string;
   type: ViewType;
   isDefault: boolean;
-  filters: FilterCondition[];
+  filters: FilterGroup[];
   sortBy: SortConfig[];
   visibleFields: string[];
   fieldOrder: string[];

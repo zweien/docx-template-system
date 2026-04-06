@@ -8,7 +8,9 @@ import type {
   DataFieldItem,
   SortConfig,
   FilterCondition,
+  FilterGroup,
 } from "@/types/data-table";
+import { normalizeFilters } from "@/types/data-table";
 import { getTable } from "./data-table.service";
 import {
   removeAllRelationsForRecord,
@@ -163,7 +165,7 @@ export async function listRecords(
     // P2: 新增字段筛选
     fieldFilters?: FieldFilters;
     sortBy?: SortConfig[] | null;
-    filterConditions?: FilterCondition[];
+    filterConditions?: FilterGroup[] | FilterCondition[];
   }
 ): Promise<ServiceResult<PaginatedRecords>> {
   try {
@@ -858,44 +860,64 @@ export async function findByUniqueField(
 
 // ── View Filter Helpers ──
 
+function buildConditionFromFilter(
+  cond: FilterCondition,
+  fields: DataFieldItem[]
+): Record<string, unknown> | null {
+  const field = fields.find((f) => f.key === cond.fieldKey)
+  if (!field) return null
+
+  switch (cond.op) {
+    case "isempty":
+      return { OR: [
+        { data: { path: [cond.fieldKey], equals: null } },
+        { data: { path: [cond.fieldKey], equals: "" } },
+      ]}
+    case "isnotempty":
+      return { NOT: { OR: [
+        { data: { path: [cond.fieldKey], equals: null } },
+        { data: { path: [cond.fieldKey], equals: "" } },
+      ]}}
+    case "eq":
+      return { data: { path: [cond.fieldKey], equals: cond.value } }
+    case "ne":
+      return { NOT: { data: { path: [cond.fieldKey], equals: cond.value } } }
+    case "contains":
+      return { data: { path: [cond.fieldKey], string_contains: String(cond.value) } }
+    case "gt":
+    case "gte":
+    case "lt":
+    case "lte":
+      // NOTE: string_contains is a known limitation for numeric comparison on JSONB
+      return { data: { path: [cond.fieldKey], string_contains: String(cond.value) } }
+    default:
+      return null
+  }
+}
+
+/** Build Prisma where conditions from FilterGroup[] (or legacy FilterCondition[]) */
 function buildFilterConditionsFromSpec(
-  conditions: FilterCondition[],
+  filterInput: FilterGroup[] | FilterCondition[],
   fields: DataFieldItem[]
 ): Record<string, unknown>[] {
-  const result: Record<string, unknown>[] = [];
+  const groups = normalizeFilters(filterInput)
 
-  for (const cond of conditions) {
-    const field = fields.find(f => f.key === cond.fieldKey);
-    if (!field) continue;
+  return groups
+    .map((group) => {
+      const built = group.conditions
+        .map((c) => buildConditionFromFilter(c, fields))
+        .filter(Boolean) as Record<string, unknown>[]
 
-    if (cond.op === "isempty") {
-      result.push({
-        OR: [
-          { data: { path: [cond.fieldKey], equals: null } },
-          { data: { path: [cond.fieldKey], equals: "" } },
-        ],
-      });
-    } else if (cond.op === "isnotempty") {
-      result.push({
-        NOT: {
-          OR: [
-            { data: { path: [cond.fieldKey], equals: null } },
-            { data: { path: [cond.fieldKey], equals: "" } },
-          ],
-        },
-      });
-    } else if (cond.op === "eq") {
-      result.push({ data: { path: [cond.fieldKey], equals: cond.value } });
-    } else if (cond.op === "ne") {
-      result.push({ NOT: { data: { path: [cond.fieldKey], equals: cond.value } } });
-    } else if (cond.op === "contains") {
-      result.push({ data: { path: [cond.fieldKey], string_contains: String(cond.value) } });
-    } else if (["gt", "gte", "lt", "lte"].includes(cond.op)) {
-      result.push({ data: { path: [cond.fieldKey], string_contains: String(cond.value) } });
-    }
-  }
+      if (built.length === 0) return null
 
-  return result;
+      // If group operator is OR, wrap conditions in Prisma OR
+      if (group.operator === "OR") {
+        return { OR: built }
+      }
+      // AND: return each condition individually (they'll be AND-combined by caller)
+      return built.length === 1 ? built[0] : { AND: built }
+    })
+    .filter(Boolean) as Record<string, unknown>[]
 }
 
 // ── Validation ──

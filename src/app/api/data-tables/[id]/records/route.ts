@@ -7,7 +7,8 @@ import {
   sortConfigSchema,
 } from "@/validators/data-table";
 import type { FieldFilters } from "@/lib/services/data-record.service";
-import type { SortConfig, FilterCondition } from "@/types/data-table";
+import type { SortConfig, FilterCondition, FilterGroup } from "@/types/data-table";
+import { normalizeFilters } from "@/types/data-table";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   // View-level parameters
   const viewId = searchParams.get("viewId") || undefined;
-  let viewFilters: FilterCondition[] | undefined;
+  let viewFilters: FilterGroup[] | FilterCondition[] | undefined;
   let viewSortBy: SortConfig[] | null | undefined;
 
   if (viewId) {
@@ -72,7 +73,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const filterConditionsParam = searchParams.get("filterConditions");
   if (filterConditionsParam) {
     try {
-      viewFilters = filterConditionSchema.array().parse(JSON.parse(filterConditionsParam));
+      const parsed = JSON.parse(filterConditionsParam);
+      // Support both FilterGroup[] and legacy FilterCondition[] formats
+      if (Array.isArray(parsed) && parsed.length > 0 && "conditions" in parsed[0]) {
+        // New FilterGroup[] format
+        viewFilters = parsed as FilterGroup[];
+      } else {
+        // Legacy FilterCondition[] format — normalize to FilterGroup[]
+        viewFilters = filterConditionSchema.array().parse(parsed);
+      }
     } catch { /* ignore */ }
   }
 

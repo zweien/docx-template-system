@@ -13,6 +13,7 @@ import type {
   DataFieldItem,
   DataRecordItem,
   FilterCondition,
+  FilterGroup,
   SortConfig,
 } from "@/types/data-table";
 import { ColumnHeader } from "@/components/data/column-header";
@@ -48,7 +49,7 @@ interface GridViewProps {
   records: DataRecordItem[];
   isLoading: boolean;
   isAdmin: boolean;
-  filters: FilterCondition[];
+  filters: FilterGroup[];
   sorts: SortConfig[];
   visibleFields: string[];
   fieldOrder: string[];
@@ -225,6 +226,15 @@ export function GridView({
   onReorderRecords,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
+
+  // Find the filter condition for a given field across all groups
+  const findFilterForField = useCallback((fieldKey: string): FilterCondition | null => {
+    for (const group of filters) {
+      const found = group.conditions.find(c => c.fieldKey === fieldKey)
+      if (found) return found
+    }
+    return null
+  }, [filters])
 
   // ── Cell context menu ────────────────────────────────────────────────────
   const { context, captureCell, captureRowHeader, captureColHeader } = useCellContext();
@@ -991,7 +1001,7 @@ export function GridView({
                   <ColumnHeader
                     field={field}
                     filter={
-                      filters.find((f) => f.fieldKey === field.key) ?? null
+                      findFilterForField(field.key)
                     }
                     sort={sorts.find((s) => s.fieldKey === field.key) ?? null}
                     onFilterChange={(filter) =>

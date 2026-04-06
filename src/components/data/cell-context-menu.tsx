@@ -160,7 +160,7 @@ export function CellContextMenu({
 
   return (
     <ContextMenu>
-      <ContextMenuTrigger>{children}</ContextMenuTrigger>
+      <ContextMenuTrigger className="flex-1 min-h-0 flex flex-col outline-none">{children}</ContextMenuTrigger>
       <ContextMenuContent>
         {renderCellMenu()}
         {renderRowHeaderMenu()}

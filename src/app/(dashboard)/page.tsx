@@ -11,6 +11,8 @@ import {
   Upload,
   Users,
   FileOutput,
+  FolderInput,
+  Database,
 } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 
@@ -26,7 +28,7 @@ export default async function DashboardPage() {
 
   const isAdmin = (session?.user?.role as Role) === "ADMIN";
 
-  const [publishedTemplates, totalTemplates, monthlyRecords, drafts, totalUsers, todayRecords] =
+  const [publishedTemplates, totalTemplates, monthlyRecords, drafts, totalUsers, todayRecords, activeCollections, dataTables] =
     await Promise.all([
       db.template.count({ where: { status: "PUBLISHED" } }),
       isAdmin ? db.template.count() : Promise.resolve(0),
@@ -43,6 +45,8 @@ export default async function DashboardPage() {
         : Promise.resolve(0),
       isAdmin ? db.user.count() : Promise.resolve(0),
       isAdmin ? db.record.count({ where: { createdAt: { gte: startOfDay } } }) : Promise.resolve(0),
+      db.documentCollectionTask.count({ where: { status: "ACTIVE" } }),
+      db.dataTable.count(),
     ]);
 
   const stats = isAdmin
@@ -51,11 +55,15 @@ export default async function DashboardPage() {
         { label: "模板总数", value: totalTemplates, icon: FileText, iconColor: "text-blue-500", href: "/templates" },
         { label: "总用户数", value: totalUsers, icon: Users, iconColor: "text-indigo-500", href: "/admin/users" },
         { label: "今日生成", value: todayRecords, icon: History, iconColor: "text-orange-500", href: "/records" },
+        { label: "收集任务", value: activeCollections, icon: FolderInput, iconColor: "text-teal-500", href: "/collections" },
+        { label: "数据表", value: dataTables, icon: Database, iconColor: "text-cyan-500", href: "/data" },
       ]
     : [
         { label: "可用模板", value: publishedTemplates, icon: CheckCircle, iconColor: "text-green-500", href: "/generate" },
         { label: "本月生成", value: monthlyRecords, icon: History, iconColor: "text-orange-500", href: "/records" },
         { label: "我的草稿", value: drafts, icon: PenLine, iconColor: "text-purple-500", href: "/drafts" },
+        { label: "收集任务", value: activeCollections, icon: FolderInput, iconColor: "text-teal-500", href: "/collections" },
+        { label: "数据表", value: dataTables, icon: Database, iconColor: "text-cyan-500", href: "/data" },
       ];
 
   return (

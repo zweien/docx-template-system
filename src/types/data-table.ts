@@ -129,6 +129,15 @@ export interface FilterGroup {
   conditions: FilterCondition[]
 }
 
+export interface ConditionalFormatRule {
+  id: string
+  name?: string
+  condition: FilterCondition
+  backgroundColor: string
+  textColor?: string
+  scope: "row" | "cell"
+}
+
 /** Normalize legacy flat FilterCondition[] to FilterGroup[] */
 export function normalizeFilters(
   filters: FilterCondition[] | FilterGroup[] | null | undefined

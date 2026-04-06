@@ -15,6 +15,9 @@ npx prisma db push   # Push schema changes to DB (no migration files)
 npx prisma generate  # Regenerate Prisma client
 npx prisma db seed   # Seed admin + user accounts
 npx prisma studio    # Database GUI
+npm run release      # Bump patch version + CHANGELOG + git tag
+npm run release:minor # Bump minor version
+npm run release:major # Bump major version
 ```
 
 ## Architecture
@@ -72,7 +75,7 @@ Route protection is in `src/proxy.ts`. All routes except `/login` and `/api/auth
 
 **DB access:** Import `db` from `@/lib/db` — it's a singleton with driver adapter already configured.
 
-**Test accounts:** admin@example.com / admin123 (ADMIN), user@example.com / user123 (USER)
+**Authentik 浏览器登录:** 用户名 `akadmin`，密码 `idrl123456`
 
 ## Python Service
 
@@ -86,3 +89,14 @@ cd python-service && .venv/bin/python main.py   # Start on port 8065
 - **Endpoints:** `GET /health`, `POST /generate` (template_path, output_filename, form_data)
 - **Dependency:** `python-docx` — replaces `{{ key }}` in paragraphs and tables
 - **Configured via:** `PYTHON_SERVICE_URL` env var (default `http://localhost:8065`)
+
+## Version Management
+
+使用 `commit-and-tag-version` 管理版本（基于 conventional commits 自动 bump + CHANGELOG + git tag）。版本号显示在登录页和侧边栏。
+
+```bash
+npm run release           # patch bump + CHANGELOG + commit + tag
+npm run release:minor     # minor bump
+npm run release:major     # major bump
+git push --follow-tags    # 推送代码和 tag
+```

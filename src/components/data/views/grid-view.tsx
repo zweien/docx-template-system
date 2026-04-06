@@ -825,38 +825,44 @@ export function GridView({
     [editingCell, renderEditor, startEditing]
   );
 
+  // ── Per-record cell-level conditional format map ────────────────────────
+  const cellRuleMapByRecord = useMemo(() => {
+    if (!conditionalFormatRules || conditionalFormatRules.length === 0) return {};
+    const outerMap: Record<string, Record<string, React.CSSProperties>> = {};
+    for (const record of records) {
+      const innerMap: Record<string, React.CSSProperties> = {};
+      for (const rule of conditionalFormatRules) {
+        if (rule.scope !== "cell") continue;
+        const val = record.data[rule.condition.fieldKey];
+        let match = false;
+        switch (rule.condition.op) {
+          case "eq": match = String(val ?? "") === String(rule.condition.value); break;
+          case "ne": match = String(val ?? "") !== String(rule.condition.value); break;
+          case "contains": match = String(val ?? "").includes(String(rule.condition.value)); break;
+          case "isempty": match = val === undefined || val === null || val === ""; break;
+          case "isnotempty": match = val !== undefined && val !== null && val !== ""; break;
+          case "gt": match = Number(val) > Number(rule.condition.value); break;
+          case "lt": match = Number(val) < Number(rule.condition.value); break;
+        }
+        if (match) {
+          const style: React.CSSProperties = { backgroundColor: rule.backgroundColor };
+          if (rule.textColor) style.color = rule.textColor;
+          innerMap[rule.condition.fieldKey] = style;
+          break;
+        }
+      }
+      if (Object.keys(innerMap).length > 0) {
+        outerMap[record.id] = innerMap;
+      }
+    }
+    return outerMap;
+  }, [records, conditionalFormatRules]);
+
   // ── Record row rendering ────────────────────────────────────────────────
   const renderRecordRow = useCallback(
     (record: DataRecordItem, index: number, flatRowIndex: number) => {
       const rowStyle = recordStyles[record.id];
-
-      // Find the matching rule for cell-level styling
-      const cellRuleMap = useMemo(() => {
-        if (!conditionalFormatRules || conditionalFormatRules.length === 0) return {};
-        const map: Record<string, React.CSSProperties> = {};
-        for (const rule of conditionalFormatRules) {
-          if (rule.scope !== "cell") continue;
-          const val = record.data[rule.condition.fieldKey];
-          let match = false;
-          switch (rule.condition.op) {
-            case "eq": match = String(val ?? "") === String(rule.condition.value); break;
-            case "ne": match = String(val ?? "") !== String(rule.condition.value); break;
-            case "contains": match = String(val ?? "").includes(String(rule.condition.value)); break;
-            case "isempty": match = val === undefined || val === null || val === ""; break;
-            case "isnotempty": match = val !== undefined && val !== null && val !== ""; break;
-            case "gt": match = Number(val) > Number(rule.condition.value); break;
-            case "lt": match = Number(val) < Number(rule.condition.value); break;
-          }
-          if (match) {
-            const style: React.CSSProperties = { backgroundColor: rule.backgroundColor };
-            if (rule.textColor) style.color = rule.textColor;
-            map[rule.condition.fieldKey] = style;
-            break;
-          }
-        }
-        return map;
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [conditionalFormatRules, record.data]);
+      const cellRuleMap = cellRuleMapByRecord[record.id] ?? {};
 
       const rowContent = (
         <>
@@ -967,7 +973,9 @@ export function GridView({
       stableActiveCell,
       handleCellClick,
       recordStyles,
-      conditionalFormatRules,
+      cellRuleMapByRecord,
+      captureRowHeader,
+      captureCell,
     ]
   );
 

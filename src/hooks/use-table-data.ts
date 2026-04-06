@@ -354,8 +354,15 @@ export function useTableData({
 
       if (search) params.set("search", search);
       if (viewId) params.set("viewId", viewId);
-      if (filters.length > 0) {
-        params.set("filterConditions", JSON.stringify(filters));
+      // Only send filter groups that have valid conditions (non-empty fieldKey)
+      const validFilters = filters
+        .map(g => ({
+          ...g,
+          conditions: g.conditions.filter(c => c.fieldKey),
+        }))
+        .filter(g => g.conditions.length > 0);
+      if (validFilters.length > 0) {
+        params.set("filterConditions", JSON.stringify(validFilters));
       }
       if (sorts.length > 0) {
         params.set("sortBy", JSON.stringify(sorts));

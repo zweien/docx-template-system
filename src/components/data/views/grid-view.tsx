@@ -33,6 +33,8 @@ import {
   FileCellEditor,
   RelationCellEditor,
 } from "@/components/data/cell-editors";
+import { UrlCellEditor } from "@/components/data/cell-editors/url-cell-editor";
+import { BooleanCellEditor } from "@/components/data/cell-editors/boolean-cell-editor";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ColumnResizer } from "@/components/data/column-resizer";
 import { useCellContext } from "@/hooks/use-cell-context";
@@ -783,6 +785,26 @@ export function GridView({
         case FieldType.RELATION_SUBTABLE:
           // Not editable inline
           return null;
+        case FieldType.URL:
+          return (
+            <UrlCellEditor
+              initialValue={String(originalValue ?? "")}
+              onCommit={(v) => void commitEdit(v)}
+              onCancel={cancelEdit}
+            />
+          );
+        case FieldType.BOOLEAN:
+          return (
+            <BooleanCellEditor
+              initialValue={!!originalValue && originalValue !== "false" && originalValue !== 0}
+              onCommit={(v) => void commitEdit(v)}
+            />
+          );
+        case FieldType.AUTO_NUMBER:
+        case FieldType.SYSTEM_TIMESTAMP:
+        case FieldType.SYSTEM_USER:
+        case FieldType.FORMULA:
+          return null;
         default:
           return null;
       }
@@ -798,7 +820,11 @@ export function GridView({
         editingCell?.fieldKey === field.key;
 
       // RELATION_SUBTABLE does not support inline editing
-      const canEdit = field.type !== FieldType.RELATION_SUBTABLE;
+      const canEdit = field.type !== FieldType.RELATION_SUBTABLE
+        && field.type !== FieldType.AUTO_NUMBER
+        && field.type !== FieldType.SYSTEM_TIMESTAMP
+        && field.type !== FieldType.SYSTEM_USER
+        && field.type !== FieldType.FORMULA;
 
       if (isEditing) {
         return renderEditor(field, record);

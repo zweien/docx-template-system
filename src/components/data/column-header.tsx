@@ -70,6 +70,16 @@ function getOperatorsForType(type: FieldType): FilterOperator[] {
     case FieldType.RELATION:
       return ["eq", "isempty"];
     case FieldType.FILE:
+    case FieldType.URL:
+      return ["eq", "ne", "contains", "isempty", "isnotempty"];
+    case FieldType.BOOLEAN:
+      return ["eq", "isempty"];
+    case FieldType.AUTO_NUMBER:
+      return ["eq", "ne", "gt", "lt", "gte", "lte", "isempty"];
+    case FieldType.SYSTEM_TIMESTAMP:
+      return ["eq", "gt", "lt", "gte", "lte", "isempty"];
+    case FieldType.FORMULA:
+      return ["eq", "ne", "gt", "lt", "gte", "lte", "isempty", "isnotempty"];
     default:
       return ["eq", "ne", "contains", "isempty", "isnotempty"];
   }

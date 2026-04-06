@@ -46,6 +46,12 @@ const FIELD_TYPES = [
   { value: FieldType.EMAIL, label: "邮箱" },
   { value: FieldType.PHONE, label: "电话" },
   { value: FieldType.FILE, label: "附件" },
+  { value: FieldType.URL, label: "URL" },
+  { value: FieldType.BOOLEAN, label: "勾选框" },
+  { value: FieldType.AUTO_NUMBER, label: "自动编号" },
+  { value: FieldType.SYSTEM_TIMESTAMP, label: "创建/修改时间" },
+  { value: FieldType.SYSTEM_USER, label: "创建/修改人" },
+  { value: FieldType.FORMULA, label: "公式" },
   { value: FieldType.RELATION, label: "关联字段" },
   { value: FieldType.RELATION_SUBTABLE, label: "关系子表格" },
 ];

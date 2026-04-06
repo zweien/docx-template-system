@@ -10,6 +10,7 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { FieldType } from "@/generated/prisma/enums";
 import type {
+  ConditionalFormatRule,
   DataFieldItem,
   DataRecordItem,
   FilterCondition,
@@ -70,6 +71,8 @@ interface GridViewProps {
   viewId?: string | null;
   page?: number;
   onReorderRecords?: (orderedIds: string[]) => void;
+  conditionalFormatRules?: ConditionalFormatRule[];
+  onQuickFormat?: (fieldKey: string, value: string) => void;
 }
 
 // ─── Grouping helpers ───────────────────────────────────────────────────────
@@ -177,10 +180,12 @@ function DragHandleRow({
   record,
   index,
   children,
+  style,
 }: {
   record: DataRecordItem;
   index: number;
   children: React.ReactNode;
+  style?: React.CSSProperties;
 }) {
   const { ref, isDragging } = useSortable({ id: record.id, index });
   return (
@@ -190,6 +195,7 @@ function DragHandleRow({
         "border-b transition-colors hover:bg-muted/50",
         isDragging && "opacity-50 bg-muted"
       )}
+      style={style}
     >
       {children}
     </tr>
@@ -224,6 +230,8 @@ export function GridView({
   viewId,
   page,
   onReorderRecords,
+  conditionalFormatRules,
+  onQuickFormat,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
 
@@ -294,6 +302,36 @@ export function GridView({
     () => sorts.length === 0 && !groupBy && !!viewId && isAdmin,
     [sorts, groupBy, viewId, isAdmin]
   );
+
+  // ── Conditional formatting styles ──────────────────────────────────────
+  const recordStyles = useMemo(() => {
+    if (!conditionalFormatRules || conditionalFormatRules.length === 0) return {};
+    const map: Record<string, React.CSSProperties> = {};
+    for (const record of records) {
+      for (const rule of conditionalFormatRules) {
+        const val = record.data[rule.condition.fieldKey];
+        let match = false;
+        switch (rule.condition.op) {
+          case "eq": match = String(val ?? "") === String(rule.condition.value); break;
+          case "ne": match = String(val ?? "") !== String(rule.condition.value); break;
+          case "contains": match = String(val ?? "").includes(String(rule.condition.value)); break;
+          case "isempty": match = val === undefined || val === null || val === ""; break;
+          case "isnotempty": match = val !== undefined && val !== null && val !== ""; break;
+          case "gt": match = Number(val) > Number(rule.condition.value); break;
+          case "lt": match = Number(val) < Number(rule.condition.value); break;
+        }
+        if (match) {
+          const style: React.CSSProperties = {
+            backgroundColor: rule.backgroundColor,
+          };
+          if (rule.textColor) style.color = rule.textColor;
+          map[record.id] = style;
+          break; // first matching rule wins
+        }
+      }
+    }
+    return map;
+  }, [records, conditionalFormatRules]);
 
   // ── Batch selection state ────────────────────────────────────────────────
   const [batchEditOpen, setBatchEditOpen] = useState(false);
@@ -790,6 +828,36 @@ export function GridView({
   // ── Record row rendering ────────────────────────────────────────────────
   const renderRecordRow = useCallback(
     (record: DataRecordItem, index: number, flatRowIndex: number) => {
+      const rowStyle = recordStyles[record.id];
+
+      // Find the matching rule for cell-level styling
+      const cellRuleMap = useMemo(() => {
+        if (!conditionalFormatRules || conditionalFormatRules.length === 0) return {};
+        const map: Record<string, React.CSSProperties> = {};
+        for (const rule of conditionalFormatRules) {
+          if (rule.scope !== "cell") continue;
+          const val = record.data[rule.condition.fieldKey];
+          let match = false;
+          switch (rule.condition.op) {
+            case "eq": match = String(val ?? "") === String(rule.condition.value); break;
+            case "ne": match = String(val ?? "") !== String(rule.condition.value); break;
+            case "contains": match = String(val ?? "").includes(String(rule.condition.value)); break;
+            case "isempty": match = val === undefined || val === null || val === ""; break;
+            case "isnotempty": match = val !== undefined && val !== null && val !== ""; break;
+            case "gt": match = Number(val) > Number(rule.condition.value); break;
+            case "lt": match = Number(val) < Number(rule.condition.value); break;
+          }
+          if (match) {
+            const style: React.CSSProperties = { backgroundColor: rule.backgroundColor };
+            if (rule.textColor) style.color = rule.textColor;
+            map[rule.condition.fieldKey] = style;
+            break;
+          }
+        }
+        return map;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [conditionalFormatRules, record.data]);
+
       const rowContent = (
         <>
           <td
@@ -811,12 +879,17 @@ export function GridView({
             const isActive =
               stableActiveCell?.rowIndex === flatRowIndex &&
               stableActiveCell?.colIndex === fieldIndex;
+            const cellStyle = cellRuleMap[field.key];
+            const mergedStyle: React.CSSProperties = {
+              ...(frozenTdStyle ?? {}),
+              ...(cellStyle ?? {}),
+            };
             return (
               <td
                 key={field.id}
                 data-row={flatRowIndex}
                 data-col={fieldIndex}
-                style={frozenTdStyle}
+                style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                 className={cn(
                   "p-2 align-middle whitespace-nowrap",
                   frozenTdStyle && "bg-background",
@@ -867,14 +940,14 @@ export function GridView({
 
       if (canDragSort) {
         return (
-          <DragHandleRow key={record.id} record={record} index={index}>
+          <DragHandleRow key={record.id} record={record} index={index} style={rowStyle}>
             {rowContent}
           </DragHandleRow>
         );
       }
 
       return (
-        <tr key={record.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted">
+        <tr key={record.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted" style={rowStyle}>
           {rowContent}
         </tr>
       );
@@ -893,6 +966,8 @@ export function GridView({
       toggleRow,
       stableActiveCell,
       handleCellClick,
+      recordStyles,
+      conditionalFormatRules,
     ]
   );
 
@@ -946,8 +1021,8 @@ export function GridView({
         }}
         onAutoFitColumn={(fieldKey) => handleAutoFit(fieldKey)}
         onOpenDetail={onOpenDetail}
-        onAddConditionalFormat={(_fieldKey, _value) => {
-          // Placeholder - will be wired in Task 9
+        onAddConditionalFormat={(fieldKey, value) => {
+          onQuickFormat?.(fieldKey, value);
         }}
       >
       <div className="flex-1 min-h-0 overflow-auto">

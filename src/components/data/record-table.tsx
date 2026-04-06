@@ -14,6 +14,7 @@ import type {
   ViewType,
 } from "@/types/data-table";
 import { FieldConfigPopover } from "@/components/data/field-config-popover";
+import { ConditionalFormatDialog } from "@/components/data/conditional-format-dialog";
 import { FilterPanel } from "@/components/data/filter-panel";
 import { ViewSelector } from "@/components/data/view-selector";
 import { SaveViewDialog } from "@/components/data/save-view-dialog";
@@ -63,6 +64,8 @@ export function RecordTable({
   onOpenDetail,
 }: RecordTableProps) {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [quickFormatField, setQuickFormatField] = useState<string | undefined>();
+  const [quickFormatValue, setQuickFormatValue] = useState<string | undefined>();
   const {
     records,
     totalCount,
@@ -81,6 +84,8 @@ export function RecordTable({
     setFieldOrder,
     setGroupBy,
     setViewOptions,
+    conditionalFormatRules,
+    setConditionalFormatRules,
     deleteRecord,
     deletingIds,
     switchView,
@@ -279,6 +284,11 @@ export function RecordTable({
             viewId={viewId}
             page={page}
             onReorderRecords={reorderRecords}
+            conditionalFormatRules={conditionalFormatRules}
+            onQuickFormat={(fieldKey, value) => {
+              setQuickFormatField(fieldKey);
+              setQuickFormatValue(value);
+            }}
           />
         );
       case "KANBAN":
@@ -335,6 +345,13 @@ export function RecordTable({
             fields={fields}
             filters={currentConfig.filters}
             onChange={setFilters}
+          />
+          <ConditionalFormatDialog
+            fields={fields}
+            rules={conditionalFormatRules}
+            onChange={setConditionalFormatRules}
+            quickCreateField={quickFormatField}
+            quickCreateValue={quickFormatValue}
           />
           <form
             onSubmit={(event) => event.preventDefault()}

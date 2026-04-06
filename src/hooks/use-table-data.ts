@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type {
+  ConditionalFormatRule,
   DataFieldItem,
   DataRecordItem,
   DataViewConfig,
@@ -41,6 +42,8 @@ export interface UseTableDataReturn {
   setFieldOrder: (order: string[]) => void;
   setGroupBy: (fieldKey: string | null) => void;
   setViewOptions: (options: Record<string, unknown>) => void;
+  conditionalFormatRules: ConditionalFormatRule[];
+  setConditionalFormatRules: (rules: ConditionalFormatRule[]) => void;
   deleteRecord: (recordId: string) => Promise<void>;
   deletingIds: Set<string>;
   refresh: () => void;
@@ -475,6 +478,18 @@ export function useTableData({
     [viewId, views]
   );
 
+  const conditionalFormatRules: ConditionalFormatRule[] = useMemo(
+    () => (currentConfig.viewOptions.conditionalFormatting as ConditionalFormatRule[]) ?? [],
+    [currentConfig.viewOptions.conditionalFormatting],
+  );
+
+  const setConditionalFormatRules = useCallback(
+    (rules: ConditionalFormatRule[]) => {
+      setViewOptionsState({ ...currentConfig.viewOptions, conditionalFormatting: rules });
+    },
+    [currentConfig.viewOptions, setViewOptionsState],
+  );
+
   return {
     records: recordsData?.records ?? [],
     totalCount: recordsData?.total ?? 0,
@@ -497,6 +512,8 @@ export function useTableData({
     setFieldOrder,
     setGroupBy,
     setViewOptions: setViewOptionsState,
+    conditionalFormatRules,
+    setConditionalFormatRules,
     deleteRecord,
     deletingIds,
     refresh,

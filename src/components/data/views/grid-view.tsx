@@ -33,6 +33,9 @@ import {
 } from "@/components/data/cell-editors";
 import { TableSkeleton } from "@/components/ui/skeleton";
 import { ColumnResizer } from "@/components/data/column-resizer";
+import { useCellContext } from "@/hooks/use-cell-context";
+import { CellContextMenu } from "@/components/data/cell-context-menu";
+import { toast } from "sonner";
 
 const DEFAULT_COL_WIDTH = 160;
 const CHECKBOX_COL_WIDTH = 40;
@@ -135,6 +138,7 @@ function DraggableColumnHeader({
   onAutoFit,
   frozenStyle,
   frozenFieldCount,
+  onContextMenu,
 }: {
   id: string;
   index: number;
@@ -145,6 +149,7 @@ function DraggableColumnHeader({
   onAutoFit: (fieldKey: string) => void;
   frozenStyle?: React.CSSProperties;
   frozenFieldCount?: number;
+  onContextMenu?: (e: React.MouseEvent) => void;
 }) {
   const { ref, isDragging } = useSortable({ id, index });
   return (
@@ -157,6 +162,7 @@ function DraggableColumnHeader({
         frozenFieldCount && frozenFieldCount > 0 && index === frozenFieldCount - 1 && "frozen-last-col"
       )}
       style={{ width: columnWidth, ...(frozenStyle ?? {}) }}
+      onContextMenu={onContextMenu}
     >
       {children}
       <ColumnResizer fieldKey={fieldKey} currentWidth={columnWidth} onWidthChange={onWidthChange} onDoubleClick={onAutoFit} />
@@ -204,6 +210,7 @@ export function GridView({
   groupBy,
   onFilterChange,
   onSortChange,
+  onVisibleFieldsChange,
   onFieldOrderChange,
   onDeleteRecord,
   deletingIds,
@@ -218,6 +225,59 @@ export function GridView({
   onReorderRecords,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
+
+  // ── Cell context menu ────────────────────────────────────────────────────
+  const { context, captureCell, captureRowHeader, captureColHeader } = useCellContext();
+
+  const handleInsertRow = useCallback(async (referenceRecordId: string, position: "above" | "below") => {
+    try {
+      const res = await fetch(`/api/data-tables/${tableId}/records`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: {} }),
+      });
+      if (!res.ok) return;
+      const newRecord = await res.json();
+      if (newRecord.success !== false) {
+        if (position === "below") {
+          const currentIds = records.map((r) => r.id);
+          const refIndex = currentIds.indexOf(referenceRecordId);
+          if (refIndex >= 0 && refIndex < currentIds.length - 1) {
+            const orderedIds = [
+              ...currentIds.slice(0, refIndex + 1),
+              newRecord.data.id,
+              ...currentIds.slice(refIndex + 1),
+            ];
+            await fetch(`/api/data-tables/${tableId}/records/reorder`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ orderedIds }),
+            });
+          }
+        }
+        onRefresh();
+      }
+    } catch {
+      toast.error("插入行失败");
+    }
+  }, [tableId, records, onRefresh]);
+
+  const handleDuplicateRecord = useCallback(async (recordId: string) => {
+    const record = records.find((r) => r.id === recordId);
+    if (!record) return;
+    try {
+      const res = await fetch(`/api/data-tables/${tableId}/records`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: { ...record.data } }),
+      });
+      if (res.ok) {
+        onRefresh();
+      }
+    } catch {
+      toast.error("复制行失败");
+    }
+  }, [tableId, records, onRefresh]);
 
   // ── Can drag-sort rows? (only when no sorts, no grouping, has viewId, and admin) ──
   const canDragSort = useMemo(
@@ -722,7 +782,10 @@ export function GridView({
     (record: DataRecordItem, index: number, flatRowIndex: number) => {
       const rowContent = (
         <>
-          <td className="w-10 sticky left-0 z-[5] bg-background border-r px-1">
+          <td
+            className="w-10 sticky left-0 z-[5] bg-background border-r px-1"
+            onContextMenu={(e) => captureRowHeader(e, record.id, flatRowIndex)}
+          >
             <Checkbox
               checked={selectedIdsSet.has(record.id)}
               onCheckedChange={() => toggleRow(record.id)}
@@ -753,6 +816,7 @@ export function GridView({
                   isActive && "ring-2 ring-primary ring-inset"
                 )}
                 onClick={(e) => handleCellClick(flatRowIndex, fieldIndex, e)}
+                onContextMenu={(e) => captureCell(e, record.id, field.key, flatRowIndex, fieldIndex)}
               >
                 {renderCell(field, record)}
               </td>
@@ -842,6 +906,40 @@ export function GridView({
         fields={orderedVisibleFields}
         onApply={handleBatchEdit}
       />
+      <CellContextMenu
+        context={context}
+        fields={orderedVisibleFields}
+        records={records}
+        frozenCount={frozenFieldCountValue}
+        onEditCell={(recordId, fieldKey) => startEditing(recordId, fieldKey)}
+        onCopyCellValue={(recordId, fieldKey) => {
+          const record = records.find((r) => r.id === recordId);
+          if (record) {
+            navigator.clipboard.writeText(String(record.data[fieldKey] ?? ""));
+            toast.success("已复制");
+          }
+        }}
+        onInsertRow={handleInsertRow}
+        onDeleteRecord={(recordId) => void onDeleteRecord(recordId)}
+        onDuplicateRecord={handleDuplicateRecord}
+        onFilterByCell={(fieldKey, value) => {
+          const newFilter: FilterCondition = { fieldKey, op: "eq", value };
+          onFilterChange(newFilter, fieldKey);
+        }}
+        onSortColumn={(fieldKey, order) => onSortChange({ fieldKey, order })}
+        onToggleFreeze={(colIndex, frozenCount) => {
+          const newCount = colIndex < frozenCount ? colIndex : colIndex + 1;
+          onFrozenFieldCountChange?.(newCount);
+        }}
+        onHideColumn={(fieldKey) => {
+          onVisibleFieldsChange(visibleFields.filter((f) => f !== fieldKey));
+        }}
+        onAutoFitColumn={(fieldKey) => handleAutoFit(fieldKey)}
+        onOpenDetail={onOpenDetail}
+        onAddConditionalFormat={(_fieldKey, _value) => {
+          // Placeholder - will be wired in Task 9
+        }}
+      >
       <div className="flex-1 min-h-0 overflow-auto">
         <table
           className="w-full caption-bottom text-sm outline-none"
@@ -888,6 +986,7 @@ export function GridView({
                   onAutoFit={handleAutoFit}
                   frozenStyle={frozenStyle}
                   frozenFieldCount={frozenFieldCountValue}
+                  onContextMenu={(e) => captureColHeader(e, field.key, index)}
                 >
                   <ColumnHeader
                     field={field}
@@ -972,6 +1071,7 @@ export function GridView({
         </tbody>
         </table>
       </div>
+      </CellContextMenu>
     </div>
   );
 }

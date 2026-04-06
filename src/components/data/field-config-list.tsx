@@ -35,6 +35,12 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   [FieldType.FILE]: "附件",
   [FieldType.RELATION]: "关联",
   [FieldType.RELATION_SUBTABLE]: "关系子表格",
+  [FieldType.URL]: "URL",
+  [FieldType.BOOLEAN]: "勾选框",
+  [FieldType.AUTO_NUMBER]: "自动编号",
+  [FieldType.SYSTEM_TIMESTAMP]: "创建/修改时间",
+  [FieldType.SYSTEM_USER]: "创建/修改人",
+  [FieldType.FORMULA]: "公式",
 };
 
 function buildInverseFieldPreview(key: string): string {
@@ -179,7 +185,7 @@ export function FieldConfigList({
   }));
 
   // Handle opening the edit form - find field from current fields state
-  const handleOpenEdit = (field: DataFieldInput) => {
+  const handleOpenEdit = (field: DataFieldItem) => {
     setEditingField(field as DataFieldItem);
     setIsFormOpen(true);
   };
@@ -305,8 +311,8 @@ export function FieldConfigList({
                     {field.type === FieldType.SELECT ||
                     field.type === FieldType.MULTISELECT ? (
                       <span className="text-sm text-zinc-500">
-                        {field.options?.slice(0, 3).join(", ")}
-                        {field.options && field.options.length > 3 && "..."}
+                        {Array.isArray(field.options) && field.options.slice(0, 3).join(", ")}
+                        {Array.isArray(field.options) && field.options.length > 3 && "..."}
                       </span>
                     ) : field.type === FieldType.RELATION_SUBTABLE ? (
                       <div className="space-y-1 text-sm text-zinc-500">

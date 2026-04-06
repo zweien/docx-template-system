@@ -68,6 +68,9 @@ function LoginForm() {
             {isLoading ? "跳转中..." : "前往统一登录"}
           </Button>
         </div>
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          v{process.env.NEXT_PUBLIC_APP_VERSION}
+        </p>
       </CardContent>
     </Card>
   );

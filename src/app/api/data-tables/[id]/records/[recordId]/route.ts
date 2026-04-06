@@ -46,7 +46,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const validated = updateRecordSchema.parse(body);
 
-    const result = await updateRecord(recordId, validated.data);
+    const result = await updateRecord(recordId, validated.data, session.user.id);
 
     if (!result.success) {
       if (result.error.code === "NOT_FOUND") {
@@ -117,7 +117,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const validated = patchFieldSchema.parse(body);
 
-    const result = await patchField(recordId, validated.fieldKey, validated.value);
+    const result = await patchField(recordId, validated.fieldKey, validated.value, session.user.id);
 
     if (!result.success) {
       if (result.error.code === "NOT_FOUND") {

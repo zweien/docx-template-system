@@ -27,6 +27,7 @@ import type {
   RelationCardinality,
   RelationSchemaField,
 } from "@/types/data-table";
+import { parseFieldOptions } from "@/types/data-table";
 import type { DataFieldInput } from "@/validators/data-table";
 
 interface FieldConfigFormProps {
@@ -46,6 +47,12 @@ const FIELD_TYPES = [
   { value: FieldType.EMAIL, label: "邮箱" },
   { value: FieldType.PHONE, label: "电话" },
   { value: FieldType.FILE, label: "附件" },
+  { value: FieldType.URL, label: "URL" },
+  { value: FieldType.BOOLEAN, label: "勾选框" },
+  { value: FieldType.AUTO_NUMBER, label: "自动编号" },
+  { value: FieldType.SYSTEM_TIMESTAMP, label: "创建/修改时间" },
+  { value: FieldType.SYSTEM_USER, label: "创建/修改人" },
+  { value: FieldType.FORMULA, label: "公式" },
   { value: FieldType.RELATION, label: "关联字段" },
   { value: FieldType.RELATION_SUBTABLE, label: "关系子表格" },
 ];
@@ -152,6 +159,8 @@ export function FieldConfigForm({
   >([]);
   const [relationFields, setRelationFields] = useState<DataFieldItem[]>([]);
   const [loadingFields, setLoadingFields] = useState(false);
+  const [formulaExpression, setFormulaExpression] = useState("");
+  const [systemFieldKind, setSystemFieldKind] = useState<"created" | "updated">("created");
   const [error, setError] = useState("");
 
   const isRelationType =
@@ -187,12 +196,16 @@ export function FieldConfigForm({
     setFieldType(nextFieldType);
     setRequired(field?.required ?? false);
     setDefaultValue(field?.defaultValue ?? "");
-    setOptionsText(field?.options?.join("\n") ?? "");
+    setOptionsText(Array.isArray(field?.options) ? field.options.join("\n") : "");
     setSelectedTableId(field?.relationTo ?? "");
     setSelectedDisplayField(field?.displayField ?? "");
     setRelationCardinality(nextRelationCardinality);
     setInverseRelationCardinality(nextInverseRelationCardinality);
     setRelationSchemaFields(buildRelationSchemaDraft(field?.relationSchema?.fields));
+    // Parse formula from field options
+    const opts = parseFieldOptions(field?.options);
+    setFormulaExpression(opts.formula ?? "");
+    setSystemFieldKind(opts.kind ?? "created");
     setError("");
 
     if (field?.relationTo) {
@@ -332,6 +345,18 @@ export function FieldConfigForm({
       return;
     }
 
+    let fieldOptions: DataFieldInput["options"] = undefined;
+    if (fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT) {
+      fieldOptions = optionsText
+        .split("\n")
+        .map((item) => item.trim())
+        .filter(Boolean);
+    } else if (fieldType === FieldType.FORMULA) {
+      fieldOptions = { formula: formulaExpression.trim() };
+    } else if (fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) {
+      fieldOptions = { kind: systemFieldKind };
+    }
+
     const data: DataFieldInput = {
       id: field?.id,
       key: key.trim(),
@@ -340,13 +365,7 @@ export function FieldConfigForm({
       required,
       defaultValue: defaultValue.trim() || undefined,
       sortOrder: field?.sortOrder ?? 0,
-      options:
-        fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT
-          ? optionsText
-              .split("\n")
-              .map((item) => item.trim())
-              .filter(Boolean)
-          : undefined,
+      options: fieldOptions,
       relationTo: isRelationType ? selectedTableId : undefined,
       displayField: isRelationType ? selectedDisplayField : undefined,
       relationCardinality: isRelationSubtableType ? relationCardinality : undefined,
@@ -446,6 +465,45 @@ export function FieldConfigForm({
                   rows={4}
                 />
                 <p className="text-xs text-zinc-500">每行一个选项值</p>
+              </div>
+            )}
+
+            {fieldType === FieldType.FORMULA && (
+              <div className="grid gap-2">
+                <Label htmlFor="formula">公式表达式</Label>
+                <Textarea
+                  id="formula"
+                  placeholder="例如：price * quantity&#10;支持：+ - * / () 及函数 SUM, AVG, MIN, MAX, IF 等"
+                  value={formulaExpression}
+                  onChange={(event) => setFormulaExpression(event.target.value)}
+                  rows={4}
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-zinc-500">
+                  使用其他字段标识作为变量，例如 <code className="bg-muted px-1 rounded">price * quantity</code>
+                </p>
+              </div>
+            )}
+
+            {(fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) && (
+              <div className="grid gap-2">
+                <Label htmlFor="system-kind">记录类型</Label>
+                <Select
+                  value={systemFieldKind}
+                  onValueChange={(value) => setSystemFieldKind(value as "created" | "updated")}
+                >
+                  <SelectTrigger id="system-kind">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="created">
+                      {fieldType === FieldType.SYSTEM_TIMESTAMP ? "创建时间" : "创建人"}
+                    </SelectItem>
+                    <SelectItem value="updated">
+                      {fieldType === FieldType.SYSTEM_TIMESTAMP ? "修改时间" : "修改人"}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             )}
 

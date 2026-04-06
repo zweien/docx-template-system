@@ -164,7 +164,7 @@ export async function validateImportData(
             }
             break;
           case "SELECT":
-            if (field.options && !field.options.includes(String(value))) {
+            if (Array.isArray(field.options) && !field.options.includes(String(value))) {
               errors.push({
                 row: i + 2,
                 field: field.key,
@@ -268,7 +268,7 @@ export async function importData(
           result.skipped++;
           continue;
         } else if (options.strategy === "overwrite") {
-          const updateResult = await updateRecord(existingId, mappedData);
+          const updateResult = await updateRecord(existingId, mappedData, userId);
           if (updateResult.success) {
             result.updated++;
           } else {

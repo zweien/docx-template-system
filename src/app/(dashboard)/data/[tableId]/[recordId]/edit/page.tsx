@@ -51,7 +51,7 @@ export default async function EditRecordPage({ params }: PageProps) {
   async function handleUpdate(data: Record<string, unknown>) {
     "use server";
 
-    const result = await updateRecord(recordId, data);
+    const result = await updateRecord(recordId, data, session!.user!.id);
 
     if (!result.success) {
       throw new Error(result.error.message);

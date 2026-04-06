@@ -164,6 +164,9 @@ export function DynamicRecordForm({
           case FieldType.RELATION:
             fieldSchema = z.string().nullable().optional();
             break;
+          case FieldType.BOOLEAN:
+            fieldSchema = z.boolean().nullable().optional();
+            break;
           case FieldType.RELATION_SUBTABLE:
             fieldSchema = buildRelationSubtableFieldSchema(field);
             break;
@@ -279,7 +282,7 @@ export function DynamicRecordForm({
               <SelectValue placeholder={`选择${field.label}`} />
             </SelectTrigger>
             <SelectContent>
-              {field.options?.map((option) => (
+              {Array.isArray(field.options) && field.options.map((option) => (
                 <SelectItem key={option} value={option}>
                   {option}
                 </SelectItem>
@@ -344,6 +347,22 @@ export function DynamicRecordForm({
             )}
             onChange={(nextValue) => setValue(field.key, nextValue)}
           />
+        );
+
+      case FieldType.BOOLEAN:
+        return (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id={field.key}
+              checked={!!watch(field.key)}
+              onChange={(e) => setValue(field.key, e.target.checked)}
+              className="h-4 w-4 rounded border-zinc-300"
+            />
+            <label htmlFor={field.key} className="text-sm text-zinc-600">
+              {watch(field.key) ? "是" : "否"}
+            </label>
+          </div>
         );
 
       default:

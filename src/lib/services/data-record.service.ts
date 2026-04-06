@@ -9,8 +9,10 @@ import type {
   SortConfig,
   FilterCondition,
   FilterGroup,
+  AggregateType,
 } from "@/types/data-table";
-import { normalizeFilters } from "@/types/data-table";
+import { normalizeFilters, parseFieldOptions } from "@/types/data-table";
+import { evaluateFormula } from "@/lib/formula";
 import { getTable } from "./data-table.service";
 import {
   removeAllRelationsForRecord,
@@ -88,6 +90,7 @@ function mapRecordToItem(row: {
   createdAt: Date;
   updatedAt: Date;
   createdBy: { name: string };
+  updatedBy?: { name: string } | null;
 }): DataRecordItem {
   return {
     id: row.id,
@@ -96,7 +99,53 @@ function mapRecordToItem(row: {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     createdByName: row.createdBy.name,
+    updatedByName: row.updatedBy?.name ?? null,
   };
+}
+
+/**
+ * Inject SYSTEM_TIMESTAMP and SYSTEM_USER field values from record metadata.
+ * These fields read from createdAt/updatedAt/createdBy rather than from the JSONB data.
+ */
+function injectSystemFieldValues(
+  records: DataRecordItem[],
+  fields: DataFieldItem[]
+): void {
+  const systemFields = fields.filter(
+    (f) => f.type === "SYSTEM_TIMESTAMP" || f.type === "SYSTEM_USER"
+  );
+  if (systemFields.length === 0) return;
+
+  for (const record of records) {
+    for (const field of systemFields) {
+      const opts = parseFieldOptions(field.options);
+      const kind = opts.kind ?? "created";
+
+      if (field.type === "SYSTEM_TIMESTAMP") {
+        record.data[field.key] = kind === "updated"
+          ? record.updatedAt.toISOString()
+          : record.createdAt.toISOString();
+      } else if (field.type === "SYSTEM_USER") {
+        record.data[field.key] = kind === "updated"
+          ? (record.updatedByName ?? "")
+          : record.createdByName;
+      }
+    }
+  }
+}
+
+/** Normalize BOOLEAN field values from strings to actual booleans */
+function normalizeBooleanFields(
+  data: Record<string, unknown>,
+  fields: DataFieldItem[]
+): void {
+  for (const field of fields) {
+    if (field.type !== "BOOLEAN") continue;
+    const value = data[field.key];
+    if (value !== undefined && value !== null) {
+      data[field.key] = value === true || value === "true" || value === 1;
+    }
+  }
 }
 
 function splitRecordDataByFieldType(
@@ -129,6 +178,21 @@ function splitRecordDataByFieldType(
   }
 
   return { scalarData, relationData };
+}
+
+function computeFormulaValues(
+  recordData: Record<string, unknown>,
+  fields: DataFieldItem[]
+): Record<string, unknown> {
+  const formulaFields = fields.filter((f) => f.type === "FORMULA");
+  if (formulaFields.length === 0) return recordData;
+  const enriched = { ...recordData };
+  for (const field of formulaFields) {
+    const opts = parseFieldOptions(field.options);
+    if (!opts.formula) continue;
+    enriched[field.key] = evaluateFormula(opts.formula, enriched);
+  }
+  return enriched;
 }
 
 function getComparableValue(value: unknown): unknown {
@@ -221,6 +285,7 @@ export async function listRecords(
         orderBy: { createdAt: "desc" },
         include: {
           createdBy: { select: { name: true } },
+          updatedBy: { select: { name: true } },
         },
       }),
       db.dataRecord.count({ where }),
@@ -361,6 +426,9 @@ export async function listRecords(
       }
     }
 
+    // Resolve SYSTEM_TIMESTAMP and SYSTEM_USER fields from record metadata
+    injectSystemFieldValues(processedRecords, tableResult.data.fields);
+
     return {
       success: true,
       data: {
@@ -417,16 +485,37 @@ export async function createRecord(
       return validation;
     }
 
-    const { scalarData, relationData } = splitRecordDataByFieldType(
-      data,
-      tableResult.data.fields
-    );
+    normalizeBooleanFields(data, tableResult.data.fields);
 
     const record = await db.$transaction(async (tx) => {
+      // ── Auto-number injection (inside transaction for atomicity) ──
+      const autoNumberFields = tableResult.data.fields.filter(
+        (f) => f.type === "AUTO_NUMBER"
+      );
+      for (const field of autoNumberFields) {
+        const lockedField = await tx.dataField.findUniqueOrThrow({
+          where: { id: field.id },
+        });
+        const opts = parseFieldOptions(lockedField.options);
+        const nextVal = (opts.nextValue ?? 0) + 1;
+        data[field.key] = nextVal;
+        await tx.dataField.update({
+          where: { id: field.id },
+          data: { options: toJsonInput({ ...opts, nextValue: nextVal }) },
+        });
+      }
+
+      const { scalarData, relationData } = splitRecordDataByFieldType(
+        data,
+        tableResult.data.fields
+      );
+
+      const enrichedScalarData = computeFormulaValues(scalarData, tableResult.data.fields);
+
       const createdRecord = await tx.dataRecord.create({
         data: {
           tableId,
-          data: toJsonInput(scalarData),
+          data: toJsonInput(enrichedScalarData),
           createdById: userId,
         },
         include: {
@@ -473,7 +562,8 @@ async function doUpdateRecord(
   tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
   id: string,
   data: Record<string, unknown>,
-  existingRecord: { id: string; tableId: string; data: unknown }
+  existingRecord: { id: string; tableId: string; data: unknown },
+  userId: string
 ): Promise<DataRecordItem> {
   const tableResult = await getTable(existingRecord.tableId);
   if (!tableResult.success) {
@@ -484,6 +574,8 @@ async function doUpdateRecord(
   if (!validation.success) {
     throw new Error(`${validation.error.code}:${validation.error.message}`);
   }
+
+  normalizeBooleanFields(data, tableResult.data.fields);
 
   const { scalarData, relationData } = splitRecordDataByFieldType(
     data,
@@ -497,6 +589,7 @@ async function doUpdateRecord(
         ...(existingRecord.data as Record<string, unknown>),
         ...scalarData,
       }),
+      updatedById: userId,
     },
   });
 
@@ -533,7 +626,8 @@ async function doUpdateRecord(
 
 export async function updateRecord(
   id: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  userId: string
 ): Promise<ServiceResult<DataRecordItem>> {
   try {
     const existingRecord = await db.dataRecord.findUnique({ where: { id } });
@@ -542,7 +636,7 @@ export async function updateRecord(
     }
 
     const result = await db.$transaction(tx =>
-      doUpdateRecord(tx, id, data, existingRecord)
+      doUpdateRecord(tx, id, data, existingRecord, userId)
     );
     return { success: true, data: result };
   } catch (error) {
@@ -558,7 +652,8 @@ export async function updateRecord(
 export async function patchField(
   recordId: string,
   fieldKey: string,
-  value: unknown
+  value: unknown,
+  userId: string
 ): Promise<ServiceResult<DataRecordItem>> {
   try {
     const existingRecord = await db.dataRecord.findUnique({ where: { id: recordId } });
@@ -604,7 +699,7 @@ export async function patchField(
           }
           break;
         case "SELECT":
-          if (field.options && !field.options.includes(String(value))) {
+          if (Array.isArray(field.options) && !field.options.includes(String(value))) {
             return {
               success: false,
               error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 的值必须是选项之一` },
@@ -614,13 +709,23 @@ export async function patchField(
       }
     }
 
+    // Normalize BOOLEAN values to actual booleans
+    if (field.type === "BOOLEAN" && value !== null && value !== undefined) {
+      value = value === true || value === "true" || value === 1;
+    }
+
     // Update only the changed field
     const currentData = existingRecord.data as Record<string, unknown>;
     const updatedData = { ...currentData, [fieldKey]: value };
 
+    const enrichedData = computeFormulaValues(updatedData, tableResult.data.fields);
+
     await db.dataRecord.update({
       where: { id: recordId },
-      data: { data: toJsonInput(updatedData) },
+      data: {
+        data: toJsonInput(enrichedData),
+        updatedById: userId,
+      },
     });
 
     // Refresh snapshots only for relation fields
@@ -735,7 +840,8 @@ export async function batchCreate(
 
 export async function batchUpdate(
   tableId: string,
-  updates: Array<{ id: string; data: Record<string, unknown> }>
+  updates: Array<{ id: string; data: Record<string, unknown> }>,
+  userId: string
 ): Promise<ServiceResult<{ updated: number; errors: Array<{ recordId: string; message: string }> }>> {
   try {
     if (updates.length === 0) {
@@ -764,7 +870,7 @@ export async function batchUpdate(
             errors.push({ recordId: id, message: "记录不属于目标表" });
             throw new Error("SKIP");
           }
-          await doUpdateRecord(tx, id, data, existingRecord);
+          await doUpdateRecord(tx, id, data, existingRecord, userId);
           updated++;
         } catch (e) {
           if (e instanceof Error && e.message === "SKIP") continue;
@@ -922,12 +1028,22 @@ function buildFilterConditionsFromSpec(
 
 // ── Validation ──
 
-function validateRecordData(
+export function validateRecordData(
   data: Record<string, unknown>,
   fields: DataFieldItem[]
 ): ServiceResult<boolean> {
   for (const field of fields) {
     const value = data[field.key];
+
+    // Skip system-managed fields — not user-editable
+    if (
+      field.type === "AUTO_NUMBER" ||
+      field.type === "SYSTEM_TIMESTAMP" ||
+      field.type === "SYSTEM_USER" ||
+      field.type === "FORMULA"
+    ) {
+      continue;
+    }
 
     // Check required fields
     if (field.required && (value === undefined || value === null || value === "")) {
@@ -972,7 +1088,7 @@ function validateRecordData(
         break;
 
       case "SELECT":
-        if (field.options && !field.options.includes(String(value))) {
+        if (Array.isArray(field.options) && !field.options.includes(String(value))) {
           return {
             success: false,
             error: {
@@ -984,8 +1100,8 @@ function validateRecordData(
         break;
 
       case "MULTISELECT":
-        if (field.options && Array.isArray(value)) {
-          const invalidOptions = value.filter((v) => !field.options!.includes(String(v)));
+        if (Array.isArray(field.options) && Array.isArray(value)) {
+          const invalidOptions = value.filter((v) => !(field.options as string[]).includes(String(v)));
           if (invalidOptions.length > 0) {
             return {
               success: false,
@@ -995,6 +1111,30 @@ function validateRecordData(
               },
             };
           }
+        }
+        break;
+
+      case "URL":
+        if (typeof value === "string" && value !== "" && !/^https?:\/\/.+/.test(value)) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: `字段 "${field.label}" 必须是有效的 URL（以 http:// 或 https:// 开头）`,
+            },
+          };
+        }
+        break;
+
+      case "BOOLEAN":
+        if (typeof value !== "boolean" && value !== "true" && value !== "false" && value !== 1 && value !== 0) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: `字段 "${field.label}" 必须是布尔值`,
+            },
+          };
         }
         break;
     }
@@ -1033,5 +1173,133 @@ export async function resolveRelations(
   } catch (error) {
     const message = error instanceof Error ? error.message : "解析关联字段失败";
     return { success: false, error: { code: "RESOLVE_RELATIONS_FAILED", message } };
+  }
+}
+
+// ── Summary / Aggregation ──
+
+export async function computeSummary(
+  tableId: string,
+  filterConditions?: FilterGroup[],
+  search?: string,
+  aggregations?: Record<string, AggregateType>,
+  fields?: DataFieldItem[]
+): Promise<ServiceResult<Record<string, { value: number | string; type: AggregateType }>>> {
+  try {
+    const tableResult = await getTable(tableId);
+    if (!tableResult.success) {
+      return { success: false, error: tableResult.error };
+    }
+
+    const resolvedFields = fields ?? tableResult.data.fields;
+    if (!aggregations || Object.keys(aggregations).length === 0) {
+      return { success: true, data: {} };
+    }
+
+    // Build where clause reusing existing filter logic
+    const conditions: Record<string, unknown>[] = [{ tableId }];
+
+    if (filterConditions && filterConditions.length > 0) {
+      const normalized = normalizeFilters(filterConditions);
+      for (const group of normalized) {
+        const groupConds = group.conditions
+          .map((cond) => buildConditionFromFilter(cond, resolvedFields))
+          .filter(Boolean) as Record<string, unknown>[];
+        if (groupConds.length > 0) {
+          if (group.operator === "OR") {
+            conditions.push({ OR: groupConds });
+          } else {
+            conditions.push(...groupConds);
+          }
+        }
+      }
+    }
+
+    // Search (OR across text-type fields only)
+    if (search) {
+      const searchFields = resolvedFields.filter(
+        (f) =>
+          f.type === "TEXT" || f.type === "EMAIL" || f.type === "SELECT" ||
+          f.type === "PHONE" || f.type === "MULTISELECT" || f.type === "URL"
+      );
+      if (searchFields.length > 0) {
+        conditions.push({
+          OR: searchFields.map((f) => ({
+            data: { path: [f.key], string_contains: search },
+          })),
+        });
+      }
+    }
+
+    const where = conditions.length > 1 ? { AND: conditions } : conditions[0];
+
+    // Get count efficiently
+    const count = await db.dataRecord.count({ where });
+
+    // Get data for field-specific aggregates
+    const records = await db.dataRecord.findMany({
+      where,
+      select: { data: true },
+    });
+
+    const data: Record<string, { value: number | string; type: AggregateType }> = {};
+
+    for (const [fieldKey, aggType] of Object.entries(aggregations)) {
+      const values = records
+        .map((r) => (r.data as Record<string, unknown>)[fieldKey])
+        .filter((v) => v !== null && v !== undefined && v !== "");
+
+      const numValues = values.map(Number);
+      let value: number | string = 0;
+
+      switch (aggType) {
+        case "count":
+          value = count;
+          break;
+        case "sum":
+          value = numValues.reduce((s, v) => s + (isNaN(v) ? 0 : v), 0);
+          break;
+        case "avg":
+          value = numValues.length > 0
+            ? numValues.reduce((s, v) => s + (isNaN(v) ? 0 : v), 0) / numValues.length
+            : 0;
+          break;
+        case "min":
+          value = values.length > 0 ? Math.min(...values.map(Number)) : 0;
+          break;
+        case "max":
+          value = values.length > 0 ? Math.max(...values.map(Number)) : 0;
+          break;
+        case "earliest":
+          if (values.length > 0) {
+            const dates = values.map(v => new Date(String(v)).getTime()).filter(t => !isNaN(t));
+            value = dates.length > 0 ? new Date(Math.min(...dates)).toISOString() : "-";
+          } else {
+            value = "-";
+          }
+          break;
+        case "latest":
+          if (values.length > 0) {
+            const dates = values.map(v => new Date(String(v)).getTime()).filter(t => !isNaN(t));
+            value = dates.length > 0 ? new Date(Math.max(...dates)).toISOString() : "-";
+          } else {
+            value = "-";
+          }
+          break;
+        case "checked":
+          value = values.filter((v) => v === true || v === 1 || v === "true").length;
+          break;
+        case "unchecked":
+          value = values.filter((v) => v !== true && v !== 1 && v !== "true").length;
+          break;
+      }
+
+      data[fieldKey] = { value, type: aggType };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "汇总计算失败";
+    return { success: false, error: { code: "SUMMARY_FAILED", message } };
   }
 }

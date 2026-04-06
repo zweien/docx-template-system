@@ -18,6 +18,8 @@ interface UseKeyboardNavOptions {
   onCopyCell: () => string | null;
   onPasteCell: (text: string) => void;
   isGroupRow?: (rowIndex: number) => boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 }
 
 export function useKeyboardNav({
@@ -31,6 +33,8 @@ export function useKeyboardNav({
   onCopyCell,
   onPasteCell,
   isGroupRow,
+  onUndo,
+  onRedo,
 }: UseKeyboardNavOptions) {
   const activeCellRef = useRef<ActiveCell | null>(null);
 
@@ -52,6 +56,17 @@ export function useKeyboardNav({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
+        e.preventDefault();
+        onUndo?.();
+        return;
+      }
+      if (((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "Z") || ((e.ctrlKey || e.metaKey) && e.key === "y")) {
+        e.preventDefault();
+        onRedo?.();
+        return;
+      }
+
       if (editingCell) return;
 
       const active = activeCellRef.current;
@@ -186,6 +201,8 @@ export function useKeyboardNav({
       onCopyCell,
       onPasteCell,
       skipGroupRow,
+      onUndo,
+      onRedo,
     ]
   );
 

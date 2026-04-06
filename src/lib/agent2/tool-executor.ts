@@ -34,7 +34,8 @@ export async function executeToolAction(
     case "updateRecord": {
       const result = await recordService.updateRecord(
         toolInput.recordId as string,
-        toolInput.data as Record<string, unknown>
+        toolInput.data as Record<string, unknown>,
+        userId
       );
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };
@@ -116,7 +117,8 @@ export async function executeToolAction(
     case "batchUpdateRecords": {
       const result = await recordService.batchUpdate(
         toolInput.tableId as string,
-        toolInput.updates as Array<{ id: string; data: Record<string, unknown> }>
+        toolInput.updates as Array<{ id: string; data: Record<string, unknown> }>,
+        userId
       );
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };

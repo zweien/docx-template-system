@@ -1,7 +1,10 @@
 import type { NextConfig } from "next";
+import pkg from "./package.json";
 
 const nextConfig: NextConfig = {
-  // Turbopack 模式下 webpack 配置不生效
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version,
+  },
 };
 
 export default nextConfig;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type {
+  AggregateType,
   ConditionalFormatRule,
   DataFieldItem,
   DataRecordItem,
@@ -44,6 +45,8 @@ export interface UseTableDataReturn {
   setViewOptions: (options: Record<string, unknown>) => void;
   conditionalFormatRules: ConditionalFormatRule[];
   setConditionalFormatRules: (rules: ConditionalFormatRule[]) => void;
+  columnAggregations: Record<string, AggregateType>;
+  setColumnAggregations: (aggregations: Record<string, AggregateType>) => void;
   deleteRecord: (recordId: string) => Promise<void>;
   deletingIds: Set<string>;
   refresh: () => void;
@@ -114,6 +117,7 @@ export function useTableData({
   const [viewOptions, setViewOptionsState] = useState<Record<string, unknown>>({});
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [refreshTick, setRefreshTick] = useState(0);
+  const [columnAggregations, setColumnAggregationsState] = useState<Record<string, AggregateType>>({});
   const latestFetchIdRef = useRef(0);
 
   const currentQueryKey = useMemo(
@@ -324,6 +328,7 @@ export function useTableData({
         );
         setGroupByState(view.groupBy ?? null);
         setViewOptionsState(view.viewOptions ?? {});
+        setColumnAggregationsState((view.viewOptions as Record<string, unknown>)?.columnAggregations as Record<string, AggregateType> ?? {});
       } catch {
         // 视图配置加载失败时保留当前配置
       } finally {
@@ -497,6 +502,10 @@ export function useTableData({
     [currentConfig.viewOptions, setViewOptionsState],
   );
 
+  const setColumnAggregations = useCallback((aggregations: Record<string, AggregateType>) => {
+    setColumnAggregationsState(aggregations);
+  }, []);
+
   return {
     records: recordsData?.records ?? [],
     totalCount: recordsData?.total ?? 0,
@@ -521,6 +530,8 @@ export function useTableData({
     setViewOptions: setViewOptionsState,
     conditionalFormatRules,
     setConditionalFormatRules,
+    columnAggregations,
+    setColumnAggregations,
     deleteRecord,
     deletingIds,
     refresh,

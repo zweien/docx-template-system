@@ -35,13 +35,29 @@ export interface RelationSchemaConfig {
   fields: RelationSchemaField[];
 }
 
+// ========== Field Options (stored in DataField.options JSON) ==========
+
+export interface FieldOptions {
+  /** AUTO_NUMBER: next auto-increment value */
+  nextValue?: number;
+  /** SYSTEM_TIMESTAMP / SYSTEM_USER: "created" or "updated" */
+  kind?: "created" | "updated";
+  /** FORMULA: formula expression string */
+  formula?: string;
+}
+
+export function parseFieldOptions(raw: unknown): FieldOptions {
+  if (!raw || typeof raw !== "object") return {};
+  return raw as FieldOptions;
+}
+
 export interface DataFieldItem {
   id: string;
   key: string;
   label: string;
   type: FieldType;
   required: boolean;
-  options?: string[]; // SELECT/MULTISELECT 选项列表
+  options?: unknown; // SELECT/MULTISELECT: string[], FORMULA: { formula: string }, etc.
   relationTo?: string; // RELATION 目标表 ID
   displayField?: string; // RELATION 显示字段
   relationCardinality?: RelationCardinality | null;
@@ -73,13 +89,14 @@ export interface DataTableDetail extends DataTableListItem {
 
 // ========== Record Types ==========
 
-export interface DataRecordItem {
+export interface DataRecordItem{
   id: string;
   tableId: string;
   data: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
   createdByName: string;
+  updatedByName: string | null;
 }
 
 export interface PaginatedRecords {
@@ -136,6 +153,24 @@ export interface ConditionalFormatRule {
   backgroundColor: string
   textColor?: string
   scope: "row" | "cell"
+}
+
+export type AggregateType =
+  | "count"
+  | "sum"
+  | "avg"
+  | "min"
+  | "max"
+  | "earliest"
+  | "latest"
+  | "checked"
+  | "unchecked";
+
+export interface SummaryRowData {
+  [fieldKey: string]: {
+    value: number | string;
+    type: AggregateType;
+  };
 }
 
 /** Normalize legacy flat FilterCondition[] to FilterGroup[] */

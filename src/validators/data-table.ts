@@ -44,7 +44,12 @@ export const dataFieldItemSchema = z.object({
   label: z.string().min(1, "显示名称不能为空").max(100, "显示名称最长100字符"),
   type: fieldTypeSchema,
   required: z.boolean().default(false),
-  options: z.array(z.string()).nullable().optional(),
+  options: z.union([
+    z.array(z.string()),
+    z.object({ formula: z.string() }),
+    z.object({ nextValue: z.number() }),
+    z.object({ kind: z.enum(["created", "updated"]) }),
+  ]).nullable().optional(),
   relationTo: z.string().nullable().optional(),
   displayField: z.string().nullable().optional(),
   relationCardinality: z.nativeEnum(PrismaRelationCardinality).nullable().optional(),

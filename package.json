@@ -1,6 +1,6 @@
 {
   "name": "docx-template-system",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 8060",
@@ -9,7 +9,10 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "release": "commit-and-tag-version",
+    "release:minor": "commit-and-tag-version --release-as minor",
+    "release:major": "commit-and-tag-version --release-as major"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.48",
@@ -70,6 +73,7 @@
     "@types/react-dom": "^19",
     "@types/xlsx": "^0.0.35",
     "@vitejs/plugin-react": "^6.0.1",
+    "commit-and-tag-version": "^12.7.1",
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.1",

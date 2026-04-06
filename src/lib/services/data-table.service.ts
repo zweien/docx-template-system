@@ -358,7 +358,7 @@ export function validateFields(fields: DataFieldInput[]): ServiceResult<boolean>
 
   // Validate SELECT/MULTISELECT have options
   for (const field of fields) {
-    if ((field.type === "SELECT" || field.type === "MULTISELECT") && (!field.options || field.options.length === 0)) {
+    if ((field.type === "SELECT" || field.type === "MULTISELECT") && (!Array.isArray(field.options) || field.options.length === 0)) {
       return {
         success: false,
         error: {

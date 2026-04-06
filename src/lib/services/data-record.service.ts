@@ -9,6 +9,7 @@ import type {
   SortConfig,
   FilterCondition,
   FilterGroup,
+  AggregateType,
 } from "@/types/data-table";
 import { normalizeFilters, parseFieldOptions } from "@/types/data-table";
 import { getTable } from "./data-table.service";
@@ -1092,5 +1093,132 @@ export async function resolveRelations(
   } catch (error) {
     const message = error instanceof Error ? error.message : "解析关联字段失败";
     return { success: false, error: { code: "RESOLVE_RELATIONS_FAILED", message } };
+  }
+}
+
+// ── Summary / Aggregation ──
+
+export async function computeSummary(
+  tableId: string,
+  filterConditions?: FilterGroup[],
+  search?: string,
+  aggregations?: Record<string, AggregateType>,
+  fields?: DataFieldItem[]
+): Promise<ServiceResult<Record<string, { value: number | string; type: AggregateType }>>> {
+  try {
+    const tableResult = await getTable(tableId);
+    if (!tableResult.success) {
+      return { success: false, error: tableResult.error };
+    }
+
+    const resolvedFields = fields ?? tableResult.data.fields;
+    if (!aggregations || Object.keys(aggregations).length === 0) {
+      return { success: true, data: {} };
+    }
+
+    // Build where clause reusing existing filter logic
+    const conditions: Record<string, unknown>[] = [{ tableId }];
+
+    if (filterConditions && filterConditions.length > 0) {
+      const normalized = normalizeFilters(filterConditions);
+      for (const group of normalized) {
+        const groupConds = group.conditions
+          .map((cond) => buildConditionFromFilter(cond, resolvedFields))
+          .filter(Boolean) as Record<string, unknown>[];
+        if (groupConds.length > 0) {
+          if (group.operator === "OR") {
+            conditions.push({ OR: groupConds });
+          } else {
+            conditions.push(...groupConds);
+          }
+        }
+      }
+    }
+
+    // Search (OR across text-type fields only)
+    if (search) {
+      const searchFields = resolvedFields.filter(
+        (f) =>
+          f.type === "TEXT" || f.type === "EMAIL" || f.type === "SELECT" ||
+          f.type === "PHONE" || f.type === "MULTISELECT" || f.type === "URL"
+      );
+      if (searchFields.length > 0) {
+        conditions.push({
+          OR: searchFields.map((f) => ({
+            data: { path: [f.key], string_contains: search },
+          })),
+        });
+      }
+    }
+
+    const where = conditions.length > 1 ? { AND: conditions } : conditions[0];
+
+    // Get count efficiently
+    const count = await db.dataRecord.count({ where });
+
+    // Get data for field-specific aggregates
+    const records = await db.dataRecord.findMany({
+      where,
+      select: { data: true },
+    });
+
+    const data: Record<string, { value: number | string; type: AggregateType }> = {};
+
+    for (const [fieldKey, aggType] of Object.entries(aggregations)) {
+      const values = records
+        .map((r) => (r.data as Record<string, unknown>)[fieldKey])
+        .filter((v) => v !== null && v !== undefined && v !== "");
+
+      let value: number | string = 0;
+
+      switch (aggType) {
+        case "count":
+          value = count;
+          break;
+        case "sum":
+          value = values.reduce((sum, v) => sum + Number(v), 0);
+          break;
+        case "avg":
+          value = values.length > 0
+            ? values.reduce((sum, v) => sum + Number(v), 0) / values.length
+            : 0;
+          break;
+        case "min":
+          value = values.length > 0 ? Math.min(...values.map(Number)) : 0;
+          break;
+        case "max":
+          value = values.length > 0 ? Math.max(...values.map(Number)) : 0;
+          break;
+        case "earliest":
+          if (values.length > 0) {
+            const dates = values.map(v => new Date(String(v)).getTime()).filter(t => !isNaN(t));
+            value = dates.length > 0 ? new Date(Math.min(...dates)).toISOString() : "-";
+          } else {
+            value = "-";
+          }
+          break;
+        case "latest":
+          if (values.length > 0) {
+            const dates = values.map(v => new Date(String(v)).getTime()).filter(t => !isNaN(t));
+            value = dates.length > 0 ? new Date(Math.max(...dates)).toISOString() : "-";
+          } else {
+            value = "-";
+          }
+          break;
+        case "checked":
+          value = values.filter((v) => v === true || v === 1 || v === "true").length;
+          break;
+        case "unchecked":
+          value = values.filter((v) => v !== true && v !== 1 && v !== "true").length;
+          break;
+      }
+
+      data[fieldKey] = { value, type: aggType };
+    }
+
+    return { success: true, data };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "汇总计算失败";
+    return { success: false, error: { code: "SUMMARY_FAILED", message } };
   }
 }

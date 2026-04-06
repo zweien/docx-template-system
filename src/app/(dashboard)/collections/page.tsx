@@ -2,18 +2,8 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { listDocumentCollectionTasks } from "@/lib/services/document-collection-task.service";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { CollectionStatusBadge } from "@/components/collections/collection-status-badge";
-
-function formatDateTime(value: Date) {
-  return value.toLocaleString("zh-CN", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { Card, CardContent } from "@/components/ui/card";
+import { CollectionTaskCard } from "@/components/collections/collection-task-card";
 
 export default async function CollectionsPage({
   searchParams,
@@ -55,30 +45,7 @@ export default async function CollectionsPage({
       ) : (
         <div className="grid gap-4">
           {tasks.map((task) => (
-            <Card key={task.id}>
-              <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1">
-                  <CardTitle>{task.title}</CardTitle>
-                  <CardDescription>截止时间：{formatDateTime(task.dueAt)}</CardDescription>
-                </div>
-                {task.myStatus ? <CollectionStatusBadge status={task.myStatus} /> : null}
-              </CardHeader>
-              <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                  <span>{task.assigneeCount} 位提交人</span>
-                  <span>已提交 {task.submittedCount}</span>
-                  <span>待提交 {task.pendingCount}</span>
-                  <span>逾期 {task.lateCount}</span>
-                </div>
-                <Button
-                  nativeButton={false}
-                  variant="outline"
-                  render={<Link href={`/collections/${task.id}`} />}
-                >
-                  查看详情
-                </Button>
-              </CardContent>
-            </Card>
+            <CollectionTaskCard key={task.id} task={task} />
           ))}
         </div>
       )}

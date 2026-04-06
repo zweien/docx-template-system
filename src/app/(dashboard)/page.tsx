@@ -72,19 +72,19 @@ export default async function DashboardPage() {
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
-            <Card key={stat.label}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  <Link href={stat.href} className="hover:underline">
+            <Link key={stat.label} href={stat.href}>
+              <Card className="hover:border-zinc-400 transition-colors cursor-pointer">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
                     {stat.label}
-                  </Link>
-                </CardTitle>
-                <Icon className={`h-4 w-4 ${stat.iconColor}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
-            </Card>
+                  </CardTitle>
+                  <Icon className={`h-4 w-4 ${stat.iconColor}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stat.value}</div>
+                </CardContent>
+              </Card>
+            </Link>
           );
         })}
       </div>

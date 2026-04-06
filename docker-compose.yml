@@ -1,0 +1,33 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8060:8060"
+    env_file: .env.production
+    environment:
+      - PYTHON_SERVICE_URL=http://python-service:8065
+      - NODE_ENV=production
+    restart: unless-stopped
+    volumes:
+      - uploads:/app/public/uploads
+      - collection-uploads:/app/.data/uploads
+    networks:
+      - default
+      - sso_net
+
+  python-service:
+    build: ./python-service
+    environment:
+      - PORT=8065
+    restart: unless-stopped
+    volumes:
+      - uploads:/app/public/uploads:ro
+
+volumes:
+  uploads:
+  collection-uploads:
+
+networks:
+  sso_net:
+    external: true
+    name: deploy_sso_net

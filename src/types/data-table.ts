@@ -35,6 +35,22 @@ export interface RelationSchemaConfig {
   fields: RelationSchemaField[];
 }
 
+// ========== Field Options (stored in DataField.options JSON) ==========
+
+export interface FieldOptions {
+  /** AUTO_NUMBER: next auto-increment value */
+  nextValue?: number;
+  /** SYSTEM_TIMESTAMP / SYSTEM_USER: "created" or "updated" */
+  kind?: "created" | "updated";
+  /** FORMULA: formula expression string */
+  formula?: string;
+}
+
+export function parseFieldOptions(raw: unknown): FieldOptions {
+  if (!raw || typeof raw !== "object") return {};
+  return raw as FieldOptions;
+}
+
 export interface DataFieldItem {
   id: string;
   key: string;
@@ -136,6 +152,24 @@ export interface ConditionalFormatRule {
   backgroundColor: string
   textColor?: string
   scope: "row" | "cell"
+}
+
+export type AggregateType =
+  | "count"
+  | "sum"
+  | "avg"
+  | "min"
+  | "max"
+  | "earliest"
+  | "latest"
+  | "checked"
+  | "unchecked";
+
+export interface SummaryRowData {
+  [fieldKey: string]: {
+    value: number | string;
+    type: AggregateType;
+  };
 }
 
 /** Normalize legacy flat FilterCondition[] to FilterGroup[] */

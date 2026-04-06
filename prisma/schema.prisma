@@ -36,6 +36,7 @@ model User {
   templates     Template[]
   dataTables    DataTable[]
   dataRecords   DataRecord[]
+  updatedDataRecords DataRecord[]  @relation("UpdatedByUser")
   batchGenerations BatchGeneration[]
   publishedTemplateVersions TemplateVersion[]
   aiConversations AiConversation[]
@@ -276,6 +277,12 @@ enum FieldType {
   FILE          // 附件
   RELATION      // 关联字段
   RELATION_SUBTABLE
+  URL
+  BOOLEAN
+  AUTO_NUMBER
+  SYSTEM_TIMESTAMP
+  SYSTEM_USER
+  FORMULA
 }
 
 enum ViewType {
@@ -347,10 +354,13 @@ model DataRecord {
   records          Record[]
   createdBy        User              @relation(fields: [createdById], references: [id])
   createdById      String
+  updatedBy        User?             @relation("UpdatedByUser", fields: [updatedById], references: [id])
+  updatedById      String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   @@index([tableId])
   @@index([createdById])
+  @@index([updatedById])
   @@index([tableId, createdAt(sort: Desc)])  // 复合索引加速列表查询
   @@index([tableId, createdById])             // 复合索引加速用户记录查询
 }

@@ -221,6 +221,11 @@ export function Sidebar() {
         )}
       </nav>
 
+      {/* Version */}
+      <div className="px-3 py-2 text-xs text-zinc-500 shrink-0">
+        {!collapsed ? `IDRL填表系统 ` : ``}v{process.env.NEXT_PUBLIC_APP_VERSION}
+      </div>
+
       {/* Footer: collapse button + user nav */}
       <div className="border-t border-zinc-800 shrink-0">
         <div className="flex items-center gap-2 p-2">

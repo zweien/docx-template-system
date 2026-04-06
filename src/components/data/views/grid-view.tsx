@@ -685,7 +685,7 @@ export function GridView({
       if (field.type === FieldType.NUMBER && isNaN(Number(text))) return;
       if (
         field.type === FieldType.SELECT &&
-        field.options &&
+        Array.isArray(field.options) &&
         !field.options.includes(text)
       )
         return;
@@ -793,7 +793,7 @@ export function GridView({
           return (
             <SelectCellEditor
               value={String(originalValue ?? "")}
-              options={field.options ?? []}
+              options={Array.isArray(field.options) ? field.options : []}
               onCommit={(v) => void commitEdit(v)}
               onCancel={cancelEdit}
             />
@@ -805,7 +805,7 @@ export function GridView({
           return (
             <MultiselectCellEditor
               value={arrValue}
-              options={field.options ?? []}
+              options={Array.isArray(field.options) ? field.options : []}
               onCommit={(v) => void commitEdit(v)}
               onCancel={cancelEdit}
             />

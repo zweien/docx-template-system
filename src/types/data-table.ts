@@ -57,7 +57,7 @@ export interface DataFieldItem {
   label: string;
   type: FieldType;
   required: boolean;
-  options?: string[]; // SELECT/MULTISELECT 选项列表
+  options?: unknown; // SELECT/MULTISELECT: string[], FORMULA: { formula: string }, etc.
   relationTo?: string; // RELATION 目标表 ID
   displayField?: string; // RELATION 显示字段
   relationCardinality?: RelationCardinality | null;
@@ -89,13 +89,14 @@ export interface DataTableDetail extends DataTableListItem {
 
 // ========== Record Types ==========
 
-export interface DataRecordItem {
+export interface DataRecordItem{
   id: string;
   tableId: string;
   data: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
   createdByName: string;
+  updatedByName: string | null;
 }
 
 export interface PaginatedRecords {

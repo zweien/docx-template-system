@@ -90,6 +90,7 @@ function mapRecordToItem(row: {
   createdAt: Date;
   updatedAt: Date;
   createdBy: { name: string };
+  updatedBy?: { name: string } | null;
 }): DataRecordItem {
   return {
     id: row.id,
@@ -98,7 +99,53 @@ function mapRecordToItem(row: {
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     createdByName: row.createdBy.name,
+    updatedByName: row.updatedBy?.name ?? null,
   };
+}
+
+/**
+ * Inject SYSTEM_TIMESTAMP and SYSTEM_USER field values from record metadata.
+ * These fields read from createdAt/updatedAt/createdBy rather than from the JSONB data.
+ */
+function injectSystemFieldValues(
+  records: DataRecordItem[],
+  fields: DataFieldItem[]
+): void {
+  const systemFields = fields.filter(
+    (f) => f.type === "SYSTEM_TIMESTAMP" || f.type === "SYSTEM_USER"
+  );
+  if (systemFields.length === 0) return;
+
+  for (const record of records) {
+    for (const field of systemFields) {
+      const opts = parseFieldOptions(field.options);
+      const kind = opts.kind ?? "created";
+
+      if (field.type === "SYSTEM_TIMESTAMP") {
+        record.data[field.key] = kind === "updated"
+          ? record.updatedAt.toISOString()
+          : record.createdAt.toISOString();
+      } else if (field.type === "SYSTEM_USER") {
+        record.data[field.key] = kind === "updated"
+          ? (record.updatedByName ?? "")
+          : record.createdByName;
+      }
+    }
+  }
+}
+
+/** Normalize BOOLEAN field values from strings to actual booleans */
+function normalizeBooleanFields(
+  data: Record<string, unknown>,
+  fields: DataFieldItem[]
+): void {
+  for (const field of fields) {
+    if (field.type !== "BOOLEAN") continue;
+    const value = data[field.key];
+    if (value !== undefined && value !== null) {
+      data[field.key] = value === true || value === "true" || value === 1;
+    }
+  }
 }
 
 function splitRecordDataByFieldType(
@@ -238,6 +285,7 @@ export async function listRecords(
         orderBy: { createdAt: "desc" },
         include: {
           createdBy: { select: { name: true } },
+          updatedBy: { select: { name: true } },
         },
       }),
       db.dataRecord.count({ where }),
@@ -378,6 +426,9 @@ export async function listRecords(
       }
     }
 
+    // Resolve SYSTEM_TIMESTAMP and SYSTEM_USER fields from record metadata
+    injectSystemFieldValues(processedRecords, tableResult.data.fields);
+
     return {
       success: true,
       data: {
@@ -433,6 +484,8 @@ export async function createRecord(
     if (!validation.success) {
       return validation;
     }
+
+    normalizeBooleanFields(data, tableResult.data.fields);
 
     const record = await db.$transaction(async (tx) => {
       // ── Auto-number injection (inside transaction for atomicity) ──
@@ -521,6 +574,8 @@ async function doUpdateRecord(
   if (!validation.success) {
     throw new Error(`${validation.error.code}:${validation.error.message}`);
   }
+
+  normalizeBooleanFields(data, tableResult.data.fields);
 
   const { scalarData, relationData } = splitRecordDataByFieldType(
     data,
@@ -644,7 +699,7 @@ export async function patchField(
           }
           break;
         case "SELECT":
-          if (field.options && !field.options.includes(String(value))) {
+          if (Array.isArray(field.options) && !field.options.includes(String(value))) {
             return {
               success: false,
               error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 的值必须是选项之一` },
@@ -652,6 +707,11 @@ export async function patchField(
           }
           break;
       }
+    }
+
+    // Normalize BOOLEAN values to actual booleans
+    if (field.type === "BOOLEAN" && value !== null && value !== undefined) {
+      value = value === true || value === "true" || value === 1;
     }
 
     // Update only the changed field
@@ -1028,7 +1088,7 @@ export function validateRecordData(
         break;
 
       case "SELECT":
-        if (field.options && !field.options.includes(String(value))) {
+        if (Array.isArray(field.options) && !field.options.includes(String(value))) {
           return {
             success: false,
             error: {
@@ -1040,8 +1100,8 @@ export function validateRecordData(
         break;
 
       case "MULTISELECT":
-        if (field.options && Array.isArray(value)) {
-          const invalidOptions = value.filter((v) => !field.options!.includes(String(v)));
+        if (Array.isArray(field.options) && Array.isArray(value)) {
+          const invalidOptions = value.filter((v) => !(field.options as string[]).includes(String(v)));
           if (invalidOptions.length > 0) {
             return {
               success: false,

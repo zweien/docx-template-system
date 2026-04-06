@@ -86,6 +86,8 @@ export function RecordTable({
     setViewOptions,
     conditionalFormatRules,
     setConditionalFormatRules,
+    columnAggregations,
+    setColumnAggregations,
     deleteRecord,
     deletingIds,
     switchView,
@@ -289,6 +291,8 @@ export function RecordTable({
               setQuickFormatField(fieldKey);
               setQuickFormatValue(value);
             }}
+            columnAggregations={columnAggregations}
+            onColumnAggregationsChange={setColumnAggregations}
           />
         );
       case "KANBAN":

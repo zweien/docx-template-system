@@ -10,6 +10,7 @@ import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { FieldType } from "@/generated/prisma/enums";
 import type {
+  AggregateType,
   ConditionalFormatRule,
   DataFieldItem,
   DataRecordItem,
@@ -22,6 +23,7 @@ import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
 import { useKeyboardNav, type ActiveCell } from "@/hooks/use-keyboard-nav";
 import { cn } from "@/lib/utils";
+import { useSummaryRow } from "@/hooks/use-summary-row";
 import {
   TextCellEditor,
   NumberCellEditor,
@@ -75,6 +77,8 @@ interface GridViewProps {
   onReorderRecords?: (orderedIds: string[]) => void;
   conditionalFormatRules?: ConditionalFormatRule[];
   onQuickFormat?: (fieldKey: string, value: string) => void;
+  columnAggregations?: Record<string, AggregateType>;
+  onColumnAggregationsChange?: (aggregations: Record<string, AggregateType>) => void;
 }
 
 // ─── Grouping helpers ───────────────────────────────────────────────────────
@@ -234,8 +238,18 @@ export function GridView({
   onReorderRecords,
   conditionalFormatRules,
   onQuickFormat,
+  columnAggregations,
+  onColumnAggregationsChange,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
+
+  // ── Summary row ──────────────────────────────────────────────────────────
+  const { summaryData } = useSummaryRow({
+    tableId,
+    filters: filters.length > 0 ? JSON.stringify(filters) : null,
+    search: "",
+    aggregations: columnAggregations ?? {},
+  });
 
   // Find the filter condition for a given field across all groups
   const findFilterForField = useCallback((fieldKey: string): FilterCondition | null => {
@@ -1188,9 +1202,71 @@ export function GridView({
           )}
           </DragDropProvider>
         </tbody>
+        {Object.keys(columnAggregations ?? {}).length > 0 && (
+          <tfoot>
+            <tr className="border-t bg-muted/30 sticky bottom-0 z-[5]">
+              <td className="p-2 text-xs text-muted-foreground w-10" />
+              {orderedVisibleFields.map((field) => {
+                const agg = columnAggregations?.[field.key];
+                if (!agg) return <td key={field.key} className="p-2" />;
+                const summary = summaryData[field.key];
+                return (
+                  <td
+                    key={field.key}
+                    className="p-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted/50"
+                    style={{ width: columnWidths[field.key] ?? DEFAULT_COL_WIDTH }}
+                    onClick={() => {
+                      const cycle = getAvailableAggTypes(field.type);
+                      const currentIndex = cycle.indexOf(agg);
+                      const next = cycle[(currentIndex + 1) % cycle.length];
+                      onColumnAggregationsChange?.({ ...columnAggregations, [field.key]: next });
+                    }}
+                  >
+                    <span className="font-medium">{getAggLabel(agg)}</span>
+                    {summary && (
+                      <span className="ml-1 font-mono">{formatSummaryValue(summary.value, agg)}</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          </tfoot>
+        )}
         </table>
       </div>
       </CellContextMenu>
     </div>
   );
+}
+
+// ─── Summary row helpers ────────────────────────────────────────────────────
+
+function getAvailableAggTypes(fieldType: string): AggregateType[] {
+  switch (fieldType) {
+    case "NUMBER": case "FORMULA": return ["sum", "avg", "min", "max", "count"];
+    case "BOOLEAN": return ["checked", "unchecked", "count"];
+    case "DATE": case "SYSTEM_TIMESTAMP": return ["earliest", "latest", "count"];
+    default: return ["count"];
+  }
+}
+
+function getAggLabel(type: AggregateType): string {
+  const labels: Record<AggregateType, string> = {
+    count: "计数", sum: "求和", avg: "平均",
+    min: "最小", max: "最大", earliest: "最早", latest: "最新",
+    checked: "已选", unchecked: "未选",
+  };
+  return labels[type];
+}
+
+function formatSummaryValue(value: number | string, type: AggregateType): string {
+  if (type === "earliest" || type === "latest") {
+    try { return new Date(value).toLocaleDateString("zh-CN"); } catch { return String(value); }
+  }
+  if (typeof value === "number") {
+    return type === "count" || type === "checked" || type === "unchecked"
+      ? String(value)
+      : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+  return String(value);
 }

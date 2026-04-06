@@ -62,6 +62,7 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
             )}
           </div>
           {isAdmin && (
+            <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
@@ -97,6 +98,7 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           )}
         </div>
       </CardHeader>

@@ -499,7 +499,7 @@ describe("data-record.service relation snapshots", () => {
     });
 
     const { updateRecord } = await import("./data-record.service");
-    const result = await updateRecord("author-1", { name: "Ada Lovelace" });
+    const result = await updateRecord("author-1", { name: "Ada Lovelace" }, "test-user-id");
 
     expect(result.success).toBe(true);
     expect(records.get("paper-1")?.data.authors).toEqual([

@@ -10,7 +10,7 @@ import type {
   FilterCondition,
   FilterGroup,
 } from "@/types/data-table";
-import { normalizeFilters } from "@/types/data-table";
+import { normalizeFilters, parseFieldOptions } from "@/types/data-table";
 import { getTable } from "./data-table.service";
 import {
   removeAllRelationsForRecord,
@@ -417,12 +417,29 @@ export async function createRecord(
       return validation;
     }
 
-    const { scalarData, relationData } = splitRecordDataByFieldType(
-      data,
-      tableResult.data.fields
-    );
-
     const record = await db.$transaction(async (tx) => {
+      // ── Auto-number injection (inside transaction for atomicity) ──
+      const autoNumberFields = tableResult.data.fields.filter(
+        (f) => f.type === "AUTO_NUMBER"
+      );
+      for (const field of autoNumberFields) {
+        const lockedField = await tx.dataField.findUniqueOrThrow({
+          where: { id: field.id },
+        });
+        const opts = parseFieldOptions(lockedField.options);
+        const nextVal = (opts.nextValue ?? 0) + 1;
+        data[field.key] = nextVal;
+        await tx.dataField.update({
+          where: { id: field.id },
+          data: { options: toJsonInput({ ...opts, nextValue: nextVal }) },
+        });
+      }
+
+      const { scalarData, relationData } = splitRecordDataByFieldType(
+        data,
+        tableResult.data.fields
+      );
+
       const createdRecord = await tx.dataRecord.create({
         data: {
           tableId,
@@ -473,7 +490,8 @@ async function doUpdateRecord(
   tx: Parameters<Parameters<typeof db.$transaction>[0]>[0],
   id: string,
   data: Record<string, unknown>,
-  existingRecord: { id: string; tableId: string; data: unknown }
+  existingRecord: { id: string; tableId: string; data: unknown },
+  userId: string
 ): Promise<DataRecordItem> {
   const tableResult = await getTable(existingRecord.tableId);
   if (!tableResult.success) {
@@ -497,6 +515,7 @@ async function doUpdateRecord(
         ...(existingRecord.data as Record<string, unknown>),
         ...scalarData,
       }),
+      updatedById: userId,
     },
   });
 
@@ -533,7 +552,8 @@ async function doUpdateRecord(
 
 export async function updateRecord(
   id: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  userId: string
 ): Promise<ServiceResult<DataRecordItem>> {
   try {
     const existingRecord = await db.dataRecord.findUnique({ where: { id } });
@@ -542,7 +562,7 @@ export async function updateRecord(
     }
 
     const result = await db.$transaction(tx =>
-      doUpdateRecord(tx, id, data, existingRecord)
+      doUpdateRecord(tx, id, data, existingRecord, userId)
     );
     return { success: true, data: result };
   } catch (error) {
@@ -558,7 +578,8 @@ export async function updateRecord(
 export async function patchField(
   recordId: string,
   fieldKey: string,
-  value: unknown
+  value: unknown,
+  userId: string
 ): Promise<ServiceResult<DataRecordItem>> {
   try {
     const existingRecord = await db.dataRecord.findUnique({ where: { id: recordId } });
@@ -620,7 +641,10 @@ export async function patchField(
 
     await db.dataRecord.update({
       where: { id: recordId },
-      data: { data: toJsonInput(updatedData) },
+      data: {
+        data: toJsonInput(updatedData),
+        updatedById: userId,
+      },
     });
 
     // Refresh snapshots only for relation fields
@@ -735,7 +759,8 @@ export async function batchCreate(
 
 export async function batchUpdate(
   tableId: string,
-  updates: Array<{ id: string; data: Record<string, unknown> }>
+  updates: Array<{ id: string; data: Record<string, unknown> }>,
+  userId: string
 ): Promise<ServiceResult<{ updated: number; errors: Array<{ recordId: string; message: string }> }>> {
   try {
     if (updates.length === 0) {
@@ -764,7 +789,7 @@ export async function batchUpdate(
             errors.push({ recordId: id, message: "记录不属于目标表" });
             throw new Error("SKIP");
           }
-          await doUpdateRecord(tx, id, data, existingRecord);
+          await doUpdateRecord(tx, id, data, existingRecord, userId);
           updated++;
         } catch (e) {
           if (e instanceof Error && e.message === "SKIP") continue;
@@ -922,12 +947,22 @@ function buildFilterConditionsFromSpec(
 
 // ── Validation ──
 
-function validateRecordData(
+export function validateRecordData(
   data: Record<string, unknown>,
   fields: DataFieldItem[]
 ): ServiceResult<boolean> {
   for (const field of fields) {
     const value = data[field.key];
+
+    // Skip system-managed fields — not user-editable
+    if (
+      field.type === "AUTO_NUMBER" ||
+      field.type === "SYSTEM_TIMESTAMP" ||
+      field.type === "SYSTEM_USER" ||
+      field.type === "FORMULA"
+    ) {
+      continue;
+    }
 
     // Check required fields
     if (field.required && (value === undefined || value === null || value === "")) {
@@ -995,6 +1030,30 @@ function validateRecordData(
               },
             };
           }
+        }
+        break;
+
+      case "URL":
+        if (typeof value === "string" && value !== "" && !/^https?:\/\/.+/.test(value)) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: `字段 "${field.label}" 必须是有效的 URL（以 http:// 或 https:// 开头）`,
+            },
+          };
+        }
+        break;
+
+      case "BOOLEAN":
+        if (typeof value !== "boolean" && value !== "true" && value !== "false" && value !== 1 && value !== 0) {
+          return {
+            success: false,
+            error: {
+              code: "VALIDATION_ERROR",
+              message: `字段 "${field.label}" 必须是布尔值`,
+            },
+          };
         }
         break;
     }

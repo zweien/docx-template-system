@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
           console.log('[CONFIRM] Updating record:', { recordId: operation.recordId, data: operation.data });
           result = await dbUpdateRecord(
             operation.recordId!,
-            operation.data!
+            operation.data!,
+            session.user.id
           );
           console.log('[CONFIRM] Update result:', JSON.stringify(result));
           break;

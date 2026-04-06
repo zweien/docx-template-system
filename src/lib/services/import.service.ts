@@ -268,7 +268,7 @@ export async function importData(
           result.skipped++;
           continue;
         } else if (options.strategy === "overwrite") {
-          const updateResult = await updateRecord(existingId, mappedData);
+          const updateResult = await updateRecord(existingId, mappedData, userId);
           if (updateResult.success) {
             result.updated++;
           } else {

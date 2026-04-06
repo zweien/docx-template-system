@@ -345,29 +345,54 @@ Note: remove the old `splitRecordDataByFieldType` call that was before the trans
 
 - [ ] **Step 6: Set updatedById in patchField and updateRecord**
 
-In `patchField` (around line 621), add `updatedById` to the update:
+**Important:** `updatedById` must be set to the **current user**, not the creator. This requires adding `userId` parameters.
 
+In `patchField`, add a `userId` parameter:
+
+```typescript
+export async function patchField(
+  recordId: string,
+  fieldKey: string,
+  value: unknown,
+  userId: string   // ← new parameter
+): Promise<ServiceResult<DataRecordItem>> {
+```
+
+Then in the update call:
 ```typescript
     await db.dataRecord.update({
       where: { id: recordId },
       data: {
         data: toJsonInput(updatedData),
-        updatedById: existingRecord.createdById, // default to creator if not available
+        updatedById: userId,
       },
     });
 ```
 
-In `updateRecord` / `doUpdateRecord`, find the record update call and add `updatedById`:
+In `updateRecord` / `doUpdateRecord`, add `userId` parameter:
 
+```typescript
+async function doUpdateRecord(
+  tx: PrismaTransactionClient,
+  id: string,
+  data: Record<string, unknown>,
+  existingRecord: { tableId: string },
+  userId: string   // ← new parameter
+) {
+```
+
+Then in the update call:
 ```typescript
     await tx.dataRecord.update({
       where: { id },
       data: {
         data: toJsonInput(scalarData),
-        updatedById: existingRecord.createdById,
+        updatedById: userId,
       },
     });
 ```
+
+Update all callers of `patchField` and `doUpdateRecord` to pass the user ID. The API route handler already has `user.id` from `getRouteSessionUser`.
 
 - [ ] **Step 7: Run tests to verify they pass**
 
@@ -762,7 +787,8 @@ export function buildRecordWhereClause(
   tableId: string,
   filterConditions?: FilterGroup[],
   search?: string,
-  fields?: DataFieldItem[]
+  fields?: DataFieldItem[],
+  fieldFilters?: FieldFilters
 ): Record<string, unknown> {
   const conditions: Record<string, unknown>[] = [{ tableId }];
   const resolvedFields = fields ?? [];
@@ -784,61 +810,32 @@ export function buildRecordWhereClause(
     }
   }
 
-  // Search (OR across all fields — not AND)
-  if (search) {
-    conditions.push({
-      OR: resolvedFields.map((f) => ({
-        data: { path: [f.key], string_contains: search },
-      })),
-    });
+  // Field-level filters (from URL query params)
+  if (fieldFilters && Object.keys(fieldFilters).length > 0) {
+    const fieldFilterConds = buildFieldFilterConditions(fieldFilters, resolvedFields);
+    conditions.push(...fieldFilterConds);
   }
 
-  return conditions.length > 1 ? { AND: conditions } : conditions[0];
-}
-```
-
-Then refactor `listRecords` to call `buildRecordWhereClause` instead of duplicating the logic.
-
-Also extract and export the existing `buildWhereConditions` logic from `listRecords` into a shared function. The key is to extract the part that builds `{ tableId, ...(filter conditions) }` into a reusable helper. Look at `listRecords` lines 159-378 — the `where` object construction from `buildConditionFromFilter` calls. Extract it:
-
-```typescript
-function buildWhereConditions(
-  tableId: string,
-  filterConditions?: FilterGroup[],
-  search?: string,
-  fields?: DataFieldItem[]
-): Record<string, unknown> {
-  const conditions: Record<string, unknown>[] = [{ tableId }];
-
-  if (filterConditions && filterConditions.length > 0) {
-    const normalized = normalizeFilters(filterConditions);
-    for (const group of normalized) {
-      const groupConds = group.conditions.map((cond) =>
-        buildConditionFromFilter(cond, fields ?? [])
-      ).filter(Boolean);
-      if (groupConds.length > 0) {
-        if (group.operator === "OR") {
-          conditions.push({ OR: groupConds });
-        } else {
-          conditions.push(...groupConds);
-        }
-      }
+  // Search (OR across text-type fields only — matches existing listRecords behavior)
+  if (search) {
+    const searchFields = resolvedFields.filter(
+      (f) => f.type === "TEXT" || f.type === "EMAIL" || f.type === "SELECT"
+        || f.type === "PHONE" || f.type === "MULTISELECT" || f.type === "URL"
+    );
+    if (searchFields.length > 0) {
+      conditions.push({
+        OR: searchFields.map((f) => ({
+          data: { path: [f.key], string_contains: search },
+        })),
+      });
     }
   }
 
-  if (search) {
-    conditions.push({
-      OR: (fields ?? []).map((f) => ({
-        data: { path: [f.key], string_contains: search },
-      })),
-    });
-  }
-
   return conditions.length > 1 ? { AND: conditions } : conditions[0];
 }
 ```
 
-Then refactor `listRecords` to use this helper instead of duplicating the logic.
+Then refactor `listRecords` to call `buildRecordWhereClause` instead of duplicating the logic. Pass `fieldFilters` from the existing `filters` parameter.
 
 - [ ] **Step 2: Create summary API route**
 

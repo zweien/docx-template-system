@@ -88,9 +88,14 @@ Also add `FORMULA` for P3 (add it now so schema migration happens once):
   FORMULA
 ```
 
-- [ ] **Step 2: Add updatedById to DataRecord model**
+- [ ] **Step 2: Add updatedById to DataRecord model and User relation**
 
 In `prisma/schema.prisma`, add to DataRecord model after `createdById`:
+
+Also add the reverse relation to the User model (find `dataRecords   DataRecord[]` and add below it):
+```prisma
+  updatedDataRecords DataRecord[]  @relation("UpdatedByUser")
+```
 
 ```prisma
 model DataRecord {
@@ -103,7 +108,8 @@ model DataRecord {
   records          Record[]
   createdBy        User              @relation(fields: [createdById], references: [id])
   createdById      String
-  updatedById      String?           // ← new field
+  updatedBy        User?             @relation("UpdatedByUser", fields: [updatedById], references: [id])
+  updatedById      String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
   @@index([tableId])
@@ -186,9 +192,11 @@ git commit -m "feat(data): add new FieldType enum values and FieldOptions type"
 
 - [ ] **Step 1: Write tests for validateRecordData changes**
 
-Add to `src/lib/services/data-record.service.test.ts`:
+Add to `src/lib/services/data-record.service.test.ts` (add import at the top if not already present):
 
 ```typescript
+import { validateRecordData } from "@/lib/services/data-record.service";
+
 describe("validateRecordData", () => {
   // System fields should be skipped in validation
   it("should skip SYSTEM_TIMESTAMP and SYSTEM_USER fields", () => {
@@ -232,12 +240,12 @@ describe("validateRecordData", () => {
 Run: `npx vitest run src/lib/services/data-record.service.test.ts`
 Expected: tests referencing SYSTEM_TIMESTAMP, URL, BOOLEAN fail (types don't exist in switch)
 
-- [ ] **Step 3: Update validateRecordData to skip system fields**
+- [ ] **Step 3: Export validateRecordData and update it to skip system fields**
 
-In `src/lib/services/data-record.service.ts`, at the top of the `validateRecordData` function loop, add:
+In `src/lib/services/data-record.service.ts`, change the function signature from `function validateRecordData` to `export function validateRecordData` so tests can import it. Then at the top of the for loop, add:
 
 ```typescript
-function validateRecordData(
+export function validateRecordData(
   data: Record<string, unknown>,
   fields: DataFieldItem[]
 ): ServiceResult<boolean> {
@@ -286,28 +294,54 @@ In `validateRecordData`, within the type validation switch, add after the MULTIS
         break;
 ```
 
-- [ ] **Step 5: Add auto-number injection in createRecord**
+- [ ] **Step 5: Add auto-number injection in createRecord (inside transaction)**
 
-In `src/lib/services/data-record.service.ts`, in the `createRecord` function, after `validateRecordData` and before `splitRecordDataByFieldType`, inject auto-number values:
+In `src/lib/services/data-record.service.ts`, in the `createRecord` function, move the auto-number logic **inside** the existing `db.$transaction` callback. The auto-number assignment and the `nextValue` increment must be atomic.
+
+Find the transaction block (around line 425) and restructure:
 
 ```typescript
-    // Inject auto-number values
-    const autoNumberFields = tableResult.data.fields.filter(
-      (f) => f.type === "AUTO_NUMBER"
-    );
-    if (autoNumberFields.length > 0) {
+    const record = await db.$transaction(async (tx) => {
+      // ── Auto-number injection (inside transaction for atomicity) ──
+      const autoNumberFields = tableResult.data.fields.filter(
+        (f) => f.type === "AUTO_NUMBER"
+      );
       for (const field of autoNumberFields) {
-        const opts = parseFieldOptions(field.options);
+        // Lock the DataField row to prevent concurrent number assignment
+        const lockedField = await tx.dataField.findUniqueOrThrow({
+          where: { id: field.id },
+        });
+        const opts = parseFieldOptions(lockedField.options);
         const nextVal = (opts.nextValue ?? 0) + 1;
         data[field.key] = nextVal;
-        // Update nextValue on the field via transaction later
-        await db.dataField.update({
+        await tx.dataField.update({
           where: { id: field.id },
           data: { options: toJsonInput({ ...opts, nextValue: nextVal }) },
         });
       }
-    }
+
+      // Re-split after auto-number injection (data has been mutated)
+      const { scalarData, relationData } = splitRecordDataByFieldType(
+        data,
+        tableResult.data.fields
+      );
+
+      const createdRecord = await tx.dataRecord.create({
+        data: {
+          tableId,
+          data: toJsonInput(scalarData),
+          createdById: userId,
+        },
+        include: {
+          createdBy: { select: { name: true } },
+        },
+      });
+
+      // ... rest of existing relation sync and return logic
+    });
 ```
+
+Note: remove the old `splitRecordDataByFieldType` call that was before the transaction, since we now do it inside after auto-number injection.
 
 - [ ] **Step 6: Set updatedById in patchField and updateRecord**
 
@@ -421,19 +455,23 @@ Create `src/components/data/cell-editors/boolean-cell-editor.tsx`:
 ```tsx
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+
 interface BooleanCellEditorProps {
   initialValue: boolean;
   onCommit: (value: boolean) => void;
 }
 
 export function BooleanCellEditor({ initialValue, onCommit }: BooleanCellEditorProps) {
-  // Toggle immediately on mount (single click behavior)
   const newValue = !initialValue;
+  const committed = useRef(false);
 
-  // Use requestAnimationFrame to avoid state update during render
-  if (typeof window !== "undefined") {
-    requestAnimationFrame(() => onCommit(newValue));
-  }
+  useEffect(() => {
+    if (!committed.current) {
+      committed.current = true;
+      onCommit(newValue);
+    }
+  }, [newValue, onCommit]);
 
   return (
     <div className="flex items-center justify-center h-8">
@@ -474,10 +512,10 @@ git commit -m "feat(data): add URL and BOOLEAN cell editors"
 
 - [ ] **Step 1: Add formatters to format-cell.tsx**
 
-Add cases to the switch in `formatCellValue` (before `default`):
+Add cases to the switch in `formatCellValue` (before `default`). Use `FieldType.URL` etc. (already imported at the top of the file):
 
 ```typescript
-    case "URL":
+    case FieldType.URL:
       return (
         <a
           href={String(value)}
@@ -489,7 +527,7 @@ Add cases to the switch in `formatCellValue` (before `default`):
           {String(value)}
         </a>
       );
-    case "BOOLEAN":
+    case FieldType.BOOLEAN:
       return value === true || value === 1 ? (
         <div className="w-4 h-4 rounded border-2 bg-green-500 border-green-500 flex items-center justify-center">
           <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
@@ -499,13 +537,13 @@ Add cases to the switch in `formatCellValue` (before `default`):
       ) : (
         <div className="w-4 h-4 rounded border-2 bg-white border-zinc-300" />
       );
-    case "AUTO_NUMBER":
+    case FieldType.AUTO_NUMBER:
       return <span className="text-muted-foreground font-mono">{String(value)}</span>;
-    case "SYSTEM_TIMESTAMP":
+    case FieldType.SYSTEM_TIMESTAMP:
       return <span className="text-muted-foreground text-xs">{formatDateValue(value)}</span>;
-    case "SYSTEM_USER":
+    case FieldType.SYSTEM_USER:
       return <span className="text-muted-foreground text-xs">{String(value)}</span>;
-    case "FORMULA":
+    case FieldType.FORMULA:
       if (value === null || value === undefined) return <span className="text-zinc-400">-</span>;
       if (typeof value === "number") return value.toLocaleString();
       return String(value);
@@ -525,18 +563,18 @@ Also add to `formatCellText`:
 
 - [ ] **Step 2: Add filter operators for new types in column-header.tsx**
 
-Add to the `getOperatorsForType` switch (before the `default` case):
+Add to the `getOperatorsForType` switch (before the `default` case). Use `FieldType.URL` etc. (already imported):
 
 ```typescript
-    case "URL":
+    case FieldType.URL:
       return ["eq", "ne", "contains", "isempty", "isnotempty"];
-    case "BOOLEAN":
+    case FieldType.BOOLEAN:
       return ["eq", "isempty"];
-    case "AUTO_NUMBER":
+    case FieldType.AUTO_NUMBER:
       return ["eq", "ne", "gt", "lt", "gte", "lte", "isempty"];
-    case "SYSTEM_TIMESTAMP":
+    case FieldType.SYSTEM_TIMESTAMP:
       return ["eq", "gt", "lt", "gte", "lte", "isempty"];
-    case "FORMULA":
+    case FieldType.FORMULA:
       return ["eq", "ne", "gt", "lt", "gte", "lte", "isempty", "isnotempty"];
 ```
 
@@ -555,12 +593,14 @@ Add to the `FIELD_TYPES` array (after FILE):
 
 Also add condition to show system-specific options (kind selector) when type is SYSTEM_TIMESTAMP or SYSTEM_USER, and formula editor when type is FORMULA. Add auto-number start value input when type is AUTO_NUMBER.
 
+**Note:** SYSTEM_TIMESTAMP, SYSTEM_USER, and AUTO_NUMBER are system-managed fields. They should be available in the type selector but clearly labeled as read-only. When creating these fields, the form should show a notice: "此字段由系统自动管理，不可手动编辑".
+
 - [ ] **Step 4: Integrate editors into grid-view.tsx renderEditor**
 
-In grid-view.tsx's `renderEditor` callback, add cases before `default`:
+In grid-view.tsx's `renderEditor` callback, add cases before `default`. Use `FieldType.URL` etc. (already imported):
 
 ```typescript
-        case "URL":
+        case FieldType.URL:
           return (
             <UrlCellEditor
               initialValue={String(originalValue ?? "")}
@@ -568,17 +608,17 @@ In grid-view.tsx's `renderEditor` callback, add cases before `default`:
               onCancel={cancelEdit}
             />
           );
-        case "BOOLEAN":
+        case FieldType.BOOLEAN:
           return (
             <BooleanCellEditor
               initialValue={!!originalValue && originalValue !== "false" && originalValue !== 0}
               onCommit={(v) => void commitEdit(v)}
             />
           );
-        case "AUTO_NUMBER":
-        case "SYSTEM_TIMESTAMP":
-        case "SYSTEM_USER":
-        case "FORMULA":
+        case FieldType.AUTO_NUMBER:
+        case FieldType.SYSTEM_TIMESTAMP:
+        case FieldType.SYSTEM_USER:
+        case FieldType.FORMULA:
           // Not editable inline
           return null;
 ```
@@ -611,17 +651,9 @@ git commit -m "feat(data): integrate URL, BOOLEAN, system field formatters and e
 
 - [ ] **Step 1: Add computeSummary to data-record.service.ts**
 
-Add new function:
+Add new function that uses Prisma aggregate + raw SQL where needed. The function reuses the existing `listRecords` filter construction pattern (see `listRecords` lines 159-214 in `data-record.service.ts`). Do NOT create a separate `buildWhereConditions` — instead, refactor `listRecords` to extract its where-clause construction into a shared `buildRecordWhereClause` helper first.
 
 ```typescript
-export interface SummaryRequest {
-  tableId: string;
-  filterConditions?: FilterGroup[];
-  search?: string;
-  aggregations: Record<string, AggregateType>;
-  fields: DataFieldItem[];
-}
-
 export interface SummaryResult {
   success: true;
   data: Record<string, { value: number | string; type: AggregateType }>;
@@ -648,19 +680,25 @@ export async function computeSummary(
       return { success: true, data: {} };
     }
 
-    // Build WHERE conditions from filters (reuse existing logic)
-    const conditions = buildWhereConditions(tableId, filterConditions, search, resolvedFields);
+    // Reuse the existing filter/where construction from listRecords
+    // by extracting it into a shared helper (buildRecordWhereClause)
+    const where = buildRecordWhereClause(tableId, filterConditions, search, resolvedFields);
 
-    // Compute aggregates using Prisma's aggregate
-    const rawResults = await db.dataRecord.findMany({
-      where: conditions,
+    // Use Prisma count for the total (efficient)
+    const count = await db.dataRecord.count({ where });
+
+    // For field-specific aggregates, use findMany with select on JSONB data
+    // Since Prisma aggregate doesn't support JSONB path extraction,
+    // we use a lightweight findMany that only selects the data column
+    const records = await db.dataRecord.findMany({
+      where,
       select: { data: true },
     });
 
     const data: Record<string, { value: number | string; type: AggregateType }> = {};
 
     for (const [fieldKey, aggType] of Object.entries(aggregations)) {
-      const values = rawResults
+      const values = records
         .map((r) => (r.data as Record<string, unknown>)[fieldKey])
         .filter((v) => v !== null && v !== undefined && v !== "");
 
@@ -668,7 +706,7 @@ export async function computeSummary(
 
       switch (aggType) {
         case "count":
-          value = rawResults.length;
+          value = count;
           break;
         case "sum":
           value = values.reduce((sum, v) => sum + Number(v), 0);
@@ -712,6 +750,54 @@ export async function computeSummary(
   }
 }
 ```
+
+Also extract a shared helper from `listRecords` (refactor the where-clause construction at lines 159-214):
+
+```typescript
+/**
+ * Build Prisma where clause for records. Shared by listRecords and computeSummary.
+ * Extract the filter/search logic from listRecords into this helper.
+ */
+export function buildRecordWhereClause(
+  tableId: string,
+  filterConditions?: FilterGroup[],
+  search?: string,
+  fields?: DataFieldItem[]
+): Record<string, unknown> {
+  const conditions: Record<string, unknown>[] = [{ tableId }];
+  const resolvedFields = fields ?? [];
+
+  // Filter conditions (AND between groups, operator within each group)
+  if (filterConditions && filterConditions.length > 0) {
+    const normalized = normalizeFilters(filterConditions);
+    for (const group of normalized) {
+      const groupConds = group.conditions
+        .map((cond) => buildConditionFromFilter(cond, resolvedFields))
+        .filter(Boolean);
+      if (groupConds.length > 0) {
+        if (group.operator === "OR") {
+          conditions.push({ OR: groupConds });
+        } else {
+          conditions.push(...groupConds);
+        }
+      }
+    }
+  }
+
+  // Search (OR across all fields — not AND)
+  if (search) {
+    conditions.push({
+      OR: resolvedFields.map((f) => ({
+        data: { path: [f.key], string_contains: search },
+      })),
+    });
+  }
+
+  return conditions.length > 1 ? { AND: conditions } : conditions[0];
+}
+```
+
+Then refactor `listRecords` to call `buildRecordWhereClause` instead of duplicating the logic.
 
 Also extract and export the existing `buildWhereConditions` logic from `listRecords` into a shared function. The key is to extract the part that builds `{ tableId, ...(filter conditions) }` into a reusable helper. Look at `listRecords` lines 159-378 — the `where` object construction from `buildConditionFromFilter` calls. Extract it:
 
@@ -776,9 +862,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const aggregationsParam = request.nextUrl.get("aggregations");
-  const filterConditionsParam = request.nextUrl.get("filterConditions");
-  const search = request.nextUrl.get("search") || undefined;
+  const aggregationsParam = request.nextUrl.searchParams.get("aggregations");
+  const filterConditionsParam = request.nextUrl.searchParams.get("filterConditions");
+  const search = request.nextUrl.searchParams.get("search") || undefined;
 
   let aggregations: Record<string, AggregateType> = {};
   try {
@@ -931,7 +1017,7 @@ In the component body, add hook:
   });
 ```
 
-After `</tbody>` and before `</table>`, add a summary `<tfoot>`:
+Add the `<tfoot>` **inside** the `<table>` element, right after `</tbody>` (line ~1165 in current code). The `<tfoot>` with `sticky bottom-0` will stick to the bottom of the scroll container (`<div className="overflow-auto ...">` wrapping the table):
 
 ```tsx
 {Object.keys(columnAggregations ?? {}).length > 0 && (
@@ -2143,7 +2229,7 @@ Create `src/hooks/use-formula.ts`:
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { evaluateFormula, extractFieldRefs, detectCircularRefs } from "@/lib/formula";
+import { evaluateFormula, extractFieldRefs, detectCircularRefs, parseFormula } from "@/lib/formula";
 import type { DataFieldItem } from "@/types/data-table";
 import { parseFieldOptions } from "@/types/data-table";
 
@@ -2202,7 +2288,6 @@ export function useFormula({ fields, records }: UseFormulaOptions) {
     (formula: string, fieldKey: string): string | null => {
       if (!formula.trim()) return null;
       try {
-        const { parseFormula } = require("@/lib/formula");
         parseFormula(formula);
       } catch (e) {
         return e instanceof Error ? e.message : "公式语法错误";

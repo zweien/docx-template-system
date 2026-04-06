@@ -1189,6 +1189,7 @@ export async function computeSummary(
         .map((r) => (r.data as Record<string, unknown>)[fieldKey])
         .filter((v) => v !== null && v !== undefined && v !== "");
 
+      const numValues = values.map(Number);
       let value: number | string = 0;
 
       switch (aggType) {
@@ -1196,11 +1197,11 @@ export async function computeSummary(
           value = count;
           break;
         case "sum":
-          value = values.reduce((sum, v) => sum + Number(v), 0);
+          value = numValues.reduce((s, v) => s + (isNaN(v) ? 0 : v), 0);
           break;
         case "avg":
-          value = values.length > 0
-            ? values.reduce((sum, v) => sum + Number(v), 0) / values.length
+          value = numValues.length > 0
+            ? numValues.reduce((s, v) => s + (isNaN(v) ? 0 : v), 0) / numValues.length
             : 0;
           break;
         case "min":

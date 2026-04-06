@@ -12,6 +12,7 @@ import type {
   AggregateType,
 } from "@/types/data-table";
 import { normalizeFilters, parseFieldOptions } from "@/types/data-table";
+import { evaluateFormula } from "@/lib/formula";
 import { getTable } from "./data-table.service";
 import {
   removeAllRelationsForRecord,
@@ -130,6 +131,21 @@ function splitRecordDataByFieldType(
   }
 
   return { scalarData, relationData };
+}
+
+function computeFormulaValues(
+  recordData: Record<string, unknown>,
+  fields: DataFieldItem[]
+): Record<string, unknown> {
+  const formulaFields = fields.filter((f) => f.type === "FORMULA");
+  if (formulaFields.length === 0) return recordData;
+  const enriched = { ...recordData };
+  for (const field of formulaFields) {
+    const opts = parseFieldOptions(field.options);
+    if (!opts.formula) continue;
+    enriched[field.key] = evaluateFormula(opts.formula, enriched);
+  }
+  return enriched;
 }
 
 function getComparableValue(value: unknown): unknown {
@@ -441,10 +457,12 @@ export async function createRecord(
         tableResult.data.fields
       );
 
+      const enrichedScalarData = computeFormulaValues(scalarData, tableResult.data.fields);
+
       const createdRecord = await tx.dataRecord.create({
         data: {
           tableId,
-          data: toJsonInput(scalarData),
+          data: toJsonInput(enrichedScalarData),
           createdById: userId,
         },
         include: {
@@ -640,10 +658,12 @@ export async function patchField(
     const currentData = existingRecord.data as Record<string, unknown>;
     const updatedData = { ...currentData, [fieldKey]: value };
 
+    const enrichedData = computeFormulaValues(updatedData, tableResult.data.fields);
+
     await db.dataRecord.update({
       where: { id: recordId },
       data: {
-        data: toJsonInput(updatedData),
+        data: toJsonInput(enrichedData),
         updatedById: userId,
       },
     });

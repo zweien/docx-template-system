@@ -70,3 +70,4 @@ test-results/
 # Local debug screenshots
 /sidebar-test.png
 /tool-error.png
+docs/deploy.md

@@ -55,9 +55,24 @@ COPY --from=builder /app/prisma.config.ts ./prisma.config.ts
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-USER nextjs
+RUN apk add --no-cache su-exec
+
+# Create upload directories with correct ownership
+RUN mkdir -p .data/uploads && chown nextjs:nodejs .data/uploads
+
+# Entrypoint fixes volume ownership at runtime (runs as root, drops to nextjs)
+COPY --chmod=755 <<'EOF' /app/entrypoint.sh
+#!/bin/sh
+# Fix ownership of volume-mounted directories at runtime
+# (Docker named volumes may retain root ownership from initial creation)
+chown -R nextjs:nodejs /app/.data/uploads 2>/dev/null || true
+chown -R nextjs:nodejs /app/public/uploads 2>/dev/null || true
+exec su-exec nextjs "$@"
+EOF
+
 EXPOSE 8060
 ENV PORT=8060
 ENV HOSTNAME="0.0.0.0"
 
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["node", "server.js"]

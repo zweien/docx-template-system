@@ -1,7 +1,7 @@
 import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
 import { getTable } from "./data-table.service";
-import type { ServiceResult, DataFieldItem } from "@/types/data-table";
+import type { ServiceResult, DataFieldItem, ExportBundle, BundleField, BundleTable } from "@/types/data-table";
 
 // ── Shared Types ──
 
@@ -265,5 +265,173 @@ export async function exportToSQL(
   } catch (error) {
     const message = error instanceof Error ? error.message : "导出 SQL 失败";
     return { success: false, error: { code: "EXPORT_SQL_ERROR", message } };
+  }
+}
+
+// ── Bundle Export (multi-table with relations) ──
+
+export async function exportBundle(
+  rootTableId: string
+): Promise<ServiceResult<ExportBundle>> {
+  try {
+    // Phase 1: BFS to collect all related table IDs
+    const visited = new Set<string>();
+    const queue = [rootTableId];
+    const tableDataMap = new Map<string, TableExportData>();
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      if (visited.has(currentId)) continue;
+      visited.add(currentId);
+
+      const dataResult = await getTableExportData(currentId);
+      if (!dataResult.success) {
+        return { success: false, error: dataResult.error };
+      }
+      tableDataMap.set(currentId, dataResult.data);
+
+      // Traverse relation fields to find related tables
+      for (const field of dataResult.data.fields) {
+        if (
+          (field.type === "RELATION" || field.type === "RELATION_SUBTABLE") &&
+          field.relationTo &&
+          !field.isSystemManagedInverse &&
+          !visited.has(field.relationTo)
+        ) {
+          queue.push(field.relationTo);
+        }
+      }
+    }
+
+    // Phase 2: Build record lookup maps (recordId -> businessKey values) per table
+    const recordLookupByTable = new Map<string, Map<string, Record<string, unknown>>>();
+
+    for (const [tableId, data] of tableDataMap) {
+      const bks = data.table.businessKeys;
+      const lookup = new Map<string, Record<string, unknown>>();
+      for (const record of data.records) {
+        const bkValues: Record<string, unknown> = {};
+        for (const bk of bks) {
+          bkValues[bk] = record.data[bk];
+        }
+        lookup.set(record.id, bkValues);
+      }
+      recordLookupByTable.set(tableId, lookup);
+    }
+
+    // Phase 3: Build id->name mapping for tables
+    const tableIdToName = new Map<string, string>();
+    for (const [, data] of tableDataMap) {
+      tableIdToName.set(data.table.id, data.table.name);
+    }
+
+    // Phase 4: Map each table to BundleTable
+    const tables: Record<string, BundleTable> = {};
+
+    for (const [tableId, data] of tableDataMap) {
+      const relFieldKeys = new Set(
+        data.fields
+          .filter((f) => f.type === "RELATION" || f.type === "RELATION_SUBTABLE")
+          .map((f) => f.key)
+      );
+
+      // Fields: exclude system-managed inverse fields, replace relationTo with table name
+      const bundleFields: BundleField[] = data.fields
+        .filter((f) => !f.isSystemManagedInverse)
+        .map((f) => ({
+          key: f.key,
+          label: f.label,
+          type: f.type as string,
+          required: f.required,
+          sortOrder: f.sortOrder,
+          options: f.options ?? null,
+          defaultValue: f.defaultValue ?? null,
+          ...(f.type === "RELATION" || f.type === "RELATION_SUBTABLE"
+            ? {
+                relationTo: f.relationTo ? (tableIdToName.get(f.relationTo) ?? f.relationTo) : null,
+                displayField: f.displayField ?? null,
+                relationCardinality: f.relationCardinality ?? null,
+                inverseRelationCardinality: f.inverseRelationCardinality ?? null,
+                relationSchema: f.relationSchema ?? null,
+              }
+            : {}),
+        }));
+
+      // Records: make relation values portable
+      const bundleRecords = data.records.map((record) => {
+        const portable: Record<string, unknown> = { ...record.data };
+
+        for (const field of data.fields) {
+          if (
+            (field.type !== "RELATION" && field.type !== "RELATION_SUBTABLE") ||
+            field.isSystemManagedInverse
+          ) {
+            continue;
+          }
+
+          const value = portable[field.key];
+          if (value === undefined || value === null) continue;
+
+          if (field.type === "RELATION") {
+            // Single relation: value is a target record ID string
+            const targetTableId = field.relationTo;
+            if (targetTableId) {
+              const lookup = recordLookupByTable.get(targetTableId);
+              const bkValues = lookup?.get(value as string);
+              portable[field.key] = bkValues
+                ? { _ref: bkValues }
+                : null;
+            }
+          } else if (field.type === "RELATION_SUBTABLE") {
+            // Array of RelationSubtableValueItem
+            const items = value as Array<{
+              targetRecordId: string;
+              displayValue?: string;
+              attributes: Record<string, unknown>;
+              sortOrder: number;
+            }>;
+
+            const targetTableId = field.relationTo;
+            const lookup = targetTableId ? recordLookupByTable.get(targetTableId) : undefined;
+
+            portable[field.key] = items.map((item) => {
+              const bkValues = lookup?.get(item.targetRecordId);
+              return {
+                ...(bkValues ? { _ref: bkValues } : {}),
+                displayValue: item.displayValue,
+                attributes: item.attributes,
+                sortOrder: item.sortOrder,
+              };
+            });
+          }
+        }
+
+        return portable;
+      });
+
+      tables[data.table.name] = {
+        name: data.table.name,
+        description: data.table.description,
+        icon: data.table.icon,
+        businessKeys: data.table.businessKeys,
+        fields: bundleFields,
+        records: bundleRecords,
+      };
+    }
+
+    const rootData = tableDataMap.get(rootTableId)!;
+
+    return {
+      success: true,
+      data: {
+        version: "2.0",
+        exportedAt: new Date().toISOString(),
+        rootTable: rootData.table.name,
+        tables,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "导出关联数据失败";
+    return { success: false, error: { code: "EXPORT_BUNDLE_ERROR", message } };
   }
 }

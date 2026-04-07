@@ -133,6 +133,51 @@ export type ServiceResult<T> =
   | { success: true; data: T }
   | { success: false; error: { code: string; message: string } };
 
+// ========== Bundle Export/Import Types (version 2.0) ==========
+
+export interface BundleField {
+  key: string;
+  label: string;
+  type: string;
+  required: boolean;
+  sortOrder: number;
+  options: unknown;
+  defaultValue: string | null;
+  /** Target table NAME (portable) instead of table ID */
+  relationTo?: string | null;
+  displayField?: string | null;
+  relationCardinality?: string | null;
+  inverseRelationCardinality?: string | null;
+  relationSchema?: RelationSchemaConfig | null;
+}
+
+export interface BundleTable {
+  name: string;
+  description: string | null;
+  icon: string | null;
+  businessKeys: string[];
+  fields: BundleField[];
+  records: Record<string, unknown>[];
+}
+
+export interface ExportBundle {
+  version: "2.0";
+  exportedAt: string;
+  rootTable: string;
+  tables: Record<string, BundleTable>;
+}
+
+export interface BundleImportResult {
+  tables: Array<{
+    tableName: string;
+    tableId: string;
+    fieldCount: number;
+    recordCount: number;
+  }>;
+  relationLinksCreated: number;
+  errors: Array<{ tableName: string; message: string }>;
+}
+
 // ========== View Types ==========
 
 export interface FilterCondition {

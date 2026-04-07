@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getTable } from "./data-table.service";
 import { findByUniqueField, createRecord, updateRecord } from "./data-record.service";
 import { syncRelationSubtableValues } from "./data-relation.service";
+import { updateFields } from "./data-table.service";
 import type {
   ServiceResult,
   ImportPreview,
@@ -10,8 +11,10 @@ import type {
   FieldMapping,
   DataFieldItem,
   RelationSubtableValueItem,
+  ExportBundle,
+  BundleImportResult,
 } from "@/types/data-table";
-import type { ImportOptionsInput } from "@/validators/data-table";
+import type { DataFieldInput, ImportOptionsInput } from "@/validators/data-table";
 import { FieldType } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 
@@ -681,3 +684,303 @@ export async function importTableFromJSON(
   }
 }
 
+// ── Import Bundle (multi-table with relations) ──
+
+function buildBusinessKeyString(record: Record<string, unknown>, businessKeys: string[]): string {
+  return businessKeys.map((k) => String(record[k] ?? "")).join("|");
+}
+
+async function findUniqueTableName(baseName: string): Promise<string> {
+  let name = baseName;
+  let suffix = 1;
+  while (await db.dataTable.findUnique({ where: { name } })) {
+    name = `${baseName}_imported${suffix > 1 ? `_${suffix}` : ""}`;
+    suffix++;
+  }
+  return name;
+}
+
+export async function importBundle(
+  userId: string,
+  bundle: ExportBundle
+): Promise<ServiceResult<BundleImportResult>> {
+  try {
+    // Validate
+    if (bundle.version !== "2.0" || !bundle.tables || typeof bundle.tables !== "object") {
+      return { success: false, error: { code: "INVALID_BUNDLE", message: "无效的 bundle 格式" } };
+    }
+
+    const tableNames = Object.keys(bundle.tables);
+    if (tableNames.length === 0) {
+      return { success: false, error: { code: "INVALID_BUNDLE", message: "bundle 中没有表数据" } };
+    }
+
+    const result: BundleImportResult = {
+      tables: [],
+      relationLinksCreated: 0,
+      errors: [],
+    };
+
+    // Resolve unique table names
+    const tableNameMap = new Map<string, string>(); // bundle name -> actual DB name
+    for (const name of tableNames) {
+      const actualName = await findUniqueTableName(name);
+      tableNameMap.set(name, actualName);
+    }
+
+    // Phase 1: Create all tables + non-relation fields + records (stripped of relation values)
+    const tableIdMap = new Map<string, string>(); // bundle name -> new table ID
+    const recordIdMap = new Map<string, Map<string, string>>(); // bundle tableName -> bkString -> new record ID
+
+    await db.$transaction(async (tx) => {
+      // 1a. Create table shells
+      for (const [bundleName, tableData] of Object.entries(bundle.tables)) {
+        const actualName = tableNameMap.get(bundleName)!;
+        const table = await tx.dataTable.create({
+          data: {
+            name: actualName,
+            description: tableData.description ?? null,
+            icon: tableData.icon ?? null,
+            businessKeys: tableData.businessKeys ?? [],
+            createdById: userId,
+          },
+        });
+        tableIdMap.set(bundleName, table.id);
+      }
+
+      // 1b. Create non-relation fields
+      for (const [bundleName, tableData] of Object.entries(bundle.tables)) {
+        const tableId = tableIdMap.get(bundleName)!;
+        const nonRelFields = tableData.fields.filter(
+          (f) => f.type !== "RELATION" && f.type !== "RELATION_SUBTABLE"
+        );
+        for (const field of nonRelFields) {
+          await tx.dataField.create({
+            data: {
+              tableId,
+              key: field.key,
+              label: field.label,
+              type: field.type as FieldType,
+              required: field.required ?? false,
+              options: field.options as Prisma.InputJsonValue ?? null,
+              defaultValue: field.defaultValue ?? null,
+              sortOrder: field.sortOrder ?? 0,
+            },
+          });
+        }
+      }
+
+      // 1c. Create records (strip relation field values)
+      for (const [bundleName, tableData] of Object.entries(bundle.tables)) {
+        const tableId = tableIdMap.get(bundleName)!;
+        const relFieldKeys = new Set(
+          tableData.fields
+            .filter((f) => f.type === "RELATION" || f.type === "RELATION_SUBTABLE")
+            .map((f) => f.key)
+        );
+        const bks = tableData.businessKeys ?? [];
+        const bkLookup = new Map<string, string>();
+
+        if (tableData.records.length > 0) {
+          const recordsData = tableData.records.map((record) => {
+            const filtered: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(record)) {
+              if (!relFieldKeys.has(k)) {
+                filtered[k] = v;
+              }
+            }
+            return filtered;
+          });
+
+          for (const data of recordsData) {
+            const created = await tx.dataRecord.create({
+              data: {
+                tableId,
+                data: data as Prisma.InputJsonValue,
+                createdById: userId,
+              },
+            });
+            const bkStr = buildBusinessKeyString(data, bks);
+            if (bkStr) {
+              bkLookup.set(bkStr, created.id);
+            }
+          }
+        }
+
+        recordIdMap.set(bundleName, bkLookup);
+
+        result.tables.push({
+          tableName: tableNameMap.get(bundleName)!,
+          tableId,
+          fieldCount: tableData.fields.filter(
+            (f) => f.type !== "RELATION" && f.type !== "RELATION_SUBTABLE"
+          ).length,
+          recordCount: tableData.records.length,
+        });
+      }
+    });
+
+    // Phase 2: Create relation fields using updateFields (handles inverse fields)
+    for (const [bundleName, tableData] of Object.entries(bundle.tables)) {
+      const tableId = tableIdMap.get(bundleName)!;
+      const relFields = tableData.fields.filter(
+        (f) => f.type === "RELATION" || f.type === "RELATION_SUBTABLE"
+      );
+
+      if (relFields.length === 0) continue;
+
+      // Get existing non-relation fields
+      const existingFields = await db.dataField.findMany({
+        where: { tableId },
+        orderBy: { sortOrder: "asc" },
+      });
+
+      // Build full field list including relation fields
+      const allFields: DataFieldInput[] = existingFields.map((f) => ({
+        id: f.id,
+        key: f.key,
+        label: f.label,
+        type: f.type as FieldType,
+        required: f.required,
+        options: f.options as DataFieldInput["options"],
+        defaultValue: f.defaultValue ?? undefined,
+        sortOrder: f.sortOrder,
+      }));
+
+      // Add relation fields with resolved table IDs
+      for (const relField of relFields) {
+        const targetBundleName = relField.relationTo;
+        const targetTableId = targetBundleName ? tableIdMap.get(targetBundleName) : undefined;
+
+        if (!targetTableId) {
+          result.errors.push({
+            tableName: bundleName,
+            message: `关系字段 ${relField.key} 的目标表 ${targetBundleName ?? "null"} 未在 bundle 中找到`,
+          });
+          continue;
+        }
+
+        allFields.push({
+          key: relField.key,
+          label: relField.label,
+          type: relField.type as FieldType,
+          required: relField.required,
+          relationTo: targetTableId,
+          displayField: relField.displayField ?? undefined,
+          relationCardinality: relField.relationCardinality as DataFieldInput["relationCardinality"],
+          inverseRelationCardinality: relField.inverseRelationCardinality as DataFieldInput["inverseRelationCardinality"],
+          relationSchema: relField.relationSchema as DataFieldInput["relationSchema"],
+          sortOrder: relField.sortOrder,
+        });
+      }
+
+      const updateResult = await updateFields(tableId, allFields, tableData.businessKeys);
+      if (!updateResult.success) {
+        result.errors.push({
+          tableName: bundleName,
+          message: `创建关系字段失败: ${updateResult.error.message}`,
+        });
+      }
+    }
+
+    // Phase 3: Link records via relation values
+    for (const [bundleName, tableData] of Object.entries(bundle.tables)) {
+      const tableId = tableIdMap.get(bundleName)!;
+      const sourceBkMap = recordIdMap.get(bundleName);
+      if (!sourceBkMap) continue;
+
+      const relFields = tableData.fields.filter(
+        (f) => f.type === "RELATION_SUBTABLE" && f.relationTo
+      );
+
+      for (const relField of relFields) {
+        const targetBkMap = recordIdMap.get(relField.relationTo!);
+        if (!targetBkMap) continue;
+
+        // Get the field ID for this relation field
+        const field = await db.dataField.findFirst({
+          where: { tableId, key: relField.key },
+        });
+        if (!field) continue;
+
+        for (const record of tableData.records) {
+          const relValue = record[relField.key];
+          if (!relValue || !Array.isArray(relValue)) continue;
+
+          // Find source record ID
+          const sourceBkStr = buildBusinessKeyString(record, tableData.businessKeys ?? []);
+          const sourceRecordId = sourceBkMap.get(sourceBkStr);
+          if (!sourceRecordId) continue;
+
+          // Resolve target record IDs from _ref business keys
+          const resolvedItems: RelationSubtableValueItem[] = [];
+          for (const item of relValue as Array<Record<string, unknown>>) {
+            const ref = item._ref as Record<string, unknown> | undefined;
+            if (!ref) continue;
+
+            const targetBkStr = Object.values(ref).map((v) => String(v ?? "")).join("|");
+            const targetRecordId = targetBkMap.get(targetBkStr);
+            if (!targetRecordId) continue;
+
+            resolvedItems.push({
+              targetRecordId,
+              displayValue: item.displayValue as string | undefined,
+              attributes: (item.attributes as Record<string, unknown>) ?? {},
+              sortOrder: (item.sortOrder as number) ?? 0,
+            });
+          }
+
+          if (resolvedItems.length > 0) {
+            await db.$transaction(async (tx) => {
+              await syncRelationSubtableValues({
+                tx,
+                sourceRecordId,
+                tableId,
+                relationPayload: { [relField.key]: resolvedItems },
+              });
+            });
+            result.relationLinksCreated += resolvedItems.length;
+          }
+        }
+      }
+
+      // Also handle RELATION (single) fields
+      const singleRelFields = tableData.fields.filter(
+        (f) => f.type === "RELATION" && f.relationTo
+      );
+
+      for (const relField of singleRelFields) {
+        const targetBkMap = recordIdMap.get(relField.relationTo!);
+        if (!targetBkMap) continue;
+
+        for (const record of tableData.records) {
+          const relValue = record[relField.key];
+          if (!relValue || typeof relValue !== "object") continue;
+
+          const ref = (relValue as Record<string, unknown>)._ref as Record<string, unknown> | undefined;
+          if (!ref) continue;
+
+          const targetBkStr = Object.values(ref).map((v) => String(v ?? "")).join("|");
+          const targetRecordId = targetBkMap.get(targetBkStr);
+          if (!targetRecordId) continue;
+
+          const sourceBkStr = buildBusinessKeyString(record, tableData.businessKeys ?? []);
+          const sourceRecordId = sourceBkMap.get(sourceBkStr);
+          if (!sourceRecordId) continue;
+
+          await db.$executeRaw`
+            UPDATE "DataRecord"
+            SET data = jsonb_set(data, ${Prisma.sql`ARRAY[${relField.key}]::text[]`}, ${Prisma.sql`to_jsonb(${targetRecordId}::text)`})
+            WHERE id = ${sourceRecordId}
+          `;
+          result.relationLinksCreated++;
+        }
+      }
+    }
+
+    return { success: true, data: result };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "导入 bundle 失败";
+    return { success: false, error: { code: "IMPORT_BUNDLE_ERROR", message } };
+  }
+}

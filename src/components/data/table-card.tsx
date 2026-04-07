@@ -112,6 +112,11 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
                     >
                       导出 SQL
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => window.open(`/api/data-tables/${table.id}/export/bundle`)}
+                    >
+                      导出关联数据
+                    </DropdownMenuItem>
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuItem

@@ -19,18 +19,29 @@ interface ImportTableDialogProps {
   trigger?: React.ReactElement;
 }
 
-interface JsonSummary {
+interface SingleSummary {
+  mode: "single";
   tableName: string;
   fieldCount: number;
   recordCount: number;
   description?: string;
 }
 
+interface BundleSummary {
+  mode: "bundle";
+  rootTable: string;
+  tableCount: number;
+  totalRecords: number;
+  tables: Array<{ name: string; fieldCount: number; recordCount: number }>;
+}
+
+type Summary = SingleSummary | BundleSummary;
+
 export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
-  const [summary, setSummary] = useState<JsonSummary | null>(null);
+  const [summary, setSummary] = useState<Summary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -42,16 +53,38 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
     setError("");
     setSummary(null);
 
-    // Parse JSON client-side to show preview
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
         const data = JSON.parse(ev.target?.result as string);
+
+        // Detect version 2.0 bundle format
+        if (data.version === "2.0" && data.tables && typeof data.tables === "object") {
+          const tables = Object.entries(data.tables as Record<string, { fields: unknown[]; records: unknown[] }>).map(
+            ([name, t]) => ({
+              name,
+              fieldCount: t.fields?.length ?? 0,
+              recordCount: t.records?.length ?? 0,
+            })
+          );
+          const totalRecords = tables.reduce((sum, t) => sum + t.recordCount, 0);
+          setSummary({
+            mode: "bundle",
+            rootTable: data.rootTable ?? tables[0]?.name ?? "未知",
+            tableCount: tables.length,
+            totalRecords,
+            tables,
+          });
+          return;
+        }
+
+        // Version 1.0 single-table format
         if (!data.version || !data.table?.name || !Array.isArray(data.fields) || !Array.isArray(data.records)) {
           setError("JSON 格式不正确，需要包含 version、table、fields 和 records");
           return;
         }
         setSummary({
+          mode: "single",
           tableName: data.table.name,
           fieldCount: data.fields.length,
           recordCount: data.records.length,
@@ -90,14 +123,21 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
       setFile(null);
       setSummary(null);
 
-      const skipped = data.skippedRelationFields?.length
-        ? `（已跳过 ${data.skippedRelationFields.length} 个关系字段）`
-        : "";
-      toast.success(
-        `数据表「${data.tableName}」创建成功，${data.fieldCount} 个字段，${data.recordCount} 条记录${skipped}`
-      );
-
-      router.push(`/data/${data.tableId}`);
+      if (summary.mode === "bundle") {
+        const tableNames = data.tables?.map((t: { tableName: string }) => t.tableName).join("、");
+        toast.success(
+          `成功导入 ${data.tables?.length ?? 0} 个数据表：${tableNames}，共建立 ${data.relationLinksCreated ?? 0} 个关联`
+        );
+        router.push("/data");
+      } else {
+        const skipped = data.skippedRelationFields?.length
+          ? `（已跳过 ${data.skippedRelationFields.length} 个关系字段）`
+          : "";
+        toast.success(
+          `数据表「${data.tableName}」创建成功，${data.fieldCount} 个字段，${data.recordCount} 条记录${skipped}`
+        );
+        router.push(`/data/${data.tableId}`);
+      }
       router.refresh();
     } catch {
       setError("导入失败，请稍后重试");
@@ -145,7 +185,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
           )
         }
       />
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>导入数据表</DialogTitle>
           <DialogDescription>
@@ -188,7 +228,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
             </label>
           </div>
 
-          {summary && (
+          {summary?.mode === "single" && (
             <div className="border rounded-lg p-4 bg-zinc-50 text-sm space-y-1">
               <div className="font-medium">{summary.tableName}</div>
               {summary.description && (
@@ -196,6 +236,24 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
               )}
               <div className="text-zinc-600 mt-2">
                 {summary.fieldCount} 个字段 · {summary.recordCount} 条记录
+              </div>
+            </div>
+          )}
+
+          {summary?.mode === "bundle" && (
+            <div className="border rounded-lg p-4 bg-zinc-50 text-sm space-y-2">
+              <div className="font-medium">
+                关联数据导出（包含 {summary.tableCount} 个表，共 {summary.totalRecords} 条记录）
+              </div>
+              <div className="divide-y">
+                {summary.tables.map((t) => (
+                  <div key={t.name} className="flex justify-between py-1.5">
+                    <span>{t.name}</span>
+                    <span className="text-zinc-500">
+                      {t.fieldCount} 字段 · {t.recordCount} 记录
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -220,8 +220,7 @@ export default async function RecordDetailPage({
         <CardContent className="space-y-3">
           {record.status === "COMPLETED" && record.fileName && (
             <a
-              href={`/uploads/documents/${record.fileName}`}
-              download={record.fileName}
+              href={`/api/records/${record.id}/download`}
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/80 transition-colors"
             >
               <Download className="h-4 w-4" />

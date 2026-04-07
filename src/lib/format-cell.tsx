@@ -2,6 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { FieldType } from "@/generated/prisma/enums";
 import type { ReactNode } from "react";
 import type { DataFieldItem, RelationSubtableValueItem } from "@/types/data-table";
+import { FileIcon } from "lucide-react";
 
 function isEmptyCell(value: unknown): boolean {
   return value === null || value === undefined || value === "";
@@ -33,6 +34,11 @@ function getRelationSubtableItems(
   return items.filter(isRelationSubtableItem).sort((left, right) => left.sortOrder - right.sortOrder);
 }
 
+function getFileName(path: string): string {
+  if (!path) return "";
+  return path.split("/").pop() || path;
+}
+
 export function formatCellValue(
   field: DataFieldItem,
   value: unknown
@@ -46,6 +52,19 @@ export function formatCellValue(
       return typeof value === "number" ? value.toLocaleString() : String(value);
     case FieldType.DATE:
       return formatDateValue(value);
+    case FieldType.FILE:
+      return (
+        <a
+          href={String(value)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 text-blue-600 hover:underline max-w-[180px]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <FileIcon className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{getFileName(String(value))}</span>
+        </a>
+      );
     case FieldType.SELECT:
       return <Badge variant="secondary">{String(value)}</Badge>;
     case FieldType.MULTISELECT:

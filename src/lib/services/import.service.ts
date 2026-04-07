@@ -300,6 +300,52 @@ export async function importData(
   }
 }
 
+// ── JSON Import ──
+
+export async function importFromJSON(
+  tableId: string,
+  userId: string,
+  jsonData: {
+    version: string;
+    fields: Array<{ key: string; label: string; type: string }>;
+    records: Record<string, unknown>[];
+  },
+  options: { strategy: "skip" | "overwrite" },
+  fields: DataFieldItem[]
+): Promise<ServiceResult<ImportResult>> {
+  // Validate version
+  if (!jsonData.version) {
+    return {
+      success: false,
+      error: { code: "INVALID_JSON", message: "缺少 version 字段" },
+    };
+  }
+
+  if (!Array.isArray(jsonData.records)) {
+    return {
+      success: false,
+      error: { code: "INVALID_JSON", message: "缺少 records 数组" },
+    };
+  }
+
+  // Build mapping: JSON field keys map directly to table field keys
+  const mapping: Record<string, string | null> = {};
+  const fieldKeySet = new Set(fields.map((f) => f.key));
+  for (const jsonField of jsonData.fields) {
+    mapping[jsonField.key] = fieldKeySet.has(jsonField.key) ? jsonField.key : null;
+  }
+
+  // Use business keys from the table for dedup
+  const tableResult = await getTable(tableId);
+  const businessKeys = tableResult.success ? (tableResult.data.businessKeys ?? []) : [];
+
+  // Delegate to importData
+  return importData(tableId, userId, jsonData.records, mapping, {
+    uniqueField: businessKeys[0] ?? fields[0]?.key ?? "",
+    strategy: options.strategy,
+  }, fields, { businessKeys });
+}
+
 // ── Business Key Lookup ──
 
 export async function findRecordByBusinessKey(

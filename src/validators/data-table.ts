@@ -104,6 +104,22 @@ export const importSchema = z.object({
   options: importOptionsSchema,
 });
 
+export const jsonImportOptionsSchema = z.object({
+  strategy: z.enum(["skip", "overwrite"]),
+});
+
+export const jsonImportSchema = z.object({
+  version: z.string(),
+  fields: z.array(z.object({
+    key: z.string(),
+    label: z.string(),
+    type: z.string(),
+  })),
+  records: z.array(z.record(z.string(), z.unknown())),
+});
+
+export type JsonImportOptionsInput = z.infer<typeof jsonImportOptionsSchema>;
+
 // ========== View Schemas ==========
 
 export const viewTypeNameSchema = z.enum(["GRID", "KANBAN", "GALLERY", "TIMELINE"]);

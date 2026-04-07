@@ -1,0 +1,268 @@
+- generic [active] [ref=e1]:
+  - button "Skip to content" [ref=e2] [cursor=pointer]
+  - generic:
+    - region "Status messages"
+  - generic [ref=e5]:
+    - banner "Main" [ref=e7]:
+      - link "Home" [ref=e8] [cursor=pointer]:
+        - /url: "#/"
+        - img "authentik 图标" [ref=e10]
+      - button "Collapse navigation" [expanded] [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: 
+      - heading "应用程序" [level=1] [ref=e918]:
+        - generic [ref=e16]: 
+        - generic [ref=e17]: 应用程序
+      - heading "通过 OAuth2 和 SAML 等协议，使用 IDRL 作为身份提供程序的外部应用程序。此处显示了所有应用程序，即使您无法访问的也包括在内。" [level=2] [ref=e919]:
+        - paragraph [ref=e19]: 通过 OAuth2 和 SAML 等协议，使用 IDRL 作为身份提供程序的外部应用程序。此处显示了所有应用程序，即使您无法访问的也包括在内。
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - button "打开 API 抽屉" [ref=e25] [cursor=pointer]:
+            - generic [ref=e27]:
+              - tooltip "打开 API 抽屉":
+                - generic [ref=e28]: 
+              - generic:
+                - generic: 打开 API 抽屉
+          - button "未读通知" [ref=e30] [cursor=pointer]:
+            - generic [ref=e31]:
+              - generic [ref=e33]:
+                - tooltip "打开通知抽屉":
+                  - generic [ref=e34]: 
+                - generic:
+                  - generic: 打开通知抽屉
+              - generic [ref=e35]: "0"
+          - link "设置" [ref=e37] [cursor=pointer]:
+            - /url: https://auth.idrl.top/if/user/#/settings
+            - generic [ref=e39]:
+              - tooltip "设置":
+                - generic [ref=e40]: 
+              - generic:
+                - generic: 设置
+          - link "登出" [ref=e42] [cursor=pointer]:
+            - /url: https://auth.idrl.top/flows/-/default/invalidation/
+            - generic [ref=e44]:
+              - tooltip "登出":
+                - generic [ref=e45]: 
+              - generic:
+                - generic: 登出
+          - link "用户界面" [ref=e46] [cursor=pointer]:
+            - /url: https://auth.idrl.top/if/user/
+        - img [ref=e48]
+    - generic [ref=e49]:
+      - navigation "Global navigation" [ref=e50]:
+        - generic:
+          - heading "Dashboards" [ref=e52]:
+            - button "Collapse Dashboards" [expanded] [ref=e53] [cursor=pointer]:
+              - text: Dashboards
+              - generic [ref=e56]: 
+            - navigation "Dashboards navigation" [ref=e58]:
+              - generic:
+                - listitem "Overview" [ref=e60]:
+                  - link "Overview" [ref=e61] [cursor=pointer]:
+                    - /url: "#/administration/overview"
+                - listitem "User Statistics" [ref=e63]:
+                  - link "User Statistics" [ref=e64] [cursor=pointer]:
+                    - /url: "#/administration/dashboard/users"
+                - listitem "System Tasks" [ref=e66]:
+                  - link "System Tasks" [ref=e67] [cursor=pointer]:
+                    - /url: "#/administration/system-tasks"
+          - heading "Applications" [ref=e69]:
+            - button "Collapse Applications" [expanded] [ref=e70] [cursor=pointer]:
+              - text: Applications
+              - generic [ref=e73]: 
+            - navigation "Applications navigation" [ref=e75]:
+              - generic:
+                - listitem "Applications" [ref=e77]:
+                  - link "Applications" [ref=e78] [cursor=pointer]:
+                    - /url: "#/core/applications"
+                - listitem "Providers" [ref=e80]:
+                  - link "Providers" [ref=e81] [cursor=pointer]:
+                    - /url: "#/core/providers"
+                - listitem "Outposts" [ref=e83]:
+                  - link "Outposts" [ref=e84] [cursor=pointer]:
+                    - /url: "#/outpost/outposts"
+          - heading "Events" [ref=e86]:
+            - button "Expand Events" [ref=e87] [cursor=pointer]:
+              - text: Events
+              - generic [ref=e90]: 
+          - heading "Customization" [ref=e92]:
+            - button "Expand Customization" [ref=e93] [cursor=pointer]:
+              - text: Customization
+              - generic [ref=e96]: 
+          - heading "Flows and Stages" [ref=e98]:
+            - button "Expand Flows and Stages" [ref=e99] [cursor=pointer]:
+              - text: Flows and Stages
+              - generic [ref=e102]: 
+          - heading "Directory" [ref=e104]:
+            - button "Expand Directory" [ref=e105] [cursor=pointer]:
+              - text: Directory
+              - generic [ref=e108]: 
+          - heading "System" [ref=e110]:
+            - button "Expand System" [ref=e111] [cursor=pointer]:
+              - text: System
+              - generic [ref=e114]: 
+          - heading "Enterprise" [ref=e116]:
+            - button "Expand Enterprise" [ref=e117] [cursor=pointer]:
+              - text: Enterprise
+              - generic [ref=e120]: 
+      - contentinfo "Open about dialog" [ref=e122] [cursor=pointer]:
+        - heading "Product name" [level=1] [ref=e123]: IDRL
+        - heading "Product version" [level=1] [ref=e124]: 版本 2025.10.4
+    - generic [ref=e127]:
+      - generic [ref=e923]:
+        - main "应用程序" [ref=e924]:
+          - generic [ref=e925]:
+            - toolbar "应用程序 actions" [ref=e926]:
+              - searchbox "Table Search" [ref=e930]
+              - generic [ref=e931]:
+                - generic [ref=e932]:
+                  - button "以提供程序创建" [ref=e934] [cursor=pointer]
+                  - button "创建" [ref=e936] [cursor=pointer]
+                  - button "刷新" [ref=e938] [cursor=pointer]:
+                    - generic: 刷新
+                  - button "清除缓存" [ref=e940] [cursor=pointer]
+                  - generic [ref=e941]:
+                    - generic:
+                      - button "删除" [disabled]
+                - navigation "应用程序 table pagination" [ref=e943]:
+                  - generic [ref=e944]:
+                    - heading "1- 1/ 1" [level=4] [ref=e947]
+                    - generic [ref=e948]:
+                      - generic [ref=e949]:
+                        - button "前往上一页" [disabled]:
+                          - generic: 
+                      - generic [ref=e950]:
+                        - button "前往下一页" [disabled]:
+                          - generic: 
+            - table "应用程序 table" [ref=e952]:
+              - rowgroup "Column actions" [ref=e953]:
+                - row "Select all rows on page (0 of 0 selected) 应用程序图标 名称 组 提供程序 提供程序类型 Row Actions" [ref=e954]:
+                  - checkbox "Select all rows on page (0 of 0 selected)" [ref=e955] [cursor=pointer]
+                  - columnheader "应用程序图标" [ref=e956]
+                  - columnheader "名称" [ref=e957]:
+                    - button "Sort by \"名称\"" [ref=e958] [cursor=pointer]:
+                      - generic [ref=e959]:
+                        - generic [ref=e960]: 名称
+                        - generic:
+                          - generic: 
+                  - columnheader "组" [ref=e961]:
+                    - button "Sort by \"组\"" [ref=e962] [cursor=pointer]:
+                      - generic [ref=e963]:
+                        - generic [ref=e964]: 组
+                        - generic:
+                          - generic: 
+                  - columnheader "提供程序" [ref=e965]
+                  - columnheader "提供程序类型" [ref=e966]
+                  - columnheader "Row Actions" [ref=e967]: 操作
+              - status [ref=e969]:
+                - generic "未找到对象。" [ref=e970]:
+                  - generic [ref=e971]:
+                    - generic [ref=e972]: 
+                    - heading "未找到对象。" [level=1] [ref=e973]:
+                      - generic [ref=e974]: 未找到对象。
+                    - generic [ref=e976]:
+                      - button "以提供程序创建" [ref=e978] [cursor=pointer]
+                      - button "创建" [ref=e980] [cursor=pointer]
+            - generic [ref=e981]:
+              - time [ref=e983]:
+                - generic [ref=e984]:
+                  - generic: Last refreshed
+                - generic [ref=e985]: 现在
+              - navigation "应用程序 table pagination" [ref=e987]:
+                - generic [ref=e988]:
+                  - heading "1- 1/ 1" [level=4] [ref=e991]
+                  - generic [ref=e992]:
+                    - generic [ref=e993]:
+                      - button "前往上一页" [disabled]:
+                        - generic: 
+                    - generic [ref=e994]:
+                      - button "前往下一页" [disabled]:
+                        - generic: 
+        - complementary "Applications Documentation" [ref=e995]:
+          - generic [ref=e999]:
+            - heading "Applications" [level=1] [ref=e1000]
+            - paragraph [ref=e1001]:
+              - text: Applications, as defined in authentik, are used to configure and separate the authorization/access control and the appearance of a specific software application in the
+              - strong [ref=e1002]: My applications
+              - text: page.
+            - paragraph [ref=e1003]: When a user logs into authentik, they see a list of the applications for which authentik is configured to provide authentication and authorization (the applications that they are authorized to use).
+            - paragraph [ref=e1004]:
+              - text: Applications are the "other half" of providers. They typically exist in a 1-to-1 relationship; each application needs a provider and every provider can be used with one application. Applications can, however, use specific, additional providers to augment the functionality of the main provider. For more information, see
+              - link "Backchannel providers" [ref=e1005] [cursor=pointer]:
+                - /url: https://next.goauthentik.io/add-secure-apps/applications/manage_apps
+              - text: .
+            - paragraph [ref=e1006]:
+              - text: Furthermore, the
+              - link "RAC (Remote Access Control)" [ref=e1007] [cursor=pointer]:
+                - /url: https://next.goauthentik.io/add-secure-apps/providers/rac/
+              - text: feature uses a single application and a single provider, but multiple "endpoints". An endpoint defines each remote machine.
+            - generic [ref=e1009]:
+              - generic [ref=e1011]: 
+              - paragraph [ref=e1012]:
+                - text: For information about creating and managing applications, refer to
+                - link "Manage applications" [ref=e1013] [cursor=pointer]:
+                  - /url: https://next.goauthentik.io/add-secure-apps/applications/manage_apps
+                - text: .
+            - heading "Appearance" [level=2] [ref=e1014]
+            - paragraph [ref=e1015]: "Applications are displayed to users when:"
+            - list [ref=e1016]:
+              - listitem [ref=e1017]: The user has access defined via policies (or the application has no policies bound)
+              - listitem [ref=e1018]: A valid Launch URL is configured/could be guessed, this consists of URLs starting with http:// and https://
+            - paragraph [ref=e1019]: "The following options can be configured:"
+            - list [ref=e1020]:
+              - listitem [ref=e1021]:
+                - paragraph [ref=e1022]:
+                  - emphasis [ref=e1023]: Name
+                  - text: ": This is the name shown for the application card"
+              - listitem [ref=e1024]:
+                - paragraph [ref=e1025]:
+                  - emphasis [ref=e1026]: Launch URL
+                  - text: ": The URL that is opened when a user clicks on the application. When left empty, authentik tries to guess it based on the provider"
+                - paragraph [ref=e1027]:
+                  - text: You can use placeholders in the launch url to build them dynamically based on the logged in user. For example, you can set the Launch URL to
+                  - code [ref=e1028]: https://goauthentik.io/%(username)s
+                  - text: ", which will be replaced with the currently logged in user's username."
+                - paragraph [ref=e1029]:
+                  - text: For a reference of all fields available, see
+                  - link "the API schema for the User object" [ref=e1030] [cursor=pointer]:
+                    - /url: https://api.goauthentik.io/reference/core-users-retrieve/
+                  - text: .
+                - paragraph [ref=e1031]:
+                  - text: Only applications whose launch URL starts with
+                  - code [ref=e1032]: http://
+                  - text: or
+                  - code [ref=e1033]: https://
+                  - text: or are relative URLs are shown on the users'
+                  - strong [ref=e1034]: My applications
+                  - text: page. This can also be used to hide applications that shouldn't be visible on the
+                  - strong [ref=e1035]: My applications
+                  - text: page but are still accessible by users, by setting the
+                  - emphasis [ref=e1036]: Launch URL
+                  - text: to
+                  - code [ref=e1037]: blank://blank
+                  - text: .
+              - listitem [ref=e1038]:
+                - paragraph [ref=e1039]:
+                  - emphasis [ref=e1040]: Icon (URL)
+                  - text: ": Optionally configure an Icon for the application"
+                - paragraph [ref=e1041]:
+                  - text: If the authentik server does not have a volume mounted under
+                  - code [ref=e1042]: /media
+                  - text: ", you'll get a text input. This accepts absolute URLs. If you've mounted single files into the container, you can reference them using"
+                  - code [ref=e1043]: https://authentik.company/media/my-file.png
+                  - text: .
+                - paragraph [ref=e1044]:
+                  - text: If there is a mount under
+                  - code [ref=e1045]: /media
+                  - text: or if
+                  - link "S3 storage" [ref=e1046] [cursor=pointer]:
+                    - /url: https://next.goauthentik.io/sys-mgmt/ops/storage-s3
+                  - text: is configured, you'll instead see a field to upload a file.
+              - listitem [ref=e1047]:
+                - paragraph [ref=e1048]:
+                  - emphasis [ref=e1049]: Publisher
+                  - text: ": Text shown in the application card's expandable kebab menu (⋮)"
+              - listitem [ref=e1050]:
+                - paragraph [ref=e1051]:
+                  - emphasis [ref=e1052]: Description
+                  - text: ": Text shown in the application card's expandable kebab menu (⋮)"
+      - text:    

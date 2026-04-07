@@ -1,4 +1,66 @@
 import * as XLSX from "xlsx";
+import { db } from "@/lib/db";
+import { getTable } from "./data-table.service";
+import type { ServiceResult, DataFieldItem } from "@/types/data-table";
+
+// ── Shared Types ──
+
+export interface TableExportData {
+  table: {
+    id: string;
+    name: string;
+    description: string | null;
+    icon: string | null;
+    businessKeys: string[];
+  };
+  fields: DataFieldItem[];
+  records: Array<{
+    id: string;
+    data: Record<string, unknown>;
+    createdAt: Date;
+    updatedAt: Date;
+  }>;
+}
+
+// ── Shared Data Fetcher ──
+
+export async function getTableExportData(
+  tableId: string
+): Promise<ServiceResult<TableExportData>> {
+  const tableResult = await getTable(tableId);
+  if (!tableResult.success) {
+    return { success: false, error: tableResult.error };
+  }
+
+  const table = tableResult.data;
+
+  const records = await db.dataRecord.findMany({
+    where: { tableId },
+    orderBy: { createdAt: "asc" },
+  });
+
+  return {
+    success: true,
+    data: {
+      table: {
+        id: table.id,
+        name: table.name,
+        description: table.description,
+        icon: table.icon,
+        businessKeys: table.businessKeys ?? [],
+      },
+      fields: table.fields,
+      records: records.map((r) => ({
+        id: r.id,
+        data: r.data as Record<string, unknown>,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt,
+      })),
+    },
+  };
+}
+
+// ── Legacy Record Export ──
 
 export function exportRecordToExcel(
   formData: Record<string, unknown>,

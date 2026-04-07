@@ -15,6 +15,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { DataTableListItem } from "@/types/data-table";
@@ -91,6 +94,26 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
                 <DropdownMenuItem render={<Link href={`/data/${table.id}`}>查看数据</Link>} />
                 <DropdownMenuItem render={<Link href={`/data/${table.id}/fields`}>配置字段</Link>} />
                 <DropdownMenuItem render={<Link href={`/data/${table.id}/import`}>导入数据</Link>} />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>导出数据</DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    <DropdownMenuItem
+                      onClick={() => window.open(`/api/data-tables/${table.id}/export`)}
+                    >
+                      导出 Excel
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => window.open(`/api/data-tables/${table.id}/export/json`)}
+                    >
+                      导出 JSON
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => window.open(`/api/data-tables/${table.id}/export/sql`)}
+                    >
+                      导出 SQL
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuItem
                   className="text-red-600"
                   onClick={handleDelete}

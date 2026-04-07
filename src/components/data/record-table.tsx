@@ -4,7 +4,13 @@ import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Download, Plus } from "lucide-react";
 import type {
   DataFieldItem,
   DataViewItem,
@@ -376,6 +382,33 @@ export function RecordTable({
             fieldOrder={currentConfig.fieldOrder}
             onChange={handleFieldConfigChange}
           />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="sm">
+                  <Download className="h-4 w-4 mr-1" />
+                  导出
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => window.open(`/api/data-tables/${tableId}/export`)}
+              >
+                导出 Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => window.open(`/api/data-tables/${tableId}/export/json`)}
+              >
+                导出 JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => window.open(`/api/data-tables/${tableId}/export/sql`)}
+              >
+                导出 SQL
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {isAdmin && (
             <Link href={`/data/${tableId}/new`}>
               <Button size="sm" className="w-full sm:w-auto">

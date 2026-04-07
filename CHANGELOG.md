@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.1](https://github.com/zweien/docx-template-system/compare/v0.3.0...v0.3.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* increase SSH command timeout to 15m for deploy workflow ([47853da](https://github.com/zweien/docx-template-system/commit/47853daf841df18f2b6722b973b0d12233eb104e))
+
 ## [0.3.0](https://github.com/zweien/docx-template-system/compare/v0.2.3...v0.3.0) (2026-04-07)
 
 

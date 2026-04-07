@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.1.2](https://github.com/zweien/docx-template-system/compare/v0.2.2...v0.1.2) (2026-04-07)
+
+
+### Bug Fixes
+
+* resolve build failures with turbopack and fix TS type errors ([0310b03](https://github.com/zweien/docx-template-system/commit/0310b0319b0305c2cf8f7e0b5d72bac64a8520c1))
+
 ## 0.1.1 (2026-04-06)
 
 

@@ -14,7 +14,10 @@ export default async function DataPage() {
 
   async function handleDeleteTable(id: string) {
     "use server";
-    await deleteTable(id);
+    const result = await deleteTable(id);
+    if (!result.success) {
+      throw new Error(result.error.message);
+    }
   }
 
   return (

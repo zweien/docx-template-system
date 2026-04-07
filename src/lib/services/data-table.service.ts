@@ -280,6 +280,17 @@ export async function deleteTable(id: string): Promise<ServiceResult<null>> {
       };
     }
 
+    // Clear inverseFieldId on all fields in this table and on fields
+    // in other tables that reference this table's fields.
+    // The self-referential FK uses onDelete: NoAction, so Prisma can't
+    // cascade-delete two mutually-linked fields at once.
+    await db.$executeRaw`
+      UPDATE "DataField"
+      SET "inverseFieldId" = NULL
+      WHERE "inverseFieldId" IN (SELECT id FROM "DataField" WHERE "tableId" = ${id})
+         OR ("tableId" = ${id} AND "inverseFieldId" IS NOT NULL)
+    `;
+
     // Cascade delete will handle fields and records
     await db.dataTable.delete({ where: { id } });
 

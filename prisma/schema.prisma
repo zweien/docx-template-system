@@ -174,7 +174,7 @@ model Template {
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   dataTableId   String?
-  dataTable     DataTable?      @relation(fields: [dataTableId], references: [id])
+  dataTable     DataTable?      @relation(fields: [dataTableId], references: [id], onDelete: SetNull)
   categoryId    String?
   category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags          TagOnTemplate[]
@@ -231,7 +231,7 @@ model TemplateVersion {
   publishedAt         DateTime        @default(now())
   placeholderSnapshot Json
   dataTableId         String?
-  dataTable           DataTable?      @relation(fields: [dataTableId], references: [id])
+  dataTable           DataTable?      @relation(fields: [dataTableId], references: [id], onDelete: SetNull)
   fieldMapping        Json?
   publishedById       String
   publishedBy         User            @relation(fields: [publishedById], references: [id])

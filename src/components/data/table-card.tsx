@@ -39,7 +39,9 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
       await onDelete(table.id);
       router.refresh();
     } catch (error) {
+      const message = error instanceof Error ? error.message : "删除失败";
       console.error("删除失败:", error);
+      alert(message);
     } finally {
       setIsDeleting(false);
     }

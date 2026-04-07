@@ -269,6 +269,13 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
             <Input type="password" placeholder="API Key (留空则不修改)" value={editForm.apiKey} onChange={e => setEditForm(f => ({ ...f, apiKey: e.target.value }))} />
           </div>
           <DialogFooter>
+            <div className="flex-1">
+              {testResult && testResult.id === editingModel?.id && (
+                <span className={testResult.success ? "text-green-500 text-sm" : "text-destructive text-sm"}>
+                  {testResult.message}
+                </span>
+              )}
+            </div>
             <Button variant="outline" onClick={() => setEditOpen(false)}>取消</Button>
             <Button variant="outline" onClick={async () => {
               if (!editingModel) return

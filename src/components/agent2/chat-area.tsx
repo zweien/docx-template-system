@@ -93,6 +93,8 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: 
   const [inputError, setInputError] = useState<string | null>(null)
   const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null)
 
+  const chatKey = `${conversationId}-${model}`
+
   const {
     messages,
     status,
@@ -102,7 +104,7 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: 
     addToolOutput,
     setMessages,
   } = useChat({
-    id: conversationId,
+    id: chatKey,
     transport: new DefaultChatTransport({
       api: `/api/agent2/conversations/${conversationId}/chat`,
       body: { model },

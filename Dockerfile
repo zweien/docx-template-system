@@ -13,6 +13,24 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+ARG AUTHENTIK_ISSUER="placeholder"
+ARG AUTHENTIK_CLIENT_ID="placeholder"
+ARG AUTHENTIK_CLIENT_SECRET="placeholder"
+ARG AUTHENTIK_LOGOUT_REDIRECT_URL="https://placeholder.example.com"
+ARG AUTHENTIK_ADMIN_EMAILS="admin@example.com"
+ARG AI_API_KEY="placeholder"
+ARG AI_BASE_URL="http://placeholder:3000/v1"
+ARG AI_MODEL="placeholder"
+ARG MODEL_CONFIG_ENCRYPTION_KEY="placeholder"
+ENV AUTHENTIK_ISSUER=${AUTHENTIK_ISSUER} \
+    AUTHENTIK_CLIENT_ID=${AUTHENTIK_CLIENT_ID} \
+    AUTHENTIK_CLIENT_SECRET=${AUTHENTIK_CLIENT_SECRET} \
+    AUTHENTIK_LOGOUT_REDIRECT_URL=${AUTHENTIK_LOGOUT_REDIRECT_URL} \
+    AUTHENTIK_ADMIN_EMAILS=${AUTHENTIK_ADMIN_EMAILS} \
+    AI_API_KEY=${AI_API_KEY} \
+    AI_BASE_URL=${AI_BASE_URL} \
+    AI_MODEL=${AI_MODEL} \
+    MODEL_CONFIG_ENCRYPTION_KEY=${MODEL_CONFIG_ENCRYPTION_KEY}
 RUN npx prisma generate
 RUN npm run build
 

@@ -223,3 +223,47 @@ export async function exportToJSON(
     return { success: false, error: { code: "EXPORT_JSON_ERROR", message } };
   }
 }
+
+// ── SQL Export ──
+
+export async function exportToSQL(
+  tableId: string
+): Promise<ServiceResult<string>> {
+  try {
+    const dataResult = await getTableExportData(tableId);
+    if (!dataResult.success) {
+      return { success: false, error: dataResult.error };
+    }
+
+    const { table, fields, records } = dataResult.data;
+
+    const lines: string[] = [];
+    lines.push(`-- 数据表: ${table.name}`);
+    lines.push(`-- 导出时间: ${new Date().toISOString()}`);
+    lines.push(
+      `-- 字段定义: ${fields.map((f) => `${f.key}(${f.type})`).join(", ")}`
+    );
+    lines.push("");
+
+    if (records.length === 0) {
+      lines.push("-- 无记录数据");
+      return { success: true, data: lines.join("\n") };
+    }
+
+    const values = records.map((r) => {
+      const dataStr = JSON.stringify(r.data).replace(/'/g, "''");
+      const id = r.id.replace(/'/g, "''");
+      return `('${id}', '${table.id}', '${dataStr}', '${r.createdAt.toISOString()}', '${r.updatedAt.toISOString()}')`;
+    });
+
+    lines.push(
+      `INSERT INTO "DataRecord" ("id", "tableId", "data", "createdAt", "updatedAt") VALUES`
+    );
+    lines.push(values.join(",\n") + ";");
+
+    return { success: true, data: lines.join("\n") };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "导出 SQL 失败";
+    return { success: false, error: { code: "EXPORT_SQL_ERROR", message } };
+  }
+}

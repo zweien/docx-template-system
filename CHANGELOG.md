@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.0](https://github.com/zweien/docx-template-system/compare/v0.2.3...v0.3.0) (2026-04-07)
+
+
+### Features
+
+* **data-table:** add export dropdown to table-card and record-table ([53c5e59](https://github.com/zweien/docx-template-system/commit/53c5e59f8ab5b6d34388b98f5a4e4830a5875f57))
+* **data-table:** add exportToJSON for JSON format export ([e30d8c8](https://github.com/zweien/docx-template-system/commit/e30d8c8128cf74c0e64cb7305cce1827c9b62c33))
+* **data-table:** add exportToSQL for PostgreSQL-compatible SQL export ([9f94549](https://github.com/zweien/docx-template-system/commit/9f94549efa9527c2d1ec380f3427ab973137d870))
+* **data-table:** add importFromJSON service and JSON import validators ([f826cb9](https://github.com/zweien/docx-template-system/commit/f826cb900796fbb97cfa25584a7be216832da28d))
+* **data-table:** add JSON and SQL export API routes ([987980a](https://github.com/zweien/docx-template-system/commit/987980a9e7e0660d4c747632621428cd82e3455e))
+* **data-table:** add JSON import API route ([b9fa989](https://github.com/zweien/docx-template-system/commit/b9fa9897dc52ba8021fefae0c35e89b2964c3df3))
+* **data-table:** create export.service.ts with getTableExportData ([392248a](https://github.com/zweien/docx-template-system/commit/392248a1c99dc1ebe65a70ea11b41f8323b8d9d4))
+* **data-table:** migrate exportToExcel to export.service.ts ([3f0b314](https://github.com/zweien/docx-template-system/commit/3f0b314bdec1179592a9e5bb89a4ed5ee1698e1c))
+* support creating a full data table from JSON import on /data page ([6c838b0](https://github.com/zweien/docx-template-system/commit/6c838b0198ef4e4c720215ae9c1739304f0492d3))
+* support JSON file import in import wizard ([5b1d39c](https://github.com/zweien/docx-template-system/commit/5b1d39cb6208a8c7f95edb3e715ea271d1c3114f))
+
+
+### Bug Fixes
+
+* allow deleting data tables with template references and inverse fields ([85bb37d](https://github.com/zweien/docx-template-system/commit/85bb37d8b737af159e6bd65961cd601f1e708cb2))
+* **data-table:** ensure unique temporary IDs for new fields and add field key uniqueness validation ([b37c0af](https://github.com/zweien/docx-template-system/commit/b37c0af466f5ac928a03b78dabf4658e7fa6bb56))
+* use --force flag for git fetch tags in deploy workflow ([c20d211](https://github.com/zweien/docx-template-system/commit/c20d21197ede530d0ecea4b7fa05ffb7c37e2e58))
+
 ## [0.1.2](https://github.com/zweien/docx-template-system/compare/v0.2.2...v0.1.2) (2026-04-07)
 
 

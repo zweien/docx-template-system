@@ -74,17 +74,10 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
 
   const handleEditSubmit = async () => {
     if (!editingModel) return
-    // 只在有值时发送 apiKey，空字符串表示不修改
-    const payload = {
-      name: editForm.name,
-      modelId: editForm.modelId,
-      baseUrl: editForm.baseUrl,
-      ...(editForm.apiKey && { apiKey: editForm.apiKey }),
-    }
     const res = await fetch(`/api/agent2/models/${editingModel.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(editForm),
     })
     const data = await res.json()
     if (data.success) {
@@ -103,9 +96,8 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          modelId: model.id, // 传模型 ID 用于查询已保存的 API Key
           baseUrl: model.baseUrl,
-          modelIdOverride: model.modelId, // 实际使用的模型 ID
+          modelId: model.modelId,
         }),
       })
       const data = await res.json()
@@ -270,13 +262,6 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
             <Input type="password" placeholder="API Key (留空则不修改)" value={editForm.apiKey} onChange={e => setEditForm(f => ({ ...f, apiKey: e.target.value }))} />
           </div>
           <DialogFooter>
-            <div className="flex-1">
-              {testResult && testResult.id === editingModel?.id && (
-                <span className={testResult.success ? "text-green-500 text-sm" : "text-destructive text-sm"}>
-                  {testResult.message}
-                </span>
-              )}
-            </div>
             <Button variant="outline" onClick={() => setEditOpen(false)}>取消</Button>
             <Button variant="outline" onClick={async () => {
               if (!editingModel) return

@@ -35,9 +35,9 @@ export const createModelSchema = z.object({
 });
 
 export const updateModelSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  modelId: z.string().min(1).optional(),
-  baseUrl: z.string().url().optional(),
+  name: z.string().min(1).max(100),
+  modelId: z.string().min(1),
+  baseUrl: z.string().url(),
   apiKey: z.string().optional(),
 });
 

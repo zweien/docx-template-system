@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { ZodError } from "zod";
-import { testModelConnection, getDecryptedApiKey } from "@/lib/services/agent2-model.service";
+import { testModelConnection } from "@/lib/services/agent2-model.service";
 import { z } from "zod";
 
 const testConnectionSchema = z.object({
   baseUrl: z.string().url(),
   apiKey: z.string().optional(),
-  modelId: z.string().min(1), // 模型配置 ID，用于查询已保存的 API Key
-  modelIdOverride: z.string().min(1).optional(), // 实际测试时使用的模型 ID
+  modelId: z.string().min(1),
 });
 
 export async function POST(request: NextRequest) {
@@ -23,23 +22,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = testConnectionSchema.parse(body);
-
-    // 如果没有提供 apiKey，尝试从已保存的模型配置中获取
-    let apiKey = parsed.apiKey;
-    if (!apiKey) {
-      const keyResult = await getDecryptedApiKey(parsed.modelId, session.user.id);
-      if (keyResult.success) {
-        apiKey = keyResult.data;
-      }
-    }
-
-    // 使用 modelIdOverride（如果提供）或 fallback 到 modelId
-    const actualModelId = parsed.modelIdOverride || parsed.modelId;
-
     const result = await testModelConnection({
       baseUrl: parsed.baseUrl,
-      apiKey,
-      modelId: actualModelId,
+      apiKey: parsed.apiKey,
+      modelId: parsed.modelId,
     });
 
     if (!result.success) {

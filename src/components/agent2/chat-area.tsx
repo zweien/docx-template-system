@@ -89,6 +89,7 @@ function PromptInputAttachmentButton({ disabled = false }: { disabled?: boolean 
 }
 
 export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: ChatAreaProps) {
+  const [modelName, setModelName] = useState("MiniMax-M2.5")
   const [model, setModel] = useState("MiniMax-M2.5")
   const [inputError, setInputError] = useState<string | null>(null)
   const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null)
@@ -118,12 +119,28 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: 
       .then((data) => {
         if (data.success && data.data.defaultModel) {
           setModel(data.data.defaultModel)
+          // 获取模型名称
+          return fetch("/api/agent2/models")
+        }
+        return null
+      })
+      .then((res) => {
+        if (!res) return
+        return res.json()
+      })
+      .then((data) => {
+        if (data?.success && data?.data) {
+          const models = data.data
+          const currentModel = models.find((m: { id: string }) => m.id === model)
+          if (currentModel) {
+            setModelName(currentModel.name)
+          }
         }
       })
       .catch(() => {
         // Use fallback model
       })
-  }, [])
+  }, [model])
 
   useEffect(() => {
     let active = true
@@ -216,7 +233,7 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: 
           )}
         </Button>
         <span className="text-sm font-medium truncate">AI 助手</span>
-        <span className="text-xs text-muted-foreground">{model}</span>
+        <span className="text-xs text-muted-foreground">{modelName}</span>
       </div>
 
       {/* Messages */}

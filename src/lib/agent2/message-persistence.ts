@@ -109,7 +109,7 @@ export function sanitizeStoredMessages(messages: UIMessage[]): UIMessage[] {
       .filter((part) => isReplayablePartType(part.type))
       .map((part) => sanitizePart(part))
       .filter((part) => part != null),
-  }))
+  })) as UIMessage[]
 }
 
 export function getLatestPersistableMessages(
@@ -146,7 +146,7 @@ export function getLatestPersistableMessages(
     },
     assistantMessage: {
       role: "assistant",
-      parts: assistantMessage.parts.flatMap((part) => {
+      parts: assistantMessage.parts.flatMap((part): UIMessage['parts'] => {
         if (part.type !== "text") {
           return [part]
         }

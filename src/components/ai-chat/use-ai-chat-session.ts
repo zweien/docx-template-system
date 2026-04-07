@@ -179,8 +179,8 @@ export function useAIChatSession(options: UseAIChatSessionOptions) {
       return null;
     }
 
-    setConversations((current) => [result.data, ...current]);
-    setCurrentConversationId(result.data.id);
+    setConversations((current) => [result.data!, ...current]);
+    setCurrentConversationId(result.data!.id);
     setMessages([]);
     return result.data as ConversationSummary;
   }
@@ -209,7 +209,7 @@ export function useAIChatSession(options: UseAIChatSessionOptions) {
     setConversations((current) =>
       current.map((conversation) =>
         conversation.id === conversationId
-          ? { ...conversation, title: result.data.title }
+          ? { ...conversation, title: result.data!.title }
           : conversation
       )
     );

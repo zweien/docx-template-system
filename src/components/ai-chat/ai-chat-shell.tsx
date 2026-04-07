@@ -37,7 +37,7 @@ export function AIChatShell({ initialTableId }: AIChatShellProps) {
             setCurrentConversationId(conversationId);
             void selectConversation(conversationId);
           }}
-          onCreateConversation={createConversation}
+          onCreateConversation={async () => { await createConversation(); }}
           onRenameConversation={async (conversationId, title) => {
             await renameConversation(conversationId, title);
           }}
@@ -61,8 +61,8 @@ export function AIChatShell({ initialTableId }: AIChatShellProps) {
         <AIChatClient
           initialTableId={initialTableId}
           conversationId={currentConversationId}
-          initialMessages={messages}
-          onCreateConversation={createConversation}
+          initialMessages={messages as Parameters<typeof AIChatClient>[0]["initialMessages"]}
+          onCreateConversation={async () => { await createConversation(); return null; }}
           onConversationTitleChange={updateConversationTitle}
         />
       </div>

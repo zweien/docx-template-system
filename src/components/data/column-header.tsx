@@ -313,7 +313,7 @@ export function ColumnHeader({
                   <SelectValue placeholder="选择值" />
                 </SelectTrigger>
                 <SelectContent>
-                  {field.options.map((opt) => (
+                  {(field.options as string[]).map((opt) => (
                     <SelectItem key={opt} value={opt}>
                       {opt}
                     </SelectItem>

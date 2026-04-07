@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    void processAttachmentExtraction(result.data.id);
+    void processAttachmentExtraction((result.data as { id: string }).id);
 
     return NextResponse.json({ success: true, data: result.data }, { status: 201 });
   } catch (error) {

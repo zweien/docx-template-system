@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
-import { Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: [
+    { path: "../../public/fonts/geist-mono-latin.woff2", weight: "100 900", style: "normal" },
+    { path: "../../public/fonts/geist-mono-latin-ext.woff2", weight: "100 900", style: "normal" },
+  ],
   variable: "--font-geist-mono",
-  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {

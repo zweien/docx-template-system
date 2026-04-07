@@ -114,11 +114,12 @@ function getMessageProgress(message: UIMessage) {
 
     if (part.type.startsWith("tool-")) {
       pushStep(getToolProgressLabel(part.type.replace("tool-", "")))
+      const toolPart = part as { state?: string };
       if (
-        part.state === "input-streaming" ||
-        part.state === "input-available" ||
-        part.state === "approval-requested" ||
-        part.state === "approval-responded"
+        toolPart.state === "input-streaming" ||
+        toolPart.state === "input-available" ||
+        toolPart.state === "approval-requested" ||
+        toolPart.state === "approval-responded"
       ) {
         isStreaming = true
       }

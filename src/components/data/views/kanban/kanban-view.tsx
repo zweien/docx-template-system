@@ -65,7 +65,7 @@ export function KanbanView({
 
   const groupedRecords = useMemo(() => {
     const groups = new Map<string, DataRecordItem[]>();
-    for (const option of groupField.options ?? []) {
+    for (const option of (groupField.options as string[]) ?? []) {
       groups.set(option, []);
     }
     groups.set("无值", []);

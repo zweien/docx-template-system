@@ -15,18 +15,18 @@ function errorResponse(message: string, status: number, code?: string) {
   return NextResponse.json({ error: { code, message } }, { status });
 }
 
-function isUploadFile(value: FormDataEntryValue): value is Blob & {
-  name: string;
-  size: number;
-  type: string;
-  arrayBuffer: () => Promise<ArrayBuffer>;
-} {
+function isUploadFile(value: FormDataEntryValue): value is File {
   return (
     typeof value !== "string" &&
-    typeof value.name === "string" &&
-    typeof value.size === "number" &&
-    typeof value.arrayBuffer === "function"
+    "name" in value &&
+    typeof (value as unknown as Record<string, unknown>).name === "string" &&
+    typeof (value as unknown as Record<string, unknown>).size === "number" &&
+    typeof (value as unknown as Record<string, unknown>).arrayBuffer === "function"
   );
+}
+
+function filterUploadFiles(entries: FormDataEntryValue[]): File[] {
+  return entries.filter((v): v is File => isUploadFile(v) && v.size > 0);
 }
 
 function mapServiceError(error: { code?: string; message: string }) {
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       .getAll("assigneeIds")
       .map((value) => String(value).trim())
       .filter(Boolean);
-    const attachmentFiles = formData.getAll("attachments").filter((value) => isUploadFile(value) && value.size > 0);
+    const attachmentFiles = filterUploadFiles(formData.getAll("attachments"));
     let renameVariables = {};
 
     if (typeof renameVariablesRaw === "string" && renameVariablesRaw.trim().length > 0) {

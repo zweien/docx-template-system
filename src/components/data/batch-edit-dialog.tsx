@@ -110,7 +110,7 @@ export function BatchEditDialog({
                   <SelectValue placeholder="选择值" />
                 </SelectTrigger>
                 <SelectContent>
-                  {selectedField.options.map((opt) => (
+                  {(selectedField.options as string[]).map((opt) => (
                     <SelectItem key={opt} value={opt}>
                       {opt}
                     </SelectItem>

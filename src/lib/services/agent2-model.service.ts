@@ -186,9 +186,9 @@ export async function updateModel(
   id: string,
   userId: string,
   data: {
-    name: string;
-    modelId: string;
-    baseUrl: string;
+    name?: string;
+    modelId?: string;
+    baseUrl?: string;
     apiKey?: string;
   }
 ): Promise<ServiceResult<Agent2ModelItem>> {
@@ -203,11 +203,11 @@ export async function updateModel(
     };
   }
 
-  const updateData: Record<string, unknown> = {
-    name: data.name,
-    modelId: data.modelId,
-    baseUrl: data.baseUrl,
-  };
+  const updateData: Record<string, unknown> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.modelId !== undefined) updateData.modelId = data.modelId;
+  if (data.baseUrl !== undefined) updateData.baseUrl = data.baseUrl;
+  // 只有明确提供了 apiKey（即使是空字符串）才更新
   if (data.apiKey !== undefined) {
     updateData.apiKeyEncrypted = data.apiKey ? encrypt(data.apiKey) : null;
   }

@@ -74,10 +74,17 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
 
   const handleEditSubmit = async () => {
     if (!editingModel) return
+    // 只在有值时发送 apiKey，空字符串表示不修改
+    const payload = {
+      name: editForm.name,
+      modelId: editForm.modelId,
+      baseUrl: editForm.baseUrl,
+      ...(editForm.apiKey && { apiKey: editForm.apiKey }),
+    }
     const res = await fetch(`/api/agent2/models/${editingModel.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
+      body: JSON.stringify(payload),
     })
     const data = await res.json()
     if (data.success) {

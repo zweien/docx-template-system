@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.3](https://github.com/zweien/docx-template-system/compare/v0.3.2...v0.3.3) (2026-04-07)
+
+
+### Features
+
+* **agent2:** add edit and test connection buttons to model manager ([665136b](https://github.com/zweien/docx-template-system/commit/665136b305169cbddce8bf3fc2c778f15cc74c05))
+* **agent2:** add edit and test connection buttons to model manager ([b56368e](https://github.com/zweien/docx-template-system/commit/b56368ead774c8a879c10639bd0978b2b00eee37))
+* **agent2:** add PUT endpoint for model update ([809b016](https://github.com/zweien/docx-template-system/commit/809b016697dac6e0195e1c4c991075bf9881d694))
+* **agent2:** add PUT endpoint for model update ([7a80964](https://github.com/zweien/docx-template-system/commit/7a80964a204bc4359d1fe3c9967ff5753b7184c0))
+* **agent2:** add test connection API endpoint ([e8cb0fe](https://github.com/zweien/docx-template-system/commit/e8cb0fe76229a8c2fa0bd0dcdb4f4fc8864b1960))
+* **agent2:** add test connection API endpoint ([b7ce687](https://github.com/zweien/docx-template-system/commit/b7ce687c1213964fc84d34ebaad3542364244041))
+* **agent2:** add updateModel and testModelConnection functions ([cbb626a](https://github.com/zweien/docx-template-system/commit/cbb626a464c1c63b363e624d3aee2bd91ceb48bf))
+* **agent2:** add updateModel and testModelConnection functions ([c39ce4f](https://github.com/zweien/docx-template-system/commit/c39ce4fa8233e5c8e12c8b5dabfd38980ab09cea))
+* **agent2:** update model validation schema ([33f8e93](https://github.com/zweien/docx-template-system/commit/33f8e93b2a1f75f577897366757cecbd9a65945c))
+* **agent2:** update model validation schema ([60872b5](https://github.com/zweien/docx-template-system/commit/60872b50f1db855d6d5a9e1258012072efcff9e8))
+
+
+### Bug Fixes
+
+* **agent2:** address code review - preserve API key on edit, include credentials when testing, support partial updates ([da8e75f](https://github.com/zweien/docx-template-system/commit/da8e75fd588d5bd7543c932d2b2a894fa3f62006))
+* **agent2:** address code review - preserve API key on edit, include credentials when testing, support partial updates ([1f90029](https://github.com/zweien/docx-template-system/commit/1f90029e69612b5f7e81d028eeafa859c982cf59))
+* **agent2:** display model name instead of id in chat header ([d3e8628](https://github.com/zweien/docx-template-system/commit/d3e862877a40ebd45cb15b2e34fe9780bfb75ac2))
+* **agent2:** pass model config ID to test API for retrieving saved API key ([62f830e](https://github.com/zweien/docx-template-system/commit/62f830e2c7c725c92b1dfd5c077d02960301f818))
+* **agent2:** pass model config ID to test API for retrieving saved API key ([7368442](https://github.com/zweien/docx-template-system/commit/736844200ca816dec149572e4071fcf3137bfe4b))
+* **agent2:** reset chat when model changes ([954a6f9](https://github.com/zweien/docx-template-system/commit/954a6f958b28ef7c4fa9b1d38eb08a66df7b7130))
+* **agent2:** reset chat when model changes ([aaef53f](https://github.com/zweien/docx-template-system/commit/aaef53f29b238d96b410f50eefe134f755310a05))
+* **agent2:** show test result in edit dialog ([cce610c](https://github.com/zweien/docx-template-system/commit/cce610cae926191e03a785a0a05c77c07f2f3e34))
+* **agent2:** show test result in edit dialog ([2cbaeff](https://github.com/zweien/docx-template-system/commit/2cbaeffc24965ad1ef24489d0a6741cde30c5278))
+
 ## [0.3.2](https://github.com/zweien/docx-template-system/compare/v0.3.1...v0.3.2) (2026-04-07)
 
 

@@ -110,3 +110,41 @@ export function exportRecordToExcel(
   const buffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
   return Buffer.from(buffer);
 }
+
+// ── Excel Export ──
+
+export async function exportToExcel(
+  tableId: string
+): Promise<ServiceResult<Buffer>> {
+  try {
+    const dataResult = await getTableExportData(tableId);
+    if (!dataResult.success) {
+      return { success: false, error: dataResult.error };
+    }
+
+    const { table, fields, records } = dataResult.data;
+
+    const headers = fields.map((f) => f.label);
+    const rows = records.map((record) => {
+      const data = record.data;
+      return fields.map((f) => {
+        const value = data[f.key];
+        if (f.type === "MULTISELECT" && Array.isArray(value)) {
+          return value.join(", ");
+        }
+        return value ?? "";
+      });
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, table.name);
+
+    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+
+    return { success: true, data: Buffer.from(buffer) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "导出数据失败";
+    return { success: false, error: { code: "EXPORT_ERROR", message } };
+  }
+}

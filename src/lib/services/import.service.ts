@@ -300,8 +300,6 @@ export async function importData(
   }
 }
 
-// ── Export ──
-
 // ── Business Key Lookup ──
 
 export async function findRecordByBusinessKey(
@@ -504,48 +502,3 @@ export async function importRelationDetails(
   }
 }
 
-// ── Export ──
-
-export async function exportToExcel(
-  tableId: string
-): Promise<ServiceResult<Buffer>> {
-  try {
-    const tableResult = await getTable(tableId);
-    if (!tableResult.success) {
-      return { success: false, error: tableResult.error };
-    }
-
-    const table = tableResult.data;
-
-    // Get all records
-    const records = await db.dataRecord.findMany({
-      where: { tableId },
-      orderBy: { createdAt: "desc" },
-    });
-
-    // Build worksheet data
-    const headers = table.fields.map((f) => f.label);
-    const rows = records.map((record) => {
-      const data = record.data as Record<string, unknown>;
-      return table.fields.map((f) => {
-        const value = data[f.key];
-        // Handle special types
-        if (f.type === "MULTISELECT" && Array.isArray(value)) {
-          return value.join(", ");
-        }
-        return value ?? "";
-      });
-    });
-
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, table.name);
-
-    const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
-
-    return { success: true, data: Buffer.from(buffer) };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "导出数据失败";
-    return { success: false, error: { code: "EXPORT_ERROR", message } };
-  }
-}

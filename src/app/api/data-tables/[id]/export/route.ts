@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { exportToExcel } from "@/lib/services/import.service";
+import { exportToExcel } from "@/lib/services/export.service";
 import { getTable } from "@/lib/services/data-table.service";
 
 interface RouteParams {

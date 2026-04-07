@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "exportedAt": "2026-04-07T05:05:15.304Z",
+  "table": {
+    "name": "项目表",
+    "description": "包含项目信息",
+    "icon": null,
+    "businessKeys": []
+  },
+  "fields": [
+    {
+      "key": "project_name",
+      "label": "项目名称",
+      "type": "TEXT",
+      "required": true,
+      "sortOrder": 0,
+      "options": null,
+      "defaultValue": null
+    },
+    {
+      "key": "start_date",
+      "label": "起始时间",
+      "type": "DATE",
+      "required": false,
+      "sortOrder": 0,
+      "options": null,
+      "defaultValue": null
+    },
+    {
+      "key": "end_date",
+      "label": "终止时间",
+      "type": "DATE",
+      "required": false,
+      "sortOrder": 0,
+      "options": null,
+      "defaultValue": null
+    }
+  ],
+  "records": [
+    {
+      "end_date": "2026-06-30",
+      "start_date": "2026-04-01",
+      "project_name": "AI平台开发"
+    },
+    {
+      "end_date": "2026-04-30",
+      "start_date": "2026-04-07",
+      "project_name": "大项目1"
+    }
+  ]
+}

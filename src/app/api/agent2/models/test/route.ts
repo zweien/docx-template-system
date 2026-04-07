@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { ZodError } from "zod";
-import { testModelConnection } from "@/lib/services/agent2-model.service";
+import { testModelConnection, getDecryptedApiKey } from "@/lib/services/agent2-model.service";
 import { z } from "zod";
 
 const testConnectionSchema = z.object({
@@ -22,9 +22,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = testConnectionSchema.parse(body);
+
+    // 如果没有提供 apiKey，尝试从已保存的模型配置中获取
+    let apiKey = parsed.apiKey;
+    if (!apiKey) {
+      const keyResult = await getDecryptedApiKey(parsed.modelId, session.user.id);
+      if (keyResult.success) {
+        apiKey = keyResult.data;
+      }
+    }
+
     const result = await testModelConnection({
       baseUrl: parsed.baseUrl,
-      apiKey: parsed.apiKey,
+      apiKey,
       modelId: parsed.modelId,
     });
 

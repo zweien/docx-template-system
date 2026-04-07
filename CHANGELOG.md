@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.2](https://github.com/zweien/docx-template-system/compare/v0.3.1...v0.3.2) (2026-04-07)
+
+
+### Bug Fixes
+
+* 修复文档下载失败 + Docker 卷权限问题 ([#4](https://github.com/zweien/docx-template-system/issues/4)) ([326b565](https://github.com/zweien/docx-template-system/commit/326b565f0768772780dd9fda14f8deb264f514c1)), closes [#3](https://github.com/zweien/docx-template-system/issues/3)
+* **mobile-nav:** add missing nav items for mobile sidebar ([#5](https://github.com/zweien/docx-template-system/issues/5)) ([83d0f8d](https://github.com/zweien/docx-template-system/commit/83d0f8d56c1584ac650ca397457b336e898427e2)), closes [#2](https://github.com/zweien/docx-template-system/issues/2)
+
 ## [0.3.1](https://github.com/zweien/docx-template-system/compare/v0.3.0...v0.3.1) (2026-04-07)
 
 

@@ -182,6 +182,93 @@ export async function deleteModel(
   };
 }
 
+export async function updateModel(
+  id: string,
+  userId: string,
+  data: {
+    name: string;
+    modelId: string;
+    baseUrl: string;
+    apiKey?: string;
+  }
+): Promise<ServiceResult<Agent2ModelItem>> {
+  const existing = await db.agent2ModelConfig.findFirst({
+    where: { id, userId, isGlobal: false },
+  });
+
+  if (!existing) {
+    return {
+      success: false,
+      error: { code: "NOT_FOUND", message: "模型配置不存在" },
+    };
+  }
+
+  const updateData: Record<string, unknown> = {
+    name: data.name,
+    modelId: data.modelId,
+    baseUrl: data.baseUrl,
+  };
+  if (data.apiKey !== undefined) {
+    updateData.apiKeyEncrypted = data.apiKey ? encrypt(data.apiKey) : null;
+  }
+
+  const updated = await db.agent2ModelConfig.update({
+    where: { id },
+    data: updateData,
+  });
+
+  return {
+    success: true,
+    data: mapModelItem(updated),
+  };
+}
+
+export async function testModelConnection(data: {
+  baseUrl: string;
+  apiKey?: string;
+  modelId: string;
+}): Promise<ServiceResult<{ success: boolean; message: string }>> {
+  try {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    if (data.apiKey) {
+      headers["Authorization"] = `Bearer ${data.apiKey}`;
+    }
+
+    const response = await fetch(`${data.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        model: data.modelId,
+        messages: [{ role: "user", content: "test" }],
+        max_tokens: 1,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return {
+        success: false,
+        error: { code: "CONNECTION_FAILED", message: `连接失败: ${response.status} ${errorText}` },
+      };
+    }
+
+    return {
+      success: true,
+      data: { success: true, message: "连接成功" },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        code: "CONNECTION_FAILED",
+        message: error instanceof Error ? error.message : "连接失败",
+      },
+    };
+  }
+}
+
 export async function getDecryptedApiKey(
   id: string,
   userId: string

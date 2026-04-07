@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.4](https://github.com/zweien/docx-template-system/compare/v0.3.3...v0.3.4) (2026-04-07)
+
+
+### Bug Fixes
+
+* **agent2:** support kimi reasoning_content in stream responses ([c49db4a](https://github.com/zweien/docx-template-system/commit/c49db4a02d277708ff14aa13431c738fada070ca))
+
 ## [0.3.3](https://github.com/zweien/docx-template-system/compare/v0.3.2...v0.3.3) (2026-04-07)
 
 

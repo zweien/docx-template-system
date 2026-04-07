@@ -12,9 +12,10 @@ import {
   PenLine,
   Database,
   Menu,
-  X,
   Users,
   Bot,
+  Sparkles,
+  FolderInput,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +50,11 @@ const navItems: NavItem[] = [
     icon: <FileText className="h-5 w-5" />,
   },
   {
+    title: "文档收集",
+    href: "/collections",
+    icon: <FolderInput className="h-5 w-5" />,
+  },
+  {
     title: "主数据",
     href: "/data",
     icon: <Database className="h-5 w-5" />,
@@ -67,6 +73,11 @@ const navItems: NavItem[] = [
     title: "AI 助手",
     href: "/ai-agent",
     icon: <Bot className="h-5 w-5" />,
+  },
+  {
+    title: "AI 助手 2",
+    href: "/ai-agent2",
+    icon: <Sparkles className="h-5 w-5" />,
   },
 ];
 

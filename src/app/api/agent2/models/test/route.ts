@@ -7,7 +7,8 @@ import { z } from "zod";
 const testConnectionSchema = z.object({
   baseUrl: z.string().url(),
   apiKey: z.string().optional(),
-  modelId: z.string().min(1),
+  modelId: z.string().min(1), // 模型配置 ID，用于查询已保存的 API Key
+  modelIdOverride: z.string().min(1).optional(), // 实际测试时使用的模型 ID
 });
 
 export async function POST(request: NextRequest) {
@@ -32,10 +33,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 使用 modelIdOverride（如果提供）或 fallback 到 modelId
+    const actualModelId = parsed.modelIdOverride || parsed.modelId;
+
     const result = await testModelConnection({
       baseUrl: parsed.baseUrl,
       apiKey,
-      modelId: parsed.modelId,
+      modelId: actualModelId,
     });
 
     if (!result.success) {

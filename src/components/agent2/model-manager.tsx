@@ -103,8 +103,9 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          modelId: model.id, // 传模型 ID 用于查询已保存的 API Key
           baseUrl: model.baseUrl,
-          modelId: model.modelId,
+          modelIdOverride: model.modelId, // 实际使用的模型 ID
         }),
       })
       const data = await res.json()

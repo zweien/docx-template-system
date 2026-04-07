@@ -35,6 +35,7 @@ interface FieldConfigFormProps {
   onOpenChange: (open: boolean) => void;
   field?: DataFieldItem | null;
   availableTables: { id: string; name: string; fields: DataFieldItem[] }[];
+  existingFieldKeys?: string[];
   onSubmit: (data: DataFieldInput) => void;
 }
 
@@ -140,6 +141,7 @@ export function FieldConfigForm({
   onOpenChange,
   field,
   availableTables,
+  existingFieldKeys = [],
   onSubmit,
 }: FieldConfigFormProps) {
   const [key, setKey] = useState("");
@@ -335,6 +337,12 @@ export function FieldConfigForm({
       return;
     }
 
+    // Uniqueness check for field key
+    if (existingFieldKeys.includes(key.trim()) && key.trim() !== field?.key) {
+      setError(`字段标识 "${key.trim()}" 已存在，请使用其他名称`);
+      return;
+    }
+
     if (isRelationSubtableType && !selectedTableId) {
       setError("请选择关联表");
       return;
@@ -451,7 +459,7 @@ export function FieldConfigForm({
 
             <div className="flex items-center justify-between">
               <Label htmlFor="required">是否必填</Label>
-              <Switch checked={required} onCheckedChange={setRequired} />
+              <Switch id="required" checked={required} onCheckedChange={setRequired} />
             </div>
 
             {(fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT) && (

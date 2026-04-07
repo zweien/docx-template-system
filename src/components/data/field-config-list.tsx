@@ -66,7 +66,7 @@ function toFieldItem(
   existing?: DataFieldItem
 ): DataFieldItem {
   return {
-    id: data.id ?? existing?.id ?? "",
+    id: data.id ?? existing?.id ?? `temp-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     key: data.key,
     label: data.label,
     type: data.type,
@@ -373,6 +373,7 @@ export function FieldConfigList({
         }}
         field={editingField}
         availableTables={tablesWithFields}
+        existingFieldKeys={fields.map((f) => f.key)}
         onSubmit={editingField ? handleEditField : handleAddField}
       />
     </div>

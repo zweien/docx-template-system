@@ -13,6 +13,7 @@ import type {
 } from "@/types/data-table";
 import type { ImportOptionsInput } from "@/validators/data-table";
 import { FieldType } from "@/generated/prisma/enums";
+import { Prisma } from "@/generated/prisma/client";
 
 // ── Helpers ──
 
@@ -545,6 +546,138 @@ export async function importRelationDetails(
   } catch (error) {
     const message = error instanceof Error ? error.message : "导入关系明细失败";
     return { success: false, error: { code: "IMPORT_RELATION_ERROR", message } };
+  }
+}
+
+// ── Import Table from JSON (create new table) ──
+
+export interface ImportTableResult {
+  tableId: string;
+  tableName: string;
+  fieldCount: number;
+  recordCount: number;
+  skippedRelationFields: string[];
+}
+
+export async function importTableFromJSON(
+  userId: string,
+  jsonData: {
+    version: string;
+    table: {
+      name: string;
+      description?: string | null;
+      icon?: string | null;
+      businessKeys?: string[];
+    };
+    fields: Array<{
+      key: string;
+      label: string;
+      type: string;
+      required?: boolean;
+      sortOrder?: number;
+      options?: unknown;
+      defaultValue?: string | null;
+      relationTo?: string;
+      relationCardinality?: string | null;
+    }>;
+    records: Record<string, unknown>[];
+  }
+): Promise<ServiceResult<ImportTableResult>> {
+  try {
+    // Validate structure
+    if (!jsonData.version) {
+      return { success: false, error: { code: "INVALID_JSON", message: "缺少 version 字段" } };
+    }
+    if (!jsonData.table?.name) {
+      return { success: false, error: { code: "INVALID_JSON", message: "缺少 table.name 字段" } };
+    }
+    if (!Array.isArray(jsonData.fields) || !Array.isArray(jsonData.records)) {
+      return { success: false, error: { code: "INVALID_JSON", message: "缺少 fields 或 records 数组" } };
+    }
+
+    // Check duplicate name
+    const existing = await db.dataTable.findUnique({
+      where: { name: jsonData.table.name },
+    });
+    if (existing) {
+      return { success: false, error: { code: "DUPLICATE_NAME", message: `数据表名称 "${jsonData.table.name}" 已存在` } };
+    }
+
+    // Filter out relation fields (cross-site relationTo IDs are meaningless)
+    const RELATION_TYPES = new Set(["RELATION", "RELATION_SUBTABLE"]);
+    const nonRelationFields = jsonData.fields.filter((f) => !RELATION_TYPES.has(f.type));
+    const skippedRelationFields = jsonData.fields
+      .filter((f) => RELATION_TYPES.has(f.type))
+      .map((f) => f.label || f.key);
+    const nonRelationFieldKeys = new Set(nonRelationFields.map((f) => f.key));
+
+    const result = await db.$transaction(async (tx) => {
+      // 1. Create table
+      const table = await tx.dataTable.create({
+        data: {
+          name: jsonData.table.name,
+          description: jsonData.table.description ?? null,
+          icon: jsonData.table.icon ?? null,
+          businessKeys: jsonData.table.businessKeys ?? [],
+          createdById: userId,
+        },
+      });
+
+      // 2. Create fields
+      for (const field of nonRelationFields) {
+        await tx.dataField.create({
+          data: {
+            tableId: table.id,
+            key: field.key,
+            label: field.label,
+            type: field.type as FieldType,
+            required: field.required ?? false,
+            options: field.options as Prisma.InputJsonValue ?? null,
+            defaultValue: field.defaultValue ?? null,
+            sortOrder: field.sortOrder ?? 0,
+          },
+        });
+      }
+
+      // 3. Create records (strip relation field values)
+      if (jsonData.records.length > 0) {
+        const recordsData = jsonData.records.map((record) => {
+          const filtered: Record<string, unknown> = {};
+          for (const [k, v] of Object.entries(record)) {
+            if (nonRelationFieldKeys.has(k)) {
+              filtered[k] = v;
+            }
+          }
+          return filtered;
+        });
+
+        await tx.dataRecord.createMany({
+          data: recordsData.map((record) => ({
+            tableId: table.id,
+            data: record as Prisma.InputJsonValue,
+            createdById: userId,
+          })),
+        });
+      }
+
+      return {
+        tableId: table.id,
+        tableName: table.name,
+        fieldCount: nonRelationFields.length,
+        recordCount: jsonData.records.length,
+      };
+    });
+
+    return {
+      success: true,
+      data: {
+        ...result,
+        skippedRelationFields,
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "导入数据表失败";
+    return { success: false, error: { code: "IMPORT_TABLE_ERROR", message } };
   }
 }
 

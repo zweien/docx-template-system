@@ -3,6 +3,7 @@ import { listTables } from "@/lib/services/data-table.service";
 import { deleteTable } from "@/lib/services/data-table.service";
 import { TableCard } from "@/components/data/table-card";
 import { CreateTableDialog } from "@/components/data/create-table-dialog";
+import { ImportTableDialog } from "@/components/data/import-table-dialog";
 import { Button } from "@/components/ui/button";
 
 export default async function DataPage() {
@@ -29,7 +30,12 @@ export default async function DataPage() {
             管理自定义数据表，支持多种字段类型和 Excel 导入
           </p>
         </div>
-        {isAdmin && <CreateTableDialog />}
+        {isAdmin && (
+          <div className="flex items-center gap-2">
+            <ImportTableDialog />
+            <CreateTableDialog />
+          </div>
+        )}
       </div>
 
       {tables.length === 0 ? (

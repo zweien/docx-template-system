@@ -54,14 +54,14 @@ export function FileCellEditor({ initialValue, onCommit, onCancel }: FileCellEdi
   return (
     <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
       <Popover open={true} onOpenChange={(open) => !open && onCancel()}>
-        <PopoverTrigger asChild>
+        <PopoverTrigger render={
           <div className="flex items-center gap-1 w-full cursor-pointer border rounded-md px-2 py-1 h-8 bg-background border-primary">
             <FileIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-xs truncate flex-1">
               {draft ? getFileName(draft) : "点击上传..."}
             </span>
           </div>
-        </PopoverTrigger>
+        } />
         <PopoverContent className="w-80 p-3" align="start">
           <div className="space-y-3">
             <div className="space-y-1">

@@ -407,6 +407,11 @@ export function RecordTable({
               >
                 导出 SQL
               </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => window.open(`/api/data-tables/${tableId}/export/bundle`)}
+              >
+                导出关联数据
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           {isAdmin && (

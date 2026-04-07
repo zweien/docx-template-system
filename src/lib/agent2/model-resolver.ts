@@ -1,5 +1,6 @@
 // src/lib/agent2/model-resolver.ts
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { db } from "@/lib/db";
 import { decrypt } from "@/lib/services/agent2-model.service";
 import type { LanguageModel } from "ai";
@@ -8,6 +9,7 @@ interface DefaultModelConfig {
   apiKey?: string;
   baseURL?: string;
   model: string;
+  headers?: Record<string, string>;
 }
 
 const DEFAULT_MODELS: Record<string, DefaultModelConfig> = {
@@ -31,6 +33,20 @@ const DEFAULT_MODELS: Record<string, DefaultModelConfig> = {
     : {}),
 };
 
+// 检测模型是否输出 reasoning_content（需要特殊处理）
+export function isReasoningModel(modelId: string, baseUrl: string): boolean {
+  const lowerModelId = modelId.toLowerCase();
+  const lowerBaseUrl = baseUrl.toLowerCase();
+
+  return (
+    lowerModelId.includes("kimi") ||
+    lowerModelId.includes("k2") ||
+    lowerModelId.includes("thinking") ||
+    lowerBaseUrl.includes("moonshot") ||
+    lowerBaseUrl.includes("kimi")
+  );
+}
+
 export async function resolveModel(
   modelId: string,
   userId: string
@@ -41,6 +57,7 @@ export async function resolveModel(
     const openai = createOpenAI({
       apiKey: defaultConfig.apiKey,
       baseURL: defaultConfig.baseURL,
+      headers: defaultConfig.headers,
     });
     return openai.chat(defaultConfig.model);
   }
@@ -69,9 +86,12 @@ export async function resolveModel(
     apiKey = process.env.AI_API_KEY || "";
   }
 
-  const openai = createOpenAI({
+  // 使用 OpenAI 兼容 provider
+  const provider = createOpenAICompatible({
+    name: "openai-compatible",
     apiKey,
     baseURL: config.baseUrl,
   });
-  return openai.chat(config.modelId);
+
+  return provider.languageModel(config.modelId);
 }

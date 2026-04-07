@@ -7,13 +7,15 @@ import { chatRequestSchema } from "@/validators/agent2";
 import { getConversation } from "@/lib/services/agent2-conversation.service";
 import { getSettings } from "@/lib/services/agent2-settings.service";
 import { saveMessages, getMessages } from "@/lib/services/agent2-message.service";
-import { resolveModel } from "@/lib/agent2/model-resolver";
+import { resolveModel, isReasoningModel } from "@/lib/agent2/model-resolver";
 import { buildSystemPrompt, truncateMessages } from "@/lib/agent2/context-builder";
 import { createTools } from "@/lib/agent2/tools";
 import {
   getLatestPersistableMessages,
   sanitizeStoredMessages,
 } from "@/lib/agent2/message-persistence";
+import { db } from "@/lib/db";
+import { decrypt } from "@/lib/services/agent2-model.service";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -50,6 +52,23 @@ export async function POST(
     const autoConfirm = settingsResult.success
       ? (settingsResult.data.autoConfirmTools as Record<string, boolean>)
       : {};
+
+    // 检测是否是 reasoning 模型
+    const config = await db.agent2ModelConfig.findFirst({
+      where: {
+        id: validated.model,
+        OR: [{ userId: session.user.id }, { isGlobal: true }],
+      },
+    });
+
+    let useReasoning = false;
+    if (config) {
+      let baseUrl = config.baseUrl;
+      if (!config.apiKeyEncrypted) {
+        baseUrl = process.env.AI_BASE_URL || baseUrl;
+      }
+      useReasoning = isReasoningModel(config.modelId, baseUrl);
+    }
 
     // Resolve model and build prompt/tools
     const model = await resolveModel(validated.model, session.user.id);
@@ -94,7 +113,7 @@ export async function POST(
 
     return result.toUIMessageStreamResponse({
       originalMessages: allMessages,
-      sendReasoning: true,
+      sendReasoning: useReasoning,
       sendSources: true,
       onFinish: async ({ messages }) => {
         try {

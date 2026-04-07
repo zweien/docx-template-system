@@ -171,8 +171,7 @@ export default async function RecordsPage({
                     <div className="flex items-center justify-end gap-1">
                       {record.status === "COMPLETED" && record.fileName && (
                         <a
-                          href={`/uploads/documents/${record.fileName}`}
-                          download={record.fileName}
+                          href={`/api/records/${record.id}/download`}
                           className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                         >
                           <Download className="h-3.5 w-3.5" />

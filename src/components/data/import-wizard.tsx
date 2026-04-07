@@ -47,6 +47,14 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
   const [localFields, setLocalFields] = useState<DataFieldItem[]>(fields);
   const [createFieldForColumn, setCreateFieldForColumn] = useState<string | null>(null);
 
+  // JSON 导入 state
+  const [isJsonFile, setIsJsonFile] = useState(false);
+  const [jsonSummary, setJsonSummary] = useState<{
+    tableName: string;
+    fieldCount: number;
+    recordCount: number;
+  } | null>(null);
+
   // 关系明细导入 state
   const [selectedRelationField, setSelectedRelationField] = useState<string>("");
   const [sourceMapping, setSourceMapping] = useState<Record<string, string>>({});
@@ -63,44 +71,87 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
     setError("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
+      const isJson = file.name.endsWith(".json");
 
-      const response = await fetch(
-        `/api/data-tables/${tableId}/import/preview`,
-        {
-          method: "POST",
-          body: formData,
+      if (isJson) {
+        // JSON 文件：前端解析，展示摘要
+        const text = await file.text();
+        const jsonData = JSON.parse(text);
+
+        if (!jsonData.version || !Array.isArray(jsonData.fields) || !Array.isArray(jsonData.records)) {
+          setError("JSON 文件格式不正确，缺少 version、fields 或 records 字段");
+          setIsLoading(false);
+          return;
         }
-      );
 
-      const data = await response.json();
+        setIsJsonFile(true);
+        setJsonSummary({
+          tableName: jsonData.table?.name ?? "未知",
+          fieldCount: jsonData.fields.length,
+          recordCount: jsonData.records.length,
+        });
 
-      if (!response.ok) {
-        setError(data.error || "上传失败");
-        return;
-      }
+        // 设置预览数据
+        const columns = jsonData.fields.map((f: { key: string }) => f.key);
+        const previewRows = jsonData.records.slice(0, 5);
+        setPreview({
+          columns,
+          rows: previewRows,
+          totalRows: jsonData.records.length,
+        });
 
-      setPreview(data);
-      // Initialize mapping with null (not imported)
-      const initialMapping: Record<string, string | null> = {};
-      data.columns.forEach((col: string) => {
-        // Try to auto-match by label or key
-        const matchedField = localFields.find(
-          (f) =>
-            f.label.toLowerCase() === col.toLowerCase() ||
-            f.key.toLowerCase() === col.toLowerCase()
+        // 自动映射（key 直接匹配）
+        const initialMapping: Record<string, string | null> = {};
+        const fieldKeySet = new Set(localFields.map((f) => f.key));
+        for (const jsonField of jsonData.fields) {
+          initialMapping[jsonField.key] = fieldKeySet.has(jsonField.key) ? jsonField.key : null;
+        }
+        setMapping(initialMapping);
+
+        // JSON 跳过映射步骤，直接到选项
+        setStep("options");
+      } else {
+        // Excel 文件：走原有逻辑
+        setIsJsonFile(false);
+        setJsonSummary(null);
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch(
+          `/api/data-tables/${tableId}/import/preview`,
+          {
+            method: "POST",
+            body: formData,
+          }
         );
-        initialMapping[col] = matchedField?.key ?? null;
-      });
-      setMapping(initialMapping);
-      setStep("mapping");
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || "上传失败");
+          return;
+        }
+
+        setPreview(data);
+        const initialMapping: Record<string, string | null> = {};
+        data.columns.forEach((col: string) => {
+          const matchedField = localFields.find(
+            (f) =>
+              f.label.toLowerCase() === col.toLowerCase() ||
+              f.key.toLowerCase() === col.toLowerCase()
+          );
+          initialMapping[col] = matchedField?.key ?? null;
+        });
+        setMapping(initialMapping);
+        setStep("mapping");
+      }
     } catch (_err) {
-      setError("上传失败，请稍后重试");
+      setError(isJsonFile ? "JSON 文件解析失败" : "上传失败，请稍后重试");
     } finally {
       setIsLoading(false);
     }
-  }, [file, tableId, localFields]);
+  }, [file, tableId, localFields, isJsonFile]);
 
   // 创建新字段
   const handleCreateField = useCallback(
@@ -230,31 +281,56 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
 
         setResult(data);
       } else {
-        // 普通导入
-        formData.append(
-          "config",
-          JSON.stringify({
-            mapping,
-            options: {
-              uniqueField,
-              strategy,
-            },
-          })
-        );
+        // 普通导入 或 JSON 导入
+        if (isJsonFile) {
+          // JSON 导入：发送文件 + config 到 JSON 导入接口
+          const jsonFormData = new FormData();
+          jsonFormData.append("file", file!);
+          jsonFormData.append(
+            "config",
+            JSON.stringify({ strategy })
+          );
 
-        const response = await fetch(`/api/data-tables/${tableId}/import`, {
-          method: "POST",
-          body: formData,
-        });
+          const response = await fetch(`/api/data-tables/${tableId}/import/json`, {
+            method: "POST",
+            body: jsonFormData,
+          });
 
-        const data = await response.json();
+          const data = await response.json();
 
-        if (!response.ok) {
-          setError(data.error || "导入失败");
-          return;
+          if (!response.ok) {
+            setError(data.error || "导入失败");
+            return;
+          }
+
+          setResult(data);
+        } else {
+          // Excel 普通导入
+          formData.append(
+            "config",
+            JSON.stringify({
+              mapping,
+              options: {
+                uniqueField,
+                strategy,
+              },
+            })
+          );
+
+          const response = await fetch(`/api/data-tables/${tableId}/import`, {
+            method: "POST",
+            body: formData,
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            setError(data.error || "导入失败");
+            return;
+          }
+
+          setResult(data);
         }
-
-        setResult(data);
       }
 
       setStep("result");
@@ -288,9 +364,9 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
   const renderUploadStep = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-medium">上传 Excel 文件</h2>
+        <h2 className="text-lg font-medium">上传文件</h2>
         <p className="text-zinc-500 text-sm mt-1">
-          支持 .xlsx 格式，最大 5MB，最多 1000 行
+          支持 .xlsx 和 .json 格式，最大 5MB，最多 1000 行
         </p>
       </div>
 
@@ -321,12 +397,15 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
       <div className="border-2 border-dashed border-zinc-200 rounded-lg p-8 text-center">
         <Input
           type="file"
-          accept=".xlsx"
+          accept=".xlsx,.json"
           onChange={(e) => {
             const selectedFile = e.target.files?.[0];
             if (selectedFile) {
               setFile(selectedFile);
               setError("");
+              if (selectedFile.name.endsWith(".json")) {
+                setImportMode("normal"); // JSON 仅支持主表导入
+              }
             }
           }}
           className="hidden"
@@ -359,6 +438,14 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
+
+      {jsonSummary && (
+        <div className="border rounded-lg p-4 bg-zinc-50 text-sm space-y-1">
+          <div>来源表：{jsonSummary.tableName}</div>
+          <div>字段数：{jsonSummary.fieldCount}</div>
+          <div>记录数：{jsonSummary.recordCount}</div>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <Button onClick={handleUpload} disabled={!file || isLoading}>
@@ -595,6 +682,7 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
       </div>
 
       <div className="space-y-4">
+        {!isJsonFile && (
         <div className="space-y-2">
           <Label>唯一标识字段</Label>
           <Select value={uniqueField} onValueChange={(v) => setUniqueField(v ?? "")}>
@@ -613,6 +701,7 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
             根据此字段判断是否为重复记录
           </p>
         </div>
+        )}
 
         <div className="space-y-2">
           <Label>发现重复记录时</Label>
@@ -639,7 +728,7 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
       {error && <p className="text-sm text-red-500">{error}</p>}
 
       <div className="flex justify-between">
-        <Button variant="outline" onClick={() => setStep("mapping")}>
+        <Button variant="outline" onClick={() => setStep(isJsonFile ? "upload" : "mapping")}>
           上一步
         </Button>
         <Button onClick={handleImport} disabled={isLoading}>
@@ -719,8 +808,14 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
       {/* Progress */}
       <div className="mb-8">
         <div className="flex items-center justify-between text-sm mb-2">
-          {["上传文件", "字段映射", "导入选项", "完成"].map((label, i) => {
-            const stepIndex = ["upload", "mapping", "options", "result"].indexOf(step);
+          {(isJsonFile
+            ? ["上传文件", "导入选项", "完成"]
+            : ["上传文件", "字段映射", "导入选项", "完成"]
+          ).map((label, i) => {
+            const steps = isJsonFile
+              ? ["upload", "options", "result"]
+              : ["upload", "mapping", "options", "result"];
+            const stepIndex = steps.indexOf(step);
             return (
               <div
                 key={label}
@@ -749,8 +844,13 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
             className="h-full bg-zinc-900 transition-all"
             style={{
               width: `${
-                ((["upload", "mapping", "options", "result"].indexOf(step) + 1) /
-                  4) *
+                (((
+                  isJsonFile
+                    ? ["upload", "options", "result"]
+                    : ["upload", "mapping", "options", "result"]
+                ).indexOf(step) +
+                  1) /
+                  (isJsonFile ? 3 : 4)) *
                 100
               }%`,
             }}

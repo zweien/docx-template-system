@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ interface TemplateItem {
   name: string;
   categoryId: string | null;
   createdAt: string;
+  screenshot: string | null;
   category: { name: string } | null;
   tags: { tag: { id: string; name: string } }[];
   currentVersion: { version: number } | null;
@@ -26,6 +27,18 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
   const [search, setSearch] = useState("");
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [tagIds, setTagIds] = useState<string[]>([]);
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+
+  // Handle ESC key to close lightbox
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setLightboxImage(null);
+    };
+    if (lightboxImage) {
+      document.addEventListener("keydown", handleEsc);
+      return () => document.removeEventListener("keydown", handleEsc);
+    }
+  }, [lightboxImage]);
 
   const filtered = useMemo(() => {
     return templates.filter((t) => {
@@ -128,6 +141,21 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
             <Link key={t.id} href={`/templates/${t.id}/fill`}>
               <Card className="h-full transition-colors hover:bg-accent cursor-pointer">
                 <CardContent className="flex flex-col gap-3 p-4">
+                  {t.screenshot && (
+                    <div
+                      className="relative -mx-4 -mt-4 cursor-pointer overflow-hidden"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setLightboxImage(t.screenshot);
+                      }}
+                    >
+                      <img
+                        src={t.screenshot}
+                        alt={t.name}
+                        className="h-28 w-full object-cover"
+                      />
+                    </div>
+                  )}
                   <div className="flex items-start gap-3">
                     <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                     <div className="min-w-0 flex-1">
@@ -173,6 +201,22 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
             className="mt-2 text-sm font-medium text-primary hover:underline"
           >
             清除筛选条件
+          </button>
+        </div>
+      )}
+
+      {/* Lightbox Modal */}
+      {lightboxImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
+          onClick={() => setLightboxImage(null)}
+        >
+          <img src={lightboxImage} alt="预览" className="max-h-[90vh] max-w-[90vw] object-contain" />
+          <button
+            className="absolute top-4 right-4 text-white text-2xl"
+            onClick={() => setLightboxImage(null)}
+          >
+            ×
           </button>
         </div>
       )}

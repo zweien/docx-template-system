@@ -2,7 +2,7 @@
 
 import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/card";
 
 function LoginForm() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
@@ -25,23 +24,11 @@ function LoginForm() {
     setIsLoading(true);
 
     try {
-      const result = await signIn("authentik", {
+      // For OAuth providers, use redirect: true (default) to properly initiate the authorization flow
+      // The redirect: false option doesn't work reliably with OAuth providers
+      await signIn("authentik", {
         callbackUrl,
-        redirect: false,
       });
-
-      if (result?.error) {
-        toast.error("登录失败", {
-          description: "统一登录跳转失败，请稍后重试。",
-        });
-      } else if (result?.url) {
-        router.push(result.url);
-        router.refresh();
-      } else {
-        toast.error("登录失败", {
-          description: "未获取到统一登录跳转地址。",
-        });
-      }
     } catch {
       toast.error("登录失败", {
         description: "发生未知错误，请稍后重试。",

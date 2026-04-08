@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.6](https://github.com/zweien/docx-template-system/compare/v0.3.5...v0.3.6) (2026-04-08)
+
+
+### Bug Fixes
+
+* **auth:** 修复统一登录提示登陆失败的问题 ([411de1d](https://github.com/zweien/docx-template-system/commit/411de1d5683e457c34eff2f22851a8a5ee7c036a))
+
 ## [0.3.5](https://github.com/zweien/docx-template-system/compare/v0.3.4...v0.3.5) (2026-04-08)
 
 

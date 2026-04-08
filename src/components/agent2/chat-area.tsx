@@ -102,7 +102,8 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, de
     }
   }, [initialDefaultModel])
 
-  const chatKey = `${conversationId}-${model}`
+  // 使用 conversationId 作为 chatKey，切换模型时不重新创建会话
+  const chatKey = conversationId
 
   const {
     messages,

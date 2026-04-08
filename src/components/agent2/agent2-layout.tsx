@@ -20,6 +20,7 @@ export function Agent2Layout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [defaultModel, setDefaultModel] = useState<string>("")
 
   useEffect(() => {
     if (selectedConversationId) {
@@ -29,6 +30,10 @@ export function Agent2Layout() {
 
     window.localStorage.removeItem(SELECTED_CONVERSATION_STORAGE_KEY)
   }, [selectedConversationId])
+
+  const handleSettingsChange = (settings: { defaultModel: string }) => {
+    setDefaultModel(settings.defaultModel)
+  }
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
@@ -53,6 +58,7 @@ export function Agent2Layout() {
             conversationId={selectedConversationId}
             onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
             sidebarCollapsed={sidebarCollapsed}
+            defaultModel={defaultModel}
           />
         ) : (
           <EmptyState
@@ -75,7 +81,7 @@ export function Agent2Layout() {
       </div>
 
       {/* Settings dialog */}
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} onSettingsChange={handleSettingsChange} />
     </div>
   )
 }

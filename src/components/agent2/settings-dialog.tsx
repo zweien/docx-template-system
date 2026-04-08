@@ -9,6 +9,7 @@ import { ModelManager } from "./model-manager"
 interface SettingsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onSettingsChange?: (settings: Settings) => void
 }
 
 interface Settings {
@@ -17,7 +18,7 @@ interface Settings {
   showReasoning: boolean
 }
 
-export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, onSettingsChange }: SettingsDialogProps) {
   const [settings, setSettings] = useState<Settings>({
     autoConfirmTools: {},
     defaultModel: "gpt-4o",
@@ -42,6 +43,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     })
+    onSettingsChange?.(newSettings)
   }
 
   const toolCategories = [

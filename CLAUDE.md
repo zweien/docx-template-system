@@ -67,6 +67,25 @@ import { useSession, signOut } from "next-auth/react";
 
 Route protection is in `src/proxy.ts`. All routes except `/login` and `/api/auth` require authentication.
 
+## GitHub Issue Workflow
+
+处理 GitHub issue 时需要创建并切换到相应分支。
+
+```bash
+# 查看 issue
+gh issue view <id>
+
+# 创建分支并处理
+git checkout -b feature/issue-<id>-<描述>
+# 完成开发后
+git push -u origin feature/issue-<id>-<描述>
+# 创建 PR
+gh pr create --title "[Feature] ..." --body "..."
+```
+
+当前处理的 issue:
+- #12: 模型管理标签页配置（管理员设置页面）
+
 ## Key Patterns
 
 **File uploads:** `src/lib/file.service.ts` handles save/copy/delete. Uploaded files go to `public/uploads/{templates|documents}/`. The `UPLOAD_DIR` env var controls the base path.

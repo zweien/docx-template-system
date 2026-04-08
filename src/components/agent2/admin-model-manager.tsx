@@ -15,18 +15,13 @@ interface Model {
   isGlobal: boolean
 }
 
-interface ModelManagerProps {
-  settings: { defaultModel: string }
-  onUpdateSettings: (updates: Record<string, unknown>) => void
-}
-
 function loadModels(): Promise<Model[]> {
-  return fetch("/api/agent2/models")
+  return fetch("/api/admin/agent2/models")
     .then(r => r.json())
     .then(data => (data.success ? data.data : []))
 }
 
-export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) {
+export function AdminModelManager() {
   const [models, setModels] = useState<Model[]>([])
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState({ name: "", providerId: "custom", modelId: "", baseUrl: "", apiKey: "" })
@@ -41,7 +36,7 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
   }, [])
 
   const handleAdd = async () => {
-    const res = await fetch("/api/agent2/models", {
+    const res = await fetch("/api/admin/agent2/models", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -56,7 +51,7 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
 
   const handleDelete = async (id: string) => {
     if (!confirm("确定删除此模型？")) return
-    await fetch(`/api/agent2/models/${id}`, { method: "DELETE" })
+    await fetch(`/api/admin/agent2/models/${id}`, { method: "DELETE" })
     loadModels().then(setModels)
   }
 
@@ -74,15 +69,14 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
 
   const handleEditSubmit = async () => {
     if (!editingModel) return
-    // 只在有值时发送 apiKey，空字符串表示不修改
     const payload = {
       name: editForm.name,
       modelId: editForm.modelId,
       baseUrl: editForm.baseUrl,
       ...(editForm.apiKey && { apiKey: editForm.apiKey }),
     }
-    const res = await fetch(`/api/agent2/models/${editingModel.id}`, {
-      method: "PUT",
+    const res = await fetch(`/api/admin/agent2/models/${editingModel.id}`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
@@ -99,13 +93,13 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
     setTestingId(model.id)
     setTestResult(null)
     try {
-      const res = await fetch("/api/agent2/models/test", {
+      const res = await fetch("/api/admin/agent2/models/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          modelId: model.id, // 传模型 ID 用于查询已保存的 API Key
+          modelId: model.id,
           baseUrl: model.baseUrl,
-          modelIdOverride: model.modelId, // 实际使用的模型 ID
+          modelIdOverride: model.modelId,
         }),
       })
       const data = await res.json()
@@ -120,50 +114,20 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
 
   const envModels = models.filter(m => m.providerId === "env")
   const globalModels = models.filter(m => m.isGlobal && m.providerId !== "env")
-  const userModels = models.filter(m => !m.isGlobal)
 
   return (
-    <div className="space-y-4">
-      {/* Default model selector */}
-      <div>
-        <p className="text-sm font-medium mb-2">选择模型</p>
-        <select
-          value={settings.defaultModel}
-          onChange={(e) => onUpdateSettings({ defaultModel: e.target.value })}
-          className="w-full h-8 rounded-md border bg-background px-2 text-sm"
-        >
-          <optgroup label="系统默认">
-            {envModels.map(m => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </optgroup>
-          {globalModels.length > 0 && (
-            <optgroup label="全局模型">
-              {globalModels.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </optgroup>
-          )}
-          {userModels.length > 0 && (
-            <optgroup label="自定义模型">
-              {userModels.map(m => (
-                <option key={m.id} value={m.id}>{m.name}</option>
-              ))}
-            </optgroup>
-          )}
-        </select>
-      </div>
-
-      {/* Env default models */}
+    <div className="space-y-6">
+      {/* Env default models - read only */}
       {envModels.length > 0 && (
         <div>
-          <p className="text-sm font-medium mb-2">系统默认模型</p>
+          <p className="text-sm font-medium mb-2">系统默认模型（环境变量配置）</p>
           <div className="space-y-1">
             {envModels.map(m => (
-              <div key={m.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 text-sm">
+              <div key={m.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50 text-sm">
                 <div>
                   <p className="font-medium">{m.name}</p>
-                  <p className="text-xs text-muted-foreground">{m.baseUrl}</p>
+                  <p className="text-xs text-muted-foreground">Base URL: {m.baseUrl}</p>
+                  <p className="text-xs text-muted-foreground">Model ID: {m.modelId}</p>
                 </div>
               </div>
             ))}
@@ -171,37 +135,21 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
         </div>
       )}
 
-      {/* Global models */}
-      {globalModels.length > 0 && (
-        <div>
-          <p className="text-sm font-medium mb-2">全局模型</p>
-          <div className="space-y-1">
-            {globalModels.map(m => (
-              <div key={m.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 text-sm">
-                <div>
-                  <p className="font-medium">{m.name}</p>
-                  <p className="text-xs text-muted-foreground">{m.modelId}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* User models */}
+      {/* Global models - admin managed */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <p className="text-sm font-medium">自定义模型</p>
+          <p className="text-sm font-medium">全局模型（所有用户可见）</p>
           <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
             <Plus className="size-3 mr-1" /> 添加
           </Button>
         </div>
         <div className="space-y-1">
-          {userModels.map(m => (
-            <div key={m.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50 text-sm">
+          {globalModels.map(m => (
+            <div key={m.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50 text-sm">
               <div>
                 <p className="font-medium">{m.name}</p>
-                <p className="text-xs text-muted-foreground">{m.baseUrl}</p>
+                <p className="text-xs text-muted-foreground">Base URL: {m.baseUrl}</p>
+                <p className="text-xs text-muted-foreground">Model ID: {m.modelId}</p>
               </div>
               <div className="flex items-center gap-1">
                 <Button
@@ -232,8 +180,8 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
               </div>
             </div>
           ))}
-          {userModels.length === 0 && (
-            <p className="text-xs text-muted-foreground text-center py-2">暂无自定义模型</p>
+          {globalModels.length === 0 && (
+            <p className="text-xs text-muted-foreground text-center py-4">暂无全局模型</p>
           )}
         </div>
       </div>
@@ -242,7 +190,7 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>添加自定义模型</DialogTitle>
+            <DialogTitle>添加全局模型</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Input placeholder="模型名称" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
@@ -261,7 +209,7 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>编辑自定义模型</DialogTitle>
+            <DialogTitle>编辑全局模型</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Input placeholder="模型名称" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
@@ -282,7 +230,7 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
               if (!editingModel) return
               setTestingId(editingModel.id)
               try {
-                const res = await fetch("/api/agent2/models/test", {
+                const res = await fetch("/api/admin/agent2/models/test", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({

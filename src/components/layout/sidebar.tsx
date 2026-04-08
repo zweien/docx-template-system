@@ -17,6 +17,7 @@ import {
   Bot,
   Sparkles,
   FolderInput,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNav } from "@/components/layout/user-nav";
@@ -77,6 +78,11 @@ const navItems: NavItem[] = [
 ];
 
 const adminNavItems: NavItem[] = [
+  {
+    title: "系统设置",
+    href: "/admin/settings",
+    icon: <Settings className="h-4 w-4" />,
+  },
   {
     title: "用户管理",
     href: "/admin/users",

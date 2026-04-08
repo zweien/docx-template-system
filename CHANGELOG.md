@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.5](https://github.com/zweien/docx-template-system/compare/v0.3.4...v0.3.5) (2026-04-08)
+
+
+### Features
+
+* **agent2:** 添加管理员系统设置页面 ([#14](https://github.com/zweien/docx-template-system/issues/14)) ([8097dfe](https://github.com/zweien/docx-template-system/commit/8097dfeb5c5e28f1cba8acd88de8535cdcec7e80))
+* **data-table:** 添加字段编辑功能 ([52b55a8](https://github.com/zweien/docx-template-system/commit/52b55a8d2a562c99c9b46a2d2db6000ee5792ca4))
+
+
+### Bug Fixes
+
+* **agent2:** 测试连接错误信息换行显示 ([#15](https://github.com/zweien/docx-template-system/issues/15)) ([0084567](https://github.com/zweien/docx-template-system/commit/00845678032063322b013e541031233f38db0251))
+* **data-table:** 修复编辑字段类型保存不生效的问题 ([fb5a47e](https://github.com/zweien/docx-template-system/commit/fb5a47e5de00875499eba835b09b9ed88a6227e0))
+
 ## [0.3.4](https://github.com/zweien/docx-template-system/compare/v0.3.3...v0.3.4) (2026-04-07)
 
 

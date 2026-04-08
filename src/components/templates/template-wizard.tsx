@@ -166,6 +166,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
         originalFileName: template.originalFileName,
         fileSize: template.fileSize,
         description: template.description,
+        screenshot: template.screenshot,
         status: template.status,
         dataTableId: template.dataTableId,
         dataTable: template.dataTable,

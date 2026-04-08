@@ -10,6 +10,7 @@ export default async function GeneratePage() {
       select: {
         id: true,
         name: true,
+        screenshot: true,
         categoryId: true,
         createdAt: true,
         category: { select: { name: true } },

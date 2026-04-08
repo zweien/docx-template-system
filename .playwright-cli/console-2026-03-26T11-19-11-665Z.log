@@ -1,8 +1,0 @@
-[   22693ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_RESET @ http://localhost:8060/api/auth/csrf:0
-[   22695ms] [ERROR] [next-auth][error][CLIENT_FETCH_ERROR] 
-https://next-auth.js.org/errors#client_fetch_error Failed to fetch {error: Object, url: /api/auth/csrf, message: Failed to fetch} @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
-[   22702ms] [ERROR] WebSocket is already in CLOSING or CLOSED state. @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:2790
-[   22702ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8060/api/auth/callback/credentials:0
-[   22703ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8060/api/auth/_log:0
-[   22736ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8060/__nextjs_font/geist-latin.woff2:0
-[   22737ms] [ERROR] Failed to load resource: net::ERR_CONNECTION_REFUSED @ http://localhost:8060/__nextjs_original-stack-frames:0

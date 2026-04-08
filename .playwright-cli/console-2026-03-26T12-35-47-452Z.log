@@ -1,5 +1,0 @@
-[     144ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8060/templates/3ed77148-120a-4ac0-8d9a-ed75b3bf12ac/fill:0
-[     547ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8060/api/auth/session:0
-[     577ms] [ERROR] [next-auth][error][CLIENT_FETCH_ERROR] 
-https://next-auth.js.org/errors#client_fetch_error Unexpected token '<', "<!DOCTYPE "... is not valid JSON {error: Object, url: /api/auth/session, message: Unexpected token '<', "<!DOCTYPE "... is not valid JSON} @ http://localhost:8060/_next/static/chunks/node_modules_next_dist_115brz8._.js:3272
-[     706ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8060/api/auth/_log:0

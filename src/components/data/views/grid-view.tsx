@@ -70,6 +70,7 @@ interface GridViewProps {
   onRefresh: () => void;
   onOpenDetail?: (recordId: string) => void;
   onOpenFieldsConfig?: () => void;
+  onDeleteField?: (fieldKey: string) => void;
   columnWidths: Record<string, number>;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   frozenFieldCount?: number;
@@ -241,6 +242,7 @@ export function GridView({
   conditionalFormatRules,
   onQuickFormat,
   onOpenFieldsConfig,
+  onDeleteField,
   columnAggregations,
   onColumnAggregationsChange,
 }: GridViewProps) {
@@ -1068,6 +1070,7 @@ export function GridView({
         context={context}
         fields={orderedVisibleFields}
         records={records}
+        isAdmin={isAdmin}
         frozenCount={frozenFieldCountValue}
         onEditCell={(recordId, fieldKey) => startEditing(recordId, fieldKey)}
         onCopyCellValue={(recordId, fieldKey) => {
@@ -1099,6 +1102,10 @@ export function GridView({
           if (field) {
             onOpenFieldsConfig?.();
           }
+        }}
+        onDeleteField={(fieldKey) => {
+          // 删除字段会清除所有数据，引导管理员去字段配置页面操作
+          onOpenFieldsConfig?.();
         }}
         onAddConditionalFormat={(fieldKey, value) => {
           onQuickFormat?.(fieldKey, value);

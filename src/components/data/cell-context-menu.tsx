@@ -15,8 +15,10 @@ interface CellContextMenuProps {
   context: CellContext
   fields: DataFieldItem[]
   records: DataRecordItem[]
+  isAdmin?: boolean
   onEditCell?: (recordId: string, fieldKey: string) => void
   onEditField?: (fieldKey: string) => void
+  onDeleteField?: (fieldKey: string) => void
   onCopyCellValue?: (recordId: string, fieldKey: string) => void
   onInsertRow?: (referenceRecordId: string, position: "above" | "below") => void
   onDeleteRecord?: (recordId: string) => void
@@ -36,8 +38,10 @@ export function CellContextMenu({
   context,
   fields,
   records,
+  isAdmin,
   onEditCell,
   onEditField,
+  onDeleteField,
   onCopyCellValue,
   onInsertRow,
   onDeleteRecord,
@@ -139,6 +143,20 @@ export function CellContextMenu({
         <ContextMenuItem onClick={() => onEditField?.(fieldKey)}>
           修改
         </ContextMenuItem>
+        {isAdmin && (
+          <>
+            <ContextMenuItem
+              onClick={() => {
+                if (confirm("确定要删除此字段吗？删除后该字段的所有数据将被清除。")) {
+                  onDeleteField?.(fieldKey)
+                }
+              }}
+              className="text-red-600"
+            >
+              删除字段
+            </ContextMenuItem>
+          </>
+        )}
         <ContextMenuSeparator />
         <ContextMenuItem onClick={() => onSortColumn?.(fieldKey, "asc")}>
           升序排序

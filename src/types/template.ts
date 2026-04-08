@@ -8,6 +8,7 @@ export interface TemplateListItem {
   fileSize: number;
   status: string; // TemplateStatus enum value
   createdAt: string; // ISO date string
+  screenshot: string | null; // 截图路径
   categoryName: string | null;
   tags: { id: string; name: string }[];
 }

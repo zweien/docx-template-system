@@ -20,6 +20,7 @@ function mapTemplateToListItem(row: {
   fileSize: number;
   status: string;
   createdAt: Date;
+  screenshot?: string | null;
   category?: { name: string } | null;
   tags?: { tag: { id: string; name: string } }[] | null;
 }): TemplateListItem {
@@ -31,6 +32,7 @@ function mapTemplateToListItem(row: {
     fileSize: row.fileSize,
     status: row.status,
     createdAt: row.createdAt.toISOString(),
+    screenshot: row.screenshot ?? null,
     categoryName: row.category?.name ?? null,
     tags: (row.tags ?? []).map((t) => ({ id: t.tag.id, name: t.tag.name })),
   };
@@ -163,6 +165,7 @@ export async function getTemplate(
         ...mapTemplateToListItem(template),
         categoryId: template.categoryId,
         description: template.description,
+        screenshot: template.screenshot,
         createdById: template.createdById,
         placeholders: template.placeholders.map(mapPlaceholderItem),
         // P2: 返回关联信息

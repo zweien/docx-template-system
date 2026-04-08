@@ -14,7 +14,6 @@ import {
   Users,
   PanelLeftClose,
   PanelLeftOpen,
-  Bot,
   Sparkles,
   FolderInput,
   Settings,
@@ -64,11 +63,6 @@ const navItems: NavItem[] = [
     title: "我的草稿",
     href: "/drafts",
     icon: <PenLine className="h-4 w-4" />,
-  },
-  {
-    title: "AI 助手",
-    href: "/ai-agent",
-    icon: <Bot className="h-4 w-4" />,
   },
   {
     title: "AI 助手 2",

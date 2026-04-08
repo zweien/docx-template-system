@@ -13,7 +13,6 @@ import {
   Database,
   Menu,
   Users,
-  Bot,
   Sparkles,
   FolderInput,
 } from "lucide-react";
@@ -68,11 +67,6 @@ const navItems: NavItem[] = [
     title: "我的草稿",
     href: "/drafts",
     icon: <PenLine className="h-5 w-5" />,
-  },
-  {
-    title: "AI 助手",
-    href: "/ai-agent",
-    icon: <Bot className="h-5 w-5" />,
   },
   {
     title: "AI 助手 2",

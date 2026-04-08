@@ -16,6 +16,7 @@ interface CellContextMenuProps {
   fields: DataFieldItem[]
   records: DataRecordItem[]
   onEditCell?: (recordId: string, fieldKey: string) => void
+  onEditField?: (fieldKey: string) => void
   onCopyCellValue?: (recordId: string, fieldKey: string) => void
   onInsertRow?: (referenceRecordId: string, position: "above" | "below") => void
   onDeleteRecord?: (recordId: string) => void
@@ -36,6 +37,7 @@ export function CellContextMenu({
   fields,
   records,
   onEditCell,
+  onEditField,
   onCopyCellValue,
   onInsertRow,
   onDeleteRecord,
@@ -134,6 +136,10 @@ export function CellContextMenu({
     if (targetType !== "colHeader" || !fieldKey || colIndex === null) return null
     return (
       <>
+        <ContextMenuItem onClick={() => onEditField?.(fieldKey)}>
+          修改
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem onClick={() => onSortColumn?.(fieldKey, "asc")}>
           升序排序
         </ContextMenuItem>

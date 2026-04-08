@@ -69,6 +69,7 @@ interface GridViewProps {
   deletingIds: Set<string>;
   onRefresh: () => void;
   onOpenDetail?: (recordId: string) => void;
+  onOpenFieldsConfig?: () => void;
   columnWidths: Record<string, number>;
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   frozenFieldCount?: number;
@@ -239,6 +240,7 @@ export function GridView({
   onReorderRecords,
   conditionalFormatRules,
   onQuickFormat,
+  onOpenFieldsConfig,
   columnAggregations,
   onColumnAggregationsChange,
 }: GridViewProps) {
@@ -1092,6 +1094,12 @@ export function GridView({
         }}
         onAutoFitColumn={(fieldKey) => handleAutoFit(fieldKey)}
         onOpenDetail={onOpenDetail}
+        onEditField={(fieldKey) => {
+          const field = fields.find((f) => f.key === fieldKey);
+          if (field) {
+            onOpenFieldsConfig?.();
+          }
+        }}
         onAddConditionalFormat={(fieldKey, value) => {
           onQuickFormat?.(fieldKey, value);
         }}

@@ -441,7 +441,6 @@ export function FieldConfigForm({
               >
                 <SelectTrigger
                   id="field-type-select"
-                  disabled={isPersistedField}
                 >
                   <SelectValue placeholder="选择类型">
                     {getFieldTypeLabel(fieldType)}

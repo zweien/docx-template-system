@@ -170,7 +170,7 @@ model Template {
   fileSize      Int
   status        TemplateStatus  @default(DRAFT)
   createdById   String
-  createdBy     User            @relation(fields: [createdById], references: [id])
+  createdBy     User            @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
   dataTableId   String?
@@ -250,7 +250,7 @@ model Draft {
   templateId String
   template   Template @relation(fields: [templateId], references: [id])
   userId     String
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   formData   Json
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -310,7 +310,7 @@ model DataTable {
   batchGenerations BatchGeneration[]
   templateVersions TemplateVersion[]
   views            DataView[]
-  createdBy        User              @relation(fields: [createdById], references: [id])
+  createdBy        User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdById      String
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -352,7 +352,7 @@ model DataRecord {
   relationRowsFrom DataRelationRow[] @relation("RelationRowsAsSource")
   relationRowsTo   DataRelationRow[] @relation("RelationRowsAsTarget")
   records          Record[]
-  createdBy        User              @relation(fields: [createdById], references: [id])
+  createdBy        User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdById      String
   updatedBy        User?             @relation("UpdatedByUser", fields: [updatedById], references: [id])
   updatedById      String?
@@ -412,7 +412,7 @@ model Record {
   templateId   String
   template     Template     @relation(fields: [templateId], references: [id])
   userId       String
-  user         User         @relation(fields: [userId], references: [id])
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   formData     Json
   status       RecordStatus @default(PENDING)
   fileName     String?
@@ -579,7 +579,7 @@ model Agent2Conversation {
   model      String   @default("gpt-4o")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages   Agent2Message[]
 
   @@index([userId, isFavorite])

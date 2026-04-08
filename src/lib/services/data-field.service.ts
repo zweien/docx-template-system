@@ -206,6 +206,7 @@ function buildFieldUpdateData(
   const updateData: Prisma.DataFieldUncheckedUpdateInput = {
     key: field.key,
     label: field.label,
+    type: field.type,
     required: field.required ?? false,
     options: toJsonInput(field.options),
     displayField: field.displayField ?? existing.displayField ?? null,

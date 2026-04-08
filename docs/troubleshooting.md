@@ -19,16 +19,16 @@ npm run dev
 
 这是 Linux 文件监听数量上限问题。
 
-当前仓库已经通过两种方式规避：
-
-- `npm run dev` 默认走 `webpack`
-- `next.config.ts` 开启轮询并忽略无关目录
-
-如果仍然出现：
+如果出现：
 
 1. 检查是否绕过了 `npm run dev`，直接手敲了别的 `next dev`
 2. 确认没有同时开很多重复的开发进程
 3. 再考虑提升系统 `inotify` 限制
+
+```bash
+# 临时提升限制
+echo 524288 | sudo tee /proc/sys/fs/inotify/max_user_watches
+```
 
 ## `/login` 能开，但点击统一登录失败
 

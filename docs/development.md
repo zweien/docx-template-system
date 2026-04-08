@@ -89,27 +89,14 @@ npm run dev
 - `http://localhost:8060/login`
 - `http://localhost:8060/login/ui-check`
 
-## 为什么默认不用 Turbopack
+## 开发服务器
 
-当前仓库开发态默认使用：
+仓库使用 Next.js 16 默认的 Turbopack：
 
-- `next dev --webpack`
-- `next build --webpack`
+- `next dev -p 8060` (Turbopack)
+- `next build` (Turbopack)
 
-原因不是功能依赖，而是本地环境稳定性：
-
-- Turbopack 在当前环境下容易碰到 file watcher 限制
-- `python-service/.venv` 的符号链接会干扰 Next.js 文件扫描
-
-为避免重复踩坑，当前已经在：
-
-- [`package.json`](/home/z/test-hub/docx-template-system/package.json)
-- [`next.config.ts`](/home/z/test-hub/docx-template-system/next.config.ts)
-
-里做了两层收敛：
-
-- 默认使用 `webpack`
-- 开发态改用轮询监听，并忽略无关大目录
+`npm run dev` 和 `npm run build` 命令已配置为使用 Turbopack。
 
 ## 当前开发态性能优化
 

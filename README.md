@@ -97,10 +97,8 @@ npm run dev
 
 说明：
 
-- `npm run dev` 和 `npm run build` 默认使用 `webpack`
-- 原因是当前开发环境下，Next.js 16 默认 Turbopack 会受到系统 file watch limit 和 `python-service/.venv` 符号链接问题影响
-- `next.config.ts` 已显式改成开发态轮询监听，并排除了 `.venv`、`.git`、`.next`、`.worktrees` 等大目录
-- 访问入口为 `http://localhost:8060`
+- `npm run dev` 默认使用 Turbopack（Next.js 16）
+- `npm run build` 使用 Turbopack 构建
 
 打开 http://localhost:8060/login ，点击“前往统一登录”：
 
@@ -118,12 +116,15 @@ npm run dev
 ### 常用命令
 
 ```bash
-npm run dev          # 启动开发服务器 (webpack, 端口 8060)
-npm run build        # 生产构建 (webpack)
+npm run dev          # 启动开发服务器 (Turbopack, 端口 8060)
+npm run build        # 生产构建 (Turbopack)
 npm run start        # 启动生产服务
 npm run lint         # ESLint 检查
 npm run test         # 运行测试 (watch 模式)
 npm run test:run     # 运行测试 (单次)
+npm run release      # 发布新版本 (自动 bump + CHANGELOG + git tag)
+npm run release:minor # 发布 minor 版本
+npm run release:major # 发布 major 版本
 npx prisma db push   # 同步数据库 schema
 npx prisma generate  # 生成 Prisma Client
 npx prisma studio    # 数据库可视化工具

@@ -64,7 +64,7 @@ model DocumentCollectionTask {
   renameRule      String
   renameVariables Json?
   createdById     String
-  createdBy       User                           @relation("CreatedCollectionTasks", fields: [createdById], references: [id])
+  createdBy       User                           @relation("CreatedCollectionTasks", fields: [createdById], references: [id], onDelete: Cascade)
   attachments     DocumentCollectionAttachment[]
   assignees       DocumentCollectionAssignee[]
   notifications Notification[]
@@ -85,7 +85,7 @@ model DocumentCollectionAttachment {
   fileSize         Int
   mimeType         String
   uploadedById     String
-  uploadedBy       User                   @relation("CollectionAttachments", fields: [uploadedById], references: [id])
+  uploadedBy       User                   @relation("CollectionAttachments", fields: [uploadedById], references: [id], onDelete: Cascade)
   createdAt        DateTime               @default(now())
 
   @@index([taskId])
@@ -96,7 +96,7 @@ model DocumentCollectionAssignee {
   taskId          String
   task            DocumentCollectionTask                @relation(fields: [taskId], references: [id], onDelete: Cascade)
   userId          String
-  user            User                                  @relation("AssignedCollectionTasks", fields: [userId], references: [id])
+  user            User                                  @relation("AssignedCollectionTasks", fields: [userId], references: [id], onDelete: Cascade)
   latestVersionId String?                               @unique
   latestVersion   DocumentCollectionSubmissionVersion?  @relation("LatestCollectionSubmissionVersion", fields: [latestVersionId, id], references: [id, assigneeId])
   submittedAt     DateTime?
@@ -121,7 +121,7 @@ model DocumentCollectionSubmissionVersion {
   fileSize           Int
   mimeType           String
   submittedById      String
-  submittedBy        User                        @relation("CollectionSubmissionVersions", fields: [submittedById], references: [id])
+  submittedBy        User                        @relation("CollectionSubmissionVersions", fields: [submittedById], references: [id], onDelete: Cascade)
   submittedAt        DateTime                    @default(now())
   note               String?
   isLate             Boolean                     @default(false)
@@ -234,7 +234,7 @@ model TemplateVersion {
   dataTable           DataTable?      @relation(fields: [dataTableId], references: [id], onDelete: SetNull)
   fieldMapping        Json?
   publishedById       String
-  publishedBy         User            @relation(fields: [publishedById], references: [id])
+  publishedBy         User            @relation(fields: [publishedById], references: [id], onDelete: Cascade)
   templateId          String
   template            Template        @relation("TemplateVersions", fields: [templateId], references: [id], onDelete: Cascade)
   isCurrentVersionOf  Template?       @relation("CurrentVersion")
@@ -354,7 +354,7 @@ model DataRecord {
   records          Record[]
   createdBy        User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdById      String
-  updatedBy        User?             @relation("UpdatedByUser", fields: [updatedById], references: [id])
+  updatedBy        User?             @relation("UpdatedByUser", fields: [updatedById], references: [id], onDelete: SetNull)
   updatedById      String?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -69,6 +70,7 @@ export function RecordTable({
   viewType = "GRID",
   onOpenDetail,
 }: RecordTableProps) {
+  const router = useRouter();
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [quickFormatField, setQuickFormatField] = useState<string | undefined>();
   const [quickFormatValue, setQuickFormatValue] = useState<string | undefined>();
@@ -195,6 +197,10 @@ export function RecordTable({
     [currentConfig.viewOptions, setViewOptions]
   );
 
+  const handleOpenFieldsConfig = useCallback(() => {
+    router.push(`/data/${tableId}/fields`);
+  }, [router, tableId]);
+
   // ── Frozen fields ──────────────────────────────────────────────────────
   const frozenFieldCount = (currentConfig.viewOptions.frozenFieldCount as number) ?? 0;
 
@@ -299,6 +305,7 @@ export function RecordTable({
             }}
             columnAggregations={columnAggregations}
             onColumnAggregationsChange={setColumnAggregations}
+            onOpenFieldsConfig={handleOpenFieldsConfig}
           />
         );
       case "KANBAN":

@@ -40,6 +40,7 @@ interface ChatAreaProps {
   conversationId: string
   onToggleSidebar: () => void
   sidebarCollapsed: boolean
+  defaultModel?: string
 }
 
 const SUGGESTIONS = [
@@ -88,11 +89,18 @@ function PromptInputAttachmentButton({ disabled = false }: { disabled?: boolean 
   )
 }
 
-export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed }: ChatAreaProps) {
+export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, defaultModel: initialDefaultModel }: ChatAreaProps) {
   const [modelName, setModelName] = useState("MiniMax-M2.5")
   const [model, setModel] = useState("MiniMax-M2.5")
   const [inputError, setInputError] = useState<string | null>(null)
   const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null)
+
+  // 当传入的 defaultModel 变化时，更新 model
+  useEffect(() => {
+    if (initialDefaultModel && initialDefaultModel !== model) {
+      setModel(initialDefaultModel)
+    }
+  }, [initialDefaultModel])
 
   const chatKey = `${conversationId}-${model}`
 

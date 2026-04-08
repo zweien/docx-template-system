@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
-import { saveTemplateDraft, deleteTemplateDir, type FilePathMeta } from "@/lib/file.service";
+import { saveTemplateDraft, deleteTemplateDir, deleteFile, type FilePathMeta } from "@/lib/file.service";
 import type { TemplateListItem, TemplateWithRelation } from "@/types/template";
 import type { PlaceholderItem } from "@/types/placeholder";
+import { join } from "path";
 
 // ── Unified return type ──
 
@@ -333,5 +334,49 @@ export async function changeStatus(
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新模板状态失败";
     return { success: false, error: { code: "STATUS_CHANGE_FAILED", message } };
+  }
+}
+
+export async function updateScreenshot(
+  id: string,
+  screenshotPath: string
+): Promise<ServiceResult<TemplateListItem>> {
+  try {
+    const template = await db.template.update({
+      where: { id },
+      data: { screenshot: screenshotPath },
+      include: {
+        category: { select: { name: true } },
+        tags: { include: { tag: { select: { id: true, name: true } } } },
+      },
+    });
+    return { success: true, data: mapTemplateToListItem(template) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新截图失败";
+    return { success: false, error: { code: "UPDATE_SCREENSHOT_FAILED", message } };
+  }
+}
+
+export async function deleteScreenshot(id: string): Promise<ServiceResult<TemplateListItem>> {
+  try {
+    const template = await db.template.findUnique({ where: { id } });
+    if (template?.screenshot) {
+      // 删除物理文件
+      const filePath = join(process.cwd(), "public", template.screenshot);
+      await deleteFile(filePath).catch(() => {});
+    }
+
+    const updated = await db.template.update({
+      where: { id },
+      data: { screenshot: null },
+      include: {
+        category: { select: { name: true } },
+        tags: { include: { tag: { select: { id: true, name: true } } } },
+      },
+    });
+    return { success: true, data: mapTemplateToListItem(updated) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "删除截图失败";
+    return { success: false, error: { code: "DELETE_SCREENSHOT_FAILED", message } };
   }
 }

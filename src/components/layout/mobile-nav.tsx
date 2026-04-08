@@ -69,7 +69,7 @@ const navItems: NavItem[] = [
     icon: <PenLine className="h-5 w-5" />,
   },
   {
-    title: "AI 助手 2",
+    title: "智能助手",
     href: "/ai-agent2",
     icon: <Sparkles className="h-5 w-5" />,
   },

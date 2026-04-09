@@ -60,7 +60,7 @@ export async function POST(
     const buffer = Buffer.from(await file.arrayBuffer());
     const ext = file.name.split(".").pop() || "png";
     const fileName = `${id}_screenshot_${Date.now()}.${ext}`;
-    const dir = join(process.cwd(), "public", UPLOAD_DIR, "templates");
+    const dir = join(process.cwd(), UPLOAD_DIR, "templates");
 
     if (!existsSync(dir)) await mkdir(dir, { recursive: true });
 

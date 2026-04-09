@@ -136,14 +136,44 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
           </Link>
         </div>
       ) : filtered.length === 0 ? null : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => (
             <Link key={t.id} href={`/templates/${t.id}/fill`}>
-              <Card className="h-full transition-colors hover:bg-accent cursor-pointer">
-                <CardContent className="flex flex-col gap-3 p-4">
-                  {t.screenshot && (
+              <Card className="transition-colors hover:bg-accent cursor-pointer">
+                <CardContent className="flex items-stretch gap-4 p-4">
+                  {/* 左侧：模板信息 */}
+                  <div className="flex flex-col justify-center min-w-0 flex-1 gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 shrink-0 text-primary" />
+                      <h3 className="text-base font-semibold leading-tight truncate">{t.name}</h3>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {t.currentVersion && (
+                        <Badge variant="secondary" className="text-xs">
+                          v{t.currentVersion.version}
+                        </Badge>
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(t.createdAt).toLocaleDateString("zh-CN")}
+                      </span>
+                    </div>
+                    {t.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {t.tags.slice(0, 2).map((tt) => (
+                          <Badge key={tt.tag.id} variant="secondary" className="text-xs">
+                            {tt.tag.name}
+                          </Badge>
+                        ))}
+                        {t.tags.length > 2 && (
+                          <span className="text-xs text-muted-foreground">+{t.tags.length - 2}</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {/* 右侧：缩略图 */}
+                  {t.screenshot ? (
                     <div
-                      className="relative -mx-4 -mt-4 cursor-pointer overflow-hidden"
+                      className="flex-shrink-0 w-20 cursor-pointer overflow-hidden rounded-md bg-muted/50 border"
                       onClick={(e) => {
                         e.preventDefault();
                         setLightboxImage(t.screenshot);
@@ -152,36 +182,12 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
                       <img
                         src={t.screenshot}
                         alt={t.name}
-                        className="h-28 w-full object-cover"
+                        className="h-full w-full object-contain p-1"
                       />
                     </div>
-                  )}
-                  <div className="flex items-start gap-3">
-                    <FileText className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-lg font-semibold leading-tight truncate">{t.name}</h3>
-                      <div className="flex items-center gap-2 mt-1">
-                        {t.currentVersion && (
-                          <Badge variant="secondary" className="text-xs">
-                            v{t.currentVersion.version}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(t.createdAt).toLocaleDateString("zh-CN")}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  {t.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {t.tags.slice(0, 3).map((tt) => (
-                        <Badge key={tt.tag.id} variant="secondary" className="text-xs">
-                          {tt.tag.name}
-                        </Badge>
-                      ))}
-                      {t.tags.length > 3 && (
-                        <span className="text-xs text-muted-foreground">+{t.tags.length - 3}</span>
-                      )}
+                  ) : (
+                    <div className="flex-shrink-0 w-20 flex items-center justify-center rounded-md bg-muted/50 border">
+                      <FileText className="h-8 w-8 text-muted-foreground/40" />
                     </div>
                   )}
                 </CardContent>

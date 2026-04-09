@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.7](https://github.com/zweien/docx-template-system/compare/v0.3.6...v0.3.7) (2026-04-09)
+
+
+### Features
+
+* 浅色/暗色主题切换功能 ([#26](https://github.com/zweien/docx-template-system/issues/26)) ([4d05bcf](https://github.com/zweien/docx-template-system/commit/4d05bcf0466ddab557a47d3826c7ceb53b6159c8)), closes [#24](https://github.com/zweien/docx-template-system/issues/24)
+* **api:** add screenshot upload/delete API ([e87188c](https://github.com/zweien/docx-template-system/commit/e87188cd8f1c38709c5e3c0d50563739a5870892))
+* **data:** 添加编辑数据表描述功能 ([#23](https://github.com/zweien/docx-template-system/issues/23)) ([d706af8](https://github.com/zweien/docx-template-system/commit/d706af83ea6ea9a7c2161aa40740012ef1f6a616))
+* **data:** 添加右键删除字段功能 ([#22](https://github.com/zweien/docx-template-system/issues/22)) ([6ee598e](https://github.com/zweien/docx-template-system/commit/6ee598e8859b1afd150ef6c49afd5ea99367cfdd))
+* **generate:** add screenshot thumbnail to template cards ([7c349b3](https://github.com/zweien/docx-template-system/commit/7c349b3d2fdd432dd1afa6b726bd7c45d5093c8f))
+* **generate:** include screenshot in template query ([ca7c247](https://github.com/zweien/docx-template-system/commit/ca7c247aea392be5d05bbf4dfa3c9fa57c09c8f9))
+* **template:** add screenshot field to Template model ([009d29c](https://github.com/zweien/docx-template-system/commit/009d29c8721a39fb9ca3dd15367bd75001faa738))
+* **template:** add updateScreenshot and deleteScreenshot methods ([683b712](https://github.com/zweien/docx-template-system/commit/683b7122c2d4d76f1c0010beae986e861d650648))
+* **template:** include screenshot in getTemplate response ([712697c](https://github.com/zweien/docx-template-system/commit/712697c608f49cfd665eb871fae20f162d0db8fd))
+* **template:** show screenshot on template detail page ([1c1614d](https://github.com/zweien/docx-template-system/commit/1c1614d9e0a45a4b31a472a6831d8afff1aae2c7))
+* **wizard:** add screenshot upload to template wizard ([c490e35](https://github.com/zweien/docx-template-system/commit/c490e351dd7dbb9073a8194bc8bbee71cf2d0cb9))
+
+
+### Bug Fixes
+
+* **auth:** 修复用户管理界面无法删除用户的问题 ([#21](https://github.com/zweien/docx-template-system/issues/21)) ([6a31de9](https://github.com/zweien/docx-template-system/commit/6a31de9c350223825dd26efc72dc5ff2f455ac1a))
+* ensure screenshot is passed to generate page client ([071a489](https://github.com/zweien/docx-template-system/commit/071a489e33bc9c3977733476720b81c60074f32c))
+* regenerate Prisma client and fix TypeScript errors ([708f252](https://github.com/zweien/docx-template-system/commit/708f2526c8aa9e436fd8430f56101bc0ce64869d))
+* screenshot path bug and improve template card layout ([a0dcebb](https://github.com/zweien/docx-template-system/commit/a0dcebb7e699b80cb57dfe0a1eaa47556624f8fc))
+
 ## [0.3.6](https://github.com/zweien/docx-template-system/compare/v0.3.5...v0.3.6) (2026-04-08)
 
 

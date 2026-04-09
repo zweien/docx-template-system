@@ -1238,7 +1238,7 @@ export const PromptInputSubmit = ({
         onStop();
         return;
       }
-      onClick?.(e as unknown as React.MouseEventHandler<HTMLButtonElement>);
+      onClick?.(e as any);
     },
     [isGenerating, onStop, onClick]
   );

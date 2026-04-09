@@ -164,6 +164,7 @@ model Template {
   id            String          @id @default(cuid())
   name          String
   description   String?
+  screenshot    String?         // 截图文件路径，相对于 public/uploads
   fileName          String
   originalFileName  String          @default("")
   filePath          String

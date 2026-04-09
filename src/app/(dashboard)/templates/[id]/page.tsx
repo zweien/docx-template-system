@@ -36,6 +36,7 @@ import { DataTableLinkWrapper } from "@/components/template/data-table-link-wrap
 import { VersionHistoryDialogWrapper } from "./version-history-wrapper";
 import { PlaceholderEditButton } from "./placeholder-edit-wrapper";
 import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
+import { ScreenshotViewer } from "@/components/templates/screenshot-viewer";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
@@ -125,6 +126,11 @@ export default async function TemplateDetailPage({
           </div>
           {template.description && (
             <p className="text-muted-foreground">{template.description}</p>
+          )}
+          {template.screenshot && (
+            <div className="mt-2 max-w-xs">
+              <ScreenshotViewer src={template.screenshot} alt={template.name} />
+            </div>
           )}
         </div>
 

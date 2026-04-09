@@ -79,9 +79,22 @@ gh issue view <id>
 git checkout -b feature/issue-<id>-<描述>
 # 完成开发后
 git push -u origin feature/issue-<id>-<描述>
-# 创建 PR
-gh pr create --title "[Feature] ..." --body "..."
+# 创建 PR 并关联 issue
+gh pr create --title "[Feature] ..." --body "$(cat <<'EOF'
+## Summary
+<描述>
+
+## Test plan
+- [ ] 测试功能
+
+Closes #<issue-id>
+EOF
+)"
 ```
+
+**PR 创建要求：**
+- 标题以 `[Feature]` 或 `[Fix]` 等前缀开头
+- Body 中使用 `Closes #<issue-id>` 关联 issue，合并 PR 时自动关闭
 
 当前处理的 issue:
 - #12: 模型管理标签页配置（管理员设置页面）

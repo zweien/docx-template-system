@@ -21,7 +21,7 @@ function Header({ children, className, ...props }: HeaderProps) {
   )
 }
 
-interface HeaderTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {}
+type HeaderTitleProps = React.HTMLAttributes<HTMLHeadingElement>
 
 function HeaderTitle({ className, ...props }: HeaderTitleProps) {
   return (

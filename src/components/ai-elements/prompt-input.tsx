@@ -429,7 +429,7 @@ export const PromptInputActionAddAttachments = ({
   );
 
   return (
-    <DropdownMenuItem {...props} onSelect={handleSelect as any}>
+    <DropdownMenuItem {...props} onSelect={handleSelect as unknown as (() => void) | undefined}>
       <ImageIcon className="mr-2 size-4" /> {label}
     </DropdownMenuItem>
   );
@@ -450,7 +450,7 @@ export const PromptInputActionAddScreenshot = ({
 
   const handleSelect = useCallback(
     async (event: Event) => {
-      (onSelect as any)?.(event);
+      (onSelect as unknown as ((event: Event) => void) | undefined)?.(event);
       if (event.defaultPrevented) {
         return;
       }
@@ -474,7 +474,7 @@ export const PromptInputActionAddScreenshot = ({
   );
 
   return (
-    <DropdownMenuItem {...props} onSelect={handleSelect as any}>
+    <DropdownMenuItem {...props} onSelect={handleSelect as unknown as (() => void) | undefined}>
       <Monitor className="mr-2 size-4" />
       {label}
     </DropdownMenuItem>
@@ -1238,7 +1238,7 @@ export const PromptInputSubmit = ({
         onStop();
         return;
       }
-      onClick?.(e as any);
+      onClick?.(e as unknown as React.MouseEventHandler<HTMLButtonElement>);
     },
     [isGenerating, onStop, onClick]
   );

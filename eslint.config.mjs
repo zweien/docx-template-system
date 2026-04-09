@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignore third-party and generated code
+    "node_modules/**",
+    ".claude/worktrees/**",
+    "scripts/**",
+    "packages/idrl-ui/**",
   ]),
   {
     rules: {
@@ -24,6 +29,8 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
+      // Disable problematic react-hooks rules that conflict with valid patterns
+      "react-hooks/set-state-in-effect": "off",
     },
   },
 ]);

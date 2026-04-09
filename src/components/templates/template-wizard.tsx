@@ -11,6 +11,7 @@ import {
   ArrowRight,
   Check,
   Loader2,
+  Image,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ interface TemplateInfo {
   fileSize: number;
   description: string | null;
   status: string;
+  screenshot: string | null;
   dataTableId: string | null;
   dataTable?: { id: string; name: string } | null;
   placeholderCount: number;
@@ -70,7 +72,13 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
   const [submitting, setSubmitting] = useState(false);
   const [loadingTemplate, setLoadingTemplate] = useState(isEditMode);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
   const configTableRef = useRef<PlaceholderConfigTableHandle>(null);
+
+  // Screenshot state
+  const [screenshot, setScreenshot] = useState<File | null>(null);
+  const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
+  const [existingScreenshot, setExistingScreenshot] = useState<string | null>(null);
 
   // Drag & drop state
   const [isDragOver, setIsDragOver] = useState(false);
@@ -112,6 +120,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
         setCategoryId(data.categoryId ?? null);
         setTagIds(data.tags?.map((t: { id: string; name: string }) => t.id) ?? []);
         setCurrentFileName(data.originalFileName || data.fileName);
+        setExistingScreenshot(data.screenshot);
       }
       setLoadingTemplate(false);
     };
@@ -157,6 +166,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
         originalFileName: template.originalFileName,
         fileSize: template.fileSize,
         description: template.description,
+        screenshot: template.screenshot,
         status: template.status,
         dataTableId: template.dataTableId,
         dataTable: template.dataTable,
@@ -209,6 +219,45 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
     setIsDragOver(false);
   };
 
+  const handleScreenshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!["image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"].includes(file.type)) {
+      toast.error("仅支持 png, jpg, jpeg, webp, gif 格式");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => setScreenshotPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    setScreenshot(file);
+  };
+
+  const handleScreenshotPaste = useCallback((e: ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (const item of Array.from(items)) {
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => setScreenshotPreview(ev.target?.result as string);
+          reader.readAsDataURL(file);
+          setScreenshot(file);
+        }
+        break;
+      }
+    }
+  }, []);
+
+  // Register paste handler
+  useEffect(() => {
+    document.addEventListener("paste", handleScreenshotPaste);
+    return () => document.removeEventListener("paste", handleScreenshotPaste);
+  }, [handleScreenshotPaste]);
+
   const handleStep1Submit = async () => {
     if (!name.trim()) {
       toast.error("请输入模板名称");
@@ -259,6 +308,16 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
           }
         }
 
+        // Upload screenshot if exists
+        if (screenshot && workingTemplateId) {
+          const screenshotFormData = new FormData();
+          screenshotFormData.append("screenshot", screenshot);
+          await fetch(`/api/templates/${workingTemplateId}/screenshot`, {
+            method: "POST",
+            body: screenshotFormData,
+          });
+        }
+
         toast.success("模板信息已更新");
       } else {
         // Create mode: upload new template
@@ -295,6 +354,16 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
         });
         if (parseRes.ok) {
           toast.success("占位符已自动解析");
+        }
+
+        // Upload screenshot if exists
+        if (screenshot) {
+          const screenshotFormData = new FormData();
+          screenshotFormData.append("screenshot", screenshot);
+          await fetch(`/api/templates/${newId}/screenshot`, {
+            method: "POST",
+            body: screenshotFormData,
+          });
         }
 
         toast.success("模板创建成功");
@@ -522,6 +591,69 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
               <div className="space-y-2">
                 <label className="text-sm font-medium">标签（可选）</label>
                 <TagMultiSelect value={tagIds} onChange={setTagIds} />
+              </div>
+
+              {/* Screenshot Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">模板截图（可选）</label>
+                <div
+                  className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 transition-colors ${
+                    screenshotPreview
+                      ? "border-primary/50 bg-primary/5"
+                      : "border-border hover:border-primary/50 hover:bg-muted/50"
+                  }`}
+                  onClick={() => screenshotInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") screenshotInputRef.current?.click();
+                  }}
+                  tabIndex={0}
+                  role="button"
+                >
+                  {screenshotPreview ? (
+                    <div className="relative w-full">
+                      <img src={screenshotPreview} alt="截图预览" className="mx-auto max-h-32 object-contain" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setScreenshot(null);
+                          setScreenshotPreview(null);
+                        }}
+                        className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : existingScreenshot ? (
+                    <div className="relative w-full">
+                      <img src={existingScreenshot} alt="当前截图" className="mx-auto max-h-32 object-contain" />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setExistingScreenshot(null);
+                          setScreenshotPreview(null);
+                          setScreenshot(null);
+                        }}
+                        className="absolute -top-2 -right-2 rounded-full bg-destructive p-1 text-white"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Image className="mb-2 h-8 w-8 text-muted-foreground" alt="" />
+                      <p className="text-sm text-muted-foreground">点击选择图片或 Ctrl+V 粘贴</p>
+                    </>
+                  )}
+                </div>
+                <input
+                  ref={screenshotInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleScreenshotChange}
+                />
               </div>
             </div>
           )}

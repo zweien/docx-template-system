@@ -10,6 +10,7 @@ export default async function GeneratePage() {
       select: {
         id: true,
         name: true,
+        screenshot: true,
         categoryId: true,
         createdAt: true,
         category: { select: { name: true } },
@@ -22,7 +23,11 @@ export default async function GeneratePage() {
 
   return (
     <GeneratePageClient
-      templates={templates.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() }))}
+      templates={templates.map((t) => ({
+        ...t,
+        createdAt: t.createdAt.toISOString(),
+        screenshot: t.screenshot
+      }))}
       categories={categories}
       allTags={allTags}
     />

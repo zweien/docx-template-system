@@ -393,20 +393,24 @@ export const CodeBlockContent = ({
   const [asyncTokens, setAsyncTokens] = useState<TokenizedCode | null>(null);
   const asyncKeyRef = useRef({ code, language });
 
-  // Invalidate stale async tokens synchronously during render
-  if (
-    asyncKeyRef.current.code !== code ||
-    asyncKeyRef.current.language !== language
-  ) {
-    asyncKeyRef.current = { code, language };
-    setAsyncTokens(null);
-  }
+  // Track if we need to reset (for comparison in effect)
+  const prevKeyRef = useRef({ code, language });
 
   useEffect(() => {
     let cancelled = false;
 
+    // Check if code or language changed and we need to reset
+    const keyChanged =
+      prevKeyRef.current.code !== code ||
+      prevKeyRef.current.language !== language;
+    if (keyChanged) {
+      prevKeyRef.current = { code, language };
+    }
+
     highlightCode(code, language, (result) => {
-      if (!cancelled) {
+      if (cancelled) return;
+      // Only update if we didn't just reset, or if this is fresh result
+      if (!keyChanged || result) {
         setAsyncTokens(result);
       }
     });

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { DynamicForm } from "@/components/forms/dynamic-form";
+import { ScreenshotViewer } from "@/components/templates/screenshot-viewer";
 
 export default async function FillPage({
   params,
@@ -57,6 +58,11 @@ export default async function FillPage({
         <p className="text-muted-foreground">
           请填写以下字段，完成后点击「确认生成」来生成文档
         </p>
+        {template.screenshot && (
+          <div className="mt-4 max-w-xs">
+            <ScreenshotViewer src={template.screenshot} alt={template.name} />
+          </div>
+        )}
       </div>
 
       <DynamicForm

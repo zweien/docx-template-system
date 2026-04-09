@@ -440,7 +440,7 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
       {error && <p className="text-sm text-red-500">{error}</p>}
 
       {jsonSummary && (
-        <div className="border rounded-lg p-4 bg-zinc-50 text-sm space-y-1">
+        <div className="border rounded-lg p-4 bg-muted text-sm space-y-1">
           <div>来源表：{jsonSummary.tableName}</div>
           <div>字段数：{jsonSummary.fieldCount}</div>
           <div>记录数：{jsonSummary.recordCount}</div>
@@ -761,8 +761,8 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
             </div>
             <div className="text-sm text-blue-600">更新</div>
           </div>
-          <div className="bg-zinc-50 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-zinc-600">
+          <div className="bg-muted rounded-lg p-4 text-center">
+            <div className="text-2xl font-bold text-foreground">
               {result.skipped}
             </div>
             <div className="text-sm text-zinc-600">跳过</div>
@@ -859,7 +859,7 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
       </div>
 
       {/* Content */}
-      <div className="bg-white rounded-lg border p-6">
+      <div className="bg-card rounded-lg border p-6">
         {step === "upload" && renderUploadStep()}
         {step === "mapping" && renderMappingStep()}
         {step === "options" && renderOptionsStep()}

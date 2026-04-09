@@ -106,8 +106,8 @@ export function Step4Result({
 
       {/* 统计卡片 */}
       <div className="grid grid-cols-3 gap-4">
-        <div className="bg-zinc-50 rounded-lg p-4 text-center">
-          <div className="text-2xl font-bold text-zinc-600">{totalCount}</div>
+        <div className="bg-muted rounded-lg p-4 text-center">
+          <div className="text-2xl font-bold text-foreground">{totalCount}</div>
           <div className="text-sm text-zinc-500">总记录数</div>
         </div>
         <div className="bg-green-50 rounded-lg p-4 text-center">

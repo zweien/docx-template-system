@@ -143,7 +143,7 @@ export function Step3Settings({
           onValueChange={(v) => handleOutputMethodChange(v as "DOWNLOAD" | "SAVE_TO_RECORDS")}
           className="space-y-3"
         >
-          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-zinc-50 cursor-pointer">
+          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted cursor-pointer">
             <RadioGroupItem value="DOWNLOAD" id="download" className="mt-0.5" />
             <div className="flex-1">
               <label htmlFor="download" className="font-medium cursor-pointer">
@@ -154,7 +154,7 @@ export function Step3Settings({
               </p>
             </div>
           </div>
-          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-zinc-50 cursor-pointer">
+          <div className="flex items-start space-x-3 p-4 border rounded-lg hover:bg-muted cursor-pointer">
             <RadioGroupItem value="SAVE_TO_RECORDS" id="save" className="mt-0.5" />
             <div className="flex-1">
               <label htmlFor="save" className="font-medium cursor-pointer">

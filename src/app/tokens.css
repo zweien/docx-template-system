@@ -75,6 +75,35 @@
   --font-mono: "Geist Mono", ui-monospace, monospace;
 }
 
+/* 暗色主题覆盖 */
+.dark {
+  --color-background: #09090B;
+  --color-background-subtle: #18181B;
+  --color-card: #18181B;
+  --color-card-foreground: #FAFAFA;
+  --color-popover: #18181B;
+  --color-popover-foreground: #FAFAFA;
+  --color-secondary: #27272A;
+  --color-secondary-foreground: #FAFAFA;
+  --color-muted: #27272A;
+  --color-muted-foreground: #A1A1AA;
+  --color-accent: #1E293B;
+  --color-accent-foreground: #FAFAFA;
+
+  --color-border: #27272A;
+  --color-border-hover: #3F3F46;
+  --color-input: #27272A;
+  --color-ring: #3B82F6;
+
+  --color-foreground: #FAFAFA;
+  --color-text-primary: #FAFAFA;
+  --color-text-secondary: #A1A1AA;
+  --color-text-muted: #71717A;
+
+  --color-destructive: #EF4444;
+  --color-destructive-foreground: #FAFAFA;
+}
+
 /* 移动端适配 */
 @media (max-width: 640px) {
   :root {

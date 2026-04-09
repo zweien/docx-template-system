@@ -27,7 +27,7 @@ export function AIChatShell({ initialTableId }: AIChatShellProps) {
   );
 
   return (
-    <div className="flex h-full min-h-0 overflow-hidden rounded-lg border bg-white">
+    <div className="flex h-full min-h-0 overflow-hidden rounded-lg border bg-card">
       <div className="hidden h-full min-h-0 shrink-0 lg:block lg:w-[280px]">
         <ConversationSidebar
           conversations={conversations}

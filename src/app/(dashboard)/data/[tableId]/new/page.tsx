@@ -67,7 +67,7 @@ export default async function NewRecordPage({ params }: PageProps) {
       </div>
 
       {/* Form */}
-      <div className="bg-white rounded-lg border p-6">
+      <div className="bg-card rounded-lg border p-6">
         <DynamicRecordForm
           tableId={tableId}
           fields={table.fields}

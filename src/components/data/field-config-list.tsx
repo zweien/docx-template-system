@@ -255,7 +255,7 @@ export function FieldConfigList({
                   className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors ${
                     isSelected
                       ? "bg-zinc-900 text-white border-zinc-900"
-                      : "bg-white text-zinc-600 border-zinc-200 hover:border-zinc-400"
+                      : "bg-card text-muted-foreground border-border hover:border-border-hover"
                   }`}
                 >
                   {f.label}

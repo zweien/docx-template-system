@@ -229,7 +229,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
           </div>
 
           {summary?.mode === "single" && (
-            <div className="border rounded-lg p-4 bg-zinc-50 text-sm space-y-1">
+            <div className="border rounded-lg p-4 bg-muted text-sm space-y-1">
               <div className="font-medium">{summary.tableName}</div>
               {summary.description && (
                 <div className="text-zinc-500">{summary.description}</div>
@@ -241,7 +241,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
           )}
 
           {summary?.mode === "bundle" && (
-            <div className="border rounded-lg p-4 bg-zinc-50 text-sm space-y-2">
+            <div className="border rounded-lg p-4 bg-muted text-sm space-y-2">
               <div className="font-medium">
                 关联数据导出（包含 {summary.tableCount} 个表，共 {summary.totalRecords} 条记录）
               </div>

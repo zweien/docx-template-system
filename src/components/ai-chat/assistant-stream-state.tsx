@@ -75,10 +75,10 @@ export function AssistantStreamState({
 
   return (
     <details
-      className="mb-2 rounded-md bg-white/80 px-2 py-1.5 ring-1 ring-black/5"
+      className="mb-2 rounded-md bg-card/80 px-2 py-1.5 ring-1 ring-black/5 dark:ring-white/5"
       open={isStreaming}
     >
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-zinc-500 [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-xs text-muted-foreground [&::-webkit-details-marker]:hidden">
         <span
           className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ring-1 ${summaryTone}`}
         >
@@ -112,7 +112,7 @@ export function AssistantStreamState({
       </summary>
 
       {timeline.length > 0 ? (
-        <ol className="mt-2 space-y-1 border-l border-zinc-200 pl-3 text-xs text-zinc-600">
+        <ol className="mt-2 space-y-1 border-l border-border pl-3 text-xs text-muted-foreground">
           {timeline.map((item, index) => {
             const isCurrent = index === timeline.length - 1;
             const isCompleted = !isStreaming || index < timeline.length - 1;

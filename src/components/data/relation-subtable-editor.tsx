@@ -273,7 +273,7 @@ export function RelationSubtableEditor({
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-md bg-zinc-50 p-3 text-sm text-zinc-500">
+        <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
           暂无关联记录
         </div>
       ) : (
@@ -282,7 +282,7 @@ export function RelationSubtableEditor({
             <div
               key={`${item.targetRecordId || "new"}-${rowIndex}`}
               data-testid="relation-row"
-              className="rounded-md border bg-white p-3"
+              className="rounded-md border bg-card p-3"
             >
               <div className="grid gap-3 md:grid-cols-[minmax(180px,1.2fr)_minmax(0,2fr)_auto]">
                 <div className="grid gap-1">

@@ -35,7 +35,7 @@ export function ConversationSidebar({
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   return (
-    <aside className="flex h-full w-full max-w-72 flex-col border-r bg-white">
+    <aside className="flex h-full w-full max-w-72 flex-col border-r bg-card">
       <div className="border-b p-4">
         <Button className="w-full" onClick={() => void onCreateConversation()}>
           新建对话
@@ -55,7 +55,7 @@ export function ConversationSidebar({
                 className={`flex items-center gap-2 rounded-lg px-2 py-2 transition ${
                   conversation.id === currentConversationId
                     ? "bg-zinc-900 text-white"
-                    : "bg-zinc-100 text-zinc-800 hover:bg-zinc-200"
+                    : "bg-zinc-100 text-zinc-800 hover:bg-zinc-200 dark:bg-muted dark:text-foreground dark:hover:bg-accent"
                 }`}
               >
                 {deletingId === conversation.id ? (
@@ -86,7 +86,7 @@ export function ConversationSidebar({
                 ) : editingId === conversation.id ? (
                   <>
                     <Input
-                      className="h-8 flex-1 bg-white text-zinc-900"
+                      className="h-8 flex-1 bg-card text-foreground"
                       onChange={(event) => setDraftTitle(event.target.value)}
                       value={draftTitle}
                     />

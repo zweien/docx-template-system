@@ -24,7 +24,7 @@ export function BooleanCellEditor({ initialValue, onCommit }: BooleanCellEditorP
         className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
           newValue
             ? "bg-green-500 border-green-500"
-            : "bg-white border-zinc-300"
+            : "bg-card border-border"
         }`}
       >
         {newValue && (

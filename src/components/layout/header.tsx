@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NotificationBell } from "@/components/layout/notification-bell";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 const routeTitles: Record<string, string> = {
   "/": "仪表盘",
@@ -28,6 +29,7 @@ export function Header() {
         <h1 className="text-base sm:text-lg font-semibold truncate">{title}</h1>
       </div>
 
+      <ThemeToggle />
       <NotificationBell />
     </header>
   );

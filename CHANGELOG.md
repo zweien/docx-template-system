@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.8](https://github.com/zweien/docx-template-system/compare/v0.3.7...v0.3.8) (2026-04-09)
+
+
+### Bug Fixes
+
+* prompt-input BaseUIEvent type error ([57cb943](https://github.com/zweien/docx-template-system/commit/57cb943be8a718dc1238864d6f67e9a1bcec34de))
+
 ## [0.3.7](https://github.com/zweien/docx-template-system/compare/v0.3.6...v0.3.7) (2026-04-09)
 
 

@@ -144,25 +144,42 @@ export function FieldConfigForm({
   existingFieldKeys = [],
   onSubmit,
 }: FieldConfigFormProps) {
-  const [key, setKey] = useState("");
-  const [label, setLabel] = useState("");
-  const [fieldType, setFieldType] = useState<FieldType>(FieldType.TEXT);
-  const [required, setRequired] = useState(false);
-  const [defaultValue, setDefaultValue] = useState("");
-  const [optionsText, setOptionsText] = useState("");
-  const [selectedTableId, setSelectedTableId] = useState("");
-  const [selectedDisplayField, setSelectedDisplayField] = useState("");
-  const [relationCardinality, setRelationCardinality] =
-    useState<RelationCardinality>("SINGLE");
-  const [inverseRelationCardinality, setInverseRelationCardinality] =
-    useState<RelationCardinality>("SINGLE");
-  const [relationSchemaFields, setRelationSchemaFields] = useState<
-    RelationSchemaFieldDraft[]
-  >([]);
-  const [relationFields, setRelationFields] = useState<DataFieldItem[]>([]);
+  // Initialize state from field prop - only run once when field changes
+  const [key, setKey] = useState(() => field?.key ?? "");
+  const [label, setLabel] = useState(() => field?.label ?? "");
+  const [fieldType, setFieldType] = useState<FieldType>(() => field?.type ?? FieldType.TEXT);
+  const [required, setRequired] = useState(() => field?.required ?? false);
+  const [defaultValue, setDefaultValue] = useState(() => field?.defaultValue ?? "");
+  const [optionsText, setOptionsText] = useState(() =>
+    Array.isArray(field?.options) ? field.options.join("\n") : ""
+  );
+  const [selectedTableId, setSelectedTableId] = useState(() => field?.relationTo ?? "");
+  const [selectedDisplayField, setSelectedDisplayField] = useState(() => field?.displayField ?? "");
+  const [relationCardinality, setRelationCardinality] = useState<RelationCardinality>(() =>
+    field?.relationCardinality ?? "SINGLE"
+  );
+  const [inverseRelationCardinality, setInverseRelationCardinality] = useState<RelationCardinality>(() =>
+    field?.inverseRelationCardinality ?? (field?.relationCardinality === "MULTIPLE" ? "MULTIPLE" : "SINGLE")
+  );
+  const [relationSchemaFields, setRelationSchemaFields] = useState<RelationSchemaFieldDraft[]>(() =>
+    buildRelationSchemaDraft(field?.relationSchema?.fields)
+  );
+  const [relationFields, setRelationFields] = useState<DataFieldItem[]>(() => {
+    if (field?.relationTo) {
+      const table = availableTables.find((item) => item.id === field.relationTo);
+      return table?.fields ?? [];
+    }
+    return [];
+  });
   const [loadingFields, setLoadingFields] = useState(false);
-  const [formulaExpression, setFormulaExpression] = useState("");
-  const [systemFieldKind, setSystemFieldKind] = useState<"created" | "updated">("created");
+  const [formulaExpression, setFormulaExpression] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return opts.formula ?? "";
+  });
+  const [systemFieldKind, setSystemFieldKind] = useState<"created" | "updated">(() => {
+    const opts = parseFieldOptions(field?.options);
+    return opts.kind ?? "created";
+  });
   const [error, setError] = useState("");
 
   const isRelationType =
@@ -184,43 +201,12 @@ export function FieldConfigForm({
     return buildInverseFieldPreview(key);
   }, [field?.key, isSystemManagedInverse, key]);
 
+  // Sync error when form opens/closes
   useEffect(() => {
-    if (!open) return;
-
-    const nextFieldType = field?.type ?? FieldType.TEXT;
-    const nextRelationCardinality = field?.relationCardinality ?? "SINGLE";
-    const nextInverseRelationCardinality =
-      field?.inverseRelationCardinality ??
-      (nextRelationCardinality === "MULTIPLE" ? "MULTIPLE" : "SINGLE");
-
-    setKey(field?.key ?? "");
-    setLabel(field?.label ?? "");
-    setFieldType(nextFieldType);
-    setRequired(field?.required ?? false);
-    setDefaultValue(field?.defaultValue ?? "");
-    setOptionsText(Array.isArray(field?.options) ? field.options.join("\n") : "");
-    setSelectedTableId(field?.relationTo ?? "");
-    setSelectedDisplayField(field?.displayField ?? "");
-    setRelationCardinality(nextRelationCardinality);
-    setInverseRelationCardinality(nextInverseRelationCardinality);
-    setRelationSchemaFields(buildRelationSchemaDraft(field?.relationSchema?.fields));
-    // Parse formula from field options
-    const opts = parseFieldOptions(field?.options);
-    setFormulaExpression(opts.formula ?? "");
-    setSystemFieldKind(opts.kind ?? "created");
-    setError("");
-
-    if (field?.relationTo) {
-      const table = availableTables.find((item) => item.id === field.relationTo);
-      if (table?.fields?.length) {
-        setRelationFields(table.fields);
-      } else {
-        setRelationFields([]);
-      }
-    } else {
-      setRelationFields([]);
+    if (open) {
+      setError("");
     }
-  }, [availableTables, field, open]);
+  }, [open]);
 
   useEffect(() => {
     if (!selectedTableId) {

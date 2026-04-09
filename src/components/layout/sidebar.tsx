@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   LayoutDashboard,
   FileOutput,
@@ -89,20 +89,20 @@ const STORAGE_KEY = "sidebar-collapsed";
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
-    }
-
-    return localStorage.getItem(STORAGE_KEY) === "true";
-  });
-
+  const [collapsed, setCollapsed] = useState(false);
   const toggle = useCallback(() => {
     setCollapsed((prev) => {
       const next = !prev;
       localStorage.setItem(STORAGE_KEY, String(next));
       return next;
     });
+  }, []);
+
+  // Initialize from localStorage on mount
+  useEffect(() => {
+     
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored !== null) setCollapsed(stored === "true");
   }, []);
 
   return (

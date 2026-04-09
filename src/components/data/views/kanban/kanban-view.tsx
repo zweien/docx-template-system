@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { DataFieldItem, DataRecordItem, DataViewItem } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
 import { KanbanColumn } from "./kanban-column";
@@ -46,14 +46,8 @@ export function KanbanView({
 }: KanbanViewProps) {
   const groupField = resolveGroupField(view, fields);
 
-  if (!groupField) {
-    return (
-      <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-        看板视图需要配置一个 SELECT 类型的分组字段。
-        <br />在视图设置中设置 groupByField 或 groupBy。
-      </div>
-    );
-  }
+  // Early return placeholder - we'll render this after hooks
+  const [shouldReturn, setShouldReturn] = useState(false);
 
   const cardFieldKeys = Array.isArray(view.viewOptions.cardFields)
     ? view.viewOptions.cardFields.filter((key): key is string => typeof key === "string")
@@ -64,6 +58,7 @@ export function KanbanView({
   const titleField = resolveTitleField(cardFields.length > 0 ? cardFields : fields);
 
   const groupedRecords = useMemo(() => {
+    if (!groupField) return new Map<string, DataRecordItem[]>();
     const groups = new Map<string, DataRecordItem[]>();
     for (const option of (groupField.options as string[]) ?? []) {
       groups.set(option, []);
@@ -78,6 +73,21 @@ export function KanbanView({
     }
     return groups;
   }, [records, groupField]);
+
+  // Check if we need to show the error message
+  if (!groupField && !shouldReturn) {
+    // This is a workaround for ESLint rules-of-hooks
+    setShouldReturn(true);
+  }
+
+  if (!groupField) {
+    return (
+      <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+        看板视图需要配置一个 SELECT 类型的分组字段。
+        <br />在视图设置中设置 groupByField 或 groupBy。
+      </div>
+    );
+  }
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-2">

@@ -44,7 +44,7 @@ export function parseFormula(formula: string): AstNode {
 
   // comparison → additive (("=" | "!=" | ">" | "<" | ">=" | "<=") additive)?
   function parseComparison(): AstNode {
-    let left = parseAdditive();
+    const left = parseAdditive();
     const token = peek();
     if (token?.type === "COMPARISON") {
       const op = advance().value;

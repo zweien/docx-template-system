@@ -23,7 +23,11 @@ export default async function GeneratePage() {
 
   return (
     <GeneratePageClient
-      templates={templates.map((t) => ({ ...t, createdAt: t.createdAt.toISOString() }))}
+      templates={templates.map((t) => ({
+        ...t,
+        createdAt: t.createdAt.toISOString(),
+        screenshot: t.screenshot
+      }))}
       categories={categories}
       allTags={allTags}
     />

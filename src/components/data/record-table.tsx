@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, Plus } from "lucide-react";
+import { Download, Plus, X } from "lucide-react";
 import type {
   DataFieldItem,
   DataViewItem,
@@ -175,6 +175,14 @@ export function RecordTable({
     [handleSortChange]
   );
 
+  // ── Sort clear handler (removes sort for a specific field) ──────────────
+  const handleSortClear = useCallback(
+    (fieldKey: string) => {
+      handleSortChange(fieldKey, null);
+    },
+    [handleSortChange]
+  );
+
   // ── Field config change handler ──────────────────────────────────────────
   const handleFieldConfigChange = useCallback(
     (nextVisibleFields: string[], nextFieldOrder: string[]) => {
@@ -284,6 +292,7 @@ export function RecordTable({
             groupBy={currentConfig.groupBy}
             onFilterChange={handleFilterChange}
             onSortChange={handleGridViewSortChange}
+            onSortClear={handleSortClear}
             onVisibleFieldsChange={setVisibleFields}
             onFieldOrderChange={setFieldOrder}
             onGroupByChange={setGroupBy}
@@ -363,6 +372,21 @@ export function RecordTable({
             filters={currentConfig.filters}
             onChange={setFilters}
           />
+          {(currentConfig.filters.length > 0 || currentConfig.sortBy.length > 0 || search) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 text-muted-foreground"
+              onClick={() => {
+                setFilters([]);
+                setSorts([]);
+                setSearchInput("");
+              }}
+            >
+              <X className="h-3.5 w-3.5 mr-1" />
+              清除筛选
+            </Button>
+          )}
           <ConditionalFormatDialog
             fields={fields}
             rules={conditionalFormatRules}

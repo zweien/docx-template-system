@@ -277,40 +277,56 @@ export async function listRecords(
       }
     }
 
-    const [records, total] = await Promise.all([
-      db.dataRecord.findMany({
-        where,
-        skip: (filters.page - 1) * filters.pageSize,
-        take: filters.pageSize,
-        orderBy: { createdAt: "desc" },
-        include: {
-          createdBy: { select: { name: true } },
-          updatedBy: { select: { name: true } },
-        },
-      }),
-      db.dataRecord.count({ where }),
-    ]);
+    // 当有 sortBy 时，需要先取全部数据排序再分页，否则排序只在当前页内生效
+    const hasSort = filters.sortBy && filters.sortBy.length > 0;
+    const sortableFields = hasSort
+      ? filters.sortBy!.filter((sortConfig) =>
+          tableResult.data.fields.some((field) => field.key === sortConfig.fieldKey)
+        )
+      : [];
 
-    // 优化：无排序时跳过内存处理
-    let processedRecords = records.map(mapRecordToItem);
+    let processedRecords: DataRecordItem[];
+    let total: number;
 
-    // 对于简单字段类型的排序，保持内存排序（JSONB 排序在 Prisma 中支持有限）
-    // 但仅在明确需要排序时执行
-    if (filters.sortBy && filters.sortBy.length > 0) {
-      const sortableFields = filters.sortBy.filter((sortConfig) =>
-        tableResult.data.fields.some((field) => field.key === sortConfig.fieldKey)
-      );
-
-      if (sortableFields.length > 0) {
-        processedRecords = [...processedRecords].sort((a, b) => {
-          for (const { fieldKey, order } of sortableFields) {
-            const result = compareRecordValues(a.data[fieldKey], b.data[fieldKey], order);
-            if (result !== 0) return result;
-          }
-
-          return 0;
-        });
-      }
+    if (sortableFields.length > 0) {
+      // 有排序：取全部匹配记录 → 内存排序 → 手动分页
+      const [allRecords, totalCount] = await Promise.all([
+        db.dataRecord.findMany({
+          where,
+          include: {
+            createdBy: { select: { name: true } },
+            updatedBy: { select: { name: true } },
+          },
+        }),
+        db.dataRecord.count({ where }),
+      ]);
+      total = totalCount;
+      processedRecords = allRecords.map(mapRecordToItem).sort((a, b) => {
+        for (const { fieldKey, order } of sortableFields) {
+          const result = compareRecordValues(a.data[fieldKey], b.data[fieldKey], order);
+          if (result !== 0) return result;
+        }
+        return 0;
+      });
+      const start = (filters.page - 1) * filters.pageSize;
+      processedRecords = processedRecords.slice(start, start + filters.pageSize);
+    } else {
+      // 无排序：直接 DB 分页（默认按创建时间倒序）
+      const [records, totalCount] = await Promise.all([
+        db.dataRecord.findMany({
+          where,
+          skip: (filters.page - 1) * filters.pageSize,
+          take: filters.pageSize,
+          orderBy: { createdAt: "desc" },
+          include: {
+            createdBy: { select: { name: true } },
+            updatedBy: { select: { name: true } },
+          },
+        }),
+        db.dataRecord.count({ where }),
+      ]);
+      total = totalCount;
+      processedRecords = records.map(mapRecordToItem);
     }
 
     // Resolve RELATION fields - batch fetch related records

@@ -62,6 +62,7 @@ interface GridViewProps {
   groupBy: string | null;
   onFilterChange: (filter: FilterCondition | null, fieldKey: string) => void;
   onSortChange: (sort: SortConfig | null) => void;
+  onSortClear: (fieldKey: string) => void;
   onVisibleFieldsChange: (fields: string[]) => void;
   onFieldOrderChange: (order: string[]) => void;
   onGroupByChange: (fieldKey: string | null) => void;
@@ -226,6 +227,7 @@ export function GridView({
   groupBy,
   onFilterChange,
   onSortChange,
+  onSortClear,
   onVisibleFieldsChange,
   onFieldOrderChange,
   onDeleteRecord,
@@ -1190,7 +1192,13 @@ export function GridView({
                     onFilterChange={(filter) =>
                       onFilterChange(filter, field.key)
                     }
-                    onSortChange={onSortChange}
+                    onSortChange={(sort) => {
+                      if (sort) {
+                        onSortChange(sort);
+                      } else {
+                        onSortClear(field.key);
+                      }
+                    }}
                     frozenFieldCount={frozenFieldCountValue}
                     index={index}
                     onFrozenFieldCountChange={onFrozenFieldCountChange}

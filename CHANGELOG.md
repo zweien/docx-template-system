@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.9](https://github.com/zweien/docx-template-system/compare/v0.3.8...v0.3.9) (2026-04-10)
+
+
+### Bug Fixes
+
+* 修复多处 Base UI Button 控制台错误 ([a33aa35](https://github.com/zweien/docx-template-system/commit/a33aa353051a5596a44d6a403ac3328d891c3167))
+* 移除 Lucide Image 组件多余的 alt 属性 ([c5eadc5](https://github.com/zweien/docx-template-system/commit/c5eadc506e777bcade4f96b25b51cf9815f2dc52))
+
 ## [0.3.8](https://github.com/zweien/docx-template-system/compare/v0.3.7...v0.3.8) (2026-04-09)
 
 

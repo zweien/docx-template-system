@@ -34,15 +34,9 @@ export function CollectionTaskCard({ task }: { task: DocumentCollectionTaskListI
             <span>待提交 {task.pendingCount}</span>
             <span>逾期 {task.lateCount}</span>
           </div>
-          <div onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-            <Button
-              nativeButton={false}
-              variant="outline"
-              render={<Link href={`/collections/${task.id}`} />}
-            >
-              查看详情
-            </Button>
-          </div>
+          <Button variant="outline">
+            查看详情
+          </Button>
         </CardContent>
       </Card>
     </Link>

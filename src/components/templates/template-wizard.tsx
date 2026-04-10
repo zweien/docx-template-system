@@ -761,6 +761,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
       <div className="flex items-center justify-between">
         <Button
           variant="outline"
+          nativeButton={false}
           render={<Link href={cancelHref} />}
         >
           取消

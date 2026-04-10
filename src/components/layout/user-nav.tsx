@@ -53,7 +53,7 @@ export function UserNav() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" className="relative h-9 w-9 rounded-full" nativeButton={false} />
+          <Button variant="ghost" className="relative h-9 w-9 rounded-full" />
         }
       >
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-900 text-sm font-medium text-white">

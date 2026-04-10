@@ -89,9 +89,9 @@ function PromptInputAttachmentButton({ disabled = false }: { disabled?: boolean 
   )
 }
 
-export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, defaultModel: initialDefaultModel }: ChatAreaProps) {
+export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, defaultModel }: ChatAreaProps) {
   const [modelName, setModelName] = useState("MiniMax-M2.5")
-  const [model, setModel] = useState(initialDefaultModel || "MiniMax-M2.5")
+  const [model, setModel] = useState(defaultModel || "MiniMax-M2.5")
   const [inputError, setInputError] = useState<string | null>(null)
   const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null)
 
@@ -114,34 +114,55 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, de
     }),
   })
 
-  // Load user's default model from settings
+  // Sync defaultModel prop changes to local state
   useEffect(() => {
-    fetch("/api/agent2/settings")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && data.data.defaultModel) {
-          setModel(data.data.defaultModel)
-          // 获取模型名称
-          return fetch("/api/agent2/models")
+    if (defaultModel) {
+      setModel(defaultModel)
+    }
+  }, [defaultModel])
+
+  // Load initial model settings + name on mount
+  useEffect(() => {
+    let active = true
+    void (async () => {
+      try {
+        const settingsRes = await fetch("/api/agent2/settings")
+        const settingsData = await settingsRes.json()
+        if (!active) return
+
+        const savedModel = settingsData.success ? settingsData.data.defaultModel : null
+        if (savedModel) {
+          setModel(savedModel)
         }
-        return null
-      })
-      .then((res) => {
-        if (!res) return
-        return res.json()
-      })
-      .then((data) => {
-        if (data?.success && data?.data) {
-          const models = data.data
-          const currentModel = models.find((m: { id: string }) => m.id === model)
-          if (currentModel) {
-            setModelName(currentModel.name)
-          }
+
+        const modelsRes = await fetch("/api/agent2/models")
+        const modelsData = await modelsRes.json()
+        if (!active || !modelsData?.success) return
+
+        const resolvedModel = savedModel || defaultModel || "MiniMax-M2.5"
+        const current = modelsData.data.find((m: { id: string }) => m.id === resolvedModel)
+        if (current) {
+          setModelName(current.name)
         }
+      } catch {
+        // fallback
+      }
+    })()
+    return () => { active = false }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Update model display name when model changes
+  useEffect(() => {
+    let active = true
+    fetch("/api/agent2/models")
+      .then(res => res.json())
+      .then(data => {
+        if (!active || !data?.success) return
+        const current = data.data.find((m: { id: string }) => m.id === model)
+        if (current) setModelName(current.name)
       })
-      .catch(() => {
-        // Use fallback model
-      })
+      .catch(() => {})
+    return () => { active = false }
   }, [model])
 
   useEffect(() => {

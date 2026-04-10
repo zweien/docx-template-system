@@ -642,7 +642,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
                     </div>
                   ) : (
                     <>
-                      <Image className="mb-2 h-8 w-8 text-muted-foreground" alt="" />
+                      <Image className="mb-2 h-8 w-8 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">点击选择图片或 Ctrl+V 粘贴</p>
                     </>
                   )}

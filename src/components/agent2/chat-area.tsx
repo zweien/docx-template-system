@@ -94,6 +94,9 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, de
   const [model, setModel] = useState(defaultModel || "MiniMax-M2.5")
   const [inputError, setInputError] = useState<string | null>(null)
   const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
 
   // 使用 conversationId 作为 chatKey，切换模型时不重新创建会话
   const chatKey = conversationId
@@ -249,8 +252,12 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, de
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-2 border-b shrink-0">
         <Button variant="ghost" size="icon-xs" onClick={onToggleSidebar}>
-          {sidebarCollapsed ? (
-            <PanelLeft className="size-4" />
+          {mounted ? (
+            sidebarCollapsed ? (
+              <PanelLeft className="size-4" />
+            ) : (
+              <PanelLeftClose className="size-4" />
+            )
           ) : (
             <PanelLeftClose className="size-4" />
           )}

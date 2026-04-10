@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateApiToken, apiErrorResponse } from "@/lib/api-token-auth";
+import { authenticateApiToken, apiErrorResponse, requireWriteAccess } from "@/lib/api-token-auth";
 import { getTemplate } from "@/lib/services/template.service";
 import { createRecord, generateDocument } from "@/lib/services/record.service";
 
@@ -12,6 +12,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   if (!authResult.success) {
     return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
   }
+
+  const writeError = requireWriteAccess(authResult.data);
+  if (writeError) return writeError;
 
   const { id } = await params;
 

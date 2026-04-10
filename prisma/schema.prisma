@@ -681,17 +681,23 @@ model Agent2McpServer {
 
 // ========== API Token (REST API) ==========
 
+enum ApiTokenPermission {
+  READ_ONLY
+  READ_WRITE
+}
+
 model ApiToken {
-  id              String    @id @default(cuid())
-  name            String    @db.VarChar(100)
-  tokenHash       String    @unique
+  id              String             @id @default(cuid())
+  name            String             @db.VarChar(100)
+  tokenHash       String             @unique
   tokenEncrypted  String
-  tokenPrefix     String    @db.VarChar(12)
+  tokenPrefix     String             @db.VarChar(12)
+  permission      ApiTokenPermission @default(READ_WRITE)
   userId          String
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   expiresAt       DateTime?
   lastUsedAt      DateTime?
-  createdAt       DateTime  @default(now())
+  createdAt       DateTime           @default(now())
   revokedAt       DateTime?
 
   @@index([tokenHash])

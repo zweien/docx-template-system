@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateApiToken, apiErrorResponse } from "@/lib/api-token-auth";
+import { authenticateApiToken, apiErrorResponse, requireWriteAccess } from "@/lib/api-token-auth";
 import {
   updateRecord,
   deleteRecord,
@@ -15,6 +15,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (!authResult.success) {
     return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
   }
+
+  const writeError = requireWriteAccess(authResult.data);
+  if (writeError) return writeError;
 
   const { recordId } = await params;
 
@@ -49,6 +52,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   if (!authResult.success) {
     return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
   }
+
+  const writeError = requireWriteAccess(authResult.data);
+  if (writeError) return writeError;
 
   const { recordId } = await params;
   const result = await deleteRecord(recordId);

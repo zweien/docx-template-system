@@ -37,8 +37,9 @@ export async function POST(request: NextRequest) {
     }
 
     const expiresInDays = body.expiresInDays as number | null | undefined;
+    const permission = body.permission === "READ_ONLY" ? "READ_ONLY" : "READ_WRITE";
 
-    const result = await createToken(session.user.id, name, expiresInDays ?? null);
+    const result = await createToken(session.user.id, name, expiresInDays ?? null, permission);
 
     if (!result.success) {
       return NextResponse.json(

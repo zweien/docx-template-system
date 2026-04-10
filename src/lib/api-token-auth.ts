@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { Role } from "@/generated/prisma/enums";
+import type { ApiTokenPermission } from "@/generated/prisma/enums";
 import { hashToken } from "@/lib/token-crypto";
 
 type ServiceResult<T> =
@@ -9,6 +10,7 @@ type ServiceResult<T> =
 export interface AuthenticatedUser {
   userId: string;
   role: Role;
+  permission: ApiTokenPermission;
 }
 
 /**
@@ -87,6 +89,7 @@ export async function authenticateApiToken(
       data: {
         userId: apiToken.user.id,
         role: apiToken.user.role,
+        permission: apiToken.permission,
       },
     };
   } catch (error) {
@@ -105,4 +108,12 @@ export function apiErrorResponse(
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+/** Check if authenticated user has write access, return error response if not */
+export function requireWriteAccess(user: AuthenticatedUser): Response | null {
+  if (user.permission === "READ_ONLY") {
+    return apiErrorResponse("FORBIDDEN", "此 Token 仅有只读权限", 403);
+  }
+  return null;
 }

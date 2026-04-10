@@ -30,6 +30,7 @@ interface TokenItem {
   lastUsedAt: string | null;
   createdAt: string;
   isRevoked: boolean;
+  permission: string;
 }
 
 export function ApiTokensTab() {
@@ -41,6 +42,7 @@ export function ApiTokensTab() {
   const [createOpen, setCreateOpen] = useState(false);
   const [tokenName, setTokenName] = useState("");
   const [expiresIn, setExpiresIn] = useState<string>("never");
+  const [permission, setPermission] = useState<string>("READ_WRITE");
 
   // Show token dialog state
   const [showTokenOpen, setShowTokenOpen] = useState(false);
@@ -91,6 +93,7 @@ export function ApiTokensTab() {
         body: JSON.stringify({
           name: tokenName.trim(),
           expiresInDays,
+          permission,
         }),
       });
 
@@ -101,6 +104,7 @@ export function ApiTokensTab() {
         setCreateOpen(false);
         setTokenName("");
         setExpiresIn("never");
+        setPermission("READ_WRITE");
         fetchTokens();
         toast.success("Token 创建成功");
       } else {
@@ -198,6 +202,18 @@ export function ApiTokensTab() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">权限</label>
+                <Select value={permission} onValueChange={(value) => setPermission(value ?? "READ_WRITE")}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="READ_WRITE">读写</SelectItem>
+                    <SelectItem value="READ_ONLY">只读</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
@@ -280,6 +296,7 @@ export function ApiTokensTab() {
               <tr className="border-b bg-muted/50">
                 <th className="text-left p-3 text-sm font-medium">名称</th>
                 <th className="text-left p-3 text-sm font-medium">Token</th>
+                <th className="text-left p-3 text-sm font-medium">权限</th>
                 <th className="text-left p-3 text-sm font-medium">过期时间</th>
                 <th className="text-left p-3 text-sm font-medium">最后使用</th>
                 <th className="text-left p-3 text-sm font-medium">状态</th>
@@ -292,6 +309,13 @@ export function ApiTokensTab() {
                   <td className="p-3 text-sm">{token.name}</td>
                   <td className="p-3 text-sm font-mono text-muted-foreground">
                     {token.tokenPrefix}...
+                  </td>
+                  <td className="p-3 text-sm">
+                    {token.permission === "READ_ONLY" ? (
+                      <span className="text-muted-foreground">只读</span>
+                    ) : (
+                      <span>读写</span>
+                    )}
                   </td>
                   <td className="p-3 text-sm text-muted-foreground">
                     {formatDate(token.expiresAt)}

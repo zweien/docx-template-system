@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { hashToken, encryptToken, decryptToken, generateToken, getTokenPrefix } from "@/lib/token-crypto";
+import type { ApiTokenPermission } from "@/generated/prisma/enums";
 
 type ServiceResult<T> =
   | { success: true; data: T }
@@ -9,6 +10,7 @@ export interface ApiTokenListItem {
   id: string;
   name: string;
   tokenPrefix: string;
+  permission: ApiTokenPermission;
   expiresAt: Date | null;
   lastUsedAt: Date | null;
   createdAt: Date;
@@ -34,6 +36,7 @@ export async function listTokens(
         id: t.id,
         name: t.name,
         tokenPrefix: t.tokenPrefix,
+        permission: t.permission,
         expiresAt: t.expiresAt,
         lastUsedAt: t.lastUsedAt,
         createdAt: t.createdAt,
@@ -49,7 +52,8 @@ export async function listTokens(
 export async function createToken(
   userId: string,
   name: string,
-  expiresInDays?: number | null
+  expiresInDays?: number | null,
+  permission: ApiTokenPermission = "READ_WRITE" as ApiTokenPermission
 ): Promise<ServiceResult<ApiTokenDetail>> {
   try {
     const token = generateToken();
@@ -69,6 +73,7 @@ export async function createToken(
         tokenHash,
         tokenEncrypted,
         tokenPrefix,
+        permission,
         userId,
         expiresAt,
       },
@@ -81,6 +86,7 @@ export async function createToken(
         name: record.name,
         token,
         tokenPrefix: record.tokenPrefix,
+        permission: record.permission,
         expiresAt: record.expiresAt,
         lastUsedAt: record.lastUsedAt,
         createdAt: record.createdAt,
@@ -118,6 +124,7 @@ export async function getTokenDetail(
         name: record.name,
         token,
         tokenPrefix: record.tokenPrefix,
+        permission: record.permission,
         expiresAt: record.expiresAt,
         lastUsedAt: record.lastUsedAt,
         createdAt: record.createdAt,

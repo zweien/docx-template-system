@@ -56,6 +56,10 @@ function getToolProgressLabel(toolName: string) {
     case "getTemplate":
       return "正在读取模板"
     default:
+      if (toolName.startsWith("mcp__")) {
+        const serverName = toolName.split("__")[1] || "";
+        return `正在调用 ${serverName} 工具`;
+      }
       return "正在处理工具调用"
   }
 }
@@ -273,7 +277,7 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
                             toolInput: confirmOutput.toolInput,
                             riskMessage: confirmOutput.riskMessage,
                             token: confirmOutput.token,
-                            toolCategory: confirmOutput.toolCategory || "execute",
+                            toolCategory: confirmOutput.toolCategory || (toolPart.toolName.startsWith("mcp__") ? "mcp" : "execute"),
                           })
                         }}
                       >

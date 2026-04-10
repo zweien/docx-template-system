@@ -18,6 +18,24 @@ export async function buildSystemPrompt(): Promise<string> {
 
   let tableContext = "";
 
+  let mcpContext = "";
+
+  try {
+    const { getEnabledMcpServers } = await import("@/lib/services/agent2-mcp.service");
+    const serversResult = await getEnabledMcpServers();
+    if (serversResult.success && serversResult.data.length > 0) {
+      mcpContext = "\n## 可用的 MCP 外部工具\n";
+      mcpContext += "你还可以使用以下 MCP 外部工具来获取外部数据。工具名称格式为 `mcp__服务器名__工具名`。\n\n";
+      for (const server of serversResult.data) {
+        const config = server.config as Record<string, unknown>;
+        mcpContext += `- **${server.name}** (${server.transportType}): ${config.url || config.command || ""}\n`;
+      }
+      mcpContext += "\n提示：使用 MCP 工具前，先了解该工具的参数要求。MCP 工具名称前缀为 `mcp__`。\n";
+    }
+  } catch {
+    // MCP 上下文获取失败不影响系统提示
+  }
+
   try {
     const tablesResult = await listTables();
     if (tablesResult.success && tablesResult.data.length > 0) {
@@ -59,6 +77,7 @@ export async function buildSystemPrompt(): Promise<string> {
 4. 主动提供帮助 — 根据用户意图推荐合适的工具
 5. 批量导入 — 用户上传文件后，解析内容并使用 batchCreateRecords 批量导入
 ${tableContext}
+${mcpContext}
 ## 回答语言
 默认使用中文回答，除非用户明确要求其他语言。`;
 

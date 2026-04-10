@@ -14,6 +14,8 @@ import {
   getLatestPersistableMessages,
   sanitizeStoredMessages,
 } from "@/lib/agent2/message-persistence";
+import { getEnabledMcpTools } from "@/lib/agent2/mcp-client";
+import type { MCPClient } from "@ai-sdk/mcp";
 import { db } from "@/lib/db";
 import { decrypt } from "@/lib/services/agent2-model.service";
 
@@ -25,6 +27,7 @@ export async function POST(
   request: NextRequest,
   { params }: RouteContext
 ) {
+  let mcpClients: MCPClient[] = [];
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json(
@@ -76,6 +79,11 @@ export async function POST(
     const messageId = randomUUID();
     const tools = createTools(conversationId, messageId, autoConfirm);
 
+    // Get MCP tools from enabled servers
+    const mcpResult = await getEnabledMcpTools(conversationId, messageId, autoConfirm);
+    mcpClients = mcpResult.clients;
+    const allTools = { ...tools, ...mcpResult.tools };
+
     // Load conversation history from DB
     const historyResult = await getMessages(conversationId);
     const historyMessages: UIMessage[] = historyResult.success
@@ -97,7 +105,7 @@ export async function POST(
 
     // Convert UIMessages to ModelMessages and truncate to prevent context overflow
     const convertedMessages = await convertToModelMessages(allMessages, {
-      tools,
+      tools: allTools,
       ignoreIncompleteToolCalls: true,
     });
     const messages = truncateMessages(convertedMessages as { role: string; content: string }[]) as typeof convertedMessages;
@@ -107,7 +115,7 @@ export async function POST(
       model,
       system: systemPrompt,
       messages,
-      tools,
+      tools: allTools,
       stopWhen: stepCountIs(10),
     });
 
@@ -117,6 +125,11 @@ export async function POST(
       sendSources: true,
       onFinish: async ({ messages }) => {
         try {
+          // Close MCP client connections
+          for (const client of mcpClients) {
+            try { await client.close(); } catch { /* best effort */ }
+          }
+
           const persistableMessages = getLatestPersistableMessages(
             messages as UIMessage[]
           );
@@ -136,6 +149,11 @@ export async function POST(
       },
     });
   } catch (error) {
+    // Close MCP clients on error
+    for (const client of mcpClients) {
+      try { await client.close(); } catch { /* best effort */ }
+    }
+
     if (error instanceof ZodError) {
       return NextResponse.json(
         { error: { code: "VALIDATION_ERROR", message: "参数校验失败" } },

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Switch } from "@/components/ui/switch"
 import { ModelManager } from "./model-manager"
+import { McpServerManager } from "./mcp-server-manager"
 
 interface SettingsDialogProps {
   open: boolean
@@ -51,6 +52,7 @@ export function SettingsDialog({ open, onOpenChange, onSettingsChange }: Setting
     { key: "write", label: "创建类工具", description: "创建记录、生成文档" },
     { key: "delete", label: "删除类工具", description: "删除记录" },
     { key: "execute", label: "执行类工具", description: "代码执行" },
+    { key: "mcp", label: "MCP 外部工具", description: "调用外部 MCP 服务器工具" },
   ]
 
   return (
@@ -64,6 +66,7 @@ export function SettingsDialog({ open, onOpenChange, onSettingsChange }: Setting
             <TabsTrigger value="tools" className="flex-1">工具执行</TabsTrigger>
             <TabsTrigger value="models" className="flex-1">模型管理</TabsTrigger>
             <TabsTrigger value="display" className="flex-1">显示设置</TabsTrigger>
+            <TabsTrigger value="mcp" className="flex-1">MCP 服务器</TabsTrigger>
           </TabsList>
           <TabsContent value="tools" className="space-y-4 mt-4">
             {toolCategories.map(cat => (
@@ -97,6 +100,9 @@ export function SettingsDialog({ open, onOpenChange, onSettingsChange }: Setting
                 onCheckedChange={(checked: boolean) => updateSettings({ showReasoning: checked })}
               />
             </div>
+          </TabsContent>
+          <TabsContent value="mcp" className="mt-4">
+            <McpServerManager />
           </TabsContent>
         </Tabs>
       </DialogContent>

@@ -16,7 +16,7 @@ if (!ENCRYPTION_KEY || !/^[0-9a-f]{64}$/i.test(ENCRYPTION_KEY)) {
   );
 }
 
-function encrypt(text: string): string {
+export function encrypt(text: string): string {
   if (!ENCRYPTION_KEY || ENCRYPTION_KEY.length !== 64) {
     throw new Error("MODEL_CONFIG_ENCRYPTION_KEY 未配置或无效（需要 64 位十六进制字符）");
   }

@@ -33,7 +33,7 @@ interface TokenItem {
 }
 
 export function ApiTokensTab() {
-  const { data: session } = useSession();
+  const { data: _session } = useSession();
   const [tokens, setTokens] = useState<TokenItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,7 +45,7 @@ export function ApiTokensTab() {
   // Show token dialog state
   const [showTokenOpen, setShowTokenOpen] = useState(false);
   const [revealedToken, setRevealedToken] = useState("");
-  const [revealingTokenId, setRevealingTokenId] = useState<string | null>(null);
+  const [_revealingTokenId, setRevealingTokenId] = useState<string | null>(null);
 
   // Created token dialog
   const [createdTokenOpen, setCreatedTokenOpen] = useState(false);

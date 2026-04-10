@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.3.10](https://github.com/zweien/docx-template-system/compare/v0.3.9...v0.3.10) (2026-04-10)
+
+
+### Features
+
+* **agent2:** 聊天流程集成 MCP 工具 ([82ab184](https://github.com/zweien/docx-template-system/commit/82ab184cd0f8729f6ecec7f37a1d2425b535b520))
+* **agent2:** 设置弹窗新增 MCP 服务器管理选项卡 ([2e3a234](https://github.com/zweien/docx-template-system/commit/2e3a2345c23b73d29333e98a8e22b21d78750e2c))
+* **agent2:** 系统提示增加 MCP 说明，确认机制增加 MCP 类别，工具来源标记 ([dec8424](https://github.com/zweien/docx-template-system/commit/dec8424d77b21f4c190099a7cce97da102341fc6))
+* **agent2:** 新增 MCP 服务器 CRUD 服务层 ([b26d03b](https://github.com/zweien/docx-template-system/commit/b26d03baf350fb888da8666cad88bd822f5c16d3))
+* **agent2:** 新增 MCP 服务器创建/更新校验 Schema ([cfd2753](https://github.com/zweien/docx-template-system/commit/cfd27530db4b7a6aa5d025bed572244ed5f339dd))
+* **agent2:** 新增 MCP 服务器管理 API 路由 ([ad8818b](https://github.com/zweien/docx-template-system/commit/ad8818b78f8f96d87fba09538a9f57220b6f1c57))
+* **agent2:** 新增 MCP 服务器管理器组件 ([8494383](https://github.com/zweien/docx-template-system/commit/84943831ca8b78b65bb18e023df9c4578473f12e))
+* **agent2:** 新增 MCP 服务器和工具相关类型定义 ([cc26508](https://github.com/zweien/docx-template-system/commit/cc265081a3bec49a9e5511d40ab6f8bb0963ac7f))
+* **agent2:** 新增 MCP 客户端管理和工具获取模块 ([3eac62c](https://github.com/zweien/docx-template-system/commit/3eac62ce26db55f29a4f18ec645a4dd90b42a89b))
+* **agent2:** 新增 McpTransportType 枚举和 Agent2McpServer 模型 ([22f4ed1](https://github.com/zweien/docx-template-system/commit/22f4ed1a242d424a73cf6af46d91c2173e680686))
+
+
+### Bug Fixes
+
+* 修复 Agent2 页面控制台错误 ([7514d52](https://github.com/zweien/docx-template-system/commit/7514d526a5f2e6a7e158bb33c1afd92bda2f989b))
+* 修复 Codex review 提出的三个问题 ([b9d4b23](https://github.com/zweien/docx-template-system/commit/b9d4b232298531f909a71eceaed000dfdfd13727))
+* 修复 MCP 模块类型错误（Zod v4 record、encrypt 导出、Prisma Json 类型） ([185b67c](https://github.com/zweien/docx-template-system/commit/185b67cc2fa298a8da4c348eb18763357145f1ed))
+* 修复 MCP 设置页面测试结果文本溢出对话框 ([49f4d77](https://github.com/zweien/docx-template-system/commit/49f4d77542bb0bbf587296fa840187854ad9742d))
+
 ## [0.3.9](https://github.com/zweien/docx-template-system/compare/v0.3.8...v0.3.9) (2026-04-10)
 
 

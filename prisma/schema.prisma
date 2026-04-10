@@ -47,6 +47,7 @@ model User {
   collectionAttachments        DocumentCollectionAttachment[]        @relation("CollectionAttachments")
   collectionSubmissionVersions DocumentCollectionSubmissionVersion[] @relation("CollectionSubmissionVersions")
   notifications                 Notification[]                       @relation("UserNotifications")
+  apiTokens                     ApiToken[]
 }
 
 enum TemplateStatus {
@@ -676,5 +677,25 @@ model Agent2McpServer {
   enabled       Boolean           @default(true)
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
+}
+
+// ========== API Token (REST API) ==========
+
+model ApiToken {
+  id              String    @id @default(cuid())
+  name            String    @db.VarChar(100)
+  tokenHash       String    @unique
+  tokenEncrypted  String
+  tokenPrefix     String    @db.VarChar(12)
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt       DateTime?
+  lastUsedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  revokedAt       DateTime?
+
+  @@index([tokenHash])
+  @@index([userId])
+  @@map("api_tokens")
 }
 

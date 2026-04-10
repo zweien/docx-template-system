@@ -209,18 +209,36 @@ export function McpServerManager() {
       </div>
       {f.transportType === "stdio" && (
         <>
-          <Input placeholder="命令 (如 npx, node, python)" value={f.command} onChange={e => setF(prev => ({ ...prev, command: e.target.value }))} />
-          <Input placeholder="参数 (空格分隔，可选)" value={f.args} onChange={e => setF(prev => ({ ...prev, args: e.target.value }))} />
-          <Input placeholder="环境变量 JSON (可选)" value={f.env} onChange={e => setF(prev => ({ ...prev, env: e.target.value }))} />
+          <div>
+            <label className="text-sm font-medium">命令</label>
+            <Input placeholder="如 npx, node, python" value={f.command} onChange={e => setF(prev => ({ ...prev, command: e.target.value }))} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-sm font-medium">参数</label>
+            <Input placeholder="空格分隔，可选" value={f.args} onChange={e => setF(prev => ({ ...prev, args: e.target.value }))} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-sm font-medium">环境变量 JSON</label>
+            <Input placeholder="可选" value={f.env} onChange={e => setF(prev => ({ ...prev, env: e.target.value }))} className="mt-1" />
+          </div>
         </>
       )}
       {(f.transportType === "sse" || f.transportType === "http") && (
         <>
-          <Input placeholder="URL (如 http://localhost:3000/mcp)" value={f.url} onChange={e => setF(prev => ({ ...prev, url: e.target.value }))} />
-          <Input placeholder="请求头 JSON (可选)" value={f.headers} onChange={e => setF(prev => ({ ...prev, headers: e.target.value }))} />
+          <div>
+            <label className="text-sm font-medium">URL</label>
+            <Input placeholder="如 http://localhost:3000/mcp" value={f.url} onChange={e => setF(prev => ({ ...prev, url: e.target.value }))} className="mt-1" />
+          </div>
+          <div>
+            <label className="text-sm font-medium">请求头 JSON</label>
+            <Input placeholder="可选" value={f.headers} onChange={e => setF(prev => ({ ...prev, headers: e.target.value }))} className="mt-1" />
+          </div>
         </>
       )}
-      <Input type="number" placeholder="连接超时 (ms，默认 5000)" value={f.timeout} onChange={e => setF(prev => ({ ...prev, timeout: e.target.value }))} />
+      <div>
+        <label className="text-sm font-medium">连接超时 (ms)</label>
+        <Input type="number" placeholder="默认 5000" value={f.timeout} onChange={e => setF(prev => ({ ...prev, timeout: e.target.value }))} className="mt-1" />
+      </div>
     </>
   )
 
@@ -249,11 +267,6 @@ export function McpServerManager() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  {testResult?.id === server.id && (
-                    <span className={`text-xs max-w-32 truncate ${testResult.success ? "text-green-500" : "text-destructive"}`}>
-                      {testResult.message}
-                    </span>
-                  )}
                   <Button variant="ghost" size="icon-xs" onClick={() => handleTest(server)} disabled={testingId === server.id} title="测试连接">
                     {testingId === server.id ? <span className="size-3 animate-spin">⟳</span> : <Wifi className="size-3" />}
                   </Button>
@@ -268,9 +281,14 @@ export function McpServerManager() {
                   </Button>
                 </div>
               </div>
-              {testResult?.id === server.id && testResult.success && testResult.tools && testResult.tools.length > 0 && (
-                <div className="mt-1 pl-4 text-xs text-muted-foreground">
-                  工具: {testResult.tools.map(t => t.name).join(", ")}
+              {testResult?.id === server.id && (
+                <div className={`mt-1 text-xs ${testResult.success ? "text-green-500" : "text-destructive"}`}>
+                  {testResult.message}
+                  {testResult.success && testResult.tools && testResult.tools.length > 0 && (
+                    <p className="text-muted-foreground mt-0.5">
+                      工具: {testResult.tools.map(t => t.name).join(", ")}
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -286,8 +304,14 @@ export function McpServerManager() {
         <DialogContent>
           <DialogHeader><DialogTitle>添加 MCP 服务器</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <Input placeholder="服务器名称" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-            <Input placeholder="描述 (可选)" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+            <div>
+              <label className="text-sm font-medium">服务器名称</label>
+              <Input placeholder="如 my-mcp-server" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">描述</label>
+              <Input placeholder="可选" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="mt-1" />
+            </div>
             {renderTransportFields(form, setForm)}
           </div>
           <DialogFooter>
@@ -302,8 +326,14 @@ export function McpServerManager() {
         <DialogContent>
           <DialogHeader><DialogTitle>编辑 MCP 服务器</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <Input placeholder="服务器名称" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} />
-            <Input placeholder="描述 (可选)" value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} />
+            <div>
+              <label className="text-sm font-medium">服务器名称</label>
+              <Input placeholder="如 my-mcp-server" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="mt-1" />
+            </div>
+            <div>
+              <label className="text-sm font-medium">描述</label>
+              <Input placeholder="可选" value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} className="mt-1" />
+            </div>
             {renderTransportFields(editForm, setEditForm)}
           </div>
           <DialogFooter>

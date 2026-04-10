@@ -55,3 +55,57 @@ export type ToolConfirmInput = z.infer<typeof toolConfirmSchema>;
 export type CreateModelInput = z.infer<typeof createModelSchema>;
 export type UpdateModelInput = z.infer<typeof updateModelSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
+
+// ============ MCP Server ============
+export const createMcpServerSchema = z.discriminatedUnion("transportType", [
+  z.object({
+    name: z.string().min(1).max(50),
+    description: z.string().max(200).optional(),
+    transportType: z.literal("stdio"),
+    config: z.object({
+      command: z.string().min(1),
+      args: z.array(z.string()).optional(),
+      env: z.record(z.string()).optional(),
+      timeout: z.number().min(1000).max(60000).optional(),
+    }),
+  }),
+  z.object({
+    name: z.string().min(1).max(50),
+    description: z.string().max(200).optional(),
+    transportType: z.literal("sse"),
+    config: z.object({
+      url: z.string().url(),
+      headers: z.record(z.string()).optional(),
+      timeout: z.number().min(1000).max(60000).optional(),
+    }),
+  }),
+  z.object({
+    name: z.string().min(1).max(50),
+    description: z.string().max(200).optional(),
+    transportType: z.literal("http"),
+    config: z.object({
+      url: z.string().url(),
+      headers: z.record(z.string()).optional(),
+      timeout: z.number().min(1000).max(60000).optional(),
+    }),
+  }),
+]);
+
+export const updateMcpServerSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  description: z.string().max(200).optional().nullable(),
+  enabled: z.boolean().optional(),
+  config: z
+    .object({
+      command: z.string().min(1).optional(),
+      args: z.array(z.string()).optional(),
+      env: z.record(z.string()).optional(),
+      url: z.string().url().optional(),
+      headers: z.record(z.string()).optional(),
+      timeout: z.number().min(1000).max(60000).optional(),
+    })
+    .optional(),
+});
+
+export type CreateMcpServerInput = z.infer<typeof createMcpServerSchema>;
+export type UpdateMcpServerInput = z.infer<typeof updateMcpServerSchema>;

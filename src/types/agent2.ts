@@ -106,3 +106,11 @@ export interface McpToolInfo {
   description?: string;
   inputSchema?: object;
 }
+
+// ============ Global Settings ============
+export interface Agent2GlobalSettingsData {
+  id: string;
+  suggestions: string[];
+  createdAt: string;
+  updatedAt: string;
+}

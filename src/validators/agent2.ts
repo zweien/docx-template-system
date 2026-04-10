@@ -109,3 +109,10 @@ export const updateMcpServerSchema = z.object({
 
 export type CreateMcpServerInput = z.infer<typeof createMcpServerSchema>;
 export type UpdateMcpServerInput = z.infer<typeof updateMcpServerSchema>;
+
+// ============ Global Settings ============
+export const updateGlobalSettingsSchema = z.object({
+  suggestions: z.array(z.string().min(1).max(200)).max(20).optional(),
+});
+
+export type UpdateGlobalSettingsInput = z.infer<typeof updateGlobalSettingsSchema>;

@@ -1,4 +1,5 @@
 import { AdminModelManager } from "@/components/agent2/admin-model-manager";
+import { SuggestionManager } from "@/components/agent2/suggestion-manager";
 import { ApiTokensTab } from "@/components/settings/api-tokens-tab";
 
 export default function AdminSettingsPage() {
@@ -12,6 +13,14 @@ export default function AdminSettingsPage() {
             在此处配置全局模型，这些模型将对所有用户可见。用户也可以添加自己的自定义模型。
           </p>
           <AdminModelManager />
+        </div>
+
+        <div className="bg-card rounded-lg border p-6">
+          <h2 className="text-lg font-semibold mb-4">对话建议配置</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            管理新对话中显示给用户的建议提示文本。
+          </p>
+          <SuggestionManager />
         </div>
 
         <div className="bg-card rounded-lg border p-6">

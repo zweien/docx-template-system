@@ -1,10 +1,11 @@
 import { NextRequest } from "next/server";
-import { authenticateApiToken, apiErrorResponse, requireWriteAccess } from "@/lib/api-token-auth";
+import { authenticateApiToken, apiErrorResponse, authErrorStatus, requireWriteAccess } from "@/lib/api-token-auth";
 import {
   updateRecord,
   deleteRecord,
 } from "@/lib/services/data-record.service";
 import { updateRecordSchema } from "@/validators/data-table";
+import { db } from "@/lib/db";
 
 interface RouteParams {
   params: Promise<{ id: string; recordId: string }>;
@@ -13,13 +14,19 @@ interface RouteParams {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const authResult = await authenticateApiToken(request);
   if (!authResult.success) {
-    return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
+    return apiErrorResponse(authResult.error.code, authResult.error.message, authErrorStatus(authResult.error.code));
   }
 
   const writeError = requireWriteAccess(authResult.data);
   if (writeError) return writeError;
 
-  const { recordId } = await params;
+  const { id, recordId } = await params;
+
+  // Verify record belongs to the declared table
+  const record = await db.dataRecord.findUnique({ where: { id: recordId }, select: { tableId: true } });
+  if (!record || record.tableId !== id) {
+    return apiErrorResponse("NOT_FOUND", "记录不存在或不属于该数据表", 404);
+  }
 
   try {
     const body = await request.json();
@@ -50,13 +57,20 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const authResult = await authenticateApiToken(request);
   if (!authResult.success) {
-    return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
+    return apiErrorResponse(authResult.error.code, authResult.error.message, authErrorStatus(authResult.error.code));
   }
 
   const writeError = requireWriteAccess(authResult.data);
   if (writeError) return writeError;
 
-  const { recordId } = await params;
+  const { id, recordId } = await params;
+
+  // Verify record belongs to the declared table
+  const record = await db.dataRecord.findUnique({ where: { id: recordId }, select: { tableId: true } });
+  if (!record || record.tableId !== id) {
+    return apiErrorResponse("NOT_FOUND", "记录不存在或不属于该数据表", 404);
+  }
+
   const result = await deleteRecord(recordId);
 
   if (!result.success) {

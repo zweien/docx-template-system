@@ -112,8 +112,17 @@ export function apiErrorResponse(
 
 /** Check if authenticated user has write access, return error response if not */
 export function requireWriteAccess(user: AuthenticatedUser): Response | null {
+  if (user.role !== "ADMIN") {
+    return apiErrorResponse("FORBIDDEN", "需要管理员权限", 403);
+  }
   if (user.permission === "READ_ONLY") {
     return apiErrorResponse("FORBIDDEN", "此 Token 仅有只读权限", 403);
   }
   return null;
+}
+
+/** Map auth error code to appropriate HTTP status */
+export function authErrorStatus(code: string): number {
+  if (code === "INTERNAL_ERROR") return 500;
+  return 401;
 }

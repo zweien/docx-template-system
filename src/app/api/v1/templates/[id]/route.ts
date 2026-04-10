@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateApiToken, apiErrorResponse } from "@/lib/api-token-auth";
+import { authenticateApiToken, apiErrorResponse, authErrorStatus } from "@/lib/api-token-auth";
 import { getTemplate } from "@/lib/services/template.service";
 
 interface RouteParams {
@@ -9,7 +9,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const authResult = await authenticateApiToken(request);
   if (!authResult.success) {
-    return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
+    return apiErrorResponse(authResult.error.code, authResult.error.message, authErrorStatus(authResult.error.code));
   }
 
   const { id } = await params;

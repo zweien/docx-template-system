@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
-import { authenticateApiToken, apiErrorResponse } from "@/lib/api-token-auth";
+import { authenticateApiToken, apiErrorResponse, authErrorStatus } from "@/lib/api-token-auth";
 import { listTemplates } from "@/lib/services/template.service";
 
 export async function GET(request: NextRequest) {
   const authResult = await authenticateApiToken(request);
   if (!authResult.success) {
-    return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
+    return apiErrorResponse(authResult.error.code, authResult.error.message, authErrorStatus(authResult.error.code));
   }
 
   const searchParams = request.nextUrl.searchParams;

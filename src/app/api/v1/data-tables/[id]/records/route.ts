@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateApiToken, apiErrorResponse, requireWriteAccess } from "@/lib/api-token-auth";
+import { authenticateApiToken, apiErrorResponse, authErrorStatus, requireWriteAccess } from "@/lib/api-token-auth";
 import {
   listRecords,
   createRecord,
@@ -13,7 +13,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const authResult = await authenticateApiToken(request);
   if (!authResult.success) {
-    return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
+    return apiErrorResponse(authResult.error.code, authResult.error.message, authErrorStatus(authResult.error.code));
   }
 
   const { id } = await params;
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const authResult = await authenticateApiToken(request);
   if (!authResult.success) {
-    return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
+    return apiErrorResponse(authResult.error.code, authResult.error.message, authErrorStatus(authResult.error.code));
   }
 
   const writeError = requireWriteAccess(authResult.data);

@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { authenticateApiToken, apiErrorResponse, requireWriteAccess } from "@/lib/api-token-auth";
+import { authenticateApiToken, apiErrorResponse, authErrorStatus, requireWriteAccess } from "@/lib/api-token-auth";
 import { getTemplate } from "@/lib/services/template.service";
 import { createRecord, generateDocument } from "@/lib/services/record.service";
 
@@ -10,7 +10,7 @@ interface RouteParams {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const authResult = await authenticateApiToken(request);
   if (!authResult.success) {
-    return apiErrorResponse(authResult.error.code, authResult.error.message, 401);
+    return apiErrorResponse(authResult.error.code, authResult.error.message, authErrorStatus(authResult.error.code));
   }
 
   const writeError = requireWriteAccess(authResult.data);

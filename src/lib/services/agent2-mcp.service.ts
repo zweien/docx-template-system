@@ -216,7 +216,29 @@ export async function updateMcpServer(
   if (data.enabled !== undefined) updateData.enabled = data.enabled;
   if (data.config !== undefined) {
     const transportType = existing.transportType as "stdio" | "sse" | "http";
-    updateData.config = encryptConfig(transportType, data.config);
+    const existingConfig = existing.config as Record<string, unknown>;
+    const newConfig = { ...data.config };
+
+    // Preserve encrypted values when the client sent masked placeholders
+    const MASK = "••••••••";
+    if (newConfig.headers && typeof newConfig.headers === "object") {
+      const existingHeaders = existingConfig.headers as Record<string, string> | undefined;
+      for (const [key, value] of Object.entries(newConfig.headers as Record<string, string>)) {
+        if (value === MASK && existingHeaders?.[key]) {
+          (newConfig.headers as Record<string, string>)[key] = existingHeaders[key];
+        }
+      }
+    }
+    if (transportType === "stdio" && newConfig.env && typeof newConfig.env === "object") {
+      const existingEnv = existingConfig.env as Record<string, string> | undefined;
+      for (const [key, value] of Object.entries(newConfig.env as Record<string, string>)) {
+        if (value === MASK && existingEnv?.[key]) {
+          (newConfig.env as Record<string, string>)[key] = existingEnv[key];
+        }
+      }
+    }
+
+    updateData.config = encryptConfig(transportType, newConfig);
   }
 
   const updated = await db.agent2McpServer.update({

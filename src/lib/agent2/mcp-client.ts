@@ -1,7 +1,10 @@
 import { createMCPClient } from "@ai-sdk/mcp";
 import type { MCPClient, MCPClientConfig } from "@ai-sdk/mcp";
-import type { Tool } from "ai";
+import type { Tool, ToolExecutionOptions } from "ai";
+import { tool } from "ai";
+import { z } from "zod";
 import { getEnabledMcpServers } from "@/lib/services/agent2-mcp.service";
+import { createConfirmToken, getRiskMessage } from "@/lib/agent2/confirm-store";
 
 type McpTransport = MCPClientConfig["transport"];
 
@@ -56,33 +59,39 @@ async function createMcpConnection(
 
     const client = await createMCPClient({ transport });
 
-    const toolsPromise = client.tools();
-    const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(
-        () =>
-          reject(
-            new Error(
-              `MCP 服务器 "${server.name}" 连接超时 (${timeout}ms)`
-            )
-          ),
-        timeout
-      )
-    );
+    try {
+      const toolsPromise = client.tools();
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(
+          () =>
+            reject(
+              new Error(
+                `MCP 服务器 "${server.name}" 连接超时 (${timeout}ms)`
+              )
+            ),
+          timeout
+        )
+      );
 
-    const rawTools = await Promise.race([toolsPromise, timeoutPromise]);
+      const rawTools = await Promise.race([toolsPromise, timeoutPromise]);
 
-    // Prefix tool names with mcp__{serverName}__ and add description tag
-    const prefixedTools: Record<string, Tool> = {};
-    for (const [toolName, toolDef] of Object.entries(rawTools)) {
-      const prefixedName = `mcp__${server.name}__${toolName}`;
-      const desc = (toolDef as { description?: string }).description;
-      prefixedTools[prefixedName] = {
-        ...toolDef,
-        description: `[MCP: ${server.name}] ${desc || toolName}`,
-      } as Tool;
+      // Prefix tool names with mcp__{serverName}__ and add description tag
+      const prefixedTools: Record<string, Tool> = {};
+      for (const [toolName, toolDef] of Object.entries(rawTools)) {
+        const prefixedName = `mcp__${server.name}__${toolName}`;
+        const desc = (toolDef as { description?: string }).description;
+        prefixedTools[prefixedName] = {
+          ...toolDef,
+          description: `[MCP: ${server.name}] ${desc || toolName}`,
+        } as Tool;
+      }
+
+      return { client, tools: prefixedTools };
+    } catch (error) {
+      // Close client on timeout or error to prevent resource leaks
+      try { await client.close(); } catch { /* best effort */ }
+      throw error;
     }
-
-    return { client, tools: prefixedTools };
   } catch (error) {
     console.warn(
       `[mcp-client] Failed to connect to "${server.name}":`,
@@ -93,9 +102,56 @@ async function createMcpConnection(
 }
 
 /**
- * 获取所有已启用 MCP 服务器的工具
+ * 将 MCP 工具包装确认机制
  */
-export async function getEnabledMcpTools(): Promise<McpToolsResult> {
+function wrapMcpToolWithConfirm(
+  prefixedName: string,
+  rawTool: Tool,
+  conversationId: string,
+  messageId: string,
+  autoConfirm: Record<string, boolean>
+): Tool {
+  if (!rawTool.execute) return rawTool;
+  const originalExecute = rawTool.execute;
+
+  return tool({
+    description: rawTool.description,
+    inputSchema: rawTool.inputSchema ?? z.object({}),
+    execute: async (args: unknown, context: ToolExecutionOptions) => {
+      const isAutoConfirmed = autoConfirm["mcp"] === true;
+      if (isAutoConfirmed) {
+        return originalExecute(args, context);
+      }
+
+      const tokenResult = await createConfirmToken(
+        conversationId,
+        messageId,
+        prefixedName,
+        args
+      );
+      if (!tokenResult.success) {
+        throw new Error(tokenResult.error.message);
+      }
+
+      return {
+        _needsConfirm: true,
+        token: tokenResult.data,
+        toolName: prefixedName,
+        toolInput: args,
+        riskMessage: getRiskMessage(prefixedName),
+      };
+    },
+  }) as Tool;
+}
+
+/**
+ * 获取所有已启用 MCP 服务器的工具（带确认包装）
+ */
+export async function getEnabledMcpTools(
+  conversationId: string,
+  messageId: string,
+  autoConfirm: Record<string, boolean>
+): Promise<McpToolsResult> {
   const result: McpToolsResult = {
     tools: {},
     clients: [],
@@ -118,7 +174,15 @@ export async function getEnabledMcpTools(): Promise<McpToolsResult> {
 
   for (const connection of connections) {
     if (connection) {
-      result.tools = { ...result.tools, ...connection.tools };
+      for (const [toolName, rawTool] of Object.entries(connection.tools)) {
+        result.tools[toolName] = wrapMcpToolWithConfirm(
+          toolName,
+          rawTool,
+          conversationId,
+          messageId,
+          autoConfirm
+        );
+      }
       result.clients.push(connection.client);
     }
   }

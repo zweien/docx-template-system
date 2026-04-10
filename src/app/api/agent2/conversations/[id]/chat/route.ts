@@ -80,7 +80,7 @@ export async function POST(
     const tools = createTools(conversationId, messageId, autoConfirm);
 
     // Get MCP tools from enabled servers
-    const mcpResult = await getEnabledMcpTools();
+    const mcpResult = await getEnabledMcpTools(conversationId, messageId, autoConfirm);
     mcpClients = mcpResult.clients;
     const allTools = { ...tools, ...mcpResult.tools };
 

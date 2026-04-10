@@ -14,6 +14,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow v1 API routes (uses Token auth, not session)
+  if (pathname.startsWith("/api/v1")) {
+    return NextResponse.next();
+  }
+
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
@@ -30,6 +35,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/|api/auth/|login$|favicon.ico|sitemap.xml|robots.txt).*)",
+    "/((?!_next/|api/auth/|api/v1/|login$|favicon.ico|sitemap.xml|robots.txt).*)",
   ],
 };

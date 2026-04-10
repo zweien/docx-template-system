@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { encrypt, decrypt } from "./agent2-model.service";
 import type { Agent2McpServerItem, McpServerConfig } from "@/types/agent2";
 import type { ServiceResult } from "@/types/data-table";
+import type { Prisma } from "@/generated/prisma/client";
 
 // ── Helpers ──
 
@@ -169,7 +170,7 @@ export async function createMcpServer(data: {
       name: data.name,
       description: data.description || null,
       transportType: data.transportType,
-      config: encryptedConfig,
+      config: encryptedConfig as unknown as Prisma.InputJsonValue,
       enabled: true,
     },
   });

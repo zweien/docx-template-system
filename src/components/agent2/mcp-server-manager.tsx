@@ -243,7 +243,7 @@ export function McpServerManager() {
                   <div className="min-w-0">
                     <p className="font-medium truncate">{server.name}</p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {server.transportType.toUpperCase()} · {config.url || config.command || ""}
+                      {server.transportType.toUpperCase()} · {String(config.url || config.command || "")}
                       {server.description && ` · ${server.description}`}
                     </p>
                   </div>

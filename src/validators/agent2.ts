@@ -65,7 +65,7 @@ export const createMcpServerSchema = z.discriminatedUnion("transportType", [
     config: z.object({
       command: z.string().min(1),
       args: z.array(z.string()).optional(),
-      env: z.record(z.string()).optional(),
+      env: z.record(z.string(), z.string()).optional(),
       timeout: z.number().min(1000).max(60000).optional(),
     }),
   }),
@@ -75,7 +75,7 @@ export const createMcpServerSchema = z.discriminatedUnion("transportType", [
     transportType: z.literal("sse"),
     config: z.object({
       url: z.string().url(),
-      headers: z.record(z.string()).optional(),
+      headers: z.record(z.string(), z.string()).optional(),
       timeout: z.number().min(1000).max(60000).optional(),
     }),
   }),
@@ -85,7 +85,7 @@ export const createMcpServerSchema = z.discriminatedUnion("transportType", [
     transportType: z.literal("http"),
     config: z.object({
       url: z.string().url(),
-      headers: z.record(z.string()).optional(),
+      headers: z.record(z.string(), z.string()).optional(),
       timeout: z.number().min(1000).max(60000).optional(),
     }),
   }),
@@ -99,9 +99,9 @@ export const updateMcpServerSchema = z.object({
     .object({
       command: z.string().min(1).optional(),
       args: z.array(z.string()).optional(),
-      env: z.record(z.string()).optional(),
+      env: z.record(z.string(), z.string()).optional(),
       url: z.string().url().optional(),
-      headers: z.record(z.string()).optional(),
+      headers: z.record(z.string(), z.string()).optional(),
       timeout: z.number().min(1000).max(60000).optional(),
     })
     .optional(),

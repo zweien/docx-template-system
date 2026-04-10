@@ -51,6 +51,7 @@ export function SettingsDialog({ open, onOpenChange, onSettingsChange }: Setting
     { key: "write", label: "创建类工具", description: "创建记录、生成文档" },
     { key: "delete", label: "删除类工具", description: "删除记录" },
     { key: "execute", label: "执行类工具", description: "代码执行" },
+    { key: "mcp", label: "MCP 外部工具", description: "调用外部 MCP 服务器工具" },
   ]
 
   return (

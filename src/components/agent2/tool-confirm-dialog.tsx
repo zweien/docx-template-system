@@ -85,7 +85,13 @@ export function ToolConfirmDialog({
         <div className="space-y-3">
           <div>
             <p className="text-sm font-medium mb-1">工具</p>
-            <code className="text-sm bg-muted px-2 py-1 rounded">{toolName}</code>
+            <code className="text-sm bg-muted px-2 py-1 rounded">
+              {toolName.startsWith("mcp__") ? (
+                <>{toolName} <span className="text-xs text-muted-foreground">[外部工具]</span></>
+              ) : (
+                toolName
+              )}
+            </code>
           </div>
           <div>
             <p className="text-sm font-medium mb-1">参数</p>

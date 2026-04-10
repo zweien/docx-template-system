@@ -31,7 +31,12 @@ export function needsConfirm(toolName: string): boolean {
 }
 
 export function getRiskMessage(toolName: string): string {
-  return RISK_MESSAGES[toolName] || "此操作需要确认";
+  if (RISK_MESSAGES[toolName]) return RISK_MESSAGES[toolName];
+  if (toolName.startsWith("mcp__")) {
+    const serverName = toolName.split("__")[1] || "";
+    return `此操作将调用外部 MCP 服务器 "${serverName}" 的工具`;
+  }
+  return "此操作需要确认";
 }
 
 export async function createConfirmToken(

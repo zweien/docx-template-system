@@ -83,3 +83,26 @@ export interface Agent2UploadResult {
   fileName: string;
   fileType: string;
 }
+
+// ============ MCP Server ============
+export interface Agent2McpServerItem {
+  id: string;
+  name: string;
+  description: string | null;
+  transportType: "stdio" | "sse" | "http";
+  config: McpServerConfig;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type McpServerConfig =
+  | { type: "stdio"; command: string; args?: string[]; env?: Record<string, string>; timeout?: number }
+  | { type: "sse"; url: string; headers?: Record<string, string>; timeout?: number }
+  | { type: "http"; url: string; headers?: Record<string, string>; timeout?: number };
+
+export interface McpToolInfo {
+  name: string;
+  description?: string;
+  inputSchema?: object;
+}

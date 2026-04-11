@@ -77,7 +77,7 @@ export async function POST(
     const model = await resolveModel(validated.model, session.user.id);
     const systemPrompt = await buildSystemPrompt();
     const messageId = randomUUID();
-    const tools = createTools(conversationId, messageId, autoConfirm);
+    const tools = createTools(conversationId, messageId, autoConfirm, session.user.id);
 
     // Get MCP tools from enabled servers
     const mcpResult = await getEnabledMcpTools(conversationId, messageId, autoConfirm);

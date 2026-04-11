@@ -3,6 +3,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import * as helpers from "./tool-helpers";
 import { fetchPaperByDOI } from "./doi-service";
+import { importPaper as executeImportPaper } from "./paper-import-executor";
 import {
   createConfirmToken,
   getRiskMessage,
@@ -114,7 +115,8 @@ function generateEChartsOption(args: {
 export function createTools(
   conversationId: string,
   messageId: string,
-  autoConfirm: AutoConfirmMap
+  autoConfirm: AutoConfirmMap,
+  userId?: string
 ) {
   // Helper to wrap tools that need confirmation
   function wrapConfirm<T>(
@@ -151,6 +153,7 @@ export function createTools(
           toolName,
           toolInput: args,
           riskMessage: getRiskMessage(toolName),
+          toolCategory: category,
         };
       },
     });
@@ -574,7 +577,11 @@ export function createTools(
       }),
       "导入论文到论文表（需要确认）",
       async (args) => {
-        return { message: "论文导入待确认", args };
+        // auto-confirm 模式下直接执行导入
+        if (!userId) throw new Error("用户未登录");
+        const result = await executeImportPaper(args.paperData, args.authors, userId);
+        if (!result.success) throw new Error(result.error);
+        return result.data;
       }
     ),
   };

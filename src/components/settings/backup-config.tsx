@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
-import { Download, Loader2, Play, Trash2, RefreshCw } from "lucide-react"
+import { Download, Loader2, Play, Trash2, RefreshCw, RotateCcw } from "lucide-react"
 
 interface BackupMeta {
   filename: string
@@ -21,6 +21,7 @@ export function BackupConfig() {
   const [backups, setBackups] = useState<BackupMeta[]>([])
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
+  const [restoring, setRestoring] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -92,6 +93,33 @@ export function BackupConfig() {
 
   const handleDownload = (filename: string) => {
     window.open(`/api/admin/data-tables/backup/${encodeURIComponent(filename)}`, "_blank")
+  }
+
+  const handleRestore = async (filename: string) => {
+    if (!confirm(`确定从 ${filename} 恢复数据？\n\n这将删除当前所有数据表中的记录，并用备份数据替换。`)) return
+    setRestoring(filename)
+    try {
+      const res = await fetch("/api/admin/data-tables/backup", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        const { tablesProcessed, recordsRestored, skippedTables } = data.data
+        let msg = `恢复成功：处理 ${tablesProcessed} 个表，恢复 ${recordsRestored} 条记录`
+        if (skippedTables.length > 0) {
+          msg += `\n跳过的表（不存在）：${skippedTables.join(", ")}`
+        }
+        alert(msg)
+      } else {
+        alert(data.error?.message || "恢复失败")
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "恢复失败")
+    } finally {
+      setRestoring(null)
+    }
   }
 
   const formatSize = (bytes: number) => {
@@ -167,6 +195,18 @@ export function BackupConfig() {
             </div>
             <Button variant="ghost" size="icon-xs" onClick={() => handleDownload(b.filename)} title="下载">
               <Download className="size-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => handleRestore(b.filename)}
+              disabled={restoring === b.filename}
+              title="恢复"
+            >
+              {restoring === b.filename
+                ? <Loader2 className="size-3 animate-spin" />
+                : <RotateCcw className="size-3" />
+              }
             </Button>
             <Button variant="ghost" size="icon-xs" onClick={() => handleDelete(b.filename)} title="删除">
               <Trash2 className="size-3 text-destructive" />

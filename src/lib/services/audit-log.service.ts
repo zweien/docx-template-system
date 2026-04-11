@@ -63,7 +63,12 @@ export async function listAuditLogs(
   try {
     const where: Record<string, unknown> = {};
 
-    if (query.userId) where.userId = { contains: query.userId, mode: "insensitive" };
+    if (query.userId) {
+      where.OR = [
+        { userName: { contains: query.userId, mode: "insensitive" } },
+        { userEmail: { contains: query.userId, mode: "insensitive" } },
+      ];
+    }
     if (query.action) where.action = query.action;
     if (query.targetType) where.targetType = query.targetType;
 

@@ -143,8 +143,8 @@ export async function readBackup(
   filename: string
 ): Promise<ServiceResult<{ data: Buffer; size: number }>> {
   try {
-    // Sanitize filename - only allow backup_*.json files
-    if (!filename.startsWith("backup_") || !filename.endsWith(".json")) {
+    // Sanitize filename - only allow backup_*.json without path separators
+    if (!filename.startsWith("backup_") || !filename.endsWith(".json") || filename.includes("/") || filename.includes("..")) {
       return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
     }
     const filepath = join(BACKUP_DIR, filename);
@@ -163,7 +163,7 @@ export async function deleteBackup(
   filename: string
 ): Promise<ServiceResult<{ filename: string }>> {
   try {
-    if (!filename.startsWith("backup_") || !filename.endsWith(".json")) {
+    if (!filename.startsWith("backup_") || !filename.endsWith(".json") || filename.includes("/") || filename.includes("..")) {
       return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
     }
     const { unlink } = await import("fs/promises");
@@ -189,7 +189,7 @@ export async function restoreBackup(
   }>
 > {
   try {
-    if (!filename.startsWith("backup_") || !filename.endsWith(".json")) {
+    if (!filename.startsWith("backup_") || !filename.endsWith(".json") || filename.includes("/") || filename.includes("..")) {
       return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
     }
 

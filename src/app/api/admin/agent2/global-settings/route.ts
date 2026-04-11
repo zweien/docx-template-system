@@ -62,7 +62,12 @@ export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = updateGlobalSettingsSchema.parse(body);
-    const result = await updateGlobalSettings(parsed);
+    const result = await updateGlobalSettings({
+      ...parsed,
+      backupConfig: parsed.backupConfig
+        ? { enabled: parsed.backupConfig.enabled ?? false, schedule: parsed.backupConfig.schedule ?? "daily" }
+        : undefined,
+    });
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });

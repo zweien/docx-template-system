@@ -58,14 +58,14 @@ COPY --from=builder /app/package.json ./package.json
 RUN apk add --no-cache su-exec
 
 # Create upload directories with correct ownership
-RUN mkdir -p .data/uploads && chown nextjs:nodejs .data/uploads
+RUN mkdir -p .data/uploads .data/backups && chown nextjs:nodejs .data/uploads .data/backups
 
 # Entrypoint fixes volume ownership at runtime (runs as root, drops to nextjs)
 COPY --chmod=755 <<'EOF' /app/entrypoint.sh
 #!/bin/sh
 # Fix ownership of volume-mounted directories at runtime
 # (Docker named volumes may retain root ownership from initial creation)
-chown -R nextjs:nodejs /app/.data/uploads 2>/dev/null || true
+chown -R nextjs:nodejs /app/.data/uploads /app/.data/backups 2>/dev/null || true
 chown -R nextjs:nodejs /app/public/uploads 2>/dev/null || true
 exec su-exec nextjs "$@"
 EOF

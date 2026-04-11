@@ -682,10 +682,12 @@ model Agent2McpServer {
 // ========== Agent2 Global Settings ==========
 
 model Agent2GlobalSettings {
-  id          String   @id @default(cuid())
-  suggestions Json     @default("[]")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(cuid())
+  suggestions   Json      @default("[]")
+  backupConfig  Json      @default("{}")
+  lastBackupAt  DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 // ========== API Token (REST API) ==========

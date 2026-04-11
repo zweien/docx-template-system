@@ -113,6 +113,10 @@ export type UpdateMcpServerInput = z.infer<typeof updateMcpServerSchema>;
 // ============ Global Settings ============
 export const updateGlobalSettingsSchema = z.object({
   suggestions: z.array(z.string().min(1).max(200)).max(20).optional(),
+  backupConfig: z.object({
+    enabled: z.boolean().optional(),
+    schedule: z.enum(["daily", "weekly", "monthly"]).optional(),
+  }).optional(),
 });
 
 export type UpdateGlobalSettingsInput = z.infer<typeof updateGlobalSettingsSchema>;

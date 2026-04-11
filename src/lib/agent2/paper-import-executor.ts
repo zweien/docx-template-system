@@ -64,6 +64,17 @@ function normalizeName(name: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+/** 获取当前论文表中最大的 paper_id（数字）+1 */
+async function nextPaperId(paperTableId: string): Promise<string> {
+  const result = await db.$queryRawUnsafe<Array<{ max_id: string | null }>>(
+    `SELECT MAX(CAST(data->>'paper_id' AS INTEGER)) as max_id
+     FROM "DataRecord" WHERE "tableId" = $1`,
+    paperTableId
+  );
+  const maxId = result[0]?.max_id;
+  return maxId ? String(Number(maxId) + 1) : "1";
+}
+
 /** 按名称查找"作者"表和"论文"表 */
 async function findPaperAndAuthorTables(): Promise<{
   paperTableId: string;
@@ -158,7 +169,7 @@ export async function importPaper(
       data: {
         tableId: paperTableId,
         data: {
-          paper_id: `paper-${Date.now()}`,
+          paper_id: await nextPaperId(paperTableId),
           title_en: paperData.title_en,
           title_cn: paperData.title_cn ?? "",
           paper_type: paperData.paper_type ?? "",

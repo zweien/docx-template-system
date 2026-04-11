@@ -13,6 +13,15 @@ import { parseThinkTaggedText } from "@/lib/agent2/think-parser"
 import { extractChartOptionFromText } from "@/lib/agent2/chart-text-parser"
 import { AssistantStreamState } from "../ai-chat/assistant-stream-state"
 
+interface DetailPreview {
+  title: string
+  type: "record" | "paper" | "template" | "code" | "generic"
+  fields?: Array<{ label: string; value: string }>
+  summary?: string
+  recordCount?: number
+  items?: Array<{ id: string; label: string }>
+}
+
 interface ConfirmState {
   open: boolean
   toolName: string
@@ -20,6 +29,7 @@ interface ConfirmState {
   toolInput: Record<string, unknown>
   riskMessage: string
   token: string
+  detailPreview?: DetailPreview | null
 }
 
 interface ConfirmToolOutput {
@@ -27,6 +37,7 @@ interface ConfirmToolOutput {
   riskMessage: string
   toolInput: Record<string, unknown>
   token: string
+  detailPreview?: DetailPreview | null
 }
 
 interface MessagePartsProps {
@@ -254,7 +265,7 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
             if (toolOutput && typeof toolOutput === "object" && toolOutput !== null && "_needsConfirm" in toolOutput) {
               const confirmOutput = toolOutput as ConfirmToolOutput
               return (
-                <Tool key={index}>
+                <Tool key={index} defaultOpen>
                   <ToolHeader
                     type="dynamic-tool"
                     state="approval-requested"
@@ -274,6 +285,7 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
                             toolInput: confirmOutput.toolInput,
                             riskMessage: confirmOutput.riskMessage,
                             token: confirmOutput.token,
+                            detailPreview: confirmOutput.detailPreview,
                           })
                         }}
                       >
@@ -321,6 +333,42 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
               const toolPart = part as ToolUIPart
               const toolName = part.type.replace("tool-", "")
               const toolState = toolPart.state
+
+              // Check for needs-confirm from tool output
+              if (toolState === "output-available" && toolPart.output && typeof toolPart.output === "object" && toolPart.output !== null && "_needsConfirm" in toolPart.output) {
+                const confirmOutput = toolPart.output as ConfirmToolOutput
+                return (
+                  <Tool key={index} defaultOpen>
+                    <ToolHeader
+                      type="dynamic-tool"
+                      state="approval-requested"
+                      toolName={toolName}
+                    />
+                    <ToolContent>
+                      <div className="space-y-3 p-3">
+                        <p className="text-sm text-muted-foreground">{confirmOutput.riskMessage}</p>
+                        <ToolInput input={confirmOutput.toolInput} />
+                        <button
+                          className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md"
+                          onClick={() => {
+                            setConfirmState({
+                              open: true,
+                              toolName,
+                              toolCallId: toolPart.toolCallId,
+                              toolInput: confirmOutput.toolInput,
+                              riskMessage: confirmOutput.riskMessage,
+                              token: confirmOutput.token,
+                              detailPreview: confirmOutput.detailPreview,
+                            })
+                          }}
+                        >
+                          查看详情并确认
+                        </button>
+                      </div>
+                    </ToolContent>
+                  </Tool>
+                )
+              }
 
               if (toolName === "generateChart" && toolState === "output-available") {
                 return (
@@ -392,6 +440,7 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
         toolInput={confirmState.toolInput}
         riskMessage={confirmState.riskMessage}
         token={confirmState.token}
+        detailPreview={confirmState.detailPreview}
         onConfirm={(result) => {
           setConfirmState(prev => ({ ...prev, open: false }))
           if (onToolConfirm && confirmState.toolCallId) {

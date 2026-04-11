@@ -5,6 +5,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button"
 import { AlertTriangle } from "lucide-react"
 
+interface DetailPreview {
+  title: string
+  type: "record" | "paper" | "template" | "code" | "generic"
+  fields?: Array<{ label: string; value: string }>
+  summary?: string
+  recordCount?: number
+  items?: Array<{ id: string; label: string }>
+}
+
 interface ToolConfirmDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -12,13 +21,49 @@ interface ToolConfirmDialogProps {
   toolInput: Record<string, unknown>
   riskMessage: string
   token: string
+  detailPreview?: DetailPreview | null
   onConfirm: (result: unknown) => void
   onReject: () => void
 }
 
+function DetailPreviewCard({ preview }: { preview: DetailPreview }) {
+  return (
+    <div className="rounded-md border bg-muted/50 p-3 space-y-2">
+      <p className="text-sm font-medium">{preview.title}</p>
+      {preview.fields && preview.fields.length > 0 && (
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+          {preview.fields.map((field, i) => (
+            <span key={i} className="contents">
+              <span className="text-muted-foreground whitespace-nowrap">{field.label}:</span>
+              <span className="break-all">{field.value}</span>
+            </span>
+          ))}
+        </div>
+      )}
+      {preview.summary && (
+        <p className="text-xs text-muted-foreground">{preview.summary}</p>
+      )}
+      {preview.items && preview.items.length > 0 && (
+        <ul className="text-xs text-muted-foreground space-y-0.5">
+          {preview.items.map((item) => (
+            <li key={item.id} className="truncate">
+              {item.label}
+            </li>
+          ))}
+          {(preview.recordCount ?? 0) > preview.items.length && (
+            <li className="italic">
+              ...共 {preview.recordCount} 条
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
+}
+
 export function ToolConfirmDialog({
   open, onOpenChange, toolName, toolInput, riskMessage, token,
-  onConfirm, onReject,
+  detailPreview, onConfirm, onReject,
 }: ToolConfirmDialogProps) {
   const [loading, setLoading] = useState(false)
 
@@ -70,12 +115,19 @@ export function ToolConfirmDialog({
               )}
             </code>
           </div>
-          <div>
-            <p className="text-sm font-medium mb-1">参数</p>
-            <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40">
-              {JSON.stringify(toolInput, null, 2)}
-            </pre>
-          </div>
+          {detailPreview ? (
+            <div>
+              <p className="text-sm font-medium mb-1">操作对象</p>
+              <DetailPreviewCard preview={detailPreview} />
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm font-medium mb-1">参数</p>
+              <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40">
+                {JSON.stringify(toolInput, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleReject} disabled={loading}>拒绝</Button>

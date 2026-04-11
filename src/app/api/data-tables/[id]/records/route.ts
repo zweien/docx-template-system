@@ -9,6 +9,8 @@ import {
 import type { FieldFilters } from "@/lib/services/data-record.service";
 import type { SortConfig, FilterCondition, FilterGroup } from "@/types/data-table";
 import { normalizeFilters } from "@/types/data-table";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -139,6 +141,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 400 }
       );
     }
+
+    await logAudit({
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      action: "DATA_RECORD_CREATE",
+      targetType: "DataRecord",
+      targetId: result.data.id,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return NextResponse.json(result.data, { status: 201 });
   } catch (error) {

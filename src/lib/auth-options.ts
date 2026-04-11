@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import type { Role } from "@/generated/prisma/enums";
 import { getAuthentikConfig } from "@/lib/authentik";
 import { syncOidcUser } from "@/lib/oidc-user-sync";
+import { logAudit } from "@/lib/services/audit-log.service";
 
 const authentikConfig = getAuthentikConfig();
 
@@ -74,6 +75,13 @@ export const authOptions: NextAuthOptions = {
         token.name = localUser.name;
         token.email = localUser.email;
         token.oidcSubject = localUser.oidcSubject ?? undefined;
+
+        logAudit({
+          userId: localUser.id,
+          userName: localUser.name,
+          userEmail: String(profile.email),
+          action: "LOGIN",
+        });
       }
 
       if (account?.id_token) {

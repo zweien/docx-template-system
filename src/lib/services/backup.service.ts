@@ -3,6 +3,7 @@ import { join } from "path";
 import { db } from "@/lib/db";
 import type { ServiceResult } from "@/types/data-table";
 import type { BackupConfig } from "@/types/agent2";
+import type { Prisma } from "@/generated/prisma/client";
 
 const BACKUP_DIR = process.env.BACKUP_DIR || ".data/backups";
 
@@ -171,6 +172,91 @@ export async function deleteBackup(
     return { success: true, data: { filename } };
   } catch {
     return { success: false, error: { code: "NOT_FOUND", message: "备份文件不存在" } };
+  }
+}
+
+/**
+ * 从备份文件恢复数据
+ * 按表名匹配现有表，删除现有记录后重新插入备份记录
+ */
+export async function restoreBackup(
+  filename: string
+): Promise<
+  ServiceResult<{
+    tablesProcessed: number;
+    recordsRestored: number;
+    skippedTables: string[];
+  }>
+> {
+  try {
+    if (!filename.startsWith("backup_") || !filename.endsWith(".json")) {
+      return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
+    }
+
+    const filepath = join(BACKUP_DIR, filename);
+    const content = await readFile(filepath, "utf-8");
+    const backup = JSON.parse(content) as {
+      version: string;
+      exportedAt: string;
+      tables: Record<
+        string,
+        {
+          id: string;
+          records: Array<{ id: string; data: unknown; createdAt: string; updatedAt: string }>;
+        }
+      >;
+    };
+
+    if (!backup.tables || typeof backup.tables !== "object") {
+      return { success: false, error: { code: "INVALID_FORMAT", message: "备份文件格式无效" } };
+    }
+
+    const result = {
+      tablesProcessed: 0,
+      recordsRestored: 0,
+      skippedTables: [] as string[],
+    };
+
+    await db.$transaction(async (tx) => {
+      for (const [tableName, tableData] of Object.entries(backup.tables)) {
+        // Find existing table by name
+        const table = await tx.dataTable.findUnique({ where: { name: tableName } });
+        if (!table) {
+          result.skippedTables.push(tableName);
+          continue;
+        }
+
+        // Delete existing records
+        await tx.dataRecord.deleteMany({ where: { tableId: table.id } });
+
+        // Insert backup records
+        for (const record of tableData.records) {
+          await tx.dataRecord.create({
+            data: {
+              id: record.id,
+              tableId: table.id,
+              data: record.data as Prisma.InputJsonValue,
+              createdById: table.createdById,
+              createdAt: new Date(record.createdAt),
+              updatedAt: new Date(record.updatedAt),
+            },
+          });
+        }
+
+        result.tablesProcessed++;
+        result.recordsRestored += tableData.records.length;
+      }
+    });
+
+    return { success: true, data: result };
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        code: "RESTORE_FAILED",
+        message: error instanceof Error ? error.message : "恢复失败",
+      },
+    };
   }
 }
 

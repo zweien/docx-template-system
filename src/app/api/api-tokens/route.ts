@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { listTokens, createToken } from "@/lib/services/api-token.service";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 export async function GET() {
   const session = await auth();
@@ -47,6 +49,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "API_TOKEN_CREATE",
+      targetType: "ApiToken",
+      targetId: result.data.id,
+      targetName: result.data.name,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return NextResponse.json(result.data, { status: 201 });
   } catch {

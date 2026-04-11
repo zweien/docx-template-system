@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getTable, updateTable, deleteTable } from "@/lib/services/data-table.service";
 import { updateTableSchema } from "@/validators/data-table";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -58,6 +60,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "DATA_TABLE_UPDATE",
+      targetType: "DataTable",
+      targetId: id,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
+
     return NextResponse.json(result.data);
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {
@@ -73,7 +86,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
@@ -96,6 +109,17 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
       { status: 400 }
     );
   }
+
+  await logAudit({
+    userId: session.user.id,
+    userName: session.user.name,
+    userEmail: session.user.email,
+    action: "DATA_TABLE_DELETE",
+    targetType: "DataTable",
+    targetId: id,
+    ipAddress: getClientIp(request),
+    userAgent: getUserAgent(request),
+  });
 
   return NextResponse.json({ success: true });
 }

@@ -37,6 +37,8 @@ export function UserNav() {
     setIsLoggingOut(true);
 
     try {
+      await fetch("/api/auth/audit-logout", { method: "POST" });
+
       const response = await fetch("/api/auth/sso-logout-url");
       const data = (await response.json()) as { url?: string };
 

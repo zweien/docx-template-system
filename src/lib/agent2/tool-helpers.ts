@@ -456,22 +456,52 @@ export async function searchRecords(params: {
 
     const skip = (page - 1) * pageSize;
 
-    const [records, total] = await Promise.all([
-      db.dataRecord.findMany({
-        where,
-        skip,
-        take: pageSize,
-        orderBy: sortBy
-          ? { [sortBy]: sortOrder }
-          : { createdAt: "desc" },
-      }),
-      db.dataRecord.count({ where }),
-    ]);
+    const isDataField = sortBy && table.fields.some((f) => f.key === sortBy);
 
-    const resultRecords = records.map((r) => ({
-      id: r.id,
-      ...(r.data as Record<string, unknown>),
-    }));
+    let resultRecords: Array<{ id: string; [key: string]: unknown }>;
+    let total: number;
+
+    if (isDataField) {
+      // Custom data field: fetch all matching, sort in memory, then paginate
+      const [allRecords, count] = await Promise.all([
+        db.dataRecord.findMany({ where }),
+        db.dataRecord.count({ where }),
+      ]);
+      total = count;
+
+      allRecords.sort((a, b) => {
+        const aVal = (a.data as Record<string, unknown>)?.[sortBy!];
+        const bVal = (b.data as Record<string, unknown>)?.[sortBy!];
+        const aStr = String(aVal ?? "");
+        const bStr = String(bVal ?? "");
+        const cmp = aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
+        return sortOrder === "desc" ? -cmp : cmp;
+      });
+
+      resultRecords = allRecords.slice(skip, skip + pageSize).map((r) => ({
+        id: r.id,
+        ...(r.data as Record<string, unknown>),
+      }));
+    } else {
+      // Prisma column or no sort: use DB-level sort
+      const [records, count] = await Promise.all([
+        db.dataRecord.findMany({
+          where,
+          skip,
+          take: pageSize,
+          orderBy: sortBy
+            ? { [sortBy]: sortOrder }
+            : { createdAt: "desc" },
+        }),
+        db.dataRecord.count({ where }),
+      ]);
+      total = count;
+
+      resultRecords = records.map((r) => ({
+        id: r.id,
+        ...(r.data as Record<string, unknown>),
+      }));
+    }
 
     // 解析关系字段
     await resolveRelationFields(table, resultRecords);

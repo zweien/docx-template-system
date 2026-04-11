@@ -44,13 +44,6 @@ interface ChatAreaProps {
   defaultModel?: string
 }
 
-const SUGGESTIONS = [
-  "帮我查看系统中有哪些数据表",
-  "搜索销售记录中金额大于1000的记录",
-  "帮我生成一份月度销售统计图表",
-  "查看可用的文档模板",
-]
-
 function PromptInputAttachmentsPreview() {
   const attachments = usePromptInputAttachments()
 
@@ -96,8 +89,16 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
   const [inputError, setInputError] = useState<string | null>(null)
   const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
+  const [suggestions, setSuggestions] = useState<string[]>([])
 
   useEffect(() => { setMounted(true) }, [])
+
+  useEffect(() => {
+    fetch("/api/agent2/suggestions")
+      .then(res => res.json())
+      .then(data => { if (data.success) setSuggestions(data.data) })
+      .catch(() => { /* keep empty */ })
+  }, [])
 
   // 使用 conversationId 作为 chatKey，切换模型时不重新创建会话
   const chatKey = conversationId
@@ -291,7 +292,7 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
             >
               <div className="mt-4">
                 <Suggestions>
-                  {SUGGESTIONS.map((s) => (
+                  {suggestions.map((s) => (
                     <Suggestion key={s} suggestion={s} onClick={handleSuggestionClick} />
                   ))}
                 </Suggestions>

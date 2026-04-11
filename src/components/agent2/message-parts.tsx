@@ -20,7 +20,6 @@ interface ConfirmState {
   toolInput: Record<string, unknown>
   riskMessage: string
   token: string
-  toolCategory: string
 }
 
 interface ConfirmToolOutput {
@@ -28,7 +27,6 @@ interface ConfirmToolOutput {
   riskMessage: string
   toolInput: Record<string, unknown>
   token: string
-  toolCategory?: string
 }
 
 interface MessagePartsProps {
@@ -150,7 +148,6 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
     toolInput: {},
     riskMessage: "",
     token: "",
-    toolCategory: "",
   })
 
   if (!message.parts || message.parts.length === 0) {
@@ -277,7 +274,6 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
                             toolInput: confirmOutput.toolInput,
                             riskMessage: confirmOutput.riskMessage,
                             token: confirmOutput.token,
-                            toolCategory: confirmOutput.toolCategory || (toolPart.toolName.startsWith("mcp__") ? "mcp" : "execute"),
                           })
                         }}
                       >
@@ -396,7 +392,6 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
         toolInput={confirmState.toolInput}
         riskMessage={confirmState.riskMessage}
         token={confirmState.token}
-        toolCategory={confirmState.toolCategory}
         onConfirm={(result) => {
           setConfirmState(prev => ({ ...prev, open: false }))
           if (onToolConfirm && confirmState.toolCallId) {

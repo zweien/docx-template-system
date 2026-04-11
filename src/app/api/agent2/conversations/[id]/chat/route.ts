@@ -5,7 +5,6 @@ import { randomUUID } from "crypto";
 import { ZodError } from "zod";
 import { chatRequestSchema } from "@/validators/agent2";
 import { getConversation } from "@/lib/services/agent2-conversation.service";
-import { getSettings } from "@/lib/services/agent2-settings.service";
 import { saveMessages, getMessages } from "@/lib/services/agent2-message.service";
 import { resolveModel, isReasoningModel } from "@/lib/agent2/model-resolver";
 import { buildSystemPrompt, truncateMessages } from "@/lib/agent2/context-builder";
@@ -50,12 +49,6 @@ export async function POST(
       );
     }
 
-    // Get user settings for auto-confirm
-    const settingsResult = await getSettings(session.user.id);
-    const autoConfirm = settingsResult.success
-      ? (settingsResult.data.autoConfirmTools as Record<string, boolean>)
-      : {};
-
     // 检测是否是 reasoning 模型
     const config = await db.agent2ModelConfig.findFirst({
       where: {
@@ -77,10 +70,10 @@ export async function POST(
     const model = await resolveModel(validated.model, session.user.id);
     const systemPrompt = await buildSystemPrompt();
     const messageId = randomUUID();
-    const tools = createTools(conversationId, messageId, autoConfirm, session.user.id);
+    const tools = createTools(conversationId, messageId, session.user.id);
 
     // Get MCP tools from enabled servers
-    const mcpResult = await getEnabledMcpTools(conversationId, messageId, autoConfirm);
+    const mcpResult = await getEnabledMcpTools(conversationId, messageId);
     mcpClients = mcpResult.clients;
     const allTools = { ...tools, ...mcpResult.tools };
 

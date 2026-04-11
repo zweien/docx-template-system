@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { AlertTriangle } from "lucide-react"
 
 interface ToolConfirmDialogProps {
@@ -15,14 +14,12 @@ interface ToolConfirmDialogProps {
   token: string
   onConfirm: (result: unknown) => void
   onReject: () => void
-  toolCategory: string
 }
 
 export function ToolConfirmDialog({
   open, onOpenChange, toolName, toolInput, riskMessage, token,
-  onConfirm, onReject, toolCategory,
+  onConfirm, onReject,
 }: ToolConfirmDialogProps) {
-  const [autoConfirm, setAutoConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleConfirm = async () => {
@@ -40,26 +37,6 @@ export function ToolConfirmDialog({
       onReject()
     } finally {
       setLoading(false)
-    }
-
-    if (autoConfirm) {
-      // Merge with existing auto-confirm settings instead of overwriting
-      try {
-        const settingsRes = await fetch("/api/agent2/settings")
-        const settingsData = await settingsRes.json()
-        const existing = settingsData.success
-          ? (settingsData.data.autoConfirmTools as Record<string, boolean>)
-          : {}
-        await fetch("/api/agent2/settings", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            autoConfirmTools: { ...existing, [toolCategory]: true },
-          }),
-        })
-      } catch {
-        // Best-effort — don't block the confirm flow
-      }
     }
   }
 
@@ -99,16 +76,6 @@ export function ToolConfirmDialog({
               {JSON.stringify(toolInput, null, 2)}
             </pre>
           </div>
-        </div>
-        <div className="flex items-center gap-2 mt-3">
-          <Checkbox
-            id="auto-confirm"
-            checked={autoConfirm}
-            onCheckedChange={(checked: boolean) => setAutoConfirm(checked)}
-          />
-          <label htmlFor="auto-confirm" className="text-sm text-muted-foreground cursor-pointer">
-            以后自动确认此类操作
-          </label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleReject} disabled={loading}>拒绝</Button>

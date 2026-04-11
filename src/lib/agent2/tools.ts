@@ -9,8 +9,6 @@ import {
   getRiskMessage,
 } from "./confirm-store";
 
-type AutoConfirmMap = Record<string, boolean>;
-
 // ── ECharts option generator for generateChart ──
 
 function generateEChartsOption(args: {
@@ -115,13 +113,11 @@ function generateEChartsOption(args: {
 export function createTools(
   conversationId: string,
   messageId: string,
-  autoConfirm: AutoConfirmMap,
   userId?: string
 ) {
   // Helper to wrap tools that need confirmation
   function wrapConfirm<T>(
     toolName: string,
-    category: string,
     schema: z.ZodType<T>,
     description: string,
     executeFn: (args: T) => Promise<unknown>
@@ -130,12 +126,6 @@ export function createTools(
       description,
       inputSchema: schema,
       execute: async (args: T) => {
-        // Check auto-confirm for this category
-        const isAutoConfirmed = autoConfirm[category] === true;
-        if (isAutoConfirmed) {
-          return executeFn(args);
-        }
-
         // Create confirm token
         const tokenResult = await createConfirmToken(
           conversationId,
@@ -153,7 +143,6 @@ export function createTools(
           toolName,
           toolInput: args,
           riskMessage: getRiskMessage(toolName),
-          toolCategory: category,
         };
       },
     });
@@ -305,7 +294,6 @@ export function createTools(
 
     generateDocument: wrapConfirm(
       "generateDocument",
-      "write",
       z.object({
         templateId: z.string().describe("模板 ID"),
         formData: z
@@ -314,7 +302,6 @@ export function createTools(
       }),
       "根据模板和表单数据生成文档（需要确认）",
       async (args) => {
-        // Placeholder: actual generation will be implemented later
         return { message: "文档生成功能暂未完全实现", args };
       }
     ),
@@ -334,7 +321,6 @@ export function createTools(
 
     createRecord: wrapConfirm(
       "createRecord",
-      "write",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
         data: z
@@ -343,15 +329,12 @@ export function createTools(
       }),
       "在数据表中创建新记录（需要确认）",
       async (args) => {
-        // When auto-confirmed, we still need userId — this will be handled
-        // by the caller (tool-executor) when processing confirmed tokens
         return { message: "记录创建待确认", args };
       }
     ),
 
     updateRecord: wrapConfirm(
       "updateRecord",
-      "write",
       z.object({
         recordId: z.string().describe("要更新的记录 ID"),
         data: z
@@ -366,7 +349,6 @@ export function createTools(
 
     deleteRecord: wrapConfirm(
       "deleteRecord",
-      "delete",
       z.object({
         recordId: z.string().describe("要删除的记录 ID"),
       }),
@@ -379,7 +361,6 @@ export function createTools(
     // ── Batch operation tools ──
     batchCreateRecords: wrapConfirm(
       "batchCreateRecords",
-      "write",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
         records: z
@@ -395,7 +376,6 @@ export function createTools(
 
     batchUpdateRecords: wrapConfirm(
       "batchUpdateRecords",
-      "write",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
         updates: z
@@ -418,7 +398,6 @@ export function createTools(
 
     batchDeleteRecords: wrapConfirm(
       "batchDeleteRecords",
-      "delete",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
         recordIds: z
@@ -451,7 +430,6 @@ export function createTools(
 
     executeCode: wrapConfirm(
       "executeCode",
-      "execute",
       z.object({
         language: z
           .enum(["python", "javascript"])
@@ -534,7 +512,6 @@ export function createTools(
 
     importPaper: wrapConfirm(
       "importPaper",
-      "write",
       z.object({
         paperData: z.object({
           title_en: z.string().describe("英文标题"),

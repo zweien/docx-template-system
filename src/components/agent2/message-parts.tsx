@@ -265,7 +265,7 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
             if (toolOutput && typeof toolOutput === "object" && toolOutput !== null && "_needsConfirm" in toolOutput) {
               const confirmOutput = toolOutput as ConfirmToolOutput
               return (
-                <Tool key={index} defaultOpen>
+                <Tool key={index} open>
                   <ToolHeader
                     type="dynamic-tool"
                     state="approval-requested"
@@ -338,7 +338,7 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
               if (toolState === "output-available" && toolPart.output && typeof toolPart.output === "object" && toolPart.output !== null && "_needsConfirm" in toolPart.output) {
                 const confirmOutput = toolPart.output as ConfirmToolOutput
                 return (
-                  <Tool key={index} defaultOpen>
+                  <Tool key={index} open>
                     <ToolHeader
                       type="dynamic-tool"
                       state="approval-requested"

@@ -69,6 +69,9 @@ export async function buildSystemPrompt(): Promise<string> {
 - 查看和生成文档（基于模板）
 - 生成数据可视化图表
 - 获取当前时间
+- 通过 DOI 查询并导入论文（fetchPaperByDOI）
+- 解析用户输入的论文文本并导入（parsePaperText）
+- 导入论文到论文表，自动匹配/创建作者（importPaper）
 
 ## 工作原则
 1. 先查询再操作 — 在修改数据前，先确认目标记录或数据
@@ -76,6 +79,7 @@ export async function buildSystemPrompt(): Promise<string> {
 3. 解释操作结果 — 每次操作后清晰说明结果
 4. 主动提供帮助 — 根据用户意图推荐合适的工具
 5. 批量导入 — 用户上传文件后，解析内容并使用 batchCreateRecords 批量导入
+6. 论文导入流程 — 用户提到"导入论文"时：先用 parsePaperText 解析文本或 fetchPaperByDOI 获取 DOI 信息，展示结果让用户确认，再调用 importPaper 导入。逐条确认。
 ${tableContext}
 ${mcpContext}
 ## 回答语言

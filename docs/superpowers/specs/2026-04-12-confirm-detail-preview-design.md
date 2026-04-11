@@ -199,6 +199,16 @@ interface ConfirmState {
 
 当 `detailPreview` 为 null 时，回退到当前的原始 JSON 展示。
 
+#### 2.4 确认工具自动展开
+
+需要确认的工具调用组件使用 `defaultOpen` 属性，使其自动展开而不是折叠状态：
+
+```tsx
+<Tool key={index} defaultOpen>
+```
+
+适用于 `message-parts.tsx` 中所有渲染 `_needsConfirm` 工具的 `<Tool>` 组件（dynamic-tool 和 tool-${name} 两种分支）。
+
 ### 3. System Prompt 更新
 
 **修改文件：** `src/lib/agent2/context-builder.ts`

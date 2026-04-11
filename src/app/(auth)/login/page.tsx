@@ -14,18 +14,97 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-function LoginForm() {
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+const devBypassAuth = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true";
 
+const DEV_ACCOUNTS = [
+  {
+    label: "管理员登录",
+    email: "admin@example.com",
+    password: "admin123",
+    description: "admin@example.com",
+  },
+  {
+    label: "普通用户登录",
+    email: "user@example.com",
+    password: "user123",
+    description: "user@example.com",
+  },
+];
+
+function DevLoginForm({ callbackUrl }: { callbackUrl: string }) {
+  const [loadingIdx, setLoadingIdx] = useState<number | null>(null);
+
+  async function handleDevLogin(
+    email: string,
+    password: string,
+    idx: number
+  ) {
+    setLoadingIdx(idx);
+    try {
+      const result = await signIn("dev-credentials", {
+        email,
+        password,
+        callbackUrl,
+        redirect: true,
+      });
+      if (result === undefined) {
+        // redirect happened
+      } else if (result?.error) {
+        toast.error("登录失败", {
+          description: "请确保已执行 npx prisma db seed 初始化用户数据",
+        });
+      }
+    } catch {
+      toast.error("登录失败", {
+        description: "发生未知错误，请稍后重试。",
+      });
+    } finally {
+      setLoadingIdx(null);
+    }
+  }
+
+  return (
+    <Card className="w-full max-w-md">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl">开发模式登录</CardTitle>
+        <CardDescription>
+          选择身份直接登录，无需 Authentik
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {DEV_ACCOUNTS.map((account, idx) => (
+            <Button
+              key={account.email}
+              variant={idx === 0 ? "default" : "outline"}
+              className="w-full"
+              disabled={loadingIdx !== null}
+              onClick={() =>
+                handleDevLogin(account.email, account.password, idx)
+              }
+            >
+              {loadingIdx === idx
+                ? "登录中..."
+                : `${account.label}（${account.description}）`}
+            </Button>
+          ))}
+        </div>
+        <p className="mt-4 text-center text-xs text-muted-foreground">
+          ⚠️ 开发绕过模式（DEV_BYPASS_AUTH=true）· v
+          {process.env.NEXT_PUBLIC_APP_VERSION}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function AuthentikLoginForm({ callbackUrl }: { callbackUrl: string }) {
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit() {
     setIsLoading(true);
 
     try {
-      // For OAuth providers, use redirect: true (default) to properly initiate the authorization flow
-      // The redirect: false option doesn't work reliably with OAuth providers
       await signIn("authentik", {
         callbackUrl,
       });
@@ -61,6 +140,17 @@ function LoginForm() {
       </CardContent>
     </Card>
   );
+}
+
+function LoginForm() {
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
+
+  if (devBypassAuth) {
+    return <DevLoginForm callbackUrl={callbackUrl} />;
+  }
+
+  return <AuthentikLoginForm callbackUrl={callbackUrl} />;
 }
 
 export default function LoginPage() {

@@ -3,6 +3,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import * as helpers from "./tool-helpers";
 import { fetchPaperByDOI } from "./doi-service";
+import { fetchDetailPreview } from "./detail-preview";
 import { importPaper as executeImportPaper } from "./paper-import-executor";
 import {
   createConfirmToken,
@@ -143,6 +144,7 @@ export function createTools(
           toolName,
           toolInput: args,
           riskMessage: getRiskMessage(toolName),
+          detailPreview: await fetchDetailPreview(toolName, args),
         };
       },
     });

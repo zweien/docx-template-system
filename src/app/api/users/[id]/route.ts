@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 const updateUserSchema = z.object({
   name: z.string().min(1, "姓名不能为空").optional(),
@@ -111,6 +113,18 @@ export async function PUT(
       },
     });
 
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "USER_UPDATE",
+      targetType: "User",
+      targetId: id,
+      targetName: user.name,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
+
     return NextResponse.json({ success: true, data: user });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -153,6 +167,18 @@ export async function DELETE(
     }
 
     await db.user.delete({ where: { id } });
+
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "USER_DELETE",
+      targetType: "User",
+      targetId: id,
+      targetName: existing.name,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

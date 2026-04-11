@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import * as templateService from "@/lib/services/template.service";
 import { createTemplateSchema, templateQuerySchema } from "@/validators/template";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 // ── GET /api/templates ──
 
@@ -96,6 +98,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "TEMPLATE_CREATE",
+      targetType: "Template",
+      targetId: result.data.id,
+      targetName: result.data.name,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return NextResponse.json({ success: true, data: result.data }, { status: 201 });
   } catch (error) {

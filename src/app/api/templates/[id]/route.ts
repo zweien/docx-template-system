@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import * as templateService from "@/lib/services/template.service";
 import { updateTemplateSchema } from "@/validators/template";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 // ── GET /api/templates/[id] ──
 
@@ -86,6 +88,18 @@ export async function PUT(
           { status: 400 }
         );
       }
+      await logAudit({
+        userId: session.user.id,
+        userName: session.user.name,
+        userEmail: session.user.email,
+        action: "TEMPLATE_UPDATE",
+        targetType: "Template",
+        targetId: id,
+        targetName: updateResult.data.name,
+        ipAddress: getClientIp(request),
+        userAgent: getUserAgent(request),
+      });
+
       return NextResponse.json({ success: true, data: updateResult.data });
     }
 
@@ -97,6 +111,18 @@ export async function PUT(
         { status: 400 }
       );
     }
+
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "TEMPLATE_UPDATE",
+      targetType: "Template",
+      targetId: id,
+      targetName: template.data.name,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return NextResponse.json({ success: true, data: template.data });
   } catch (error) {
@@ -134,6 +160,17 @@ export async function DELETE(
     const status = result.error.code === "NOT_FOUND" ? 404 : 400;
     return NextResponse.json({ error: result.error }, { status });
   }
+
+  await logAudit({
+    userId: session.user.id,
+    userName: session.user.name,
+    userEmail: session.user.email,
+    action: "TEMPLATE_DELETE",
+    targetType: "Template",
+    targetId: id,
+    ipAddress: getClientIp(request),
+    userAgent: getUserAgent(request),
+  });
 
   return NextResponse.json({ success: true, data: null });
 }

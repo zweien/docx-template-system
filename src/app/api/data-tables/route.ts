@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { listTables, createTable } from "@/lib/services/data-table.service";
 import { createTableSchema } from "@/validators/data-table";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 export async function GET() {
   const session = await auth();
@@ -44,6 +46,18 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "DATA_TABLE_CREATE",
+      targetType: "DataTable",
+      targetId: result.data.id,
+      targetName: result.data.name,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return NextResponse.json(result.data, { status: 201 });
   } catch (error) {

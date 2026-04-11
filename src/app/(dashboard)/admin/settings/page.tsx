@@ -1,5 +1,6 @@
 import { AdminModelManager } from "@/components/agent2/admin-model-manager";
 import { SuggestionManager } from "@/components/agent2/suggestion-manager";
+import { BackupConfig } from "@/components/settings/backup-config";
 import { ApiTokensTab } from "@/components/settings/api-tokens-tab";
 
 export default function AdminSettingsPage() {
@@ -21,6 +22,14 @@ export default function AdminSettingsPage() {
             管理新对话中显示给用户的建议提示文本。
           </p>
           <SuggestionManager />
+        </div>
+
+        <div className="bg-card rounded-lg border p-6">
+          <h2 className="text-lg font-semibold mb-4">数据表备份</h2>
+          <p className="text-sm text-muted-foreground mb-6">
+            配置数据表自动备份，将所有数据表导出为 JSON 文件保存到服务器。
+          </p>
+          <BackupConfig />
         </div>
 
         <div className="bg-card rounded-lg border p-6">

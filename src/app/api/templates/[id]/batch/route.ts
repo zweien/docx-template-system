@@ -6,6 +6,8 @@ import { generateBatch } from "@/lib/services/batch-generation.service";
 import { batchGenerationInputSchema } from "@/validators/batch-generation";
 import { db } from "@/lib/db";
 import type { Role } from "@/generated/prisma/enums";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -55,6 +57,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 400 }
       );
     }
+
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "BATCH_GENERATE",
+      targetType: "BatchGeneration",
+      targetId: result.data.batchId ?? templateId,
+      targetName: `批量生成 - ${templateId}`,
+      detail: { templateId, count: result.data.generatedRecords?.length ?? 0 },
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return NextResponse.json(result.data, { status: 201 });
   } catch (error) {

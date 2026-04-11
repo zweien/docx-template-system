@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 const createUserSchema = z.object({
   name: z.string().min(1, "姓名不能为空"),
@@ -127,6 +129,18 @@ export async function POST(request: NextRequest) {
         role: true,
         createdAt: true,
       },
+    });
+
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "USER_CREATE",
+      targetType: "User",
+      targetId: user.id,
+      targetName: user.name,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
     });
 
     return NextResponse.json({ success: true, data: user });

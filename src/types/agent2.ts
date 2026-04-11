@@ -108,9 +108,16 @@ export interface McpToolInfo {
 }
 
 // ============ Global Settings ============
+export interface BackupConfig {
+  enabled: boolean;
+  schedule: "daily" | "weekly" | "monthly";
+}
+
 export interface Agent2GlobalSettingsData {
   id: string;
   suggestions: string[];
+  backupConfig: BackupConfig;
+  lastBackupAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

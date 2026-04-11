@@ -17,6 +17,7 @@ import {
   Sparkles,
   FolderInput,
   Settings,
+  ScrollText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserNav } from "@/components/layout/user-nav";
@@ -81,6 +82,11 @@ const adminNavItems: NavItem[] = [
     title: "用户管理",
     href: "/admin/users",
     icon: <Users className="h-4 w-4" />,
+  },
+  {
+    title: "审计日志",
+    href: "/admin/audit-logs",
+    icon: <ScrollText className="h-4 w-4" />,
   },
 ];
 

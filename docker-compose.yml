@@ -11,6 +11,7 @@ services:
     volumes:
       - uploads:/app/public/uploads
       - collection-uploads:/app/.data/uploads
+      - backups:/app/.data/backups
     networks:
       - default
       - sso_net
@@ -26,6 +27,7 @@ services:
 volumes:
   uploads:
   collection-uploads:
+  backups:
 
 networks:
   sso_net:

@@ -38,10 +38,11 @@ import {
 
 interface ChatAreaProps {
   conversationId: string
-  onToggleSidebar: () => void
-  sidebarCollapsed: boolean
+  onToggleSidebar?: () => void
+  sidebarCollapsed?: boolean
   onMobileMenuOpen?: () => void
   defaultModel?: string
+  tableId?: string
 }
 
 function PromptInputAttachmentsPreview() {
@@ -83,7 +84,7 @@ function PromptInputAttachmentButton({ disabled = false }: { disabled?: boolean 
   )
 }
 
-export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, onMobileMenuOpen, defaultModel }: ChatAreaProps) {
+export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, onMobileMenuOpen, defaultModel, tableId }: ChatAreaProps) {
   const [modelName, setModelName] = useState("MiniMax-M2.5")
   const [model, setModel] = useState(defaultModel || "MiniMax-M2.5")
   const [inputError, setInputError] = useState<string | null>(null)
@@ -115,7 +116,7 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
     id: chatKey,
     transport: new DefaultChatTransport({
       api: `/api/agent2/conversations/${conversationId}/chat`,
-      body: { model },
+      body: { model, ...(tableId ? { tableId } : {}) },
     }),
   })
 
@@ -253,17 +254,19 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-2 border-b shrink-0">
-        <Button variant="ghost" size="icon-xs" className="hidden md:inline-flex" onClick={onToggleSidebar}>
-          {mounted ? (
-            sidebarCollapsed ? (
-              <PanelLeft className="size-4" />
+        {onToggleSidebar && (
+          <Button variant="ghost" size="icon-xs" className="hidden md:inline-flex" onClick={onToggleSidebar}>
+            {mounted ? (
+              sidebarCollapsed ? (
+                <PanelLeft className="size-4" />
+              ) : (
+                <PanelLeftClose className="size-4" />
+              )
             ) : (
               <PanelLeftClose className="size-4" />
-            )
-          ) : (
-            <PanelLeftClose className="size-4" />
-          )}
-        </Button>
+            )}
+          </Button>
+        )}
         {onMobileMenuOpen && (
           <Button variant="ghost" size="icon-xs" className="md:hidden" onClick={onMobileMenuOpen}>
             <PanelLeft className="size-4" />

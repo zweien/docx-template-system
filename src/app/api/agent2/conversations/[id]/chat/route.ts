@@ -68,7 +68,7 @@ export async function POST(
 
     // Resolve model and build prompt/tools
     const model = await resolveModel(validated.model, session.user.id);
-    const systemPrompt = await buildSystemPrompt();
+    const systemPrompt = await buildSystemPrompt(validated.tableId);
     const messageId = randomUUID();
     const tools = createTools(conversationId, messageId, session.user.id);
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
+import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { randomUUID } from "crypto";
 import { ZodError } from "zod";
 import { chatRequestSchema } from "@/validators/agent2";
@@ -104,12 +104,21 @@ export async function POST(
     const messages = truncateMessages(convertedMessages as { role: string; content: string }[]) as typeof convertedMessages;
 
     // Stream with AI SDK
+    // Custom stopWhen: stop on _needsConfirm (tool needs user confirmation) or max 10 steps
     const result = streamText({
       model,
       system: systemPrompt,
       messages,
       tools: allTools,
-      stopWhen: stepCountIs(10),
+      stopWhen: ({ steps }) => {
+        if (steps.length >= 10) return true;
+        const lastStep = steps[steps.length - 1];
+        if (!lastStep) return false;
+        // Stop if any tool returned _needsConfirm to wait for user approval
+        return lastStep.dynamicToolResults.some(
+          (r) => typeof r.output === "object" && r.output !== null && "_needsConfirm" in (r.output as Record<string, unknown>)
+        );
+      },
     });
 
     return result.toUIMessageStreamResponse({

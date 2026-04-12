@@ -41,8 +41,8 @@ export function Agent2Layout() {
     setSidebarCollapsed(c => !c)
   }, [])
 
-  const handleMobileSelect = useCallback((id: string) => {
-    setSelectedConversationId(id)
+  const handleMobileSelect = useCallback((id: string | null) => {
+    if (id) setSelectedConversationId(id)
     setMobileMenuOpen(false)
   }, [])
 

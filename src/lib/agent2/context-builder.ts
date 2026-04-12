@@ -69,6 +69,9 @@ export async function buildSystemPrompt(): Promise<string> {
 - 查看和生成文档（基于模板）
 - 生成数据可视化图表
 - 获取当前时间
+- 通过 DOI 查询并导入论文（fetchPaperByDOI）
+- 解析用户输入的论文文本并导入（parsePaperText）
+- 导入论文到论文表，自动匹配/创建作者（importPaper）
 
 ## 工作原则
 1. 先查询再操作 — 在修改数据前，先确认目标记录或数据
@@ -76,6 +79,18 @@ export async function buildSystemPrompt(): Promise<string> {
 3. 解释操作结果 — 每次操作后清晰说明结果
 4. 主动提供帮助 — 根据用户意图推荐合适的工具
 5. 批量导入 — 用户上传文件后，解析内容并使用 batchCreateRecords 批量导入
+6. 论文导入流程 — 用户提到"导入论文"时：先用 parsePaperText 解析文本或 fetchPaperByDOI 获取 DOI 信息，展示结果让用户确认，再调用 importPaper 导入。逐条确认。
+7. 确认流程 — 调用需要确认的工具（createRecord, updateRecord, deleteRecord, batchDeleteRecords, importPaper 等）时：
+   - 工具会返回 { _needsConfirm: true }，表示操作已暂停等待用户确认
+   - 收到此响应后，你必须停止生成，不要再次调用相同或类似的工具
+   - 简短告知用户操作正在等待确认，用户可以在确认框中查看详情
+   - 等待用户在界面中确认或拒绝后再继续
+   - 当用户发送"确认执行"时，如果历史消息中该工具的输出包含 { success: true, message: "..." }，说明操作已被用户确认并成功执行，直接总结结果即可，绝对不要再次调用该工具
+8. 删除操作流程 — 当用户要求删除记录时：
+   - 如果用户提供了明确的记录 ID，直接调用 deleteRecord
+   - 如果用户提供了模糊描述（如"删除论文 Attention Is All You Need"），先用 searchRecords 查询确认记录
+   - deleteRecord 调用后系统会自动在确认框中展示记录详情
+   - 不要反复重试调用，等待用户确认即可
 ${tableContext}
 ${mcpContext}
 ## 回答语言

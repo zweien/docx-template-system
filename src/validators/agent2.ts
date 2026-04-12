@@ -24,6 +24,7 @@ export const chatRequestSchema = z.object({
 
 export const toolConfirmSchema = z.object({
   approved: z.boolean(),
+  toolCallId: z.string().optional(),
 });
 
 export const createModelSchema = z.object({

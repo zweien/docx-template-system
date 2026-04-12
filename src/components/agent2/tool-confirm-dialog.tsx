@@ -3,8 +3,16 @@
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { AlertTriangle } from "lucide-react"
+
+interface DetailPreview {
+  title: string
+  type: "record" | "paper" | "template" | "code" | "generic"
+  fields?: Array<{ label: string; value: string }>
+  summary?: string
+  recordCount?: number
+  items?: Array<{ id: string; label: string }>
+}
 
 interface ToolConfirmDialogProps {
   open: boolean
@@ -13,16 +21,51 @@ interface ToolConfirmDialogProps {
   toolInput: Record<string, unknown>
   riskMessage: string
   token: string
+  toolCallId: string
+  detailPreview?: DetailPreview | null
   onConfirm: (result: unknown) => void
   onReject: () => void
-  toolCategory: string
+}
+
+function DetailPreviewCard({ preview }: { preview: DetailPreview }) {
+  return (
+    <div className="rounded-md border bg-muted/50 p-3 space-y-2">
+      <p className="text-sm font-medium">{preview.title}</p>
+      {preview.fields && preview.fields.length > 0 && (
+        <div className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+          {preview.fields.map((field, i) => (
+            <span key={i} className="contents">
+              <span className="text-muted-foreground whitespace-nowrap">{field.label}:</span>
+              <span className="break-all">{field.value}</span>
+            </span>
+          ))}
+        </div>
+      )}
+      {preview.summary && (
+        <p className="text-xs text-muted-foreground">{preview.summary}</p>
+      )}
+      {preview.items && preview.items.length > 0 && (
+        <ul className="text-xs text-muted-foreground space-y-0.5">
+          {preview.items.map((item) => (
+            <li key={item.id} className="truncate">
+              {item.label}
+            </li>
+          ))}
+          {(preview.recordCount ?? 0) > preview.items.length && (
+            <li className="italic">
+              ...共 {preview.recordCount} 条
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 export function ToolConfirmDialog({
-  open, onOpenChange, toolName, toolInput, riskMessage, token,
-  onConfirm, onReject, toolCategory,
+  open, onOpenChange, toolName, toolInput, riskMessage, token, toolCallId,
+  detailPreview, onConfirm, onReject,
 }: ToolConfirmDialogProps) {
-  const [autoConfirm, setAutoConfirm] = useState(false)
   const [loading, setLoading] = useState(false)
 
   const handleConfirm = async () => {
@@ -31,7 +74,7 @@ export function ToolConfirmDialog({
       const res = await fetch(`/api/agent2/confirm/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved: true }),
+        body: JSON.stringify({ approved: true, toolCallId }),
       })
       const data = await res.json()
       if (data.success) onConfirm(data.data)
@@ -40,26 +83,6 @@ export function ToolConfirmDialog({
       onReject()
     } finally {
       setLoading(false)
-    }
-
-    if (autoConfirm) {
-      // Merge with existing auto-confirm settings instead of overwriting
-      try {
-        const settingsRes = await fetch("/api/agent2/settings")
-        const settingsData = await settingsRes.json()
-        const existing = settingsData.success
-          ? (settingsData.data.autoConfirmTools as Record<string, boolean>)
-          : {}
-        await fetch("/api/agent2/settings", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            autoConfirmTools: { ...existing, [toolCategory]: true },
-          }),
-        })
-      } catch {
-        // Best-effort — don't block the confirm flow
-      }
     }
   }
 
@@ -82,7 +105,7 @@ export function ToolConfirmDialog({
           </DialogTitle>
           <DialogDescription>{riskMessage}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
           <div>
             <p className="text-sm font-medium mb-1">工具</p>
             <code className="text-sm bg-muted px-2 py-1 rounded">
@@ -93,22 +116,19 @@ export function ToolConfirmDialog({
               )}
             </code>
           </div>
-          <div>
-            <p className="text-sm font-medium mb-1">参数</p>
-            <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40">
-              {JSON.stringify(toolInput, null, 2)}
-            </pre>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 mt-3">
-          <Checkbox
-            id="auto-confirm"
-            checked={autoConfirm}
-            onCheckedChange={(checked: boolean) => setAutoConfirm(checked)}
-          />
-          <label htmlFor="auto-confirm" className="text-sm text-muted-foreground cursor-pointer">
-            以后自动确认此类操作
-          </label>
+          {detailPreview ? (
+            <div>
+              <p className="text-sm font-medium mb-1">操作对象</p>
+              <DetailPreviewCard preview={detailPreview} />
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm font-medium mb-1">参数</p>
+              <pre className="text-xs bg-muted p-3 rounded-md overflow-auto max-h-40">
+                {JSON.stringify(toolInput, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={handleReject} disabled={loading}>拒绝</Button>

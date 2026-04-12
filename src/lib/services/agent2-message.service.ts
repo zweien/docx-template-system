@@ -5,12 +5,13 @@ import type { ServiceResult } from "@/types/data-table";
 
 export async function saveMessages(
   conversationId: string,
-  userMessage: { role: string; parts: unknown[]; attachments?: unknown },
-  assistantMessage: { role: string; parts: unknown[] }
+  userMessage: { id?: string; role: string; parts: unknown[]; attachments?: unknown },
+  assistantMessage: { id?: string; role: string; parts: unknown[] }
 ): Promise<ServiceResult<Agent2MessageItem[]>> {
   const [user, assistant] = await db.$transaction([
     db.agent2Message.create({
       data: {
+        ...(userMessage.id ? { id: userMessage.id } : {}),
         conversationId,
         role: userMessage.role,
         parts: userMessage.parts as Prisma.InputJsonValue,
@@ -21,6 +22,7 @@ export async function saveMessages(
     }),
     db.agent2Message.create({
       data: {
+        ...(assistantMessage.id ? { id: assistantMessage.id } : {}),
         conversationId,
         role: assistantMessage.role,
         parts: assistantMessage.parts as Prisma.InputJsonValue,

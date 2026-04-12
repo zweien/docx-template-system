@@ -312,6 +312,8 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
                         toolCallId,
                         output: result,
                       })
+                      // Trigger AI continuation after user confirms tool execution
+                      void sendMessage({ text: "确认执行" })
                     }}
                   />
                 </MessageContent>

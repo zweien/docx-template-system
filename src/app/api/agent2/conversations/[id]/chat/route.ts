@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { streamText, convertToModelMessages, stepCountIs, type UIMessage } from "ai";
+import { streamText, convertToModelMessages, type UIMessage } from "ai";
 import { randomUUID } from "crypto";
 import { ZodError } from "zod";
 import { chatRequestSchema } from "@/validators/agent2";
 import { getConversation } from "@/lib/services/agent2-conversation.service";
-import { getSettings } from "@/lib/services/agent2-settings.service";
-import { saveMessages, getMessages } from "@/lib/services/agent2-message.service";
+import { saveMessages } from "@/lib/services/agent2-message.service";
 import { resolveModel, isReasoningModel } from "@/lib/agent2/model-resolver";
 import { buildSystemPrompt, truncateMessages } from "@/lib/agent2/context-builder";
 import { createTools } from "@/lib/agent2/tools";
@@ -50,12 +49,6 @@ export async function POST(
       );
     }
 
-    // Get user settings for auto-confirm
-    const settingsResult = await getSettings(session.user.id);
-    const autoConfirm = settingsResult.success
-      ? (settingsResult.data.autoConfirmTools as Record<string, boolean>)
-      : {};
-
     // 检测是否是 reasoning 模型
     const config = await db.agent2ModelConfig.findFirst({
       where: {
@@ -77,31 +70,21 @@ export async function POST(
     const model = await resolveModel(validated.model, session.user.id);
     const systemPrompt = await buildSystemPrompt();
     const messageId = randomUUID();
-    const tools = createTools(conversationId, messageId, autoConfirm);
+    const tools = createTools(conversationId, messageId, session.user.id);
 
     // Get MCP tools from enabled servers
-    const mcpResult = await getEnabledMcpTools(conversationId, messageId, autoConfirm);
+    const mcpResult = await getEnabledMcpTools(conversationId, messageId);
     mcpClients = mcpResult.clients;
     const allTools = { ...tools, ...mcpResult.tools };
 
-    // Load conversation history from DB
-    const historyResult = await getMessages(conversationId);
-    const historyMessages: UIMessage[] = historyResult.success
-      ? historyResult.data.map((m) => ({
-          id: m.id,
-          role: m.role as "user" | "assistant",
-          parts: m.parts as UIMessage["parts"],
-          createdAt: new Date(m.createdAt),
-        }))
-      : [];
-
-    // Extract the latest user message from the frontend payload
+    // Use client messages directly — the client sends the full message list
+    // which includes all history (loaded from DB on page init) plus the latest
+    // updates such as addToolOutput results from tool confirmations.
+    // This avoids a race condition where the DB hasn't been updated yet
+    // (onFinish may still be saving the original messages when a confirm
+    // route tries to update them).
     const uiMessages = validated.messages as unknown as UIMessage[];
-    const lastUserMessage = uiMessages[uiMessages.length - 1];
-    const allMessages = sanitizeStoredMessages([
-      ...historyMessages,
-      lastUserMessage as unknown as UIMessage,
-    ]);
+    const allMessages = sanitizeStoredMessages(uiMessages);
 
     // Convert UIMessages to ModelMessages and truncate to prevent context overflow
     const convertedMessages = await convertToModelMessages(allMessages, {
@@ -111,12 +94,21 @@ export async function POST(
     const messages = truncateMessages(convertedMessages as { role: string; content: string }[]) as typeof convertedMessages;
 
     // Stream with AI SDK
+    // Custom stopWhen: stop on _needsConfirm (tool needs user confirmation) or max 10 steps
     const result = streamText({
       model,
       system: systemPrompt,
       messages,
       tools: allTools,
-      stopWhen: stepCountIs(10),
+      stopWhen: ({ steps }) => {
+        if (steps.length >= 10) return true;
+        const lastStep = steps[steps.length - 1];
+        if (!lastStep) return false;
+        // Stop if any tool returned _needsConfirm to wait for user approval
+        return lastStep.dynamicToolResults.some(
+          (r) => typeof r.output === "object" && r.output !== null && "_needsConfirm" in (r.output as Record<string, unknown>)
+        );
+      },
     });
 
     return result.toUIMessageStreamResponse({

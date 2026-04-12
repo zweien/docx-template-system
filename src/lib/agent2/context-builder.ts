@@ -85,6 +85,7 @@ export async function buildSystemPrompt(): Promise<string> {
    - 收到此响应后，你必须停止生成，不要再次调用相同或类似的工具
    - 简短告知用户操作正在等待确认，用户可以在确认框中查看详情
    - 等待用户在界面中确认或拒绝后再继续
+   - 当用户发送"确认执行"时，如果历史消息中该工具的输出包含 { success: true, message: "..." }，说明操作已被用户确认并成功执行，直接总结结果即可，绝对不要再次调用该工具
 8. 删除操作流程 — 当用户要求删除记录时：
    - 如果用户提供了明确的记录 ID，直接调用 deleteRecord
    - 如果用户提供了模糊描述（如"删除论文 Attention Is All You Need"），先用 searchRecords 查询确认记录

@@ -138,6 +138,7 @@ export function getLatestPersistableMessages(
 
   return {
     userMessage: {
+      id: userMessage.id,
       role: "user",
       parts: userMessage.parts,
       attachments: "experimental_attachments" in userMessage
@@ -145,6 +146,7 @@ export function getLatestPersistableMessages(
         : undefined,
     },
     assistantMessage: {
+      id: assistantMessage.id,
       role: "assistant",
       parts: assistantMessage.parts.flatMap((part): UIMessage['parts'] => {
         if (part.type !== "text") {

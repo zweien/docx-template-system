@@ -2,7 +2,7 @@
 
 import { useChat } from "@ai-sdk/react"
 import { useCallback, useEffect, useState } from "react"
-import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls, type FileUIPart, type UIMessage } from "ai"
+import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai"
 
 // AI Elements
 import { Conversation, ConversationContent, ConversationEmptyState, ConversationScrollButton } from "@/components/ai-elements/conversation"
@@ -117,7 +117,6 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
       api: `/api/agent2/conversations/${conversationId}/chat`,
       body: { model },
     }),
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   })
 
   // Sync defaultModel prop changes to local state
@@ -313,6 +312,8 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
                         toolCallId,
                         output: result,
                       })
+                      // Trigger AI continuation after user confirms tool execution
+                      void sendMessage({ text: "确认执行" })
                     }}
                   />
                 </MessageContent>

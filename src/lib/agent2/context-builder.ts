@@ -10,15 +10,16 @@ export function invalidateSyspromptCache(): void {
   syspromptCache = null;
 }
 
-export async function buildSystemPrompt(): Promise<string> {
-  // Check cache
-  if (syspromptCache && Date.now() < syspromptCache.expiresAt) {
+export async function buildSystemPrompt(tableId?: string): Promise<string> {
+  // When tableId is provided, each table gets a different prompt — skip global cache
+  if (!tableId && syspromptCache && Date.now() < syspromptCache.expiresAt) {
     return syspromptCache.text;
   }
 
   let tableContext = "";
-
+  let currentTableContext = "";
   let mcpContext = "";
+  let tablesResult: Awaited<ReturnType<typeof listTables>> | null = null;
 
   try {
     const { getEnabledMcpServers } = await import("@/lib/services/agent2-mcp.service");
@@ -37,7 +38,7 @@ export async function buildSystemPrompt(): Promise<string> {
   }
 
   try {
-    const tablesResult = await listTables();
+    tablesResult = await listTables();
     if (tablesResult.success && tablesResult.data.length > 0) {
       tableContext = "\n## 当前系统数据表概览\n";
       for (const t of tablesResult.data.slice(0, 5)) {
@@ -59,6 +60,53 @@ export async function buildSystemPrompt(): Promise<string> {
     }
   } catch {
     // 动态上下文获取失败时不影响系统正常运行
+  }
+
+  // Build current table context when tableId is provided
+  if (tableId) {
+    try {
+      const schemaResult = await getTableSchema(tableId);
+
+      if (schemaResult.success) {
+        const s = schemaResult.data;
+        const fieldsList = s.fields
+          .map(f => {
+            let desc = `- ${f.label} (${f.key}, 类型: ${f.type})`;
+            if (f.required) desc += " [必填]";
+            if (f.options?.length) desc += ` [选项: ${f.options.join("/")}]`;
+            if (f.relationTo) desc += ` [关联→${f.relationTo}]`;
+            return desc;
+          })
+          .join("\n");
+
+        // Get recordCount from tablesResult if available, otherwise fetch it
+        let recordCount = 0;
+        if (tablesResult?.success) {
+          const tableInfo = tablesResult.data.find(t => t.id === tableId);
+          if (tableInfo) recordCount = tableInfo.recordCount;
+        } else {
+          // Fallback: fetch the current table info if tablesResult is not available
+          const fallbackResult = await listTables();
+          if (fallbackResult.success) {
+            const tableInfo = fallbackResult.data.find(t => t.id === tableId);
+            if (tableInfo) recordCount = tableInfo.recordCount;
+          }
+        }
+
+        currentTableContext = `
+## 当前数据表（用户正在查看的页面）
+表名：${s.name}（ID: ${s.id}）
+描述：${s.description || "无"}
+记录数：${recordCount}
+字段：
+${fieldsList}
+
+用户当前正在查看此数据表，你应优先针对此表进行问答和操作。
+`;
+      }
+    } catch {
+      // Current table context fetch failure should not break the prompt
+    }
   }
 
   const text = `你是一个系统集成 AI 助手，能够操作本系统的数据表、模板和记录。
@@ -91,12 +139,16 @@ export async function buildSystemPrompt(): Promise<string> {
    - 如果用户提供了模糊描述（如"删除论文 Attention Is All You Need"），先用 searchRecords 查询确认记录
    - deleteRecord 调用后系统会自动在确认框中展示记录详情
    - 不要反复重试调用，等待用户确认即可
+${currentTableContext}
 ${tableContext}
 ${mcpContext}
 ## 回答语言
 默认使用中文回答，除非用户明确要求其他语言。`;
 
-  syspromptCache = { text, expiresAt: Date.now() + SYSPROMPT_TTL };
+  // Only cache when tableId is NOT provided (to avoid cache pollution)
+  if (!tableId) {
+    syspromptCache = { text, expiresAt: Date.now() + SYSPROMPT_TTL };
+  }
   return text;
 }
 

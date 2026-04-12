@@ -20,6 +20,7 @@ export const chatRequestSchema = z.object({
     })
   ),
   model: z.string().min(1),
+  tableId: z.string().min(1).optional(),
 });
 
 export const toolConfirmSchema = z.object({

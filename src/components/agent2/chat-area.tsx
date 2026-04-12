@@ -30,7 +30,19 @@ import {
 
 import { MessageParts } from "./message-parts"
 import { Button } from "@/components/ui/button"
-import { PanelLeftClose, PanelLeft, Paperclip, Sparkles } from "lucide-react"
+import { PanelLeftClose, PanelLeft, Paperclip, Sparkles, ChevronDown } from "lucide-react"
+import {
+  ModelSelector,
+  ModelSelectorTrigger,
+  ModelSelectorContent,
+  ModelSelectorInput,
+  ModelSelectorList,
+  ModelSelectorEmpty,
+  ModelSelectorGroup,
+  ModelSelectorItem,
+  ModelSelectorName,
+  ModelSelectorSeparator,
+} from "@/components/ai-elements/model-selector"
 import {
   buildAttachmentMessageText,
   uploadAgent2Files,
@@ -87,6 +99,7 @@ function PromptInputAttachmentButton({ disabled = false }: { disabled?: boolean 
 export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, onMobileMenuOpen, defaultModel, tableId }: ChatAreaProps) {
   const [modelName, setModelName] = useState("MiniMax-M2.5")
   const [model, setModel] = useState(defaultModel || "MiniMax-M2.5")
+  const [models, setModels] = useState<{ id: string; name: string; providerId: string; modelId: string }[]>([])
   const [inputError, setInputError] = useState<string | null>(null)
   const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
@@ -145,6 +158,7 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
         const modelsData = await modelsRes.json()
         if (!active || !modelsData?.success) return
 
+        setModels(modelsData.data)
         const resolvedModel = savedModel || defaultModel || "MiniMax-M2.5"
         const current = modelsData.data.find((m: { id: string }) => m.id === resolvedModel)
         if (current) {
@@ -273,7 +287,6 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
           </Button>
         )}
         <span className="text-sm font-medium truncate">AI 助手</span>
-        <span className="text-xs text-muted-foreground">{modelName}</span>
       </div>
 
       {/* Messages */}
@@ -344,6 +357,56 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
             <PromptInputFooter>
               <PromptInputTools>
                 <PromptInputAttachmentButton disabled={!historyLoaded} />
+                <ModelSelector>
+                  <ModelSelectorTrigger
+                    render={
+                      <PromptInputButton
+                        tooltip="切换模型"
+                        disabled={!historyLoaded}
+                        aria-label="切换模型"
+                      />
+                    }
+                  >
+                    <span className="max-w-24 truncate text-xs">{modelName}</span>
+                    <ChevronDown className="size-3 shrink-0 opacity-50" />
+                  </ModelSelectorTrigger>
+                  <ModelSelectorContent title="选择模型">
+                    <ModelSelectorInput placeholder="搜索模型..." />
+                    <ModelSelectorList>
+                      <ModelSelectorEmpty>未找到模型</ModelSelectorEmpty>
+                      {(() => {
+                        const providers = [...new Set(models.map(m => m.providerId))]
+                        return providers.map((provider, i) => (
+                          <div key={provider}>
+                            {i > 0 && <ModelSelectorSeparator />}
+                            <ModelSelectorGroup heading={provider}>
+                              {models
+                                .filter(m => m.providerId === provider)
+                                .map(m => (
+                                  <ModelSelectorItem
+                                    key={m.id}
+                                    value={`${m.name} ${m.modelId} ${m.providerId}`}
+                                    onSelect={() => {
+                                      setModel(m.id)
+                                      setModelName(m.name)
+                                    }}
+                                  >
+                                    <span className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-[10px] font-semibold text-muted-foreground uppercase">
+                                      {m.providerId.slice(0, 2)}
+                                    </span>
+                                    <ModelSelectorName>{m.name}</ModelSelectorName>
+                                    {m.id === model && (
+                                      <span className="text-xs text-muted-foreground">✓</span>
+                                    )}
+                                  </ModelSelectorItem>
+                                ))}
+                            </ModelSelectorGroup>
+                          </div>
+                        ))
+                      })()}
+                    </ModelSelectorList>
+                  </ModelSelectorContent>
+                </ModelSelector>
               </PromptInputTools>
               <PromptInputSubmit status={status} onStop={stop} disabled={!historyLoaded} />
             </PromptInputFooter>

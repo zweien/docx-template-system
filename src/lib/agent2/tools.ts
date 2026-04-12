@@ -111,11 +111,24 @@ function generateEChartsOption(args: {
 
 // ── Tool factory ──
 
+function readOnlyTool(description: string) {
+  return tool({
+    description: `${description}（需要管理员权限）`,
+    inputSchema: z.object({ message: z.string().optional() }),
+    execute: async () => ({
+      error: "权限不足",
+      message: "当前用户为普通用户，仅支持查询操作。如需修改数据，请联系管理员。",
+    }),
+  });
+}
+
 export function createTools(
   conversationId: string,
   messageId: string,
-  userId?: string
+  userId?: string,
+  userRole?: string
 ) {
+  const isAdmin = userRole === "ADMIN";
   // Helper to wrap tools that need confirmation
   function wrapConfirm<T>(
     toolName: string,
@@ -294,7 +307,7 @@ export function createTools(
       },
     }),
 
-    generateDocument: wrapConfirm(
+    generateDocument: isAdmin ? wrapConfirm(
       "generateDocument",
       z.object({
         templateId: z.string().describe("模板 ID"),
@@ -306,7 +319,7 @@ export function createTools(
       async (args) => {
         return { message: "文档生成功能暂未完全实现", args };
       }
-    ),
+    ) : readOnlyTool("根据模板和表单数据生成文档"),
 
     // ── Record management tools ──
     getRecord: tool({
@@ -321,7 +334,7 @@ export function createTools(
       },
     }),
 
-    createRecord: wrapConfirm(
+    createRecord: isAdmin ? wrapConfirm(
       "createRecord",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
@@ -333,9 +346,9 @@ export function createTools(
       async (args) => {
         return { message: "记录创建待确认", args };
       }
-    ),
+    ) : readOnlyTool("在数据表中创建新记录"),
 
-    updateRecord: wrapConfirm(
+    updateRecord: isAdmin ? wrapConfirm(
       "updateRecord",
       z.object({
         recordId: z.string().describe("要更新的记录 ID"),
@@ -347,9 +360,9 @@ export function createTools(
       async (args) => {
         return { message: "记录更新待确认", args };
       }
-    ),
+    ) : readOnlyTool("更新已有记录"),
 
-    deleteRecord: wrapConfirm(
+    deleteRecord: isAdmin ? wrapConfirm(
       "deleteRecord",
       z.object({
         recordId: z.string().describe("要删除的记录 ID"),
@@ -358,10 +371,10 @@ export function createTools(
       async (args) => {
         return { message: "记录删除待确认", args };
       }
-    ),
+    ) : readOnlyTool("删除记录"),
 
     // ── Batch operation tools ──
-    batchCreateRecords: wrapConfirm(
+    batchCreateRecords: isAdmin ? wrapConfirm(
       "batchCreateRecords",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
@@ -374,9 +387,9 @@ export function createTools(
       async (args) => {
         return { message: "批量创建待确认", args };
       }
-    ),
+    ) : readOnlyTool("批量创建记录"),
 
-    batchUpdateRecords: wrapConfirm(
+    batchUpdateRecords: isAdmin ? wrapConfirm(
       "batchUpdateRecords",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
@@ -396,9 +409,9 @@ export function createTools(
       async (args) => {
         return { message: "批量更新待确认", args };
       }
-    ),
+    ) : readOnlyTool("批量更新记录"),
 
-    batchDeleteRecords: wrapConfirm(
+    batchDeleteRecords: isAdmin ? wrapConfirm(
       "batchDeleteRecords",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
@@ -411,7 +424,7 @@ export function createTools(
       async (args) => {
         return { message: "批量删除待确认", args };
       }
-    ),
+    ) : readOnlyTool("批量删除记录"),
 
     // ── Auxiliary tools ──
     getCurrentTime: tool({
@@ -430,7 +443,7 @@ export function createTools(
       },
     }),
 
-    executeCode: wrapConfirm(
+    executeCode: isAdmin ? wrapConfirm(
       "executeCode",
       z.object({
         language: z
@@ -442,7 +455,7 @@ export function createTools(
       async () => {
         return { message: "代码执行功能暂未开放" };
       }
-    ),
+    ) : readOnlyTool("在沙箱中执行代码"),
 
     generateChart: tool({
       description:
@@ -512,7 +525,7 @@ export function createTools(
       },
     }),
 
-    importPaper: wrapConfirm(
+    importPaper: isAdmin ? wrapConfirm(
       "importPaper",
       z.object({
         paperData: z.object({
@@ -562,6 +575,6 @@ export function createTools(
         if (!result.success) throw new Error(result.error);
         return result.data;
       }
-    ),
+    ) : readOnlyTool("导入论文到论文表"),
   };
 }

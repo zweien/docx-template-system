@@ -64,11 +64,15 @@ function normalizeName(name: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-/** 获取当前论文表中最大的 paper_id（数字）+1 */
-async function nextPaperId(paperTableId: string): Promise<string> {
-  const result = await db.$queryRawUnsafe<Array<{ max_id: string | null }>>(
+/**
+ * 在事务内安全生成下一个 paper_id。
+ * 使用 FOR UPDATE 锁定扫描范围，防止并发重复。
+ */
+async function nextPaperId(tx: Prisma.TransactionClient, paperTableId: string): Promise<string> {
+  const result = await tx.$queryRawUnsafe<Array<{ max_id: string | null }>>(
     `SELECT MAX(CAST(data->>'paper_id' AS INTEGER)) as max_id
-     FROM "DataRecord" WHERE "tableId" = $1`,
+     FROM "DataRecord" WHERE "tableId" = $1
+     FOR UPDATE`,
     paperTableId
   );
   const maxId = result[0]?.max_id;
@@ -99,15 +103,16 @@ async function findPaperAndAuthorTables(): Promise<{
   };
 }
 
-/** 在作者表中按标准化姓名匹配作者 */
+/** 在事务内按标准化姓名匹配或创建作者 */
 async function matchOrCreateAuthor(
+  tx: Prisma.TransactionClient,
   authorTableId: string,
   name: string,
   userId: string
 ): Promise<{ id: string; status: "matched" | "created" }> {
   const norm = normalizeName(name);
 
-  const existing = await db.dataRecord.findFirst({
+  const existing = await tx.dataRecord.findFirst({
     where: {
       tableId: authorTableId,
       OR: [
@@ -122,7 +127,7 @@ async function matchOrCreateAuthor(
     return { id: existing.id, status: "matched" };
   }
 
-  const record = await db.dataRecord.create({
+  const record = await tx.dataRecord.create({
     data: {
       tableId: authorTableId,
       data: {
@@ -152,85 +157,90 @@ export async function importPaper(
 
     const { paperTableId, authorTableId } = tables;
 
-    // 1. 匹配/创建所有作者
-    const authorResults: ImportResult["authors"] = [];
+    // 整个导入流程在单一事务内执行，任一步失败全部回滚
+    const result = await db.$transaction(async (tx) => {
+      // 1. 在事务内安全生成 paper_id
+      const paperId = await nextPaperId(tx, paperTableId);
 
-    for (const author of authors) {
-      const result = await matchOrCreateAuthor(authorTableId, author.name, userId);
-      authorResults.push({
-        name: author.name,
-        status: result.status,
-        authorId: result.id,
-      });
-    }
+      // 2. 匹配/创建所有作者
+      const authorResults: ImportResult["authors"] = [];
+      for (const author of authors) {
+        const matchResult = await matchOrCreateAuthor(tx, authorTableId, author.name, userId);
+        authorResults.push({
+          name: author.name,
+          status: matchResult.status,
+          authorId: matchResult.id,
+        });
+      }
 
-    // 2. 创建论文记录
-    const paperRecord = await db.dataRecord.create({
-      data: {
-        tableId: paperTableId,
+      // 3. 创建论文记录
+      const paperRecord = await tx.dataRecord.create({
         data: {
-          paper_id: await nextPaperId(paperTableId),
-          title_en: paperData.title_en,
-          title_cn: paperData.title_cn ?? "",
-          paper_type: paperData.paper_type ?? "",
-          group_name: paperData.group_name ?? "",
-          publish_year: paperData.publish_year ?? null,
-          publish_date: paperData.publish_date ?? "",
-          conf_start_date: paperData.conf_start_date ?? "",
-          conf_end_date: paperData.conf_end_date ?? "",
-          venue_name: paperData.venue_name ?? "",
-          venue_name_cn: paperData.venue_name_cn ?? "",
-          conf_location: paperData.conf_location ?? "",
-          doi: paperData.doi ?? "",
-          index_type: paperData.index_type ?? "",
-          pub_status: paperData.pub_status ?? "",
-          archive_status: paperData.archive_status ?? "",
-          corr_authors: paperData.corr_authors ?? "",
-          inst_rank: paperData.inst_rank ?? null,
-          fund_no: paperData.fund_no ?? "",
-          paper_url: paperData.paper_url ?? "",
-          volume: paperData.volume ?? "",
-          issue: paperData.issue ?? "",
-          pages: paperData.pages ?? "",
-          impact_factor: paperData.impact_factor ?? null,
-          issn_isbn: paperData.issn_isbn ?? "",
-          ccf_category: paperData.ccf_category ?? "",
-          cas_partition: paperData.cas_partition ?? "",
-          jcr_partition: paperData.jcr_partition ?? "",
-          sci_partition: paperData.sci_partition ?? "",
-        } as unknown as Prisma.InputJsonValue,
-        createdById: userId,
-      },
-    });
-
-    // 3. 建立论文-作者关联（RELATION_SUBTABLE）
-    if (authors.length > 0) {
-      const relationItems: RelationSubtableValueItem[] = authors.map((author, idx) => ({
-        targetRecordId: authorResults[idx].authorId,
-        displayValue: author.name,
-        attributes: {
-          author_order: author.author_order,
-          is_first_author: author.is_first_author,
-          is_corresponding_author: author.is_corresponding_author,
+          tableId: paperTableId,
+          data: {
+            paper_id: paperId,
+            title_en: paperData.title_en,
+            title_cn: paperData.title_cn ?? "",
+            paper_type: paperData.paper_type ?? "",
+            group_name: paperData.group_name ?? "",
+            publish_year: paperData.publish_year ?? null,
+            publish_date: paperData.publish_date ?? "",
+            conf_start_date: paperData.conf_start_date ?? "",
+            conf_end_date: paperData.conf_end_date ?? "",
+            venue_name: paperData.venue_name ?? "",
+            venue_name_cn: paperData.venue_name_cn ?? "",
+            conf_location: paperData.conf_location ?? "",
+            doi: paperData.doi ?? "",
+            index_type: paperData.index_type ?? "",
+            pub_status: paperData.pub_status ?? "",
+            archive_status: paperData.archive_status ?? "",
+            corr_authors: paperData.corr_authors ?? "",
+            inst_rank: paperData.inst_rank ?? null,
+            fund_no: paperData.fund_no ?? "",
+            paper_url: paperData.paper_url ?? "",
+            volume: paperData.volume ?? "",
+            issue: paperData.issue ?? "",
+            pages: paperData.pages ?? "",
+            impact_factor: paperData.impact_factor ?? null,
+            issn_isbn: paperData.issn_isbn ?? "",
+            ccf_category: paperData.ccf_category ?? "",
+            cas_partition: paperData.cas_partition ?? "",
+            jcr_partition: paperData.jcr_partition ?? "",
+            sci_partition: paperData.sci_partition ?? "",
+          } as unknown as Prisma.InputJsonValue,
+          createdById: userId,
         },
-        sortOrder: author.author_order,
-      }));
+      });
 
-      await db.$transaction(async (tx) => {
+      // 4. 建立论文-作者关联（在同一事务内）
+      if (authors.length > 0) {
+        const relationItems: RelationSubtableValueItem[] = authors.map((author, idx) => ({
+          targetRecordId: authorResults[idx].authorId,
+          displayValue: author.name,
+          attributes: {
+            author_order: author.author_order,
+            is_first_author: author.is_first_author,
+            is_corresponding_author: author.is_corresponding_author,
+          },
+          sortOrder: author.author_order,
+        }));
+
         await syncRelationSubtableValues({
           tx,
           sourceRecordId: paperRecord.id,
           tableId: paperTableId,
           relationPayload: { authors: relationItems },
         });
-      });
-    }
+      }
+
+      return { paperRecord, authorResults };
+    });
 
     return {
       success: true,
       data: {
-        paperId: paperRecord.id,
-        authors: authorResults,
+        paperId: result.paperRecord.id,
+        authors: result.authorResults,
       },
     };
   } catch (err) {

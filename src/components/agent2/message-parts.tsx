@@ -440,6 +440,7 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
         toolInput={confirmState.toolInput}
         riskMessage={confirmState.riskMessage}
         token={confirmState.token}
+        toolCallId={confirmState.toolCallId}
         detailPreview={confirmState.detailPreview}
         onConfirm={(result) => {
           setConfirmState(prev => ({ ...prev, open: false }))

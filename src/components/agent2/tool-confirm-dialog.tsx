@@ -21,6 +21,7 @@ interface ToolConfirmDialogProps {
   toolInput: Record<string, unknown>
   riskMessage: string
   token: string
+  toolCallId: string
   detailPreview?: DetailPreview | null
   onConfirm: (result: unknown) => void
   onReject: () => void
@@ -62,7 +63,7 @@ function DetailPreviewCard({ preview }: { preview: DetailPreview }) {
 }
 
 export function ToolConfirmDialog({
-  open, onOpenChange, toolName, toolInput, riskMessage, token,
+  open, onOpenChange, toolName, toolInput, riskMessage, token, toolCallId,
   detailPreview, onConfirm, onReject,
 }: ToolConfirmDialogProps) {
   const [loading, setLoading] = useState(false)
@@ -73,7 +74,7 @@ export function ToolConfirmDialog({
       const res = await fetch(`/api/agent2/confirm/${token}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approved: true }),
+        body: JSON.stringify({ approved: true, toolCallId }),
       })
       const data = await res.json()
       if (data.success) onConfirm(data.data)

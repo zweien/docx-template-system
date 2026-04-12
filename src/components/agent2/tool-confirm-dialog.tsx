@@ -104,7 +104,7 @@ export function ToolConfirmDialog({
           </DialogTitle>
           <DialogDescription>{riskMessage}</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
           <div>
             <p className="text-sm font-medium mb-1">工具</p>
             <code className="text-sm bg-muted px-2 py-1 rounded">

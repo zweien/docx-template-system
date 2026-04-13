@@ -487,7 +487,8 @@ export async function getRecord(id: string): Promise<ServiceResult<DataRecordIte
 export async function createRecord(
   userId: string,
   tableId: string,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  options?: { skipRequiredValidation?: boolean }
 ): Promise<ServiceResult<DataRecordItem>> {
   try {
     // Get table and validate data against fields
@@ -496,9 +497,11 @@ export async function createRecord(
       return { success: false, error: tableResult.error };
     }
 
-    const validation = validateRecordData(data, tableResult.data.fields);
-    if (!validation.success) {
-      return validation;
+    if (!options?.skipRequiredValidation) {
+      const validation = validateRecordData(data, tableResult.data.fields);
+      if (!validation.success) {
+        return validation;
+      }
     }
 
     normalizeBooleanFields(data, tableResult.data.fields);

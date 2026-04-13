@@ -50,6 +50,7 @@ export interface UseTableDataReturn {
   deleteRecord: (recordId: string) => Promise<void>;
   deletingIds: Set<string>;
   updateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
+  addRecord: (record: DataRecordItem) => void;
   refresh: () => void;
 }
 
@@ -249,6 +250,20 @@ export function useTableData({
               ? { ...record, data: { ...record.data, [fieldKey]: value } }
               : record
           ),
+        };
+      });
+    },
+    []
+  );
+
+  const addRecord = useCallback(
+    (record: DataRecordItem) => {
+      setRecordsData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          records: [...prev.records, record],
+          total: prev.total + 1,
         };
       });
     },
@@ -553,6 +568,7 @@ export function useTableData({
     deleteRecord,
     deletingIds,
     updateRecordField,
+    addRecord,
     refresh,
   };
 }

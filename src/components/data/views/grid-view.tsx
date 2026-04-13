@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Redo2, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
 import { BatchActionBar } from "@/components/data/batch-action-bar";
 import { BatchEditDialog } from "@/components/data/batch-edit-dialog";
 import { DragDropProvider } from "@dnd-kit/react";
@@ -70,6 +70,7 @@ interface GridViewProps {
   deletingIds: Set<string>;
   onRefresh: () => void;
   onUpdateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
+  onAddRecord: (record: DataRecordItem) => void;
   onOpenDetail?: (recordId: string) => void;
   onOpenFieldsConfig?: () => void;
   onDeleteField?: (fieldKey: string) => void;
@@ -235,6 +236,7 @@ export function GridView({
   deletingIds,
   onRefresh,
   onUpdateRecordField,
+  onAddRecord,
   onOpenDetail,
   columnWidths,
   onColumnWidthsChange,
@@ -777,6 +779,42 @@ export function GridView({
     },
     [setActiveCellRef, page]
   );
+
+  // ── Quick add row ────────────────────────────────────────────────────────
+  const handleQuickAddRow = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/data-tables/${tableId}/records`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: {}, skipRequiredValidation: true }),
+      });
+      if (!res.ok) {
+        toast.error("新建行失败");
+        return;
+      }
+      const record = (await res.json()) as DataRecordItem;
+      onAddRecord(record);
+      // Move activeCell to new row, start editing first editable field
+      const newRowIndex = flatRecords.length;
+      const firstEditableField = orderedVisibleFields.find(
+        (f) => f.type !== FieldType.RELATION_SUBTABLE
+          && f.type !== FieldType.AUTO_NUMBER
+          && f.type !== FieldType.SYSTEM_TIMESTAMP
+          && f.type !== FieldType.SYSTEM_USER
+          && f.type !== FieldType.FORMULA
+          && f.type !== FieldType.BOOLEAN
+      );
+      if (firstEditableField) {
+        const colIndex = orderedVisibleFields.indexOf(firstEditableField);
+        setTimeout(() => {
+          setActiveCell({ rowIndex: newRowIndex, colIndex });
+          startEditing(record.id, firstEditableField.key);
+        }, 0);
+      }
+    } catch {
+      toast.error("新建行失败");
+    }
+  }, [tableId, onAddRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing]);
 
   // When activeCell is set, remember which page it was on.
   // If page changed, activeCell becomes stale — use derived value instead.
@@ -1333,6 +1371,24 @@ export function GridView({
           ) : (
             // ── Flat rendering ────────────────────────────────────────────
             records.map((record, idx) => renderRecordRow(record, idx, idx))
+          )}
+          {!isLoading && records.length > 0 && isAdmin && (
+            <tr
+              className="border-b hover:bg-muted/30 cursor-pointer group"
+              onClick={handleQuickAddRow}
+            >
+              <td className="w-10 sticky left-0 z-[5] bg-background border-r" />
+              {canDragSort && <td className="w-8" />}
+              <td
+                colSpan={orderedVisibleFields.length + 1}
+                className="p-1 align-middle text-muted-foreground text-sm"
+              >
+                <span className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-muted/50 transition-colors">
+                  <Plus className="h-3.5 w-3.5" />
+                  <span className="opacity-60 group-hover:opacity-100 transition-opacity">新建行</span>
+                </span>
+              </td>
+            </tr>
           )}
           </DragDropProvider>
         </tbody>

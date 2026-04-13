@@ -277,19 +277,26 @@ export async function listRecords(
       }
     }
 
-    // 当有 sortBy 时，需要先取全部数据排序再分页，否则排序只在当前页内生效
+    // 当有 sortBy 或内存过滤运算符时，需要先取全部数据再分页
     const hasSort = filters.sortBy && filters.sortBy.length > 0;
     const sortableFields = hasSort
       ? filters.sortBy!.filter((sortConfig) =>
           tableResult.data.fields.some((field) => field.key === sortConfig.fieldKey)
         )
       : [];
+    const memoryFilterGroups = (filters.filterConditions && filters.filterConditions.length > 0)
+      ? normalizeFilters(filters.filterConditions).map(g => ({
+          ...g,
+          conditions: g.conditions.filter(c => c.op === "between" || c.op === "in" || c.op === "notin"),
+        })).filter(g => g.conditions.length > 0)
+      : [];
+    const needsFullFetch = hasSort || memoryFilterGroups.length > 0;
 
     let processedRecords: DataRecordItem[];
-    let total: number;
+    let total = 0;
 
-    if (sortableFields.length > 0) {
-      // 有排序：取全部匹配记录 → 内存排序 → 手动分页
+    if (needsFullFetch) {
+      // 有排序或内存过滤运算符：取全部匹配记录 → 内存排序/过滤 → 手动分页
       const [allRecords, totalCount] = await Promise.all([
         db.dataRecord.findMany({
           where,
@@ -300,16 +307,16 @@ export async function listRecords(
         }),
         db.dataRecord.count({ where }),
       ]);
-      total = totalCount;
-      processedRecords = allRecords.map(mapRecordToItem).sort((a, b) => {
-        for (const { fieldKey, order } of sortableFields) {
-          const result = compareRecordValues(a.data[fieldKey], b.data[fieldKey], order);
-          if (result !== 0) return result;
-        }
-        return 0;
-      });
-      const start = (filters.page - 1) * filters.pageSize;
-      processedRecords = processedRecords.slice(start, start + filters.pageSize);
+      processedRecords = allRecords.map(mapRecordToItem);
+      if (sortableFields.length > 0) {
+        processedRecords.sort((a, b) => {
+          for (const { fieldKey, order } of sortableFields) {
+            const result = compareRecordValues(a.data[fieldKey], b.data[fieldKey], order);
+            if (result !== 0) return result;
+          }
+          return 0;
+        });
+      }
     } else {
       // 无排序：直接 DB 分页（默认按创建时间倒序）
       const [records, totalCount] = await Promise.all([
@@ -444,6 +451,51 @@ export async function listRecords(
 
     // Resolve SYSTEM_TIMESTAMP and SYSTEM_USER fields from record metadata
     injectSystemFieldValues(processedRecords, tableResult.data.fields);
+
+    // ── Memory filtering for operators not supported by Prisma JSONB ──
+    if (memoryFilterGroups.length > 0) {
+      processedRecords = processedRecords.filter((record) =>
+        memoryFilterGroups.some((group) =>
+          group.conditions.every((cond) => {
+            const raw = record.data[cond.fieldKey];
+            const val = typeof raw === "object" && raw !== null && "display" in raw
+              ? (raw as { display: unknown }).display
+              : raw;
+            switch (cond.op) {
+              case "between": {
+                const range = cond.value as { min: number | string; max: number | string };
+                const num = Number(val);
+                if (!isNaN(num)) {
+                  return num >= Number(range.min) && num <= Number(range.max);
+                }
+                // Date string comparison
+                const dateVal = new Date(String(val));
+                const dateMin = new Date(String(range.min));
+                const dateMax = new Date(String(range.max));
+                return !isNaN(dateVal.getTime()) && dateVal >= dateMin && dateVal <= dateMax;
+              }
+              case "in": {
+                const list = Array.isArray(cond.value) ? cond.value.map(String) : [];
+                return list.includes(String(val ?? ""));
+              }
+              case "notin": {
+                const list = Array.isArray(cond.value) ? cond.value.map(String) : [];
+                return !list.includes(String(val ?? ""));
+              }
+              default:
+                return true;
+            }
+          })
+        )
+      );
+    }
+
+    // Compute total after memory filtering, before pagination
+    if (needsFullFetch) {
+      total = processedRecords.length;
+      const start = (filters.page - 1) * filters.pageSize;
+      processedRecords = processedRecords.slice(start, start + filters.pageSize);
+    }
 
     return {
       success: true,
@@ -1009,6 +1061,12 @@ function buildConditionFromFilter(
       return { NOT: { data: { path: [cond.fieldKey], equals: cond.value } } }
     case "contains":
       return { data: { path: [cond.fieldKey], string_contains: String(cond.value) } }
+    case "notcontains":
+      return { NOT: { data: { path: [cond.fieldKey], string_contains: String(cond.value) } } }
+    case "startswith":
+      return { data: { path: [cond.fieldKey], string_starts_with: String(cond.value) } }
+    case "endswith":
+      return { data: { path: [cond.fieldKey], string_ends_with: String(cond.value) } }
     case "gt":
     case "gte":
     case "lt":

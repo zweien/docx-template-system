@@ -21,7 +21,7 @@ import type {
 import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { useKeyboardNav, type ActiveCell } from "@/hooks/use-keyboard-nav";
+import { useKeyboardNav, type ActiveCell, type CellRange } from "@/hooks/use-keyboard-nav";
 import { useUndoManager } from "@/hooks/use-undo-manager";
 import { cn } from "@/lib/utils";
 import { useSummaryRow } from "@/hooks/use-summary-row";
@@ -635,7 +635,8 @@ export function GridView({
     useInlineEdit({ tableId, onCommit: handleCommitWithUndo });
 
   // ── Keyboard navigation ──────────────────────────────────────────────────
-  const { handleKeyDown, setActiveCell: setActiveCellRef } = useKeyboardNav({
+  const [selectionRange, setSelectionRangeState] = useState<CellRange | null>(null);
+  const { handleKeyDown, setActiveCell: setActiveCellRef, setSelectionRange: setSelectionRangeRef } = useKeyboardNav({
     rowCount: flatRecords.length,
     colCount: orderedVisibleFields.length,
     editingCell,
@@ -690,6 +691,46 @@ export function GridView({
         field.key,
         field.type === FieldType.NUMBER ? Number(text) : text
       );
+    },
+    onCopyRange: (range: CellRange) => {
+      const minRow = Math.min(range.startRow, range.endRow);
+      const maxRow = Math.max(range.startRow, range.endRow);
+      const minCol = Math.min(range.startCol, range.endCol);
+      const maxCol = Math.max(range.startCol, range.endCol);
+      const lines: string[] = [];
+      for (let r = minRow; r <= maxRow; r++) {
+        const entry = flatRecords[r];
+        if (entry?.type !== "record" || !entry.record) { lines.push(""); continue; }
+        const cells: string[] = [];
+        for (let c = minCol; c <= maxCol; c++) {
+          const field = orderedVisibleFields[c];
+          cells.push(field ? String(entry.record.data[field.key] ?? "") : "");
+        }
+        lines.push(cells.join("\t"));
+      }
+      navigator.clipboard.writeText(lines.join("\n"));
+    },
+    onPasteRange: (text: string, startRow: number, startCol: number) => {
+      const rows = text.split(/\r?\n/).filter(line => line.length > 0);
+      const parsed = rows.map(row => row.split("\t"));
+      for (let dr = 0; dr < parsed.length; dr++) {
+        const targetRow = startRow + dr;
+        const entry = flatRecords[targetRow];
+        if (!entry || entry.type !== "record" || !entry.record) continue;
+        for (let dc = 0; dc < parsed[dr].length; dc++) {
+          const targetCol = startCol + dc;
+          const field = orderedVisibleFields[targetCol];
+          if (!field) continue;
+          if (field.type === FieldType.RELATION_SUBTABLE || field.type === FieldType.AUTO_NUMBER || field.type === FieldType.SYSTEM_TIMESTAMP || field.type === FieldType.SYSTEM_USER || field.type === FieldType.FORMULA) continue;
+          const rawValue = parsed[dr][dc];
+          const value = field.type === FieldType.NUMBER ? Number(rawValue) : rawValue;
+          if (field.type === FieldType.NUMBER && isNaN(value as number)) continue;
+          handleCommit(entry.record.id, field.key, value);
+        }
+      }
+    },
+    onSelectionChange: (range: CellRange | null) => {
+      setSelectionRangeState(range);
     },
     isGroupRow: (rowIndex: number) =>
       groupRowIndices.has(rowIndex),
@@ -814,21 +855,39 @@ export function GridView({
     (rowIndex: number, colIndex: number, e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('button, [role="checkbox"], input, select')) return;
-      setActiveCell({ rowIndex, colIndex });
+
+      if (e.shiftKey && stableActiveCell) {
+        // Shift+click: extend selection
+        e.preventDefault();
+        const range: CellRange = {
+          startRow: stableActiveCell.rowIndex,
+          startCol: stableActiveCell.colIndex,
+          endRow: rowIndex,
+          endCol: colIndex,
+        };
+        setSelectionRangeRef(range);
+        setSelectionRangeState(range);
+      } else {
+        setActiveCell({ rowIndex, colIndex });
+        setSelectionRangeRef(null);
+        setSelectionRangeState(null);
+      }
       tableRef.current?.focus();
 
-      // Boolean toggle on single click
-      const entry = flatRecords[rowIndex];
-      if (entry?.type === "record" && entry.record) {
-        const field = orderedVisibleFields[colIndex];
-        if (field?.type === FieldType.BOOLEAN) {
-          const currentValue = entry.record.data[field.key];
-          const newValue = !(!!currentValue && currentValue !== "false" && currentValue !== 0);
-          void handleCommitWithUndo(entry.record.id, field.key, newValue);
+      // Boolean toggle on single click (only without Shift)
+      if (!e.shiftKey) {
+        const entry = flatRecords[rowIndex];
+        if (entry?.type === "record" && entry.record) {
+          const field = orderedVisibleFields[colIndex];
+          if (field?.type === FieldType.BOOLEAN) {
+            const currentValue = entry.record.data[field.key];
+            const newValue = !(!!currentValue && currentValue !== "false" && currentValue !== 0);
+            void handleCommitWithUndo(entry.record.id, field.key, newValue);
+          }
         }
       }
     },
-    [setActiveCell, flatRecords, orderedVisibleFields, handleCommitWithUndo]
+    [setActiveCell, setSelectionRangeRef, stableActiveCell, flatRecords, orderedVisibleFields, handleCommitWithUndo]
   );
 
   // ── Editor rendering ────────────────────────────────────────────────────
@@ -1026,6 +1085,11 @@ export function GridView({
             const isActive =
               stableActiveCell?.rowIndex === flatRowIndex &&
               stableActiveCell?.colIndex === fieldIndex;
+            const isInRange = selectionRange &&
+              flatRowIndex >= Math.min(selectionRange.startRow, selectionRange.endRow) &&
+              flatRowIndex <= Math.max(selectionRange.startRow, selectionRange.endRow) &&
+              fieldIndex >= Math.min(selectionRange.startCol, selectionRange.endCol) &&
+              fieldIndex <= Math.max(selectionRange.startCol, selectionRange.endCol);
             const cellStyle = cellRuleMap[field.key];
             const mergedStyle: React.CSSProperties = {
               ...(frozenTdStyle ?? {}),
@@ -1043,7 +1107,8 @@ export function GridView({
                   frozenFieldCountValue > 0 &&
                     fieldIndex === frozenFieldCountValue - 1 &&
                     "frozen-last-col relative",
-                  isActive && "ring-2 ring-primary ring-inset"
+                  isActive && "ring-2 ring-primary ring-inset",
+                  isInRange && !isActive && "bg-primary/20 ring-1 ring-inset ring-primary/40"
                 )}
                 onClick={(e) => handleCellClick(flatRowIndex, fieldIndex, e)}
                 onDoubleClick={() => {
@@ -1221,7 +1286,7 @@ export function GridView({
       </div>
       <div className="flex-1 min-h-0 overflow-auto" ref={scrollRef}>
         <table
-          className="w-full caption-bottom text-sm outline-none"
+          className="w-full caption-bottom text-sm outline-none select-none"
           style={{ tableLayout: "fixed" }}
           ref={tableRef}
           tabIndex={0}

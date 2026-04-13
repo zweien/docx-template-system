@@ -13,12 +13,18 @@ const OPERATOR_OPTIONS = [
   { value: "eq", label: "等于" },
   { value: "ne", label: "不等于" },
   { value: "contains", label: "包含" },
+  { value: "notcontains", label: "不包含" },
+  { value: "startswith", label: "开头是" },
+  { value: "endswith", label: "结尾是" },
   { value: "isempty", label: "为空" },
   { value: "isnotempty", label: "不为空" },
   { value: "gt", label: "大于" },
   { value: "lt", label: "小于" },
   { value: "gte", label: "大于等于" },
   { value: "lte", label: "小于等于" },
+  { value: "between", label: "范围" },
+  { value: "in", label: "属于" },
+  { value: "notin", label: "不属于" },
 ]
 
 const NO_VALUE_OPS = ["isempty", "isnotempty"]
@@ -136,9 +142,31 @@ export function FilterPanel({ fields, filters, onChange }: FilterPanelProps) {
                 {!NO_VALUE_OPS.includes(cond.op) && (
                   <Input
                     className="h-7 flex-1 text-xs"
-                    value={String(cond.value)}
-                    onChange={(e) => updateCondition(gi, ci, { value: e.target.value })}
-                    placeholder="值"
+                    value={
+                      cond.op === "between"
+                        ? `${(cond.value as { min: unknown; max: unknown }).min ?? ""}-${(cond.value as { min: unknown; max: unknown }).max ?? ""}`
+                        : Array.isArray(cond.value)
+                          ? cond.value.join(",")
+                          : String(cond.value)
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (cond.op === "between") {
+                        const parts = raw.split("-").map(s => s.trim());
+                        updateCondition(gi, ci, { value: { min: parts[0] ?? "", max: parts[1] ?? "" } });
+                      } else if (cond.op === "in" || cond.op === "notin") {
+                        updateCondition(gi, ci, { value: raw.split(",").map(s => s.trim()).filter(Boolean) });
+                      } else {
+                        updateCondition(gi, ci, { value: raw });
+                      }
+                    }}
+                    placeholder={
+                      cond.op === "between"
+                        ? "最小值-最大值"
+                        : cond.op === "in" || cond.op === "notin"
+                          ? "逗号分隔多个值"
+                          : "值"
+                    }
                   />
                 )}
                 <Button variant="ghost" size="sm" className="h-7 px-1" onClick={() => removeCondition(gi, ci)}>

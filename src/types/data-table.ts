@@ -180,10 +180,16 @@ export interface BundleImportResult {
 
 // ========== View Types ==========
 
+export type FilterOperator =
+  | 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte'
+  | 'contains' | 'notcontains' | 'startswith' | 'endswith'
+  | 'isempty' | 'isnotempty'
+  | 'between' | 'in' | 'notin';
+
 export interface FilterCondition {
   fieldKey: string;
-  op: 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains' | 'isempty' | 'isnotempty';
-  value: string | number;
+  op: FilterOperator;
+  value: string | number | (string | number)[] | { min: number | string; max: number | string };
 }
 
 export interface FilterGroup {

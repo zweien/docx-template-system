@@ -445,6 +445,42 @@ export async function listRecords(
     // Resolve SYSTEM_TIMESTAMP and SYSTEM_USER fields from record metadata
     injectSystemFieldValues(processedRecords, tableResult.data.fields);
 
+    // ── Memory filtering for operators not supported by Prisma JSONB ──
+    if (filters.filterConditions && filters.filterConditions.length > 0) {
+      const allConditions = normalizeFilters(filters.filterConditions).flatMap(g => g.conditions);
+      const memoryConditions = allConditions.filter(
+        (c) => c.op === "between" || c.op === "in" || c.op === "notin"
+      );
+      if (memoryConditions.length > 0) {
+        processedRecords = processedRecords.filter((record) =>
+          memoryConditions.every((cond) => {
+            const raw = record.data[cond.fieldKey];
+            const val = typeof raw === "object" && raw !== null && "display" in raw
+              ? (raw as { display: unknown }).display
+              : raw;
+            switch (cond.op) {
+              case "between": {
+                const range = cond.value as { min: number | string; max: number | string };
+                const num = Number(val);
+                return !isNaN(num) && num >= Number(range.min) && num <= Number(range.max);
+              }
+              case "in": {
+                const list = Array.isArray(cond.value) ? cond.value.map(String) : [];
+                return list.includes(String(val ?? ""));
+              }
+              case "notin": {
+                const list = Array.isArray(cond.value) ? cond.value.map(String) : [];
+                return !list.includes(String(val ?? ""));
+              }
+              default:
+                return true;
+            }
+          })
+        );
+        total = processedRecords.length;
+      }
+    }
+
     return {
       success: true,
       data: {
@@ -1009,6 +1045,12 @@ function buildConditionFromFilter(
       return { NOT: { data: { path: [cond.fieldKey], equals: cond.value } } }
     case "contains":
       return { data: { path: [cond.fieldKey], string_contains: String(cond.value) } }
+    case "notcontains":
+      return { NOT: { data: { path: [cond.fieldKey], string_contains: String(cond.value) } } }
+    case "startswith":
+      return { data: { path: [cond.fieldKey], string_starts_with: String(cond.value) } }
+    case "endswith":
+      return { data: { path: [cond.fieldKey], string_ends_with: String(cond.value) } }
     case "gt":
     case "gte":
     case "lt":

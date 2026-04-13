@@ -18,18 +18,12 @@ import { useDebouncedCallback } from "@/hooks/use-debounce";
 export interface UseTableDataOptions {
   tableId: string;
   fields: DataFieldItem[];
-  pageSize?: number;
 }
 
 export interface UseTableDataReturn {
   records: DataRecordItem[];
   totalCount: number;
-  totalPages: number;
   isLoading: boolean;
-  page: number;
-  setPage: (p: number) => void;
-  pageSize: number;
-  setPageSize: (ps: number) => void;
   search: string;
   searchInput: string;
   setSearchInput: (v: string) => void;
@@ -56,38 +50,23 @@ export interface UseTableDataReturn {
   refresh: () => void;
 }
 
-function parsePageValue(value: string | null): number {
-  const page = Number.parseInt(value ?? "1", 10);
-  return Number.isFinite(page) && page > 0 ? page : 1;
-}
-
 function buildTablePath(tableId: string, params: URLSearchParams): string {
   const query = params.toString();
   return query ? `/data/${tableId}?${query}` : `/data/${tableId}`;
 }
 
 function buildQueryKey(
-  page: number,
-  pageSize: number,
   search: string,
   viewId: string | null,
   filters: FilterGroup[],
   sorts: SortConfig[]
 ): string {
-  return JSON.stringify({
-    page,
-    pageSize,
-    search,
-    viewId,
-    filters,
-    sorts,
-  });
+  return JSON.stringify({ search, viewId, filters, sorts });
 }
 
 export function useTableData({
   tableId,
   fields,
-  pageSize: defaultPageSize = 20,
 }: UseTableDataOptions): UseTableDataReturn {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -102,13 +81,6 @@ export function useTableData({
   const [viewId, setViewId] = useState<string | null>(
     searchParams.get("viewId") ?? null
   );
-  const [page, setPageState] = useState(() =>
-    parsePageValue(searchParams.get("page"))
-  );
-  const [pageSize, setPageSizeState] = useState(() => {
-    const ps = Number.parseInt(searchParams.get("pageSize") ?? "", 10);
-    return [10, 20, 50, 100].includes(ps) ? ps : defaultPageSize;
-  });
   const [views, setViews] = useState<DataViewItem[]>([]);
   const [isViewConfigReady, setIsViewConfigReady] = useState(
     () => searchParams.get("viewId") === null
@@ -129,8 +101,8 @@ export function useTableData({
   const latestFetchIdRef = useRef(0);
 
   const currentQueryKey = useMemo(
-    () => buildQueryKey(page, pageSize, search, viewId, filters, sorts),
-    [filters, page, pageSize, search, sorts, viewId]
+    () => buildQueryKey(search, viewId, filters, sorts),
+    [filters, search, sorts, viewId]
   );
   const latestQueryKeyRef = useRef(currentQueryKey);
 
@@ -141,10 +113,8 @@ export function useTableData({
   const syncUrlQuery = useCallback(
     (
       nextQuery: Partial<{
-        page: number;
         search: string;
         viewId: string | null;
-        pageSize: number;
       }>,
       mode: "push" | "replace"
     ) => {
@@ -168,24 +138,6 @@ export function useTableData({
         }
       }
 
-      if (Object.hasOwn(nextQuery, "page")) {
-        const nextPage = nextQuery.page ?? 1;
-        if (nextPage > 1) {
-          params.set("page", String(nextPage));
-        } else {
-          params.delete("page");
-        }
-      }
-
-      if (Object.hasOwn(nextQuery, "pageSize")) {
-        const nextPageSize = nextQuery.pageSize ?? 20;
-        if (nextPageSize !== 20) {
-          params.set("pageSize", String(nextPageSize));
-        } else {
-          params.delete("pageSize");
-        }
-      }
-
       const href = buildTablePath(tableId, params);
       if (mode === "replace") {
         router.replace(href, { scroll: false });
@@ -196,31 +148,10 @@ export function useTableData({
     [router, searchParams, tableId]
   );
 
-  const setPage = useCallback(
-    (nextPage: number) => {
-      const normalizedPage = Number.isFinite(nextPage)
-        ? Math.max(1, Math.trunc(nextPage))
-        : 1;
-      setPageState(normalizedPage);
-      syncUrlQuery({ page: normalizedPage }, "push");
-    },
-    [syncUrlQuery]
-  );
-
-  const setPageSize = useCallback(
-    (nextPageSize: number) => {
-      setPageSizeState(nextPageSize);
-      setPageState(1);
-      syncUrlQuery({ pageSize: nextPageSize, page: 1 }, "push");
-    },
-    [syncUrlQuery]
-  );
-
   const debouncedSyncSearch = useDebouncedCallback((value: unknown) => {
     const nextSearch = String(value ?? "");
     setSearch(nextSearch);
-    setPageState(1);
-    syncUrlQuery({ search: nextSearch, page: 1 }, "replace");
+    syncUrlQuery({ search: nextSearch }, "replace");
   }, 300);
 
   const setSearchInput = useCallback(
@@ -237,8 +168,7 @@ export function useTableData({
       setIsViewConfigReady(nextViewId === null);
       setIsLoading(true);
       setViewId(nextViewId);
-      setPageState(1);
-      syncUrlQuery({ viewId: nextViewId, page: 1 }, "push");
+      syncUrlQuery({ viewId: nextViewId }, "push");
     },
     [syncUrlQuery]
   );
@@ -331,11 +261,6 @@ export function useTableData({
       setIsLoading(true);
     }
     setViewId(nextViewId);
-    setPageState(parsePageValue(searchParams.get("page")));
-    const ps = Number.parseInt(searchParams.get("pageSize") ?? "", 10);
-    if ([10, 20, 50, 100].includes(ps)) {
-      setPageSizeState(ps);
-    }
   }, [searchParams, viewId]);
 
   useEffect(() => {
@@ -406,6 +331,7 @@ export function useTableData({
     };
   }, [defaultFieldKeys, tableId, viewId]);
 
+  // ── Fetch all records (no pagination) ──────────────────────────────────────
   const fetchData = useCallback(async () => {
     if (!isViewConfigReady) return;
 
@@ -414,10 +340,7 @@ export function useTableData({
     setIsLoading(true);
 
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(pageSize),
-      });
+      const params = new URLSearchParams();
 
       if (search) params.set("search", search);
       if (viewId) params.set("viewId", viewId);
@@ -453,8 +376,6 @@ export function useTableData({
   }, [
     filters,
     isViewConfigReady,
-    page,
-    pageSize,
     search,
     sorts,
     tableId,
@@ -571,12 +492,7 @@ export function useTableData({
   return {
     records: recordsData?.records ?? [],
     totalCount: recordsData?.total ?? 0,
-    totalPages: recordsData?.totalPages ?? 1,
     isLoading,
-    page,
-    setPage,
-    pageSize,
-    setPageSize,
     search,
     searchInput: searchInputState,
     setSearchInput,

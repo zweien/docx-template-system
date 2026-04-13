@@ -80,6 +80,8 @@ export function RecordTable({
     totalPages,
     isLoading,
     page,
+    pageSize,
+    setPageSize,
     search,
     searchInput,
     setSearchInput,
@@ -253,6 +255,9 @@ export function RecordTable({
     }
     if (viewId) {
       params.set("viewId", viewId);
+    }
+    if (pageSize !== 20) {
+      params.set("pageSize", String(pageSize));
     }
 
     const query = params.toString();
@@ -468,6 +473,8 @@ export function RecordTable({
         page={page}
         totalPages={Math.max(totalPages, 1)}
         totalCount={totalCount}
+        pageSize={pageSize}
+        onPageSizeChange={setPageSize}
         buildPageHref={buildPageHref}
       />
 
@@ -501,15 +508,21 @@ function getPageNumbers(current: number, total: number): (number | "ellipsis")[]
   return pages;
 }
 
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
 function Pagination({
   page,
   totalPages,
   totalCount,
+  pageSize,
+  onPageSizeChange,
   buildPageHref,
 }: {
   page: number;
   totalPages: number;
   totalCount: number;
+  pageSize: number;
+  onPageSizeChange: (ps: number) => void;
   buildPageHref: (page: number) => string;
 }) {
   const [jumpValue, setJumpValue] = useState("");
@@ -527,7 +540,28 @@ function Pagination({
 
   return (
     <div className="flex items-center justify-between text-sm text-zinc-500 flex-shrink-0">
-      <span>共 {totalCount} 条，第 {page}/{totalPages} 页</span>
+      <div className="flex items-center gap-2">
+        <span>共 {totalCount} 条</span>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="outline" size="sm" className="h-8 gap-1">
+                {pageSize} 条/页
+              </Button>
+            }
+          />
+          <DropdownMenuContent align="start">
+            {PAGE_SIZE_OPTIONS.map((opt) => (
+              <DropdownMenuItem
+                key={opt}
+                onClick={() => onPageSizeChange(opt)}
+              >
+                {opt} 条/页
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <div className="flex items-center gap-1">
         {/* First page */}
         <Link href={buildPageHref(1)}>

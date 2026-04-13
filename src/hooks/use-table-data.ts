@@ -28,6 +28,8 @@ export interface UseTableDataReturn {
   isLoading: boolean;
   page: number;
   setPage: (p: number) => void;
+  pageSize: number;
+  setPageSize: (ps: number) => void;
   search: string;
   searchInput: string;
   setSearchInput: (v: string) => void;
@@ -85,7 +87,7 @@ function buildQueryKey(
 export function useTableData({
   tableId,
   fields,
-  pageSize = 20,
+  pageSize: defaultPageSize = 20,
 }: UseTableDataOptions): UseTableDataReturn {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -103,6 +105,10 @@ export function useTableData({
   const [page, setPageState] = useState(() =>
     parsePageValue(searchParams.get("page"))
   );
+  const [pageSize, setPageSizeState] = useState(() => {
+    const ps = Number.parseInt(searchParams.get("pageSize") ?? "", 10);
+    return [10, 20, 50, 100].includes(ps) ? ps : defaultPageSize;
+  });
   const [views, setViews] = useState<DataViewItem[]>([]);
   const [isViewConfigReady, setIsViewConfigReady] = useState(
     () => searchParams.get("viewId") === null
@@ -138,6 +144,7 @@ export function useTableData({
         page: number;
         search: string;
         viewId: string | null;
+        pageSize: number;
       }>,
       mode: "push" | "replace"
     ) => {
@@ -170,6 +177,15 @@ export function useTableData({
         }
       }
 
+      if (Object.hasOwn(nextQuery, "pageSize")) {
+        const nextPageSize = nextQuery.pageSize ?? 20;
+        if (nextPageSize !== 20) {
+          params.set("pageSize", String(nextPageSize));
+        } else {
+          params.delete("pageSize");
+        }
+      }
+
       const href = buildTablePath(tableId, params);
       if (mode === "replace") {
         router.replace(href, { scroll: false });
@@ -187,6 +203,15 @@ export function useTableData({
         : 1;
       setPageState(normalizedPage);
       syncUrlQuery({ page: normalizedPage }, "push");
+    },
+    [syncUrlQuery]
+  );
+
+  const setPageSize = useCallback(
+    (nextPageSize: number) => {
+      setPageSizeState(nextPageSize);
+      setPageState(1);
+      syncUrlQuery({ pageSize: nextPageSize, page: 1 }, "push");
     },
     [syncUrlQuery]
   );
@@ -307,6 +332,10 @@ export function useTableData({
     }
     setViewId(nextViewId);
     setPageState(parsePageValue(searchParams.get("page")));
+    const ps = Number.parseInt(searchParams.get("pageSize") ?? "", 10);
+    if ([10, 20, 50, 100].includes(ps)) {
+      setPageSizeState(ps);
+    }
   }, [searchParams, viewId]);
 
   useEffect(() => {
@@ -546,6 +575,8 @@ export function useTableData({
     isLoading,
     page,
     setPage,
+    pageSize,
+    setPageSize,
     search,
     searchInput: searchInputState,
     setSearchInput,

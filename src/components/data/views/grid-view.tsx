@@ -25,6 +25,7 @@ import { useKeyboardNav, type ActiveCell } from "@/hooks/use-keyboard-nav";
 import { useUndoManager } from "@/hooks/use-undo-manager";
 import { cn } from "@/lib/utils";
 import { useSummaryRow } from "@/hooks/use-summary-row";
+import { useVirtualRows } from "@/hooks/use-virtual-rows";
 import {
   TextCellEditor,
   NumberCellEditor,
@@ -79,7 +80,6 @@ interface GridViewProps {
   frozenFieldCount?: number;
   onFrozenFieldCountChange?: (count: number) => void;
   viewId?: string | null;
-  page?: number;
   onReorderRecords?: (orderedIds: string[]) => void;
   conditionalFormatRules?: ConditionalFormatRule[];
   onQuickFormat?: (fieldKey: string, value: string) => void;
@@ -243,7 +243,6 @@ export function GridView({
   frozenFieldCount,
   onFrozenFieldCountChange,
   viewId,
-  page,
   onReorderRecords,
   conditionalFormatRules,
   onQuickFormat,
@@ -374,7 +373,6 @@ export function GridView({
 
   // ── Keyboard nav: active cell state (for rendering) ──────────────────────
   const [activeCell, setActiveCellState] = useState<ActiveCell | null>(null);
-  const [activeCellPage, setActiveCellPage] = useState(page);
 
   const toggleGroup = useCallback((groupValue: string) => {
     setCollapsedGroups((prev) => {
@@ -389,39 +387,19 @@ export function GridView({
   }, []);
 
   // ── Batch toggle handlers ─────────────────────────────────────────────
-  // selectedIds is scoped to current page; we store {page, ids} so page
-  // changes automatically clear the selection.
-  const [selectionState, setSelectionState] = useState<{
-    page: number | undefined;
-    ids: Set<string>;
-  }>({ page, ids: new Set() });
-
-  // Keep in sync with prop changes
-  const currentSelectedIds =
-    selectionState.page === page ? selectionState.ids : new Set<string>();
-  const updateSelectedIds = useCallback(
-    (updater: (prev: Set<string>) => Set<string>) => {
-      setSelectionState((prev) => ({
-        page,
-        ids: updater(prev.page === page ? prev.ids : new Set()),
-      }));
-    },
-    [page]
-  );
+  const [selectedIdsSet, setSelectedIdsSet] = useState<Set<string>>(new Set());
 
   const toggleAll = useCallback(() => {
-    const current =
-      selectionState.page === page ? selectionState.ids : new Set<string>();
-    if (current.size === records.length) {
-      updateSelectedIds(() => new Set());
+    if (selectedIdsSet.size === records.length) {
+      setSelectedIdsSet(new Set());
     } else {
-      updateSelectedIds(() => new Set(records.map((r) => r.id)));
+      setSelectedIdsSet(new Set(records.map((r) => r.id)));
     }
-  }, [records, page, selectionState, updateSelectedIds]);
+  }, [records, selectedIdsSet]);
 
   const toggleRow = useCallback(
     (recordId: string) => {
-      updateSelectedIds((prev) => {
+      setSelectedIdsSet((prev) => {
         const next = new Set(prev);
         if (next.has(recordId)) {
           next.delete(recordId);
@@ -431,10 +409,8 @@ export function GridView({
         return next;
       });
     },
-    [updateSelectedIds]
+    []
   );
-
-  const selectedIdsSet = currentSelectedIds;
 
   // ── Ordered visible fields ──────────────────────────────────────────────
   const fieldMap = useMemo(
@@ -484,7 +460,7 @@ export function GridView({
   const handleBatchDelete = useCallback(async () => {
     if (!confirm(`确定删除 ${selectedIdsSet.size} 条记录？`)) return;
     const ids = [...selectedIdsSet];
-    updateSelectedIds(() => new Set());
+    setSelectedIdsSet(new Set());
     const results = await Promise.allSettled(
       ids.map((id) =>
         fetch(`/api/data-tables/${tableId}/records/${id}`, {
@@ -497,13 +473,13 @@ export function GridView({
       alert(`${failedCount} 条记录删除失败，请重试`);
     }
     onRefresh();
-  }, [selectedIdsSet, tableId, onRefresh, updateSelectedIds]);
+  }, [selectedIdsSet, tableId, onRefresh]);
 
   // ── Batch edit handler ────────────────────────────────────────────────
   const handleBatchEdit = useCallback(
     async (fieldKey: string, value: unknown) => {
       const ids = [...selectedIdsSet];
-      updateSelectedIds(() => new Set());
+      setSelectedIdsSet(new Set());
       const BATCH_SIZE = 10;
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
@@ -519,7 +495,7 @@ export function GridView({
       }
       onRefresh();
     },
-    [selectedIdsSet, tableId, onRefresh, updateSelectedIds]
+    [selectedIdsSet, tableId, onRefresh]
   );
 
   // ── Column drag end handler ──────────────────────────────────────
@@ -582,15 +558,16 @@ export function GridView({
     return groupRecords(records, groupField);
   }, [groupField, records]);
 
-  // ── Flat records for keyboard nav (maps flat index → record or group) ────
+  // ── Virtual scrolling ────────────────────────────────────────────────────
   const flatRecords = useMemo(() => {
     if (groupedRecords) {
       const flat: Array<{
         type: "group" | "record";
         record?: DataRecordItem;
+        group?: { value: string; label: string; records: DataRecordItem[] };
       }> = [];
       for (const group of groupedRecords) {
-        flat.push({ type: "group" });
+        flat.push({ type: "group", group });
         if (!collapsedGroups.has(group.value)) {
           for (const r of group.records)
             flat.push({ type: "record", record: r });
@@ -600,6 +577,10 @@ export function GridView({
     }
     return records.map((r) => ({ type: "record" as const, record: r }));
   }, [groupedRecords, collapsedGroups, records]);
+
+  const { startIndex, endIndex, topPadding, bottomPadding, scrollRef } =
+    useVirtualRows(flatRecords.length);
+  const visibleFlatRecords = flatRecords.slice(startIndex, endIndex);
 
   // ── Group row indices (for skipping in keyboard nav) ─────────────────────
   const groupRowIndices = useMemo(() => {
@@ -775,9 +756,8 @@ export function GridView({
     (cell: ActiveCell | null) => {
       setActiveCellRef(cell);
       setActiveCellState(cell);
-      if (cell) setActiveCellPage(page);
     },
-    [setActiveCellRef, page]
+    [setActiveCellRef]
   );
 
   // ── Quick add row ────────────────────────────────────────────────────────
@@ -818,7 +798,7 @@ export function GridView({
 
   // When activeCell is set, remember which page it was on.
   // If page changed, activeCell becomes stale — use derived value instead.
-  const stableActiveCell = activeCell && activeCellPage === page ? activeCell : null;
+  const stableActiveCell = activeCell;
 
   // Auto-scroll on stableActiveCell change
   useEffect(() => {
@@ -1163,7 +1143,7 @@ export function GridView({
           selectedCount={selectedIdsSet.size}
           onBatchDelete={handleBatchDelete}
           onBatchEdit={() => setBatchEditOpen(true)}
-          onClearSelection={() => updateSelectedIds(() => new Set())}
+          onClearSelection={() => setSelectedIdsSet(new Set())}
         />
       )}
       <BatchEditDialog
@@ -1239,7 +1219,7 @@ export function GridView({
           <Redo2 className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto" ref={scrollRef}>
         <table
           className="w-full caption-bottom text-sm outline-none"
           style={{ tableLayout: "fixed" }}
@@ -1331,20 +1311,23 @@ export function GridView({
                 暂无记录
               </td>
             </tr>
-          ) : groupedRecords ? (
-            // ── Grouped rendering ────────────────────────────────────────
-            (() => {
-              let flatIdx = 0;
-              return groupedRecords.map((group) => {
-                const isCollapsed = collapsedGroups.has(group.value);
-                flatIdx += 1; // group header row
-                const startRecordFlatIdx = flatIdx;
-                if (!isCollapsed) {
-                  flatIdx += group.records.length;
-                }
-                return (
-                  <Fragment key={`group-${group.value}`}>
+          ) : (
+            <>
+              {/* Top padding for virtual scroll */}
+              {topPadding > 0 && (
+                <tr aria-hidden="true">
+                  <td colSpan={colCount} style={{ height: topPadding, padding: 0 }} />
+                </tr>
+              )}
+              {/* Visible rows only */}
+              {visibleFlatRecords.map((entry, visibleIdx) => {
+                const globalIdx = startIndex + visibleIdx;
+                if (entry.type === "group" && entry.group) {
+                  const group = entry.group;
+                  const isCollapsed = collapsedGroups.has(group.value);
+                  return (
                     <tr
+                      key={`group-${group.value}`}
                       className="border-b transition-colors bg-muted/50 hover:bg-muted/70 cursor-pointer select-none sticky top-[41px] z-[5]"
                       onClick={() => toggleGroup(group.value)}
                     >
@@ -1360,35 +1343,43 @@ export function GridView({
                         </div>
                       </td>
                     </tr>
-                    {!isCollapsed &&
-                      group.records.map((record, idx) =>
-                        renderRecordRow(record, idx, startRecordFlatIdx + idx)
-                      )}
-                  </Fragment>
-                );
-              });
-            })()
-          ) : (
-            // ── Flat rendering ────────────────────────────────────────────
-            records.map((record, idx) => renderRecordRow(record, idx, idx))
-          )}
-          {!isLoading && records.length > 0 && isAdmin && (
-            <tr
-              className="border-b hover:bg-muted/30 cursor-pointer group"
-              onClick={handleQuickAddRow}
-            >
-              <td className="w-10 sticky left-0 z-[5] bg-background border-r" />
-              {canDragSort && <td className="w-8" />}
-              <td
-                colSpan={orderedVisibleFields.length + 1}
-                className="p-1 align-middle text-muted-foreground text-sm"
-              >
-                <span className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-muted/50 transition-colors">
-                  <Plus className="h-3.5 w-3.5" />
-                  <span className="opacity-60 group-hover:opacity-100 transition-opacity">新建行</span>
-                </span>
-              </td>
-            </tr>
+                  );
+                }
+                if (entry.record) {
+                  return renderRecordRow(
+                    entry.record,
+                    visibleIdx,
+                    globalIdx
+                  );
+                }
+                return null;
+              })}
+              {/* Bottom padding for virtual scroll */}
+              {bottomPadding > 0 && (
+                <tr aria-hidden="true">
+                  <td colSpan={colCount} style={{ height: bottomPadding, padding: 0 }} />
+                </tr>
+              )}
+              {/* Quick add row */}
+              {isAdmin && (
+                <tr
+                  className="border-b hover:bg-muted/30 cursor-pointer group"
+                  onClick={handleQuickAddRow}
+                >
+                  <td className="w-10 sticky left-0 z-[5] bg-background border-r" />
+                  {canDragSort && <td className="w-8" />}
+                  <td
+                    colSpan={orderedVisibleFields.length + 1}
+                    className="p-1 align-middle text-muted-foreground text-sm"
+                  >
+                    <span className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-muted/50 transition-colors">
+                      <Plus className="h-3.5 w-3.5" />
+                      <span className="opacity-60 group-hover:opacity-100 transition-opacity">新建行</span>
+                    </span>
+                  </td>
+                </tr>
+              )}
+            </>
           )}
           </DragDropProvider>
         </tbody>

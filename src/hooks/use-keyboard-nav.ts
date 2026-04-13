@@ -7,6 +7,13 @@ export interface ActiveCell {
   colIndex: number;
 }
 
+export interface CellRange {
+  startRow: number;
+  startCol: number;
+  endRow: number;
+  endCol: number;
+}
+
 interface UseKeyboardNavOptions {
   rowCount: number;
   colCount: number;
@@ -17,6 +24,9 @@ interface UseKeyboardNavOptions {
   onClearCell: () => void;
   onCopyCell: () => string | null;
   onPasteCell: (text: string) => void;
+  onCopyRange?: (range: CellRange) => void;
+  onPasteRange?: (text: string, startRow: number, startCol: number) => void;
+  onSelectionChange?: (range: CellRange | null) => void;
   isGroupRow?: (rowIndex: number) => boolean;
   onUndo?: () => void;
   onRedo?: () => void;
@@ -34,6 +44,9 @@ export function useKeyboardNav({
   onClearCell,
   onCopyCell,
   onPasteCell,
+  onCopyRange,
+  onPasteRange,
+  onSelectionChange,
   isGroupRow,
   onUndo,
   onRedo,
@@ -41,10 +54,16 @@ export function useKeyboardNav({
   onExpandRecord,
 }: UseKeyboardNavOptions) {
   const activeCellRef = useRef<ActiveCell | null>(null);
+  const selectionRangeRef = useRef<CellRange | null>(null);
 
   const setActiveCell = useCallback((cell: ActiveCell | null) => {
     activeCellRef.current = cell;
   }, []);
+
+  const setSelectionRange = useCallback((range: CellRange | null) => {
+    selectionRangeRef.current = range;
+    onSelectionChange?.(range);
+  }, [onSelectionChange]);
 
   const skipGroupRow = useCallback(
     (targetRow: number, direction: 1 | -1): number => {
@@ -72,7 +91,6 @@ export function useKeyboardNav({
       }
 
       if (editingCell) {
-        // During editing, handle Tab/Enter for navigation after commit
         if (e.key === "Tab") {
           e.preventDefault();
           onEditNavigate?.(e.shiftKey ? "left" : "right");
@@ -104,12 +122,20 @@ export function useKeyboardNav({
 
       const maxRow = rowCount - 1;
       const maxCol = colCount - 1;
+      const shift = e.shiftKey;
 
       switch (e.key) {
         case "ArrowUp": {
           const next = skipGroupRow(active.rowIndex - 1, -1);
           if (next >= 0) {
             activeCellRef.current = { ...active, rowIndex: next };
+            if (shift) {
+              const range = selectionRangeRef.current ?? { startRow: active.rowIndex, startCol: active.colIndex, endRow: active.rowIndex, endCol: active.colIndex };
+              selectionRangeRef.current = { ...range, endRow: next };
+              onSelectionChange?.(selectionRangeRef.current);
+            } else {
+              setSelectionRange(null);
+            }
             onMoveTo(activeCellRef.current);
           }
           e.preventDefault();
@@ -119,6 +145,13 @@ export function useKeyboardNav({
           const next = skipGroupRow(active.rowIndex + 1, 1);
           if (next <= maxRow) {
             activeCellRef.current = { ...active, rowIndex: next };
+            if (shift) {
+              const range = selectionRangeRef.current ?? { startRow: active.rowIndex, startCol: active.colIndex, endRow: active.rowIndex, endCol: active.colIndex };
+              selectionRangeRef.current = { ...range, endRow: next };
+              onSelectionChange?.(selectionRangeRef.current);
+            } else {
+              setSelectionRange(null);
+            }
             onMoveTo(activeCellRef.current);
           }
           e.preventDefault();
@@ -126,47 +159,50 @@ export function useKeyboardNav({
         }
         case "ArrowRight":
           if (active.colIndex < maxCol) {
-            activeCellRef.current = {
-              ...active,
-              colIndex: active.colIndex + 1,
-            };
+            activeCellRef.current = { ...active, colIndex: active.colIndex + 1 };
           } else if (active.rowIndex < maxRow) {
             const next = skipGroupRow(active.rowIndex + 1, 1);
             activeCellRef.current = { rowIndex: next, colIndex: 0 };
+          }
+          if (shift) {
+            const range = selectionRangeRef.current ?? { startRow: active.rowIndex, startCol: active.colIndex, endRow: active.rowIndex, endCol: active.colIndex };
+            selectionRangeRef.current = { ...range, endRow: activeCellRef.current!.rowIndex, endCol: activeCellRef.current!.colIndex };
+            onSelectionChange?.(selectionRangeRef.current);
+          } else {
+            setSelectionRange(null);
           }
           onMoveTo(activeCellRef.current!);
           e.preventDefault();
           break;
         case "ArrowLeft":
           if (active.colIndex > 0) {
-            activeCellRef.current = {
-              ...active,
-              colIndex: active.colIndex - 1,
-            };
+            activeCellRef.current = { ...active, colIndex: active.colIndex - 1 };
           } else if (active.rowIndex > 0) {
             const next = skipGroupRow(active.rowIndex - 1, -1);
             activeCellRef.current = { rowIndex: next, colIndex: maxCol };
+          }
+          if (shift) {
+            const range = selectionRangeRef.current ?? { startRow: active.rowIndex, startCol: active.colIndex, endRow: active.rowIndex, endCol: active.colIndex };
+            selectionRangeRef.current = { ...range, endRow: activeCellRef.current!.rowIndex, endCol: activeCellRef.current!.colIndex };
+            onSelectionChange?.(selectionRangeRef.current);
+          } else {
+            setSelectionRange(null);
           }
           onMoveTo(activeCellRef.current!);
           e.preventDefault();
           break;
         case "Tab":
+          setSelectionRange(null);
           if (e.shiftKey) {
             if (active.colIndex > 0) {
-              activeCellRef.current = {
-                ...active,
-                colIndex: active.colIndex - 1,
-              };
+              activeCellRef.current = { ...active, colIndex: active.colIndex - 1 };
             } else if (active.rowIndex > 0) {
               const next = skipGroupRow(active.rowIndex - 1, -1);
               activeCellRef.current = { rowIndex: next, colIndex: maxCol };
             }
           } else {
             if (active.colIndex < maxCol) {
-              activeCellRef.current = {
-                ...active,
-                colIndex: active.colIndex + 1,
-              };
+              activeCellRef.current = { ...active, colIndex: active.colIndex + 1 };
             } else if (active.rowIndex < maxRow) {
               const next = skipGroupRow(active.rowIndex + 1, 1);
               activeCellRef.current = { rowIndex: next, colIndex: 0 };
@@ -177,6 +213,7 @@ export function useKeyboardNav({
           break;
         case "Enter":
         case "F2":
+          setSelectionRange(null);
           onStartEdit();
           e.preventDefault();
           break;
@@ -188,6 +225,7 @@ export function useKeyboardNav({
           break;
         case "Escape":
           activeCellRef.current = null;
+          setSelectionRange(null);
           onCancelEdit();
           e.preventDefault();
           break;
@@ -198,15 +236,28 @@ export function useKeyboardNav({
           break;
         default:
           if ((e.ctrlKey || e.metaKey) && e.key === "c") {
-            const text = onCopyCell();
-            if (text !== null) navigator.clipboard.writeText(text);
+            const range = selectionRangeRef.current;
+            if (range && onCopyRange) {
+              onCopyRange(range);
+            } else {
+              const text = onCopyCell();
+              if (text !== null) navigator.clipboard.writeText(text);
+            }
             e.preventDefault();
           }
           if ((e.ctrlKey || e.metaKey) && e.key === "v") {
             navigator.clipboard
               .readText()
               .then((text) => {
-                if (text) onPasteCell(text);
+                if (!text) return;
+                const range = selectionRangeRef.current;
+                if (range && onPasteRange) {
+                  onPasteRange(text, Math.min(range.startRow, range.endRow), Math.min(range.startCol, range.endCol));
+                } else if (onPasteRange && activeCellRef.current) {
+                  onPasteRange(text, activeCellRef.current.rowIndex, activeCellRef.current.colIndex);
+                } else {
+                  onPasteCell(text);
+                }
               })
               .catch(() => {});
             e.preventDefault();
@@ -214,22 +265,12 @@ export function useKeyboardNav({
       }
     },
     [
-      editingCell,
-      rowCount,
-      colCount,
-      onMoveTo,
-      onStartEdit,
-      onCancelEdit,
-      onClearCell,
-      onCopyCell,
-      onPasteCell,
-      skipGroupRow,
-      onUndo,
-      onRedo,
-      onEditNavigate,
-      onExpandRecord,
+      editingCell, rowCount, colCount, onMoveTo, onStartEdit, onCancelEdit,
+      onClearCell, onCopyCell, onPasteCell, onCopyRange, onPasteRange,
+      onSelectionChange, skipGroupRow, onUndo, onRedo, onEditNavigate,
+      onExpandRecord, setSelectionRange,
     ]
   );
 
-  return { handleKeyDown, setActiveCell };
+  return { handleKeyDown, setActiveCell, setSelectionRange };
 }

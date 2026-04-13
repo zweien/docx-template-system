@@ -48,6 +48,7 @@ model User {
   collectionSubmissionVersions DocumentCollectionSubmissionVersion[] @relation("CollectionSubmissionVersions")
   notifications                 Notification[]                       @relation("UserNotifications")
   apiTokens                     ApiToken[]
+  changeHistories               DataRecordChangeHistory[]
 }
 
 enum TemplateStatus {
@@ -365,6 +366,26 @@ model DataRecord {
   @@index([updatedById])
   @@index([tableId, createdAt(sort: Desc)])  // 复合索引加速列表查询
   @@index([tableId, createdById])             // 复合索引加速用户记录查询
+  changeHistories DataRecordChangeHistory[]
+}
+
+model DataRecordChangeHistory {
+  id          String    @id @default(cuid())
+  recordId    String
+  record      DataRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  tableId     String
+  fieldKey    String
+  fieldLabel  String
+  oldValue    Json?
+  newValue    Json?
+  changedById String
+  changedBy   User      @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  changedAt   DateTime  @default(now())
+
+  @@index([recordId, changedAt(sort: Desc)])
+  @@index([tableId, changedAt(sort: Desc)])
+  @@index([changedById])
+  @@map("data_record_change_history")
 }
 
 model DataRelationRow {

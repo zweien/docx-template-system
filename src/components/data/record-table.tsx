@@ -99,6 +99,7 @@ export function RecordTable({
     deleteRecord,
     deletingIds,
     updateRecordField,
+    addRecord,
     switchView,
     refresh,
   } = useTableData({ tableId, fields });
@@ -301,6 +302,7 @@ export function RecordTable({
             deletingIds={deletingIds}
             onRefresh={refresh}
             onUpdateRecordField={updateRecordField}
+            onAddRecord={addRecord}
             onOpenDetail={onOpenDetail}
             columnWidths={columnWidths}
             onColumnWidthsChange={handleColumnWidthsChange}

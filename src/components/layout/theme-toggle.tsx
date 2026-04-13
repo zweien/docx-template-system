@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,11 @@ const icons = {
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const current = themes.includes(theme as typeof themes[number])
     ? (theme as typeof themes[number])
@@ -22,9 +28,17 @@ export function ThemeToggle() {
   const Icon = icons[current];
 
   const toggle = () => {
-    const next = themes[(themes.indexOf(current) + 1) % themes.length];
+    const next = themes[(themes.indexOf(current) + themes.length + 1) % themes.length];
     setTheme(next);
   };
+
+  if (!mounted) {
+    return (
+      <Button variant="ghost" size="icon" className="shrink-0">
+        <Monitor className="h-4 w-4" />
+      </Button>
+    );
+  }
 
   return (
     <Button

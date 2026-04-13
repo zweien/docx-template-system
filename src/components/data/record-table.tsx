@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, Plus, X } from "lucide-react";
+import { Download, Plus, X, ChevronsLeft, ChevronsRight } from "lucide-react";
 import type {
   DataFieldItem,
   DataViewItem,
@@ -464,17 +464,12 @@ export function RecordTable({
       {renderView()}
 
       {/* Pagination */}
-      <div className="flex items-center justify-between text-sm text-zinc-500 flex-shrink-0">
-        <span>共 {totalCount} 条，第 {page}/{Math.max(totalPages, 1)} 页</span>
-        <div className="flex gap-2">
-          <Link href={buildPageHref(page - 1)}>
-            <Button variant="outline" size="sm" disabled={page <= 1}>上一页</Button>
-          </Link>
-          <Link href={buildPageHref(page + 1)}>
-            <Button variant="outline" size="sm" disabled={page >= totalPages}>下一页</Button>
-          </Link>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        totalPages={Math.max(totalPages, 1)}
+        totalCount={totalCount}
+        buildPageHref={buildPageHref}
+      />
 
       {/* Save View Dialog */}
       <SaveViewDialog
@@ -484,6 +479,105 @@ export function RecordTable({
         currentConfig={currentConfig}
         onSaved={switchView}
       />
+    </div>
+  );
+}
+
+// ─── Pagination Component ────────────────────────────────────────────────────
+
+/** Generate visible page number list with ellipsis */
+function getPageNumbers(current: number, total: number): (number | "ellipsis")[] {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const pages: (number | "ellipsis")[] = [1];
+  const left = Math.max(2, current - 1);
+  const right = Math.min(total - 1, current + 1);
+
+  if (left > 2) pages.push("ellipsis");
+  for (let i = left; i <= right; i++) pages.push(i);
+  if (right < total - 1) pages.push("ellipsis");
+  pages.push(total);
+  return pages;
+}
+
+function Pagination({
+  page,
+  totalPages,
+  totalCount,
+  buildPageHref,
+}: {
+  page: number;
+  totalPages: number;
+  totalCount: number;
+  buildPageHref: (page: number) => string;
+}) {
+  const [jumpValue, setJumpValue] = useState("");
+  const router = useRouter();
+
+  const handleJump = () => {
+    const target = parseInt(jumpValue, 10);
+    if (Number.isFinite(target) && target >= 1 && target <= totalPages && target !== page) {
+      router.push(buildPageHref(target));
+    }
+    setJumpValue("");
+  };
+
+  const pages = getPageNumbers(page, totalPages);
+
+  return (
+    <div className="flex items-center justify-between text-sm text-zinc-500 flex-shrink-0">
+      <span>共 {totalCount} 条，第 {page}/{totalPages} 页</span>
+      <div className="flex items-center gap-1">
+        {/* First page */}
+        <Link href={buildPageHref(1)}>
+          <Button variant="outline" size="sm" className="h-8 px-2" disabled={page <= 1}>
+            <ChevronsLeft className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
+        {/* Previous */}
+        <Link href={buildPageHref(page - 1)}>
+          <Button variant="outline" size="sm" disabled={page <= 1}>上一页</Button>
+        </Link>
+        {/* Page numbers */}
+        {pages.map((p, i) =>
+          p === "ellipsis" ? (
+            <span key={`e${i}`} className="px-1 text-muted-foreground select-none">…</span>
+          ) : (
+            <Link key={p} href={buildPageHref(p)}>
+              <Button
+                variant={p === page ? "default" : "outline"}
+                size="sm"
+                className="h-8 w-8 p-0"
+              >
+                {p}
+              </Button>
+            </Link>
+          )
+        )}
+        {/* Next */}
+        <Link href={buildPageHref(page + 1)}>
+          <Button variant="outline" size="sm" disabled={page >= totalPages}>下一页</Button>
+        </Link>
+        {/* Last page */}
+        <Link href={buildPageHref(totalPages)}>
+          <Button variant="outline" size="sm" className="h-8 px-2" disabled={page >= totalPages}>
+            <ChevronsRight className="h-3.5 w-3.5" />
+          </Button>
+        </Link>
+        {/* Jump to page */}
+        <div className="flex items-center gap-1 ml-2">
+          <span className="text-muted-foreground">跳至</span>
+          <Input
+            className="h-8 w-14 text-center text-sm"
+            value={jumpValue}
+            onChange={(e) => setJumpValue(e.target.value.replace(/\D/g, ""))}
+            onKeyDown={(e) => e.key === "Enter" && handleJump()}
+            placeholder={String(page)}
+          />
+          <span className="text-muted-foreground">页</span>
+        </div>
+      </div>
     </div>
   );
 }

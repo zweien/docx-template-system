@@ -20,6 +20,7 @@ interface UseKeyboardNavOptions {
   isGroupRow?: (rowIndex: number) => boolean;
   onUndo?: () => void;
   onRedo?: () => void;
+  onEditNavigate?: (direction: "left" | "right" | "down") => void;
 }
 
 export function useKeyboardNav({
@@ -35,6 +36,7 @@ export function useKeyboardNav({
   isGroupRow,
   onUndo,
   onRedo,
+  onEditNavigate,
 }: UseKeyboardNavOptions) {
   const activeCellRef = useRef<ActiveCell | null>(null);
 
@@ -67,7 +69,20 @@ export function useKeyboardNav({
         return;
       }
 
-      if (editingCell) return;
+      if (editingCell) {
+        // During editing, handle Tab/Enter for navigation after commit
+        if (e.key === "Tab") {
+          e.preventDefault();
+          onEditNavigate?.(e.shiftKey ? "left" : "right");
+          return;
+        }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onEditNavigate?.("down");
+          return;
+        }
+        return;
+      }
 
       const active = activeCellRef.current;
 
@@ -203,6 +218,7 @@ export function useKeyboardNav({
       skipGroupRow,
       onUndo,
       onRedo,
+      onEditNavigate,
     ]
   );
 

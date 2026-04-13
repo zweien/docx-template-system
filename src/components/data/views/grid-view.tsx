@@ -712,6 +712,53 @@ export function GridView({
       groupRowIndices.has(rowIndex),
     onUndo: () => void undoManager.undo(),
     onRedo: () => void undoManager.redo(),
+    onEditNavigate: (direction) => {
+      // Navigate synchronously — the cell editor's onCommit is already in flight
+      if (!stableActiveCell) return;
+      const { rowIndex, colIndex } = stableActiveCell;
+      const maxRow = flatRecords.length - 1;
+      const maxCol = orderedVisibleFields.length - 1;
+      let nextRow = rowIndex;
+      let nextCol = colIndex;
+
+      if (direction === "right") {
+        if (colIndex < maxCol) {
+          nextCol = colIndex + 1;
+        } else {
+          let r = rowIndex + 1;
+          while (r <= maxRow && groupRowIndices.has(r)) r++;
+          if (r <= maxRow) { nextRow = r; nextCol = 0; }
+        }
+      } else if (direction === "left") {
+        if (colIndex > 0) {
+          nextCol = colIndex - 1;
+        } else {
+          let r = rowIndex - 1;
+          while (r >= 0 && groupRowIndices.has(r)) r--;
+          if (r >= 0) { nextRow = r; nextCol = maxCol; }
+        }
+      } else if (direction === "down") {
+        let r = rowIndex + 1;
+        while (r <= maxRow && groupRowIndices.has(r)) r++;
+        if (r <= maxRow) nextRow = r;
+      }
+
+      if (nextRow !== rowIndex || nextCol !== colIndex) {
+        setActiveCell({ rowIndex: nextRow, colIndex: nextCol });
+        const entry = flatRecords[nextRow];
+        if (entry?.type === "record" && entry.record) {
+          const field = orderedVisibleFields[nextCol];
+          if (field && field.type !== FieldType.RELATION_SUBTABLE
+            && field.type !== FieldType.AUTO_NUMBER
+            && field.type !== FieldType.SYSTEM_TIMESTAMP
+            && field.type !== FieldType.SYSTEM_USER
+            && field.type !== FieldType.FORMULA
+            && field.type !== FieldType.BOOLEAN) {
+            startEditing(entry.record.id, field.key);
+          }
+        }
+      }
+    },
   });
 
   // Wrapper that syncs both ref and state

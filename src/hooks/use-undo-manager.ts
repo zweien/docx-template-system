@@ -9,7 +9,8 @@ export type CommandType =
   | "DELETE_RECORD"
   | "BATCH_UPDATE"
   | "ADD_FIELD"
-  | "DELETE_FIELD";
+  | "DELETE_FIELD"
+  | "FILL_CELLS";
 
 export interface Command {
   type: CommandType;

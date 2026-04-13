@@ -386,6 +386,7 @@ export function GridView({
 
   // ── Keyboard nav: active cell state (for rendering) ──────────────────────
   const [activeCell, setActiveCellState] = useState<ActiveCell | null>(null);
+  const stableActiveCell = activeCell;
 
   const toggleGroup = useCallback((groupValue: string) => {
     setCollapsedGroups((prev) => {
@@ -647,6 +648,190 @@ export function GridView({
   const { editingCell, startEditing, commitEdit, cancelEdit } =
     useInlineEdit({ tableId, onCommit: handleCommitWithUndo });
 
+  // ── Fill handle (drag-fill) ──────────────────────────────────────────────
+  const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
+  const [fillMode, setFillMode] = useState<"increment" | "copy">("increment");
+  const [fillComplete, setFillComplete] = useState<{
+    range: { startRow: number; startCol: number; endRow: number; endCol: number };
+    originalValue: unknown;
+    fieldKey: string;
+    fieldType: string;
+    updates: Array<{ recordId: string; fieldKey: string; oldValue: unknown }>;
+    anchorRect: { x: number; y: number };
+  } | null>(null);
+
+  const READONLY_FIELD_TYPES: readonly string[] = [
+    FieldType.AUTO_NUMBER, FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER,
+    FieldType.FORMULA, FieldType.RELATION_SUBTABLE,
+  ];
+
+  const computeFillValue = useCallback((fieldType: string, originalValue: unknown, step: number, mode: "increment" | "copy"): unknown => {
+    if (mode === "copy") return originalValue;
+    if (fieldType === FieldType.NUMBER) {
+      const num = Number(originalValue);
+      return isNaN(num) ? originalValue : num + step;
+    }
+    if (fieldType === FieldType.DATE) {
+      try {
+        const d = new Date(originalValue as string);
+        if (isNaN(d.getTime())) return originalValue;
+        d.setDate(d.getDate() + step);
+        return d.toISOString().slice(0, 10);
+      } catch {
+        return originalValue;
+      }
+    }
+    return originalValue;
+  }, []);
+
+  const applyFill = useCallback(
+    async (
+      range: { startRow: number; startCol: number; endRow: number; endCol: number },
+      originalValue: unknown,
+      fieldType: string,
+      mode: "increment" | "copy",
+    ) => {
+      const { startRow: sr, startCol: sc, endRow: er, endCol: ec } = range;
+      const updates: Array<{ recordId: string; fieldKey: string; value: unknown; oldValue: unknown }> = [];
+      const fields = orderedVisibleFields;
+
+      for (let r = sr; r <= er; r++) {
+        for (let c = sc; c <= ec; c++) {
+          if (r === sr && c === sc) continue;
+          const entry = flatRecords[r];
+          if (entry?.type !== "record" || !entry.record) continue;
+          const f = fields[c];
+          if (!f || READONLY_FIELD_TYPES.includes(f.type)) continue;
+          const step = r - sr + (c - sc);
+          updates.push({
+            recordId: entry.record.id,
+            fieldKey: f.key,
+            value: computeFillValue(f.type, originalValue, step, mode),
+            oldValue: entry.record.data[f.key],
+          });
+        }
+      }
+
+      if (updates.length > 0) {
+        await undoManager.execute({
+          type: "FILL_CELLS",
+          description: `填充了${updates.length}个单元格（${mode === "copy" ? "复制" : "递增"}）`,
+          execute: async () => { await Promise.all(updates.map((u) => handleCommit(u.recordId, u.fieldKey, u.value))); },
+          undo: async () => { await Promise.all(updates.map((u) => handleCommit(u.recordId, u.fieldKey, u.oldValue))); },
+        });
+      }
+      return updates;
+    },
+    [flatRecords, orderedVisibleFields, computeFillValue, handleCommit, undoManager]
+  );
+
+  const handleFillStart = useCallback(
+    (e: React.MouseEvent, record: DataRecordItem, field: DataFieldItem) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startRow = stableActiveCell?.rowIndex ?? 0;
+      const startCol = stableActiveCell?.colIndex ?? 0;
+      const originalValue = record.data[field.key];
+      const isCopyMode = e.ctrlKey || e.metaKey;
+      const currentMode = isCopyMode ? "copy" : "increment";
+
+      document.body.style.cursor = "crosshair";
+      document.body.style.userSelect = "none";
+      setFillComplete(null);
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const el = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+        const td = el?.closest("td[data-row][data-col]") as HTMLElement | null;
+        if (!td) return;
+        const targetRow = parseInt(td.getAttribute("data-row")!, 10);
+        const targetCol = parseInt(td.getAttribute("data-col")!, 10);
+        if (targetRow >= startRow && targetCol >= startCol) {
+          setFillRange({ startRow, startCol, endRow: targetRow, endCol: targetCol });
+        }
+      };
+
+      const handleMouseUp = async (upEvent: MouseEvent) => {
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+
+        setFillRange((currentRange) => {
+          if (!currentRange) return null;
+
+          const { startRow: sr, startCol: sc, endRow: er, endCol: ec } = currentRange;
+          if (sr === er && sc === ec) return null;
+
+          const updatesSnapshot: Array<{ recordId: string; fieldKey: string; oldValue: unknown }> = [];
+          const fields = orderedVisibleFields;
+
+          for (let r = sr; r <= er; r++) {
+            for (let c = sc; c <= ec; c++) {
+              if (r === sr && c === sc) continue;
+              const entry = flatRecords[r];
+              if (entry?.type !== "record" || !entry.record) continue;
+              const f = fields[c];
+              if (!f || READONLY_FIELD_TYPES.includes(f.type)) continue;
+              updatesSnapshot.push({
+                recordId: entry.record.id,
+                fieldKey: f.key,
+                oldValue: entry.record.data[f.key],
+              });
+            }
+          }
+
+          if (updatesSnapshot.length > 0) {
+            setFillMode(currentMode);
+            void applyFill(currentRange, originalValue, field.type, currentMode).then(() => {
+              const anchorCell = document.querySelector(`td[data-row="${er}"][data-col="${ec}"]`);
+              const rect = anchorCell?.getBoundingClientRect();
+              if (rect) {
+                setFillComplete({
+                  range: currentRange,
+                  originalValue,
+                  fieldKey: field.key,
+                  fieldType: field.type,
+                  updates: updatesSnapshot,
+                  anchorRect: { x: rect.right, y: rect.bottom },
+                });
+              }
+            });
+          }
+
+          return null;
+        });
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [stableActiveCell, flatRecords, orderedVisibleFields, computeFillValue, handleCommit, undoManager, applyFill]
+  );
+
+  // Toggle fill mode after completion
+  const handleFillModeToggle = useCallback(async () => {
+    if (!fillComplete) return;
+    const newMode = fillMode === "copy" ? "increment" : "copy";
+    setFillMode(newMode);
+    // Undo previous fill, then apply with new mode
+    await undoManager.undo();
+    void applyFill(fillComplete.range, fillComplete.originalValue, fillComplete.fieldType, newMode);
+  }, [fillComplete, fillMode, undoManager, applyFill]);
+
+  // Dismiss fill complete popup on click outside
+  useEffect(() => {
+    if (!fillComplete) return;
+    const handleClick = () => setFillComplete(null);
+    const handleKeyDown = () => setFillComplete(null);
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [fillComplete]);
+
   // ── Keyboard navigation ──────────────────────────────────────────────────
   const [selectionRange, setSelectionRangeState] = useState<CellRange | null>(null);
   const { handleKeyDown, setActiveCell: setActiveCellRef, setSelectionRange: setSelectionRangeRef } = useKeyboardNav({
@@ -849,10 +1034,6 @@ export function GridView({
       toast.error("新建行失败");
     }
   }, [tableId, onAddRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing]);
-
-  // When activeCell is set, remember which page it was on.
-  // If page changed, activeCell becomes stale — use derived value instead.
-  const stableActiveCell = activeCell;
 
   // Auto-scroll on stableActiveCell change
   useEffect(() => {
@@ -1104,6 +1285,12 @@ export function GridView({
               flatRowIndex <= Math.max(selectionRange.startRow, selectionRange.endRow) &&
               fieldIndex >= Math.min(selectionRange.startCol, selectionRange.endCol) &&
               fieldIndex <= Math.max(selectionRange.startCol, selectionRange.endCol);
+            const isFillTarget = fillRange &&
+              !isActive &&
+              flatRowIndex >= fillRange.startRow &&
+              flatRowIndex <= fillRange.endRow &&
+              fieldIndex >= fillRange.startCol &&
+              fieldIndex <= fillRange.endCol;
             const cellStyle = cellRuleMap[field.key];
             const mergedStyle: React.CSSProperties = {
               ...(frozenTdStyle ?? {}),
@@ -1123,8 +1310,9 @@ export function GridView({
                   frozenFieldCountValue > 0 &&
                     fieldIndex === frozenFieldCountValue - 1 &&
                     "frozen-last-col relative",
-                  isActive && "ring-2 ring-primary ring-inset",
-                  isInRange && !isActive && "bg-primary/20 ring-1 ring-inset ring-primary/40"
+                  isActive && "outline outline-2 outline-primary outline-offset-[-2px] relative",
+                  isInRange && !isActive && "bg-primary/20 outline outline-1 outline-offset-[-1px] outline-primary/40",
+                  isFillTarget && "bg-primary/15"
                 )}
                 onClick={(e) => handleCellClick(flatRowIndex, fieldIndex, e)}
                 onDoubleClick={() => {
@@ -1141,6 +1329,12 @@ export function GridView({
                 onContextMenu={(e) => captureCell(e, record.id, field.key, flatRowIndex, fieldIndex)}
               >
                 {renderCell(field, record)}
+                {isActive && !READONLY_FIELD_TYPES.includes(field.type) && !editingCell && (
+                  <div
+                    className="absolute bottom-0 right-0 w-2 h-2 bg-primary cursor-crosshair z-10"
+                    onMouseDown={(e) => handleFillStart(e, record, field)}
+                  />
+                )}
               </td>
             );
           })}
@@ -1211,6 +1405,9 @@ export function GridView({
       captureRowHeader,
       captureCell,
       rowHeight,
+      fillRange,
+      editingCell,
+      handleFillStart,
     ]
   );
 
@@ -1498,6 +1695,31 @@ export function GridView({
         </table>
       </div>
       </CellContextMenu>
+      {/* Fill mode toggle popup */}
+      {fillComplete && (
+        <div
+          className="fixed z-50 bg-popover text-popover-foreground border rounded-md shadow-md flex items-center gap-1 p-1"
+          style={{ left: fillComplete.anchorRect.x + 4, top: fillComplete.anchorRect.y + 4 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            variant={fillMode === "copy" ? "default" : "ghost"}
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={handleFillModeToggle}
+          >
+            复制
+          </Button>
+          <Button
+            variant={fillMode === "increment" ? "default" : "ghost"}
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={handleFillModeToggle}
+          >
+            递增
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

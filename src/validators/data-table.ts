@@ -86,6 +86,7 @@ export const recordQuerySchema = z.object({
 
 export const createRecordSchema = z.object({
   data: z.record(z.string(), z.unknown()),
+  skipRequiredValidation: z.boolean().optional().default(false),
 });
 
 export const updateRecordSchema = createRecordSchema;

@@ -130,7 +130,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const validated = createRecordSchema.parse(body);
 
-    const result = await createRecord(user.id, id, validated.data);
+    const result = await createRecord(user.id, id, validated.data, {
+      skipRequiredValidation: validated.skipRequiredValidation,
+    });
 
     if (!result.success) {
       if (result.error.code === "NOT_FOUND") {

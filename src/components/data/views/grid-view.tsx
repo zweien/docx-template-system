@@ -786,7 +786,7 @@ export function GridView({
       const res = await fetch(`/api/data-tables/${tableId}/records`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: {} }),
+        body: JSON.stringify({ data: {}, skipRequiredValidation: true }),
       });
       if (!res.ok) {
         toast.error("新建行失败");

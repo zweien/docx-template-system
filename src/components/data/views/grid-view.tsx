@@ -69,6 +69,7 @@ interface GridViewProps {
   onDeleteRecord: (recordId: string) => Promise<void>;
   deletingIds: Set<string>;
   onRefresh: () => void;
+  onUpdateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
   onOpenDetail?: (recordId: string) => void;
   onOpenFieldsConfig?: () => void;
   onDeleteField?: (fieldKey: string) => void;
@@ -233,6 +234,7 @@ export function GridView({
   onDeleteRecord,
   deletingIds,
   onRefresh,
+  onUpdateRecordField,
   onOpenDetail,
   columnWidths,
   onColumnWidthsChange,
@@ -624,9 +626,9 @@ export function GridView({
       if (!response.ok) {
         throw new Error("保存失败");
       }
-      onRefresh();
+      onUpdateRecordField(recordId, fieldKey, value);
     },
-    [tableId, onRefresh]
+    [tableId, onUpdateRecordField]
   );
 
   const handleCommitWithUndo = useCallback(
@@ -660,7 +662,12 @@ export function GridView({
       const entry = flatRecords[activeCell.rowIndex];
       if (entry?.type !== "record" || !entry.record) return;
       const field = orderedVisibleFields[activeCell.colIndex];
-      if (field && field.type !== FieldType.RELATION_SUBTABLE) {
+      if (!field || field.type === FieldType.RELATION_SUBTABLE) return;
+      if (field.type === FieldType.BOOLEAN) {
+        const currentValue = entry.record.data[field.key];
+        const newValue = !(!!currentValue && currentValue !== "false" && currentValue !== 0);
+        void handleCommitWithUndo(entry.record.id, field.key, newValue);
+      } else {
         startEditing(entry.record.id, field.key);
       }
     },
@@ -730,15 +737,26 @@ export function GridView({
     el?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [stableActiveCell]);
 
-  // Click handler to set activeCell
+  // Click handler to set activeCell + boolean toggle
   const handleCellClick = useCallback(
     (rowIndex: number, colIndex: number, e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('button, [role="checkbox"], input, select')) return;
       setActiveCell({ rowIndex, colIndex });
       tableRef.current?.focus();
+
+      // Boolean toggle on single click
+      const entry = flatRecords[rowIndex];
+      if (entry?.type === "record" && entry.record) {
+        const field = orderedVisibleFields[colIndex];
+        if (field?.type === FieldType.BOOLEAN) {
+          const currentValue = entry.record.data[field.key];
+          const newValue = !(!!currentValue && currentValue !== "false" && currentValue !== 0);
+          void handleCommitWithUndo(entry.record.id, field.key, newValue);
+        }
+      }
     },
-    [setActiveCell]
+    [setActiveCell, flatRecords, orderedVisibleFields, handleCommitWithUndo]
   );
 
   // ── Editor rendering ────────────────────────────────────────────────────
@@ -863,35 +881,17 @@ export function GridView({
         editingCell?.fieldKey === field.key;
 
       // RELATION_SUBTABLE does not support inline editing
-      const canEdit = field.type !== FieldType.RELATION_SUBTABLE
-        && field.type !== FieldType.AUTO_NUMBER
-        && field.type !== FieldType.SYSTEM_TIMESTAMP
-        && field.type !== FieldType.SYSTEM_USER
-        && field.type !== FieldType.FORMULA;
-
       if (isEditing) {
         return renderEditor(field, record);
       }
 
       return (
-        <span
-          className={`block truncate ${
-            canEdit ? "cursor-pointer hover:bg-muted/30 rounded px-1" : ""
-          }`}
-          onClick={
-            canEdit
-              ? (e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  startEditing(record.id, field.key);
-                }
-              : undefined
-          }
-        >
+        <span className="block truncate px-1">
           {formatCellValue(field, record.data[field.key])}
         </span>
       );
     },
-    [editingCell, renderEditor, startEditing]
+    [editingCell, renderEditor]
   );
 
   // ── Per-record cell-level conditional format map ────────────────────────
@@ -974,6 +974,17 @@ export function GridView({
                   isActive && "ring-2 ring-primary ring-inset"
                 )}
                 onClick={(e) => handleCellClick(flatRowIndex, fieldIndex, e)}
+                onDoubleClick={() => {
+                  const canEdit = field.type !== FieldType.RELATION_SUBTABLE
+                    && field.type !== FieldType.AUTO_NUMBER
+                    && field.type !== FieldType.SYSTEM_TIMESTAMP
+                    && field.type !== FieldType.SYSTEM_USER
+                    && field.type !== FieldType.FORMULA
+                    && field.type !== FieldType.BOOLEAN;
+                  if (canEdit) {
+                    startEditing(record.id, field.key);
+                  }
+                }}
                 onContextMenu={(e) => captureCell(e, record.id, field.key, flatRowIndex, fieldIndex)}
               >
                 {renderCell(field, record)}
@@ -1041,6 +1052,7 @@ export function GridView({
       toggleRow,
       stableActiveCell,
       handleCellClick,
+      startEditing,
       recordStyles,
       cellRuleMapByRecord,
       captureRowHeader,

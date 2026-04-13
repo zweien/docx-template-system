@@ -21,6 +21,7 @@ interface UseKeyboardNavOptions {
   onUndo?: () => void;
   onRedo?: () => void;
   onEditNavigate?: (direction: "left" | "right" | "down") => void;
+  onExpandRecord?: () => void;
 }
 
 export function useKeyboardNav({
@@ -37,6 +38,7 @@ export function useKeyboardNav({
   onUndo,
   onRedo,
   onEditNavigate,
+  onExpandRecord,
 }: UseKeyboardNavOptions) {
   const activeCellRef = useRef<ActiveCell | null>(null);
 
@@ -178,6 +180,12 @@ export function useKeyboardNav({
           onStartEdit();
           e.preventDefault();
           break;
+        case " ":
+          if (e.shiftKey) {
+            onExpandRecord?.();
+            e.preventDefault();
+          }
+          break;
         case "Escape":
           activeCellRef.current = null;
           onCancelEdit();
@@ -219,6 +227,7 @@ export function useKeyboardNav({
       onUndo,
       onRedo,
       onEditNavigate,
+      onExpandRecord,
     ]
   );
 

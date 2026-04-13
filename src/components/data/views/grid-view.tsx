@@ -759,6 +759,13 @@ export function GridView({
         }
       }
     },
+    onExpandRecord: () => {
+      if (!stableActiveCell) return;
+      const entry = flatRecords[stableActiveCell.rowIndex];
+      if (entry?.type === "record" && entry.record && onOpenDetail) {
+        onOpenDetail(entry.record.id);
+      }
+    },
   });
 
   // Wrapper that syncs both ref and state

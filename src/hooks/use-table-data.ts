@@ -49,6 +49,7 @@ export interface UseTableDataReturn {
   setColumnAggregations: (aggregations: Record<string, AggregateType>) => void;
   deleteRecord: (recordId: string) => Promise<void>;
   deletingIds: Set<string>;
+  updateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
   refresh: () => void;
 }
 
@@ -236,6 +237,23 @@ export function useTableData({
   const refresh = useCallback(() => {
     setRefreshTick((value) => value + 1);
   }, []);
+
+  const updateRecordField = useCallback(
+    (recordId: string, fieldKey: string, value: unknown) => {
+      setRecordsData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          records: prev.records.map((record) =>
+            record.id === recordId
+              ? { ...record, data: { ...record.data, [fieldKey]: value } }
+              : record
+          ),
+        };
+      });
+    },
+    []
+  );
 
   const setFilters = useCallback((nextFilters: FilterGroup[]) => {
     setFiltersState(nextFilters);
@@ -534,6 +552,7 @@ export function useTableData({
     setColumnAggregations,
     deleteRecord,
     deletingIds,
+    updateRecordField,
     refresh,
   };
 }

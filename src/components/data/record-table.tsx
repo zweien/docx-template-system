@@ -98,6 +98,7 @@ export function RecordTable({
     setColumnAggregations,
     deleteRecord,
     deletingIds,
+    updateRecordField,
     switchView,
     refresh,
   } = useTableData({ tableId, fields });
@@ -122,9 +123,9 @@ export function RecordTable({
         const data = await res.json();
         throw new Error(data.error ?? "保存失败");
       }
-      refresh();
+      updateRecordField(recordId, fieldKey, value);
     },
-    [tableId, refresh]
+    [tableId, updateRecordField]
   );
 
   // ── Filter change handler ────────────────────────────────────────────────
@@ -299,6 +300,7 @@ export function RecordTable({
             onDeleteRecord={deleteRecord}
             deletingIds={deletingIds}
             onRefresh={refresh}
+            onUpdateRecordField={updateRecordField}
             onOpenDetail={onOpenDetail}
             columnWidths={columnWidths}
             onColumnWidthsChange={handleColumnWidthsChange}

@@ -357,10 +357,15 @@ export function GridView({
           case "eq": match = String(val ?? "") === String(rule.condition.value); break;
           case "ne": match = String(val ?? "") !== String(rule.condition.value); break;
           case "contains": match = String(val ?? "").includes(String(rule.condition.value)); break;
+          case "notcontains": match = !String(val ?? "").includes(String(rule.condition.value)); break;
+          case "startswith": match = String(val ?? "").startsWith(String(rule.condition.value)); break;
+          case "endswith": match = String(val ?? "").endsWith(String(rule.condition.value)); break;
           case "isempty": match = val === undefined || val === null || val === ""; break;
           case "isnotempty": match = val !== undefined && val !== null && val !== ""; break;
           case "gt": match = Number(val) > Number(rule.condition.value); break;
           case "lt": match = Number(val) < Number(rule.condition.value); break;
+          case "gte": match = Number(val) >= Number(rule.condition.value); break;
+          case "lte": match = Number(val) <= Number(rule.condition.value); break;
         }
         if (match) {
           const style: React.CSSProperties = {
@@ -1233,10 +1238,15 @@ export function GridView({
           case "eq": match = String(val ?? "") === String(rule.condition.value); break;
           case "ne": match = String(val ?? "") !== String(rule.condition.value); break;
           case "contains": match = String(val ?? "").includes(String(rule.condition.value)); break;
+          case "notcontains": match = !String(val ?? "").includes(String(rule.condition.value)); break;
+          case "startswith": match = String(val ?? "").startsWith(String(rule.condition.value)); break;
+          case "endswith": match = String(val ?? "").endsWith(String(rule.condition.value)); break;
           case "isempty": match = val === undefined || val === null || val === ""; break;
           case "isnotempty": match = val !== undefined && val !== null && val !== ""; break;
           case "gt": match = Number(val) > Number(rule.condition.value); break;
           case "lt": match = Number(val) < Number(rule.condition.value); break;
+          case "gte": match = Number(val) >= Number(rule.condition.value); break;
+          case "lte": match = Number(val) <= Number(rule.condition.value); break;
         }
         if (match) {
           const style: React.CSSProperties = { backgroundColor: rule.backgroundColor };

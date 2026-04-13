@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const ROW_HEIGHT = 40; // px, matches h-10 tailwind class
+const DEFAULT_ROW_HEIGHT = 40;
 const BUFFER = 5; // extra rows above/below viewport
 
 export interface VirtualRowsResult {
@@ -15,7 +15,8 @@ export interface VirtualRowsResult {
 
 export function useVirtualRows(
   totalRows: number,
-  containerHeight?: number
+  containerHeight?: number,
+  rowHeight?: number
 ): VirtualRowsResult {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -35,11 +36,12 @@ export function useVirtualRows(
 
   // Re-calc on totalRows change (e.g. data loaded)
   const { startIndex, endIndex, topPadding, bottomPadding } = useMemo(() => {
+    const h = rowHeight ?? DEFAULT_ROW_HEIGHT;
     const viewportHeight =
       scrollRef.current?.clientHeight ?? containerHeight ?? 600;
-    const maxVisible = Math.ceil(viewportHeight / ROW_HEIGHT);
+    const maxVisible = Math.ceil(viewportHeight / h);
 
-    const rawStart = Math.floor(scrollTop / ROW_HEIGHT);
+    const rawStart = Math.floor(scrollTop / h);
     const rawEnd = rawStart + maxVisible;
 
     const start = Math.max(0, rawStart - BUFFER);
@@ -48,10 +50,10 @@ export function useVirtualRows(
     return {
       startIndex: start,
       endIndex: end,
-      topPadding: start * ROW_HEIGHT,
-      bottomPadding: Math.max(0, (totalRows - end) * ROW_HEIGHT),
+      topPadding: start * h,
+      bottomPadding: Math.max(0, (totalRows - end) * h),
     };
-  }, [scrollTop, totalRows, containerHeight]);
+  }, [scrollTop, totalRows, containerHeight, rowHeight]);
 
   return { startIndex, endIndex, topPadding, bottomPadding, scrollRef };
 }

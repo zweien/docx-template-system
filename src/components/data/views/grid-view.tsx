@@ -85,6 +85,7 @@ interface GridViewProps {
   onQuickFormat?: (fieldKey: string, value: string) => void;
   columnAggregations?: Record<string, AggregateType>;
   onColumnAggregationsChange?: (aggregations: Record<string, AggregateType>) => void;
+  rowHeight?: number;
 }
 
 // ─── Grouping helpers ───────────────────────────────────────────────────────
@@ -119,6 +120,17 @@ function groupRecords(
   }
 
   return groups;
+}
+
+// ─── Row height style helper ────────────────────────────────────────────────
+
+function getRowHeightClasses(h: number) {
+  switch (h) {
+    case 24: return { td: "p-0.5", text: "text-xs" };
+    case 32: return { td: "p-1", text: "" };
+    case 56: return { td: "p-3 whitespace-normal", text: "" };
+    default: return { td: "p-2", text: "" }; // 40px
+  }
 }
 
 // ─── Frozen style helper ──────────────────────────────────────────────────
@@ -250,6 +262,7 @@ export function GridView({
   onDeleteField,
   columnAggregations,
   onColumnAggregationsChange,
+  rowHeight,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
 
@@ -579,7 +592,7 @@ export function GridView({
   }, [groupedRecords, collapsedGroups, records]);
 
   const { startIndex, endIndex, topPadding, bottomPadding, scrollRef } =
-    useVirtualRows(flatRecords.length);
+    useVirtualRows(flatRecords.length, undefined, rowHeight);
   const visibleFlatRecords = flatRecords.slice(startIndex, endIndex);
 
   // ── Group row indices (for skipping in keyboard nav) ─────────────────────
@@ -1017,7 +1030,7 @@ export function GridView({
       }
 
       return (
-        <span className="block truncate px-1">
+        <span className="block px-1 truncate">
           {formatCellValue(field, record.data[field.key])}
         </span>
       );
@@ -1082,6 +1095,7 @@ export function GridView({
           )}
           {orderedVisibleFields.map((field, fieldIndex) => {
             const frozenTdStyle = getFrozenStyle(fieldIndex, frozenFieldCountValue, orderedVisibleFields, columnWidths);
+            const rhClasses = getRowHeightClasses(rowHeight ?? 40);
             const isActive =
               stableActiveCell?.rowIndex === flatRowIndex &&
               stableActiveCell?.colIndex === fieldIndex;
@@ -1102,7 +1116,9 @@ export function GridView({
                 data-col={fieldIndex}
                 style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                 className={cn(
-                  "p-2 align-middle whitespace-nowrap",
+                  "align-middle overflow-hidden", rhClasses.td,
+                  (rowHeight ?? 40) < 56 && "whitespace-nowrap",
+                  rhClasses.text,
                   frozenTdStyle && "bg-background",
                   frozenFieldCountValue > 0 &&
                     fieldIndex === frozenFieldCountValue - 1 &&
@@ -1194,6 +1210,7 @@ export function GridView({
       cellRuleMapByRecord,
       captureRowHeader,
       captureCell,
+      rowHeight,
     ]
   );
 

@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, Plus, X } from "lucide-react";
+import { ArrowUpDown, Download, Plus, X } from "lucide-react";
 import type {
   DataFieldItem,
   DataViewItem,
@@ -219,6 +219,15 @@ export function RecordTable({
     [currentConfig.viewOptions, setViewOptions]
   );
 
+  const rowHeight = (currentConfig.viewOptions.rowHeight as number) ?? 40;
+
+  const handleRowHeightChange = useCallback(
+    (h: number) => {
+      setViewOptions({ ...currentConfig.viewOptions, rowHeight: h });
+    },
+    [currentConfig.viewOptions, setViewOptions]
+  );
+
   // ── Row reorder ────────────────────────────────────────────────────────
   const reorderRecords = useCallback(
     async (orderedIds: string[]) => {
@@ -301,6 +310,7 @@ export function RecordTable({
             columnAggregations={columnAggregations}
             onColumnAggregationsChange={setColumnAggregations}
             onOpenFieldsConfig={handleOpenFieldsConfig}
+            rowHeight={rowHeight}
           />
         );
       case "KANBAN":
@@ -393,6 +403,32 @@ export function RecordTable({
           </form>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="sm">
+                  <ArrowUpDown className="h-4 w-4 mr-1" />
+                  行高
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              {([
+                [24, "紧凑"],
+                [32, "标准"],
+                [40, "宽松"],
+                [56, "超高"],
+              ] as const).map(([h, label]) => (
+                <DropdownMenuItem
+                  key={h}
+                  onClick={() => handleRowHeightChange(h)}
+                  className={rowHeight === h ? "font-bold bg-muted" : ""}
+                >
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <FieldConfigPopover
             fields={fields}
             visibleFields={currentConfig.visibleFields}

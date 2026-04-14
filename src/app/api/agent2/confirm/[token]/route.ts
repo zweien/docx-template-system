@@ -7,6 +7,8 @@ import {
   rejectToken,
 } from "@/lib/agent2/confirm-store";
 import { executeToolAction } from "@/lib/agent2/tool-executor";
+import { db } from "@/lib/db";
+import type { Prisma } from "@/generated/prisma/client";
 
 interface RouteContext {
   params: Promise<{ token: string }>;
@@ -27,7 +29,7 @@ export async function POST(
   try {
     const { token } = await params;
     const body = await request.json();
-    const { approved } = toolConfirmSchema.parse(body);
+    const { approved, toolCallId } = toolConfirmSchema.parse(body);
 
     if (approved) {
       const claimResult = await validateAndClaimToken(token, session.user.id);
@@ -56,6 +58,58 @@ export async function POST(
           },
           { status: 500 }
         );
+      }
+
+      // Update the DB-stored assistant message to replace _needsConfirm with
+      // a clear success message so the next AI continuation understands the tool was executed
+      if (toolCallId) {
+        try {
+          // Search by conversationId + precise toolCallId for exact match
+          const messages = await db.agent2Message.findMany({
+            where: {
+              conversationId: claimResult.data.conversationId,
+              role: "assistant",
+            },
+            orderBy: { createdAt: "desc" },
+            take: 10,
+          });
+
+          for (const message of messages) {
+            const parts = message.parts as Array<Record<string, unknown>>;
+            let found = false;
+            const updatedParts = parts.map((part) => {
+              if (
+                !found &&
+                (part.type === "dynamic-tool" || (typeof part.type === "string" && part.type.startsWith("tool-"))) &&
+                part.toolCallId === toolCallId &&
+                part.output != null &&
+                typeof part.output === "object" &&
+                "_needsConfirm" in (part.output as Record<string, unknown>)
+              ) {
+                found = true;
+                return {
+                  ...part,
+                  output: {
+                    success: true,
+                    message: `${claimResult.data.toolName} 已由用户确认并执行成功`,
+                    data: execResult.data,
+                  },
+                };
+              }
+              return part;
+            });
+
+            if (found) {
+              await db.agent2Message.update({
+                where: { id: message.id },
+                data: { parts: updatedParts as Prisma.InputJsonValue },
+              });
+              break;
+            }
+          }
+        } catch {
+          // Non-critical: if DB update fails, the client still has the result
+        }
       }
 
       return NextResponse.json({ success: true, data: execResult.data });

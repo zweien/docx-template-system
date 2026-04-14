@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import * as recordService from "@/lib/services/record.service";
 import { createRecordSchema, recordQuerySchema } from "@/validators/record";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 // ── GET /api/records ──
 
@@ -77,6 +79,17 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "DOCUMENT_GENERATE",
+      targetType: "Record",
+      targetId: result.data.id,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return NextResponse.json({ success: true, data: result.data }, { status: 201 });
   } catch (error) {

@@ -19,6 +19,7 @@ export const updateTemplateSchema = z.object({
   fieldMapping: fieldMappingSchema,
   categoryId: z.string().nullable().optional(),
   tagIds: z.array(z.string()).optional(),
+  fillAssistPrompt: z.string().max(2000).nullable().optional(),
 });
 
 export const templateQuerySchema = z.object({

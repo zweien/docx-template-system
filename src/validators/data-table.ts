@@ -86,6 +86,7 @@ export const recordQuerySchema = z.object({
 
 export const createRecordSchema = z.object({
   data: z.record(z.string(), z.unknown()),
+  skipRequiredValidation: z.boolean().optional().default(false),
 });
 
 export const updateRecordSchema = createRecordSchema;
@@ -137,17 +138,16 @@ export const sortConfigSchema = z.object({
 export const filterConditionSchema = z.object({
   fieldKey: z.string(),
   op: z.enum([
-    "eq",
-    "ne",
-    "gt",
-    "lt",
-    "gte",
-    "lte",
-    "contains",
-    "isempty",
-    "isnotempty",
+    "eq", "ne", "gt", "lt", "gte", "lte",
+    "contains", "notcontains", "startswith", "endswith",
+    "isempty", "isnotempty",
+    "between", "in", "notin",
   ]),
-  value: z.union([z.string(), z.number()]),
+  value: z.union([
+    z.string(), z.number(),
+    z.array(z.union([z.string(), z.number()])),
+    z.object({ min: z.union([z.string(), z.number()]), max: z.union([z.string(), z.number()]) }),
+  ]),
 });
 
 export const filterGroupSchema = z.object({

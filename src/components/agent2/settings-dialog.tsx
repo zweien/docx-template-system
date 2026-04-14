@@ -14,14 +14,12 @@ interface SettingsDialogProps {
 }
 
 interface Settings {
-  autoConfirmTools: Record<string, boolean>
   defaultModel: string
   showReasoning: boolean
 }
 
 export function SettingsDialog({ open, onOpenChange, onSettingsChange }: SettingsDialogProps) {
   const [settings, setSettings] = useState<Settings>({
-    autoConfirmTools: {},
     defaultModel: "gpt-4o",
     showReasoning: true,
   })
@@ -47,45 +45,18 @@ export function SettingsDialog({ open, onOpenChange, onSettingsChange }: Setting
     onSettingsChange?.(newSettings)
   }
 
-  const toolCategories = [
-    { key: "read", label: "查询类工具", description: "搜索、查询、聚合统计" },
-    { key: "write", label: "创建类工具", description: "创建记录、生成文档" },
-    { key: "delete", label: "删除类工具", description: "删除记录" },
-    { key: "execute", label: "执行类工具", description: "代码执行" },
-    { key: "mcp", label: "MCP 外部工具", description: "调用外部 MCP 服务器工具" },
-  ]
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>设置</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="tools">
+        <Tabs defaultValue="models">
           <TabsList className="w-full">
-            <TabsTrigger value="tools" className="flex-1">工具执行</TabsTrigger>
             <TabsTrigger value="models" className="flex-1">模型管理</TabsTrigger>
             <TabsTrigger value="display" className="flex-1">显示设置</TabsTrigger>
             <TabsTrigger value="mcp" className="flex-1">MCP 服务器</TabsTrigger>
           </TabsList>
-          <TabsContent value="tools" className="space-y-4 mt-4">
-            {toolCategories.map(cat => (
-              <div key={cat.key} className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{cat.label}</p>
-                  <p className="text-xs text-muted-foreground">{cat.description}</p>
-                </div>
-                <Switch
-                  checked={settings.autoConfirmTools[cat.key] || false}
-                  onCheckedChange={(checked: boolean) => {
-                    updateSettings({
-                      autoConfirmTools: { ...settings.autoConfirmTools, [cat.key]: checked },
-                    })
-                  }}
-                />
-              </div>
-            ))}
-          </TabsContent>
           <TabsContent value="models" className="mt-4">
             <ModelManager settings={settings} onUpdateSettings={(updates) => updateSettings(updates as Partial<Settings>)} />
           </TabsContent>

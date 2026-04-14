@@ -27,10 +27,15 @@ const OPERATOR_OPTIONS = [
   { value: "eq", label: "等于" },
   { value: "ne", label: "不等于" },
   { value: "contains", label: "包含" },
+  { value: "notcontains", label: "不包含" },
   { value: "isempty", label: "为空" },
   { value: "isnotempty", label: "不为空" },
   { value: "gt", label: "大于" },
   { value: "lt", label: "小于" },
+  { value: "gte", label: "大于等于" },
+  { value: "lte", label: "小于等于" },
+  { value: "startswith", label: "开头是" },
+  { value: "endswith", label: "结尾是" },
 ]
 
 interface ConditionalFormatDialogProps {

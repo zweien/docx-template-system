@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Download, Plus, X } from "lucide-react";
+import { ArrowUpDown, Download, Plus, X } from "lucide-react";
 import type {
   DataFieldItem,
   DataViewItem,
@@ -77,9 +77,7 @@ export function RecordTable({
   const {
     records,
     totalCount,
-    totalPages,
     isLoading,
-    page,
     search,
     searchInput,
     setSearchInput,
@@ -98,6 +96,8 @@ export function RecordTable({
     setColumnAggregations,
     deleteRecord,
     deletingIds,
+    updateRecordField,
+    addRecord,
     switchView,
     refresh,
   } = useTableData({ tableId, fields });
@@ -122,9 +122,9 @@ export function RecordTable({
         const data = await res.json();
         throw new Error(data.error ?? "保存失败");
       }
-      refresh();
+      updateRecordField(recordId, fieldKey, value);
     },
-    [tableId, refresh]
+    [tableId, updateRecordField]
   );
 
   // ── Filter change handler ────────────────────────────────────────────────
@@ -219,6 +219,15 @@ export function RecordTable({
     [currentConfig.viewOptions, setViewOptions]
   );
 
+  const rowHeight = (currentConfig.viewOptions.rowHeight as number) ?? 40;
+
+  const handleRowHeightChange = useCallback(
+    (h: number) => {
+      setViewOptions({ ...currentConfig.viewOptions, rowHeight: h });
+    },
+    [currentConfig.viewOptions, setViewOptions]
+  );
+
   // ── Row reorder ────────────────────────────────────────────────────────
   const reorderRecords = useCallback(
     async (orderedIds: string[]) => {
@@ -240,22 +249,7 @@ export function RecordTable({
     [viewId, tableId, refresh]
   );
 
-  // ── Pagination href builder ──────────────────────────────────────────────
-  const buildPageHref = (nextPage: number) => {
-    const params = new URLSearchParams();
-    if (nextPage > 1) {
-      params.set("page", String(nextPage));
-    }
-    if (search) {
-      params.set("search", search);
-    }
-    if (viewId) {
-      params.set("viewId", viewId);
-    }
-
-    const query = params.toString();
-    return query ? `/data/${tableId}?${query}` : `/data/${tableId}`;
-  };
+  // ── Record count ──────────────────────────────────────────────────────
 
   // ── Empty state ──────────────────────────────────────────────────────────
   if (fields.length === 0) {
@@ -299,13 +293,14 @@ export function RecordTable({
             onDeleteRecord={deleteRecord}
             deletingIds={deletingIds}
             onRefresh={refresh}
+            onUpdateRecordField={updateRecordField}
+            onAddRecord={addRecord}
             onOpenDetail={onOpenDetail}
             columnWidths={columnWidths}
             onColumnWidthsChange={handleColumnWidthsChange}
             frozenFieldCount={frozenFieldCount}
             onFrozenFieldCountChange={handleFrozenFieldCountChange}
             viewId={viewId}
-            page={page}
             onReorderRecords={reorderRecords}
             conditionalFormatRules={conditionalFormatRules}
             onQuickFormat={(fieldKey, value) => {
@@ -315,6 +310,7 @@ export function RecordTable({
             columnAggregations={columnAggregations}
             onColumnAggregationsChange={setColumnAggregations}
             onOpenFieldsConfig={handleOpenFieldsConfig}
+            rowHeight={rowHeight}
           />
         );
       case "KANBAN":
@@ -407,6 +403,32 @@ export function RecordTable({
           </form>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="sm">
+                  <ArrowUpDown className="h-4 w-4 mr-1" />
+                  行高
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              {([
+                [24, "紧凑"],
+                [32, "标准"],
+                [40, "宽松"],
+                [56, "超高"],
+              ] as const).map(([h, label]) => (
+                <DropdownMenuItem
+                  key={h}
+                  onClick={() => handleRowHeightChange(h)}
+                  className={rowHeight === h ? "font-bold bg-muted" : ""}
+                >
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <FieldConfigPopover
             fields={fields}
             visibleFields={currentConfig.visibleFields}
@@ -459,18 +481,12 @@ export function RecordTable({
       {/* View content */}
       {renderView()}
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between text-sm text-zinc-500 flex-shrink-0">
-        <span>共 {totalCount} 条，第 {page}/{Math.max(totalPages, 1)} 页</span>
-        <div className="flex gap-2">
-          <Link href={buildPageHref(page - 1)}>
-            <Button variant="outline" size="sm" disabled={page <= 1}>上一页</Button>
-          </Link>
-          <Link href={buildPageHref(page + 1)}>
-            <Button variant="outline" size="sm" disabled={page >= totalPages}>下一页</Button>
-          </Link>
+      {/* Record count */}
+      {!isLoading && (
+        <div className="text-sm text-zinc-500 flex-shrink-0">
+          共 {totalCount} 条
         </div>
-      </div>
+      )}
 
       {/* Save View Dialog */}
       <SaveViewDialog

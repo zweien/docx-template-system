@@ -37,6 +37,7 @@ model User {
   dataTables    DataTable[]
   dataRecords   DataRecord[]
   updatedDataRecords DataRecord[]  @relation("UpdatedByUser")
+  changeHistories     DataRecordChangeHistory[]
   batchGenerations BatchGeneration[]
   publishedTemplateVersions TemplateVersion[]
   aiConversations AiConversation[]
@@ -180,8 +181,9 @@ model Template {
   categoryId    String?
   category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags          TagOnTemplate[]
-  fieldMapping  Json?
-  placeholders  Placeholder[]
+  fieldMapping     Json?
+  fillAssistPrompt String?
+  placeholders     Placeholder[]
   drafts        Draft[]
   records       Record[]
   batchGenerations BatchGeneration[]
@@ -365,6 +367,26 @@ model DataRecord {
   @@index([updatedById])
   @@index([tableId, createdAt(sort: Desc)])  // 复合索引加速列表查询
   @@index([tableId, createdById])             // 复合索引加速用户记录查询
+  changeHistories DataRecordChangeHistory[]
+}
+
+model DataRecordChangeHistory {
+  id          String    @id @default(cuid())
+  recordId    String
+  record      DataRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  tableId     String
+  fieldKey    String
+  fieldLabel  String
+  oldValue    Json?
+  newValue    Json?
+  changedById String
+  changedBy   User      @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  changedAt   DateTime  @default(now())
+
+  @@index([recordId, changedAt(sort: Desc)])
+  @@index([tableId, changedAt(sort: Desc)])
+  @@index([changedById])
+  @@map("data_record_change_history")
 }
 
 model DataRelationRow {
@@ -688,6 +710,52 @@ model Agent2GlobalSettings {
   lastBackupAt  DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+}
+
+// ========== Audit Log ==========
+
+enum AuditAction {
+  LOGIN
+  LOGOUT
+  TEMPLATE_CREATE
+  TEMPLATE_UPDATE
+  TEMPLATE_DELETE
+  TEMPLATE_PUBLISH
+  DOCUMENT_GENERATE
+  BATCH_GENERATE
+  DATA_TABLE_CREATE
+  DATA_TABLE_UPDATE
+  DATA_TABLE_DELETE
+  DATA_RECORD_CREATE
+  DATA_RECORD_UPDATE
+  DATA_RECORD_DELETE
+  DATA_IMPORT
+  DATA_EXPORT
+  USER_CREATE
+  USER_UPDATE
+  USER_DELETE
+  API_TOKEN_CREATE
+  API_TOKEN_REVOKE
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  userId     String
+  userName   String?
+  userEmail  String?
+  action     AuditAction
+  targetType String?
+  targetId   String?
+  targetName String?
+  detail     Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
 
 // ========== API Token (REST API) ==========

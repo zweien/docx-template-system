@@ -108,8 +108,7 @@ function wrapMcpToolWithConfirm(
   prefixedName: string,
   rawTool: Tool,
   conversationId: string,
-  messageId: string,
-  autoConfirm: Record<string, boolean>
+  messageId: string
 ): Tool {
   if (!rawTool.execute) return rawTool;
   const originalExecute = rawTool.execute;
@@ -118,11 +117,6 @@ function wrapMcpToolWithConfirm(
     description: rawTool.description,
     inputSchema: rawTool.inputSchema ?? z.object({}),
     execute: async (args: unknown, context: ToolExecutionOptions) => {
-      const isAutoConfirmed = autoConfirm["mcp"] === true;
-      if (isAutoConfirmed) {
-        return originalExecute(args, context);
-      }
-
       const tokenResult = await createConfirmToken(
         conversationId,
         messageId,
@@ -149,8 +143,7 @@ function wrapMcpToolWithConfirm(
  */
 export async function getEnabledMcpTools(
   conversationId: string,
-  messageId: string,
-  autoConfirm: Record<string, boolean>
+  messageId: string
 ): Promise<McpToolsResult> {
   const result: McpToolsResult = {
     tools: {},
@@ -179,8 +172,7 @@ export async function getEnabledMcpTools(
           toolName,
           rawTool,
           conversationId,
-          messageId,
-          autoConfirm
+          messageId
         );
       }
       result.clients.push(connection.client);

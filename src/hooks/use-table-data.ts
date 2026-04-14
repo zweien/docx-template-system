@@ -18,16 +18,12 @@ import { useDebouncedCallback } from "@/hooks/use-debounce";
 export interface UseTableDataOptions {
   tableId: string;
   fields: DataFieldItem[];
-  pageSize?: number;
 }
 
 export interface UseTableDataReturn {
   records: DataRecordItem[];
   totalCount: number;
-  totalPages: number;
   isLoading: boolean;
-  page: number;
-  setPage: (p: number) => void;
   search: string;
   searchInput: string;
   setSearchInput: (v: string) => void;
@@ -49,12 +45,9 @@ export interface UseTableDataReturn {
   setColumnAggregations: (aggregations: Record<string, AggregateType>) => void;
   deleteRecord: (recordId: string) => Promise<void>;
   deletingIds: Set<string>;
+  updateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
+  addRecord: (record: DataRecordItem) => void;
   refresh: () => void;
-}
-
-function parsePageValue(value: string | null): number {
-  const page = Number.parseInt(value ?? "1", 10);
-  return Number.isFinite(page) && page > 0 ? page : 1;
 }
 
 function buildTablePath(tableId: string, params: URLSearchParams): string {
@@ -63,27 +56,17 @@ function buildTablePath(tableId: string, params: URLSearchParams): string {
 }
 
 function buildQueryKey(
-  page: number,
-  pageSize: number,
   search: string,
   viewId: string | null,
   filters: FilterGroup[],
   sorts: SortConfig[]
 ): string {
-  return JSON.stringify({
-    page,
-    pageSize,
-    search,
-    viewId,
-    filters,
-    sorts,
-  });
+  return JSON.stringify({ search, viewId, filters, sorts });
 }
 
 export function useTableData({
   tableId,
   fields,
-  pageSize = 20,
 }: UseTableDataOptions): UseTableDataReturn {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -97,9 +80,6 @@ export function useTableData({
   );
   const [viewId, setViewId] = useState<string | null>(
     searchParams.get("viewId") ?? null
-  );
-  const [page, setPageState] = useState(() =>
-    parsePageValue(searchParams.get("page"))
   );
   const [views, setViews] = useState<DataViewItem[]>([]);
   const [isViewConfigReady, setIsViewConfigReady] = useState(
@@ -121,8 +101,8 @@ export function useTableData({
   const latestFetchIdRef = useRef(0);
 
   const currentQueryKey = useMemo(
-    () => buildQueryKey(page, pageSize, search, viewId, filters, sorts),
-    [filters, page, pageSize, search, sorts, viewId]
+    () => buildQueryKey(search, viewId, filters, sorts),
+    [filters, search, sorts, viewId]
   );
   const latestQueryKeyRef = useRef(currentQueryKey);
 
@@ -133,7 +113,6 @@ export function useTableData({
   const syncUrlQuery = useCallback(
     (
       nextQuery: Partial<{
-        page: number;
         search: string;
         viewId: string | null;
       }>,
@@ -159,15 +138,6 @@ export function useTableData({
         }
       }
 
-      if (Object.hasOwn(nextQuery, "page")) {
-        const nextPage = nextQuery.page ?? 1;
-        if (nextPage > 1) {
-          params.set("page", String(nextPage));
-        } else {
-          params.delete("page");
-        }
-      }
-
       const href = buildTablePath(tableId, params);
       if (mode === "replace") {
         router.replace(href, { scroll: false });
@@ -178,22 +148,10 @@ export function useTableData({
     [router, searchParams, tableId]
   );
 
-  const setPage = useCallback(
-    (nextPage: number) => {
-      const normalizedPage = Number.isFinite(nextPage)
-        ? Math.max(1, Math.trunc(nextPage))
-        : 1;
-      setPageState(normalizedPage);
-      syncUrlQuery({ page: normalizedPage }, "push");
-    },
-    [syncUrlQuery]
-  );
-
   const debouncedSyncSearch = useDebouncedCallback((value: unknown) => {
     const nextSearch = String(value ?? "");
     setSearch(nextSearch);
-    setPageState(1);
-    syncUrlQuery({ search: nextSearch, page: 1 }, "replace");
+    syncUrlQuery({ search: nextSearch }, "replace");
   }, 300);
 
   const setSearchInput = useCallback(
@@ -210,8 +168,7 @@ export function useTableData({
       setIsViewConfigReady(nextViewId === null);
       setIsLoading(true);
       setViewId(nextViewId);
-      setPageState(1);
-      syncUrlQuery({ viewId: nextViewId, page: 1 }, "push");
+      syncUrlQuery({ viewId: nextViewId }, "push");
     },
     [syncUrlQuery]
   );
@@ -236,6 +193,37 @@ export function useTableData({
   const refresh = useCallback(() => {
     setRefreshTick((value) => value + 1);
   }, []);
+
+  const updateRecordField = useCallback(
+    (recordId: string, fieldKey: string, value: unknown) => {
+      setRecordsData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          records: prev.records.map((record) =>
+            record.id === recordId
+              ? { ...record, data: { ...record.data, [fieldKey]: value } }
+              : record
+          ),
+        };
+      });
+    },
+    []
+  );
+
+  const addRecord = useCallback(
+    (record: DataRecordItem) => {
+      setRecordsData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          records: [...prev.records, record],
+          total: prev.total + 1,
+        };
+      });
+    },
+    []
+  );
 
   const setFilters = useCallback((nextFilters: FilterGroup[]) => {
     setFiltersState(nextFilters);
@@ -273,7 +261,6 @@ export function useTableData({
       setIsLoading(true);
     }
     setViewId(nextViewId);
-    setPageState(parsePageValue(searchParams.get("page")));
   }, [searchParams, viewId]);
 
   useEffect(() => {
@@ -344,6 +331,7 @@ export function useTableData({
     };
   }, [defaultFieldKeys, tableId, viewId]);
 
+  // ── Fetch all records (no pagination) ──────────────────────────────────────
   const fetchData = useCallback(async () => {
     if (!isViewConfigReady) return;
 
@@ -352,10 +340,7 @@ export function useTableData({
     setIsLoading(true);
 
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        pageSize: String(pageSize),
-      });
+      const params = new URLSearchParams();
 
       if (search) params.set("search", search);
       if (viewId) params.set("viewId", viewId);
@@ -391,8 +376,6 @@ export function useTableData({
   }, [
     filters,
     isViewConfigReady,
-    page,
-    pageSize,
     search,
     sorts,
     tableId,
@@ -509,10 +492,7 @@ export function useTableData({
   return {
     records: recordsData?.records ?? [],
     totalCount: recordsData?.total ?? 0,
-    totalPages: recordsData?.totalPages ?? 1,
     isLoading,
-    page,
-    setPage,
     search,
     searchInput: searchInputState,
     setSearchInput,
@@ -534,6 +514,8 @@ export function useTableData({
     setColumnAggregations,
     deleteRecord,
     deletingIds,
+    updateRecordField,
+    addRecord,
     refresh,
   };
 }

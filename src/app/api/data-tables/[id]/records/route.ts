@@ -9,6 +9,8 @@ import {
 import type { FieldFilters } from "@/lib/services/data-record.service";
 import type { SortConfig, FilterCondition, FilterGroup } from "@/types/data-table";
 import { normalizeFilters } from "@/types/data-table";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -23,8 +25,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const searchParams = request.nextUrl.searchParams;
 
+  const hasPage = searchParams.has("page") || searchParams.has("pageSize");
   const page = parseInt(searchParams.get("page") || "1", 10);
-  const pageSize = parseInt(searchParams.get("pageSize") || "20", 10);
+  const pageSize = parseInt(searchParams.get("pageSize") || "10000", 10);
   const search = searchParams.get("search") || undefined;
 
   // P2: 解析字段筛选参数
@@ -128,7 +131,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const body = await request.json();
     const validated = createRecordSchema.parse(body);
 
-    const result = await createRecord(user.id, id, validated.data);
+    const result = await createRecord(user.id, id, validated.data, {
+      skipRequiredValidation: validated.skipRequiredValidation,
+    });
 
     if (!result.success) {
       if (result.error.code === "NOT_FOUND") {
@@ -139,6 +144,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 400 }
       );
     }
+
+    await logAudit({
+      userId: user.id,
+      userName: user.name,
+      userEmail: user.email,
+      action: "DATA_RECORD_CREATE",
+      targetType: "DataRecord",
+      targetId: result.data.id,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
 
     return NextResponse.json(result.data, { status: 201 });
   } catch (error) {

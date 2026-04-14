@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Bot } from "lucide-react";
+import { toast } from "sonner";
 import { RecordTable } from "@/components/data/record-table";
 import { ViewSwitcher } from "@/components/data/view-switcher";
 import { RecordDetailDrawer } from "@/components/data/record-detail-drawer";
+import { ChatArea } from "@/components/agent2/chat-area";
+import {
+  Sheet,
+  SheetContent,
+} from "@/components/ui/sheet";
 import type { DataTableDetail, ViewType } from "@/types/data-table";
 
 interface TableDetailContentProps {
@@ -20,6 +26,41 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
   const [viewType, setViewType] = useState<ViewType>("GRID");
   const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // AI Sheet state
+  const [aiOpen, setAiOpen] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  const handleAiOpen = useCallback(() => {
+    if (!aiOpen) {
+      // Opening: create new conversation
+      void fetch("/api/agent2/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: `数据表: ${table.name}` }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.json();
+        })
+        .then((data) => {
+          if (data.success) {
+            setConversationId(data.data.id);
+            setAiOpen(true);
+          }
+        })
+        .catch(() => {
+          toast.error("创建会话失败，请稍后重试");
+        });
+    }
+  }, [aiOpen, table.name]);
+
+  const handleAiClose = useCallback((open: boolean) => {
+    if (!open) {
+      setAiOpen(false);
+      setConversationId(null);
+    }
+  }, []);
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-6">
@@ -40,12 +81,10 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
           )}
         </div>
         <div className="flex gap-2">
-          <Link href={`/ai-agent?tableId=${tableId}`}>
-            <Button variant="outline" size="sm">
-              <Bot className="h-4 w-4 mr-2" />
-              AI 助手
-            </Button>
-          </Link>
+          <Button variant="outline" size="sm" onClick={handleAiOpen}>
+            <Bot className="h-4 w-4 mr-2" />
+            AI 助手
+          </Button>
 
           {isAdmin && (
             <>
@@ -168,6 +207,18 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
         fields={table.fields}
         isAdmin={isAdmin}
       />
+
+      {/* AI Assistant Sheet */}
+      <Sheet open={aiOpen} onOpenChange={handleAiClose}>
+        <SheetContent side="right" className="sm:max-w-lg w-full p-0" showCloseButton={false}>
+          {conversationId && (
+            <ChatArea
+              conversationId={conversationId}
+              tableId={tableId}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

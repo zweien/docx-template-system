@@ -13,6 +13,7 @@ const CONFIRM_REQUIRED_TOOLS = new Set([
   "batchCreateRecords",
   "batchUpdateRecords",
   "batchDeleteRecords",
+  "importPaper",
 ]);
 
 const RISK_MESSAGES: Record<string, string> = {
@@ -24,6 +25,7 @@ const RISK_MESSAGES: Record<string, string> = {
   batchCreateRecords: "即将批量创建多条记录",
   batchUpdateRecords: "即将批量更新多条记录",
   batchDeleteRecords: "⚠️ 即将永久删除多条记录，此操作不可撤销",
+  importPaper: "此操作将导入论文并创建/匹配作者记录",
 };
 
 export function needsConfirm(toolName: string): boolean {

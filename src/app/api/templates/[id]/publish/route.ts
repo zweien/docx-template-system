@@ -1,9 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import * as templateVersionService from "@/lib/services/template-version.service";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
 export async function POST(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await auth();
@@ -21,6 +23,17 @@ export async function POST(
     const status = result.error.code === "NOT_FOUND" ? 404 : 400;
     return NextResponse.json({ error: result.error }, { status });
   }
+
+  await logAudit({
+    userId: session.user.id,
+    userName: session.user.name,
+    userEmail: session.user.email,
+    action: "TEMPLATE_PUBLISH",
+    targetType: "Template",
+    targetId: id,
+    ipAddress: getClientIp(request),
+    userAgent: getUserAgent(request),
+  });
 
   return NextResponse.json({ success: true, data: result.data });
 }

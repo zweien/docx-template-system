@@ -48,38 +48,44 @@ const OPERATOR_LABELS: Record<FilterOperator, string> = {
   gte: "大于等于",
   lte: "小于等于",
   contains: "包含",
+  notcontains: "不包含",
+  startswith: "开头是",
+  endswith: "结尾是",
   isempty: "为空",
   isnotempty: "不为空",
+  between: "范围",
+  in: "属于",
+  notin: "不属于",
 };
 
 function getOperatorsForType(type: FieldType): FilterOperator[] {
   switch (type) {
     case FieldType.TEXT:
-      return ["eq", "ne", "contains", "isempty", "isnotempty"];
+      return ["eq", "ne", "contains", "notcontains", "startswith", "endswith", "in", "notin", "isempty", "isnotempty"];
     case FieldType.NUMBER:
-      return ["eq", "ne", "gt", "lt", "gte", "lte", "isempty"];
+      return ["eq", "ne", "gt", "lt", "gte", "lte", "between", "isempty"];
     case FieldType.DATE:
-      return ["eq", "gt", "lt", "gte", "lte", "isempty"];
+      return ["eq", "gt", "lt", "gte", "lte", "between", "isempty"];
     case FieldType.SELECT:
-      return ["eq", "ne", "isempty"];
+      return ["eq", "ne", "in", "notin", "isempty"];
     case FieldType.MULTISELECT:
       return ["contains", "isempty"];
     case FieldType.EMAIL:
     case FieldType.PHONE:
-      return ["eq", "contains", "isempty"];
+      return ["eq", "contains", "notcontains", "startswith", "endswith", "isempty"];
     case FieldType.RELATION:
       return ["eq", "isempty"];
     case FieldType.FILE:
     case FieldType.URL:
-      return ["eq", "ne", "contains", "isempty", "isnotempty"];
+      return ["eq", "ne", "contains", "notcontains", "isempty", "isnotempty"];
     case FieldType.BOOLEAN:
       return ["eq", "isempty"];
     case FieldType.AUTO_NUMBER:
-      return ["eq", "ne", "gt", "lt", "gte", "lte", "isempty"];
+      return ["eq", "ne", "gt", "lt", "gte", "lte", "between", "isempty"];
     case FieldType.SYSTEM_TIMESTAMP:
-      return ["eq", "gt", "lt", "gte", "lte", "isempty"];
+      return ["eq", "gt", "lt", "gte", "lte", "between", "isempty"];
     case FieldType.FORMULA:
-      return ["eq", "ne", "gt", "lt", "gte", "lte", "isempty", "isnotempty"];
+      return ["eq", "ne", "gt", "lt", "gte", "lte", "between", "isempty", "isnotempty"];
     default:
       return ["eq", "ne", "contains", "isempty", "isnotempty"];
   }
@@ -104,7 +110,13 @@ export function ColumnHeader({
     filter?.op ?? getOperatorsForType(field.type)[0]
   );
   const [filterValue, setFilterValue] = useState<string>(
-    filter ? String(filter.value) : ""
+    filter
+      ? filter.op === "between"
+        ? `${(filter.value as { min: unknown; max: unknown }).min ?? ""}-${(filter.value as { min: unknown; max: unknown }).max ?? ""}`
+        : Array.isArray(filter.value)
+          ? (filter.value as unknown[]).join(",")
+          : String(filter.value)
+      : ""
   );
 
   // When popover opens, sync local state with props
@@ -112,13 +124,34 @@ export function ColumnHeader({
     setOpen(nextOpen);
     if (nextOpen) {
       setFilterOp(filter?.op ?? getOperatorsForType(field.type)[0]);
-      setFilterValue(filter ? String(filter.value) : "");
+      setFilterValue(
+        filter
+          ? filter.op === "between"
+            ? `${(filter.value as { min: unknown; max: unknown }).min ?? ""}-${(filter.value as { min: unknown; max: unknown }).max ?? ""}`
+            : Array.isArray(filter.value)
+              ? (filter.value as unknown[]).join(",")
+              : String(filter.value)
+          : ""
+      );
     }
   };
 
   const handleApplyFilter = () => {
     if (NO_VALUE_OPS.includes(filterOp)) {
       onFilterChange({ fieldKey: field.key, op: filterOp, value: "" });
+    } else if (filterOp === "between") {
+      const parts = filterValue.split("-").map((s) => s.trim());
+      const min = field.type === FieldType.NUMBER ? Number(parts[0]) : parts[0] ?? "";
+      const max = field.type === FieldType.NUMBER ? Number(parts[1]) : parts[1] ?? "";
+      if (!isNaN(Number(min)) && !isNaN(Number(max))) {
+        onFilterChange({ fieldKey: field.key, op: filterOp, value: { min, max } });
+      }
+    } else if (filterOp === "in" || filterOp === "notin") {
+      const items = filterValue.split(",").map((s) => s.trim()).filter(Boolean);
+      if (items.length > 0) {
+        const value = field.type === FieldType.NUMBER ? items.map(Number) : items;
+        onFilterChange({ fieldKey: field.key, op: filterOp, value });
+      }
     } else if (filterValue) {
       const value: string | number =
         field.type === FieldType.NUMBER && !isNaN(Number(filterValue))
@@ -150,21 +183,14 @@ export function ColumnHeader({
   // Build filter summary text
   const getFilterSummary = () => {
     if (!filter) return null;
-    const opLabel =
-      filter.op === "eq"
-        ? "=="
-        : filter.op === "ne"
-          ? "!="
-          : filter.op === "contains"
-            ? "~"
-            : filter.op === "isempty"
-              ? "=空"
-              : filter.op === "isnotempty"
-                ? "=非空"
-                : filter.op;
+    const opLabel = OPERATOR_LABELS[filter.op] ?? filter.op;
     const val = NO_VALUE_OPS.includes(filter.op)
       ? ""
-      : `\"${filter.value}\"`;
+      : filter.op === "between"
+        ? `${(filter.value as { min: unknown; max: unknown }).min}~${(filter.value as { min: unknown; max: unknown }).max}`
+        : Array.isArray(filter.value)
+          ? (filter.value as unknown[]).join(",")
+          : `"${filter.value}"`;
     return `${opLabel}${val}`;
   };
 
@@ -301,7 +327,7 @@ export function ColumnHeader({
           </Select>
 
           {!hideValue &&
-            (field.type === FieldType.SELECT && field.options ? (
+            (field.type === FieldType.SELECT && field.options && filterOp !== "in" && filterOp !== "notin" ? (
               <Select
                 value={filterValue}
                 onValueChange={(v) => {
@@ -322,11 +348,17 @@ export function ColumnHeader({
               </Select>
             ) : (
               <Input
-                placeholder="输入值"
+                placeholder={
+                  filterOp === "between"
+                    ? "最小值-最大值（如 10-100）"
+                    : filterOp === "in" || filterOp === "notin"
+                      ? "多个值，逗号分隔"
+                      : "输入值"
+                }
                 value={filterValue}
                 onChange={(e) => setFilterValue(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleApplyFilter()}
-                type={field.type === FieldType.NUMBER ? "number" : "text"}
+                type={field.type === FieldType.NUMBER && filterOp !== "between" ? "number" : "text"}
               />
             ))}
         </div>

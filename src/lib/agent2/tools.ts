@@ -2,12 +2,13 @@
 import { tool } from "ai";
 import { z } from "zod";
 import * as helpers from "./tool-helpers";
+import { fetchPaperByDOI } from "./doi-service";
+import { fetchDetailPreview } from "./detail-preview";
+import { importPaper as executeImportPaper } from "./paper-import-executor";
 import {
   createConfirmToken,
   getRiskMessage,
 } from "./confirm-store";
-
-type AutoConfirmMap = Record<string, boolean>;
 
 // ── ECharts option generator for generateChart ──
 
@@ -110,15 +111,27 @@ function generateEChartsOption(args: {
 
 // ── Tool factory ──
 
+function readOnlyTool(description: string) {
+  return tool({
+    description: `${description}（需要管理员权限）`,
+    inputSchema: z.object({ message: z.string().optional() }),
+    execute: async () => ({
+      error: "权限不足",
+      message: "当前用户为普通用户，仅支持查询操作。如需修改数据，请联系管理员。",
+    }),
+  });
+}
+
 export function createTools(
   conversationId: string,
   messageId: string,
-  autoConfirm: AutoConfirmMap
+  userId?: string,
+  userRole?: string
 ) {
+  const isAdmin = userRole === "ADMIN";
   // Helper to wrap tools that need confirmation
   function wrapConfirm<T>(
     toolName: string,
-    category: string,
     schema: z.ZodType<T>,
     description: string,
     executeFn: (args: T) => Promise<unknown>
@@ -127,12 +140,6 @@ export function createTools(
       description,
       inputSchema: schema,
       execute: async (args: T) => {
-        // Check auto-confirm for this category
-        const isAutoConfirmed = autoConfirm[category] === true;
-        if (isAutoConfirmed) {
-          return executeFn(args);
-        }
-
         // Create confirm token
         const tokenResult = await createConfirmToken(
           conversationId,
@@ -150,6 +157,7 @@ export function createTools(
           toolName,
           toolInput: args,
           riskMessage: getRiskMessage(toolName),
+          detailPreview: await fetchDetailPreview(toolName, args),
         };
       },
     });
@@ -299,9 +307,8 @@ export function createTools(
       },
     }),
 
-    generateDocument: wrapConfirm(
+    generateDocument: isAdmin ? wrapConfirm(
       "generateDocument",
-      "write",
       z.object({
         templateId: z.string().describe("模板 ID"),
         formData: z
@@ -310,10 +317,9 @@ export function createTools(
       }),
       "根据模板和表单数据生成文档（需要确认）",
       async (args) => {
-        // Placeholder: actual generation will be implemented later
         return { message: "文档生成功能暂未完全实现", args };
       }
-    ),
+    ) : readOnlyTool("根据模板和表单数据生成文档"),
 
     // ── Record management tools ──
     getRecord: tool({
@@ -328,9 +334,8 @@ export function createTools(
       },
     }),
 
-    createRecord: wrapConfirm(
+    createRecord: isAdmin ? wrapConfirm(
       "createRecord",
-      "write",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
         data: z
@@ -339,15 +344,12 @@ export function createTools(
       }),
       "在数据表中创建新记录（需要确认）",
       async (args) => {
-        // When auto-confirmed, we still need userId — this will be handled
-        // by the caller (tool-executor) when processing confirmed tokens
         return { message: "记录创建待确认", args };
       }
-    ),
+    ) : readOnlyTool("在数据表中创建新记录"),
 
-    updateRecord: wrapConfirm(
+    updateRecord: isAdmin ? wrapConfirm(
       "updateRecord",
-      "write",
       z.object({
         recordId: z.string().describe("要更新的记录 ID"),
         data: z
@@ -358,11 +360,10 @@ export function createTools(
       async (args) => {
         return { message: "记录更新待确认", args };
       }
-    ),
+    ) : readOnlyTool("更新已有记录"),
 
-    deleteRecord: wrapConfirm(
+    deleteRecord: isAdmin ? wrapConfirm(
       "deleteRecord",
-      "delete",
       z.object({
         recordId: z.string().describe("要删除的记录 ID"),
       }),
@@ -370,12 +371,11 @@ export function createTools(
       async (args) => {
         return { message: "记录删除待确认", args };
       }
-    ),
+    ) : readOnlyTool("删除记录"),
 
     // ── Batch operation tools ──
-    batchCreateRecords: wrapConfirm(
+    batchCreateRecords: isAdmin ? wrapConfirm(
       "batchCreateRecords",
-      "write",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
         records: z
@@ -387,11 +387,10 @@ export function createTools(
       async (args) => {
         return { message: "批量创建待确认", args };
       }
-    ),
+    ) : readOnlyTool("批量创建记录"),
 
-    batchUpdateRecords: wrapConfirm(
+    batchUpdateRecords: isAdmin ? wrapConfirm(
       "batchUpdateRecords",
-      "write",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
         updates: z
@@ -410,11 +409,10 @@ export function createTools(
       async (args) => {
         return { message: "批量更新待确认", args };
       }
-    ),
+    ) : readOnlyTool("批量更新记录"),
 
-    batchDeleteRecords: wrapConfirm(
+    batchDeleteRecords: isAdmin ? wrapConfirm(
       "batchDeleteRecords",
-      "delete",
       z.object({
         tableId: z.string().describe("目标数据表 ID"),
         recordIds: z
@@ -426,7 +424,7 @@ export function createTools(
       async (args) => {
         return { message: "批量删除待确认", args };
       }
-    ),
+    ) : readOnlyTool("批量删除记录"),
 
     // ── Auxiliary tools ──
     getCurrentTime: tool({
@@ -445,9 +443,8 @@ export function createTools(
       },
     }),
 
-    executeCode: wrapConfirm(
+    executeCode: isAdmin ? wrapConfirm(
       "executeCode",
-      "execute",
       z.object({
         language: z
           .enum(["python", "javascript"])
@@ -458,7 +455,7 @@ export function createTools(
       async () => {
         return { message: "代码执行功能暂未开放" };
       }
-    ),
+    ) : readOnlyTool("在沙箱中执行代码"),
 
     generateChart: tool({
       description:
@@ -487,5 +484,97 @@ export function createTools(
         return generateEChartsOption(args);
       },
     }),
+
+    // ── Paper import tools ──
+    parsePaperText: tool({
+      description:
+        "将用户输入的论文文本解析为结构化的论文元数据。当用户粘贴论文信息（标题、作者、年份等）时使用此工具。返回解析后的字段供用户确认。",
+      inputSchema: z.object({
+        rawText: z.string().describe("用户粘贴的论文信息原始文本"),
+      }),
+      execute: async (args) => {
+        return {
+          message: "请根据以下原始文本提取结构化论文信息，确保字段准确。提取后展示给用户确认。",
+          rawText: args.rawText,
+          fields: [
+            "title_en", "title_cn", "paper_type", "group_name",
+            "publish_year", "publish_date", "venue_name", "venue_name_cn",
+            "doi", "index_type", "volume", "issue", "pages",
+            "ccf_category", "cas_partition", "corr_authors",
+          ],
+          authorFields: ["name", "author_order", "is_first_author", "is_corresponding_author"],
+        };
+      },
+    }),
+
+    fetchPaperByDOI: tool({
+      description:
+        "通过 DOI 从 Crossref 学术数据库获取论文元数据。当用户提供 DOI 编号时使用此工具自动获取论文信息。",
+      inputSchema: z.object({
+        doi: z.string().describe("论文 DOI 编号，如 10.1038/nature14539"),
+      }),
+      execute: async (args) => {
+        const result = await fetchPaperByDOI(args.doi);
+        if (!result.success) {
+          return { error: result.error };
+        }
+        return {
+          paper: result.data,
+          message: "请将以上信息展示给用户确认，并根据需要补充 group_name、index_type 等本地字段。",
+        };
+      },
+    }),
+
+    importPaper: isAdmin ? wrapConfirm(
+      "importPaper",
+      z.object({
+        paperData: z.object({
+          title_en: z.string().describe("英文标题"),
+          title_cn: z.string().optional().describe("中文标题"),
+          paper_type: z.enum(["journal", "conference"]).optional().describe("论文类型"),
+          group_name: z.string().optional().describe("组别"),
+          publish_year: z.number().optional().describe("发表年份"),
+          publish_date: z.string().optional().describe("发表日期"),
+          conf_start_date: z.string().optional().describe("会议开始日期"),
+          conf_end_date: z.string().optional().describe("会议结束日期"),
+          venue_name: z.string().optional().describe("期刊/会议名"),
+          venue_name_cn: z.string().optional().describe("期刊/会议中文名"),
+          conf_location: z.string().optional().describe("会议地点"),
+          doi: z.string().optional().describe("DOI"),
+          index_type: z.string().optional().describe("收录类型"),
+          pub_status: z.string().optional().describe("刊出状态"),
+          archive_status: z.string().optional().describe("归档状态"),
+          corr_authors: z.string().optional().describe("通讯作者"),
+          inst_rank: z.number().optional().describe("机构排名"),
+          fund_no: z.string().optional().describe("基金编号"),
+          paper_url: z.string().optional().describe("论文链接"),
+          volume: z.string().optional().describe("卷"),
+          issue: z.string().optional().describe("期"),
+          pages: z.string().optional().describe("页码"),
+          impact_factor: z.number().optional().describe("影响因子"),
+          issn_isbn: z.string().optional().describe("ISSN/ISBN"),
+          ccf_category: z.string().optional().describe("CCF分类"),
+          cas_partition: z.string().optional().describe("中科院分区"),
+          jcr_partition: z.string().optional().describe("JCR分区"),
+          sci_partition: z.string().optional().describe("SCI分区"),
+        }).describe("论文元数据"),
+        authors: z.array(
+          z.object({
+            name: z.string().describe("作者姓名"),
+            author_order: z.number().describe("作者顺序"),
+            is_first_author: z.enum(["Y", "N"]).describe("是否第一作者"),
+            is_corresponding_author: z.enum(["Y", "N"]).describe("是否通讯作者"),
+          })
+        ).describe("作者列表"),
+      }),
+      "导入论文到论文表（需要确认）",
+      async (args) => {
+        // auto-confirm 模式下直接执行导入
+        if (!userId) throw new Error("用户未登录");
+        const result = await executeImportPaper(args.paperData, args.authors, userId);
+        if (!result.success) throw new Error(result.error);
+        return result.data;
+      }
+    ) : readOnlyTool("导入论文到论文表"),
   };
 }

@@ -54,7 +54,7 @@ Template-driven office automation system: users upload .docx templates with `{{ 
 
 ## Auth
 
-NextAuth v4 Credentials Provider with JWT strategy. Session includes `user.id` and `user.role`.
+NextAuth v4 with JWT strategy. Session includes `user.id` and `user.role`.
 
 ```typescript
 // Server Component / Route Handler
@@ -64,6 +64,13 @@ const session = await auth(); // session.user.id, session.user.role
 // Client Component
 import { useSession, signOut } from "next-auth/react";
 ```
+
+### 开发模式绕过认证
+
+设置 `DEV_BYPASS_AUTH=true` 和 `NEXT_PUBLIC_DEV_BYPASS_AUTH=true` 后，登录页显示管理员/普通用户快捷登录按钮，无需启动 Authentik。使用种子用户账号（`npx prisma db seed` 初始化）：
+
+- 管理员：`admin@example.com` / `admin123`
+- 普通用户：`user@example.com` / `user123`
 
 Route protection is in `src/proxy.ts`. All routes except `/login` and `/api/auth` require authentication.
 

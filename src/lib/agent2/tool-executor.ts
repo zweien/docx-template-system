@@ -1,5 +1,6 @@
 // src/lib/agent2/tool-executor.ts
 import * as helpers from "./tool-helpers";
+import { importPaper } from "./paper-import-executor";
 import { invalidateSchemaCache } from "./tool-helpers";
 import { invalidateSyspromptCache } from "./context-builder";
 import * as recordService from "@/lib/services/data-record.service";
@@ -135,6 +136,17 @@ export async function executeToolAction(
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };
       invalidateSchemaCache(toolInput.tableId as string);
+      invalidateSyspromptCache();
+      return { success: true, data: result.data };
+    }
+
+    case "importPaper": {
+      const paperData = toolInput.paperData as Parameters<typeof importPaper>[0];
+      const authors = toolInput.authors as Parameters<typeof importPaper>[1];
+      const result = await importPaper(paperData, authors, userId);
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
       invalidateSyspromptCache();
       return { success: true, data: result.data };
     }

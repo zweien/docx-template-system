@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Redo2, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
 import { BatchActionBar } from "@/components/data/batch-action-bar";
 import { BatchEditDialog } from "@/components/data/batch-edit-dialog";
 import { DragDropProvider } from "@dnd-kit/react";
@@ -21,10 +21,11 @@ import type {
 import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { useKeyboardNav, type ActiveCell } from "@/hooks/use-keyboard-nav";
+import { useKeyboardNav, type ActiveCell, type CellRange } from "@/hooks/use-keyboard-nav";
 import { useUndoManager } from "@/hooks/use-undo-manager";
 import { cn } from "@/lib/utils";
 import { useSummaryRow } from "@/hooks/use-summary-row";
+import { useVirtualRows } from "@/hooks/use-virtual-rows";
 import {
   TextCellEditor,
   NumberCellEditor,
@@ -69,6 +70,8 @@ interface GridViewProps {
   onDeleteRecord: (recordId: string) => Promise<void>;
   deletingIds: Set<string>;
   onRefresh: () => void;
+  onUpdateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
+  onAddRecord: (record: DataRecordItem) => void;
   onOpenDetail?: (recordId: string) => void;
   onOpenFieldsConfig?: () => void;
   onDeleteField?: (fieldKey: string) => void;
@@ -77,12 +80,12 @@ interface GridViewProps {
   frozenFieldCount?: number;
   onFrozenFieldCountChange?: (count: number) => void;
   viewId?: string | null;
-  page?: number;
   onReorderRecords?: (orderedIds: string[]) => void;
   conditionalFormatRules?: ConditionalFormatRule[];
   onQuickFormat?: (fieldKey: string, value: string) => void;
   columnAggregations?: Record<string, AggregateType>;
   onColumnAggregationsChange?: (aggregations: Record<string, AggregateType>) => void;
+  rowHeight?: number;
 }
 
 // ─── Grouping helpers ───────────────────────────────────────────────────────
@@ -117,6 +120,17 @@ function groupRecords(
   }
 
   return groups;
+}
+
+// ─── Row height style helper ────────────────────────────────────────────────
+
+function getRowHeightClasses(h: number) {
+  switch (h) {
+    case 24: return { td: "p-0.5", text: "text-xs" };
+    case 32: return { td: "p-1", text: "" };
+    case 56: return { td: "p-3 whitespace-normal", text: "" };
+    default: return { td: "p-2", text: "" }; // 40px
+  }
 }
 
 // ─── Frozen style helper ──────────────────────────────────────────────────
@@ -233,13 +247,14 @@ export function GridView({
   onDeleteRecord,
   deletingIds,
   onRefresh,
+  onUpdateRecordField,
+  onAddRecord,
   onOpenDetail,
   columnWidths,
   onColumnWidthsChange,
   frozenFieldCount,
   onFrozenFieldCountChange,
   viewId,
-  page,
   onReorderRecords,
   conditionalFormatRules,
   onQuickFormat,
@@ -247,6 +262,7 @@ export function GridView({
   onDeleteField,
   columnAggregations,
   onColumnAggregationsChange,
+  rowHeight,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
 
@@ -341,10 +357,15 @@ export function GridView({
           case "eq": match = String(val ?? "") === String(rule.condition.value); break;
           case "ne": match = String(val ?? "") !== String(rule.condition.value); break;
           case "contains": match = String(val ?? "").includes(String(rule.condition.value)); break;
+          case "notcontains": match = !String(val ?? "").includes(String(rule.condition.value)); break;
+          case "startswith": match = String(val ?? "").startsWith(String(rule.condition.value)); break;
+          case "endswith": match = String(val ?? "").endsWith(String(rule.condition.value)); break;
           case "isempty": match = val === undefined || val === null || val === ""; break;
           case "isnotempty": match = val !== undefined && val !== null && val !== ""; break;
           case "gt": match = Number(val) > Number(rule.condition.value); break;
           case "lt": match = Number(val) < Number(rule.condition.value); break;
+          case "gte": match = Number(val) >= Number(rule.condition.value); break;
+          case "lte": match = Number(val) <= Number(rule.condition.value); break;
         }
         if (match) {
           const style: React.CSSProperties = {
@@ -370,7 +391,7 @@ export function GridView({
 
   // ── Keyboard nav: active cell state (for rendering) ──────────────────────
   const [activeCell, setActiveCellState] = useState<ActiveCell | null>(null);
-  const [activeCellPage, setActiveCellPage] = useState(page);
+  const stableActiveCell = activeCell;
 
   const toggleGroup = useCallback((groupValue: string) => {
     setCollapsedGroups((prev) => {
@@ -385,39 +406,19 @@ export function GridView({
   }, []);
 
   // ── Batch toggle handlers ─────────────────────────────────────────────
-  // selectedIds is scoped to current page; we store {page, ids} so page
-  // changes automatically clear the selection.
-  const [selectionState, setSelectionState] = useState<{
-    page: number | undefined;
-    ids: Set<string>;
-  }>({ page, ids: new Set() });
-
-  // Keep in sync with prop changes
-  const currentSelectedIds =
-    selectionState.page === page ? selectionState.ids : new Set<string>();
-  const updateSelectedIds = useCallback(
-    (updater: (prev: Set<string>) => Set<string>) => {
-      setSelectionState((prev) => ({
-        page,
-        ids: updater(prev.page === page ? prev.ids : new Set()),
-      }));
-    },
-    [page]
-  );
+  const [selectedIdsSet, setSelectedIdsSet] = useState<Set<string>>(new Set());
 
   const toggleAll = useCallback(() => {
-    const current =
-      selectionState.page === page ? selectionState.ids : new Set<string>();
-    if (current.size === records.length) {
-      updateSelectedIds(() => new Set());
+    if (selectedIdsSet.size === records.length) {
+      setSelectedIdsSet(new Set());
     } else {
-      updateSelectedIds(() => new Set(records.map((r) => r.id)));
+      setSelectedIdsSet(new Set(records.map((r) => r.id)));
     }
-  }, [records, page, selectionState, updateSelectedIds]);
+  }, [records, selectedIdsSet]);
 
   const toggleRow = useCallback(
     (recordId: string) => {
-      updateSelectedIds((prev) => {
+      setSelectedIdsSet((prev) => {
         const next = new Set(prev);
         if (next.has(recordId)) {
           next.delete(recordId);
@@ -427,10 +428,8 @@ export function GridView({
         return next;
       });
     },
-    [updateSelectedIds]
+    []
   );
-
-  const selectedIdsSet = currentSelectedIds;
 
   // ── Ordered visible fields ──────────────────────────────────────────────
   const fieldMap = useMemo(
@@ -480,7 +479,7 @@ export function GridView({
   const handleBatchDelete = useCallback(async () => {
     if (!confirm(`确定删除 ${selectedIdsSet.size} 条记录？`)) return;
     const ids = [...selectedIdsSet];
-    updateSelectedIds(() => new Set());
+    setSelectedIdsSet(new Set());
     const results = await Promise.allSettled(
       ids.map((id) =>
         fetch(`/api/data-tables/${tableId}/records/${id}`, {
@@ -493,13 +492,13 @@ export function GridView({
       alert(`${failedCount} 条记录删除失败，请重试`);
     }
     onRefresh();
-  }, [selectedIdsSet, tableId, onRefresh, updateSelectedIds]);
+  }, [selectedIdsSet, tableId, onRefresh]);
 
   // ── Batch edit handler ────────────────────────────────────────────────
   const handleBatchEdit = useCallback(
     async (fieldKey: string, value: unknown) => {
       const ids = [...selectedIdsSet];
-      updateSelectedIds(() => new Set());
+      setSelectedIdsSet(new Set());
       const BATCH_SIZE = 10;
       for (let i = 0; i < ids.length; i += BATCH_SIZE) {
         const batch = ids.slice(i, i + BATCH_SIZE);
@@ -515,7 +514,7 @@ export function GridView({
       }
       onRefresh();
     },
-    [selectedIdsSet, tableId, onRefresh, updateSelectedIds]
+    [selectedIdsSet, tableId, onRefresh]
   );
 
   // ── Column drag end handler ──────────────────────────────────────
@@ -578,15 +577,16 @@ export function GridView({
     return groupRecords(records, groupField);
   }, [groupField, records]);
 
-  // ── Flat records for keyboard nav (maps flat index → record or group) ────
+  // ── Virtual scrolling ────────────────────────────────────────────────────
   const flatRecords = useMemo(() => {
     if (groupedRecords) {
       const flat: Array<{
         type: "group" | "record";
         record?: DataRecordItem;
+        group?: { value: string; label: string; records: DataRecordItem[] };
       }> = [];
       for (const group of groupedRecords) {
-        flat.push({ type: "group" });
+        flat.push({ type: "group", group });
         if (!collapsedGroups.has(group.value)) {
           for (const r of group.records)
             flat.push({ type: "record", record: r });
@@ -596,6 +596,10 @@ export function GridView({
     }
     return records.map((r) => ({ type: "record" as const, record: r }));
   }, [groupedRecords, collapsedGroups, records]);
+
+  const { startIndex, endIndex, topPadding, bottomPadding, scrollRef } =
+    useVirtualRows(flatRecords.length, undefined, rowHeight);
+  const visibleFlatRecords = flatRecords.slice(startIndex, endIndex);
 
   // ── Group row indices (for skipping in keyboard nav) ─────────────────────
   const groupRowIndices = useMemo(() => {
@@ -624,9 +628,9 @@ export function GridView({
       if (!response.ok) {
         throw new Error("保存失败");
       }
-      onRefresh();
+      onUpdateRecordField(recordId, fieldKey, value);
     },
-    [tableId, onRefresh]
+    [tableId, onUpdateRecordField]
   );
 
   const handleCommitWithUndo = useCallback(
@@ -649,8 +653,193 @@ export function GridView({
   const { editingCell, startEditing, commitEdit, cancelEdit } =
     useInlineEdit({ tableId, onCommit: handleCommitWithUndo });
 
+  // ── Fill handle (drag-fill) ──────────────────────────────────────────────
+  const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
+  const [fillMode, setFillMode] = useState<"increment" | "copy">("increment");
+  const [fillComplete, setFillComplete] = useState<{
+    range: { startRow: number; startCol: number; endRow: number; endCol: number };
+    originalValue: unknown;
+    fieldKey: string;
+    fieldType: string;
+    updates: Array<{ recordId: string; fieldKey: string; oldValue: unknown }>;
+    anchorRect: { x: number; y: number };
+  } | null>(null);
+
+  const READONLY_FIELD_TYPES: readonly string[] = [
+    FieldType.AUTO_NUMBER, FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER,
+    FieldType.FORMULA, FieldType.RELATION_SUBTABLE,
+  ];
+
+  const computeFillValue = useCallback((fieldType: string, originalValue: unknown, step: number, mode: "increment" | "copy"): unknown => {
+    if (mode === "copy") return originalValue;
+    if (fieldType === FieldType.NUMBER) {
+      const num = Number(originalValue);
+      return isNaN(num) ? originalValue : num + step;
+    }
+    if (fieldType === FieldType.DATE) {
+      try {
+        const d = new Date(originalValue as string);
+        if (isNaN(d.getTime())) return originalValue;
+        d.setDate(d.getDate() + step);
+        return d.toISOString().slice(0, 10);
+      } catch {
+        return originalValue;
+      }
+    }
+    return originalValue;
+  }, []);
+
+  const applyFill = useCallback(
+    async (
+      range: { startRow: number; startCol: number; endRow: number; endCol: number },
+      originalValue: unknown,
+      fieldType: string,
+      mode: "increment" | "copy",
+    ) => {
+      const { startRow: sr, startCol: sc, endRow: er, endCol: ec } = range;
+      const updates: Array<{ recordId: string; fieldKey: string; value: unknown; oldValue: unknown }> = [];
+      const fields = orderedVisibleFields;
+
+      for (let r = sr; r <= er; r++) {
+        for (let c = sc; c <= ec; c++) {
+          if (r === sr && c === sc) continue;
+          const entry = flatRecords[r];
+          if (entry?.type !== "record" || !entry.record) continue;
+          const f = fields[c];
+          if (!f || READONLY_FIELD_TYPES.includes(f.type)) continue;
+          const step = r - sr + (c - sc);
+          updates.push({
+            recordId: entry.record.id,
+            fieldKey: f.key,
+            value: computeFillValue(f.type, originalValue, step, mode),
+            oldValue: entry.record.data[f.key],
+          });
+        }
+      }
+
+      if (updates.length > 0) {
+        await undoManager.execute({
+          type: "FILL_CELLS",
+          description: `填充了${updates.length}个单元格（${mode === "copy" ? "复制" : "递增"}）`,
+          execute: async () => { await Promise.all(updates.map((u) => handleCommit(u.recordId, u.fieldKey, u.value))); },
+          undo: async () => { await Promise.all(updates.map((u) => handleCommit(u.recordId, u.fieldKey, u.oldValue))); },
+        });
+      }
+      return updates;
+    },
+    [flatRecords, orderedVisibleFields, computeFillValue, handleCommit, undoManager]
+  );
+
+  const handleFillStart = useCallback(
+    (e: React.MouseEvent, record: DataRecordItem, field: DataFieldItem) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startRow = stableActiveCell?.rowIndex ?? 0;
+      const startCol = stableActiveCell?.colIndex ?? 0;
+      const originalValue = record.data[field.key];
+      const isCopyMode = e.ctrlKey || e.metaKey;
+      const currentMode = isCopyMode ? "copy" : "increment";
+
+      document.body.style.cursor = "crosshair";
+      document.body.style.userSelect = "none";
+      setFillComplete(null);
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        const el = document.elementFromPoint(moveEvent.clientX, moveEvent.clientY);
+        const td = el?.closest("td[data-row][data-col]") as HTMLElement | null;
+        if (!td) return;
+        const targetRow = parseInt(td.getAttribute("data-row")!, 10);
+        const targetCol = parseInt(td.getAttribute("data-col")!, 10);
+        if (targetRow >= startRow && targetCol >= startCol) {
+          setFillRange({ startRow, startCol, endRow: targetRow, endCol: targetCol });
+        }
+      };
+
+      const handleMouseUp = async (upEvent: MouseEvent) => {
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+
+        setFillRange((currentRange) => {
+          if (!currentRange) return null;
+
+          const { startRow: sr, startCol: sc, endRow: er, endCol: ec } = currentRange;
+          if (sr === er && sc === ec) return null;
+
+          const updatesSnapshot: Array<{ recordId: string; fieldKey: string; oldValue: unknown }> = [];
+          const fields = orderedVisibleFields;
+
+          for (let r = sr; r <= er; r++) {
+            for (let c = sc; c <= ec; c++) {
+              if (r === sr && c === sc) continue;
+              const entry = flatRecords[r];
+              if (entry?.type !== "record" || !entry.record) continue;
+              const f = fields[c];
+              if (!f || READONLY_FIELD_TYPES.includes(f.type)) continue;
+              updatesSnapshot.push({
+                recordId: entry.record.id,
+                fieldKey: f.key,
+                oldValue: entry.record.data[f.key],
+              });
+            }
+          }
+
+          if (updatesSnapshot.length > 0) {
+            setFillMode(currentMode);
+            void applyFill(currentRange, originalValue, field.type, currentMode).then(() => {
+              const anchorCell = document.querySelector(`td[data-row="${er}"][data-col="${ec}"]`);
+              const rect = anchorCell?.getBoundingClientRect();
+              if (rect) {
+                setFillComplete({
+                  range: currentRange,
+                  originalValue,
+                  fieldKey: field.key,
+                  fieldType: field.type,
+                  updates: updatesSnapshot,
+                  anchorRect: { x: rect.right, y: rect.bottom },
+                });
+              }
+            });
+          }
+
+          return null;
+        });
+      };
+
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [stableActiveCell, flatRecords, orderedVisibleFields, computeFillValue, handleCommit, undoManager, applyFill]
+  );
+
+  // Toggle fill mode after completion
+  const handleFillModeToggle = useCallback(async () => {
+    if (!fillComplete) return;
+    const newMode = fillMode === "copy" ? "increment" : "copy";
+    setFillMode(newMode);
+    // Undo previous fill, then apply with new mode
+    await undoManager.undo();
+    void applyFill(fillComplete.range, fillComplete.originalValue, fillComplete.fieldType, newMode);
+  }, [fillComplete, fillMode, undoManager, applyFill]);
+
+  // Dismiss fill complete popup on click outside
+  useEffect(() => {
+    if (!fillComplete) return;
+    const handleClick = () => setFillComplete(null);
+    const handleKeyDown = () => setFillComplete(null);
+    document.addEventListener("click", handleClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("click", handleClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [fillComplete]);
+
   // ── Keyboard navigation ──────────────────────────────────────────────────
-  const { handleKeyDown, setActiveCell: setActiveCellRef } = useKeyboardNav({
+  const [selectionRange, setSelectionRangeState] = useState<CellRange | null>(null);
+  const { handleKeyDown, setActiveCell: setActiveCellRef, setSelectionRange: setSelectionRangeRef } = useKeyboardNav({
     rowCount: flatRecords.length,
     colCount: orderedVisibleFields.length,
     editingCell,
@@ -660,7 +849,12 @@ export function GridView({
       const entry = flatRecords[activeCell.rowIndex];
       if (entry?.type !== "record" || !entry.record) return;
       const field = orderedVisibleFields[activeCell.colIndex];
-      if (field && field.type !== FieldType.RELATION_SUBTABLE) {
+      if (!field || field.type === FieldType.RELATION_SUBTABLE) return;
+      if (field.type === FieldType.BOOLEAN) {
+        const currentValue = entry.record.data[field.key];
+        const newValue = !(!!currentValue && currentValue !== "false" && currentValue !== 0);
+        void handleCommitWithUndo(entry.record.id, field.key, newValue);
+      } else {
         startEditing(entry.record.id, field.key);
       }
     },
@@ -701,10 +895,104 @@ export function GridView({
         field.type === FieldType.NUMBER ? Number(text) : text
       );
     },
+    onCopyRange: (range: CellRange) => {
+      const minRow = Math.min(range.startRow, range.endRow);
+      const maxRow = Math.max(range.startRow, range.endRow);
+      const minCol = Math.min(range.startCol, range.endCol);
+      const maxCol = Math.max(range.startCol, range.endCol);
+      const lines: string[] = [];
+      for (let r = minRow; r <= maxRow; r++) {
+        const entry = flatRecords[r];
+        if (entry?.type !== "record" || !entry.record) { lines.push(""); continue; }
+        const cells: string[] = [];
+        for (let c = minCol; c <= maxCol; c++) {
+          const field = orderedVisibleFields[c];
+          cells.push(field ? String(entry.record.data[field.key] ?? "") : "");
+        }
+        lines.push(cells.join("\t"));
+      }
+      navigator.clipboard.writeText(lines.join("\n"));
+    },
+    onPasteRange: (text: string, startRow: number, startCol: number) => {
+      const rows = text.split(/\r?\n/).filter(line => line.length > 0);
+      const parsed = rows.map(row => row.split("\t"));
+      for (let dr = 0; dr < parsed.length; dr++) {
+        const targetRow = startRow + dr;
+        const entry = flatRecords[targetRow];
+        if (!entry || entry.type !== "record" || !entry.record) continue;
+        for (let dc = 0; dc < parsed[dr].length; dc++) {
+          const targetCol = startCol + dc;
+          const field = orderedVisibleFields[targetCol];
+          if (!field) continue;
+          if (field.type === FieldType.RELATION_SUBTABLE || field.type === FieldType.AUTO_NUMBER || field.type === FieldType.SYSTEM_TIMESTAMP || field.type === FieldType.SYSTEM_USER || field.type === FieldType.FORMULA) continue;
+          const rawValue = parsed[dr][dc];
+          const value = field.type === FieldType.NUMBER ? Number(rawValue) : rawValue;
+          if (field.type === FieldType.NUMBER && isNaN(value as number)) continue;
+          handleCommit(entry.record.id, field.key, value);
+        }
+      }
+    },
+    onSelectionChange: (range: CellRange | null) => {
+      setSelectionRangeState(range);
+    },
     isGroupRow: (rowIndex: number) =>
       groupRowIndices.has(rowIndex),
     onUndo: () => void undoManager.undo(),
     onRedo: () => void undoManager.redo(),
+    onEditNavigate: (direction) => {
+      // Navigate synchronously — the cell editor's onCommit is already in flight
+      if (!stableActiveCell) return;
+      const { rowIndex, colIndex } = stableActiveCell;
+      const maxRow = flatRecords.length - 1;
+      const maxCol = orderedVisibleFields.length - 1;
+      let nextRow = rowIndex;
+      let nextCol = colIndex;
+
+      if (direction === "right") {
+        if (colIndex < maxCol) {
+          nextCol = colIndex + 1;
+        } else {
+          let r = rowIndex + 1;
+          while (r <= maxRow && groupRowIndices.has(r)) r++;
+          if (r <= maxRow) { nextRow = r; nextCol = 0; }
+        }
+      } else if (direction === "left") {
+        if (colIndex > 0) {
+          nextCol = colIndex - 1;
+        } else {
+          let r = rowIndex - 1;
+          while (r >= 0 && groupRowIndices.has(r)) r--;
+          if (r >= 0) { nextRow = r; nextCol = maxCol; }
+        }
+      } else if (direction === "down") {
+        let r = rowIndex + 1;
+        while (r <= maxRow && groupRowIndices.has(r)) r++;
+        if (r <= maxRow) nextRow = r;
+      }
+
+      if (nextRow !== rowIndex || nextCol !== colIndex) {
+        setActiveCell({ rowIndex: nextRow, colIndex: nextCol });
+        const entry = flatRecords[nextRow];
+        if (entry?.type === "record" && entry.record) {
+          const field = orderedVisibleFields[nextCol];
+          if (field && field.type !== FieldType.RELATION_SUBTABLE
+            && field.type !== FieldType.AUTO_NUMBER
+            && field.type !== FieldType.SYSTEM_TIMESTAMP
+            && field.type !== FieldType.SYSTEM_USER
+            && field.type !== FieldType.FORMULA
+            && field.type !== FieldType.BOOLEAN) {
+            startEditing(entry.record.id, field.key);
+          }
+        }
+      }
+    },
+    onExpandRecord: () => {
+      if (!stableActiveCell) return;
+      const entry = flatRecords[stableActiveCell.rowIndex];
+      if (entry?.type === "record" && entry.record && onOpenDetail) {
+        onOpenDetail(entry.record.id);
+      }
+    },
   });
 
   // Wrapper that syncs both ref and state
@@ -712,14 +1000,45 @@ export function GridView({
     (cell: ActiveCell | null) => {
       setActiveCellRef(cell);
       setActiveCellState(cell);
-      if (cell) setActiveCellPage(page);
     },
-    [setActiveCellRef, page]
+    [setActiveCellRef]
   );
 
-  // When activeCell is set, remember which page it was on.
-  // If page changed, activeCell becomes stale — use derived value instead.
-  const stableActiveCell = activeCell && activeCellPage === page ? activeCell : null;
+  // ── Quick add row ────────────────────────────────────────────────────────
+  const handleQuickAddRow = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/data-tables/${tableId}/records`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: {}, skipRequiredValidation: true }),
+      });
+      if (!res.ok) {
+        toast.error("新建行失败");
+        return;
+      }
+      const record = (await res.json()) as DataRecordItem;
+      onAddRecord(record);
+      // Move activeCell to new row, start editing first editable field
+      const newRowIndex = flatRecords.length;
+      const firstEditableField = orderedVisibleFields.find(
+        (f) => f.type !== FieldType.RELATION_SUBTABLE
+          && f.type !== FieldType.AUTO_NUMBER
+          && f.type !== FieldType.SYSTEM_TIMESTAMP
+          && f.type !== FieldType.SYSTEM_USER
+          && f.type !== FieldType.FORMULA
+          && f.type !== FieldType.BOOLEAN
+      );
+      if (firstEditableField) {
+        const colIndex = orderedVisibleFields.indexOf(firstEditableField);
+        setTimeout(() => {
+          setActiveCell({ rowIndex: newRowIndex, colIndex });
+          startEditing(record.id, firstEditableField.key);
+        }, 0);
+      }
+    } catch {
+      toast.error("新建行失败");
+    }
+  }, [tableId, onAddRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing]);
 
   // Auto-scroll on stableActiveCell change
   useEffect(() => {
@@ -730,15 +1049,44 @@ export function GridView({
     el?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [stableActiveCell]);
 
-  // Click handler to set activeCell
+  // Click handler to set activeCell + boolean toggle
   const handleCellClick = useCallback(
     (rowIndex: number, colIndex: number, e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
       if (target.closest('button, [role="checkbox"], input, select')) return;
-      setActiveCell({ rowIndex, colIndex });
+
+      if (e.shiftKey && stableActiveCell) {
+        // Shift+click: extend selection
+        e.preventDefault();
+        const range: CellRange = {
+          startRow: stableActiveCell.rowIndex,
+          startCol: stableActiveCell.colIndex,
+          endRow: rowIndex,
+          endCol: colIndex,
+        };
+        setSelectionRangeRef(range);
+        setSelectionRangeState(range);
+      } else {
+        setActiveCell({ rowIndex, colIndex });
+        setSelectionRangeRef(null);
+        setSelectionRangeState(null);
+      }
       tableRef.current?.focus();
+
+      // Boolean toggle on single click (only without Shift)
+      if (!e.shiftKey) {
+        const entry = flatRecords[rowIndex];
+        if (entry?.type === "record" && entry.record) {
+          const field = orderedVisibleFields[colIndex];
+          if (field?.type === FieldType.BOOLEAN) {
+            const currentValue = entry.record.data[field.key];
+            const newValue = !(!!currentValue && currentValue !== "false" && currentValue !== 0);
+            void handleCommitWithUndo(entry.record.id, field.key, newValue);
+          }
+        }
+      }
     },
-    [setActiveCell]
+    [setActiveCell, setSelectionRangeRef, stableActiveCell, flatRecords, orderedVisibleFields, handleCommitWithUndo]
   );
 
   // ── Editor rendering ────────────────────────────────────────────────────
@@ -863,35 +1211,17 @@ export function GridView({
         editingCell?.fieldKey === field.key;
 
       // RELATION_SUBTABLE does not support inline editing
-      const canEdit = field.type !== FieldType.RELATION_SUBTABLE
-        && field.type !== FieldType.AUTO_NUMBER
-        && field.type !== FieldType.SYSTEM_TIMESTAMP
-        && field.type !== FieldType.SYSTEM_USER
-        && field.type !== FieldType.FORMULA;
-
       if (isEditing) {
         return renderEditor(field, record);
       }
 
       return (
-        <span
-          className={`block truncate ${
-            canEdit ? "cursor-pointer hover:bg-muted/30 rounded px-1" : ""
-          }`}
-          onClick={
-            canEdit
-              ? (e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  startEditing(record.id, field.key);
-                }
-              : undefined
-          }
-        >
+        <span className="block px-1 truncate">
           {formatCellValue(field, record.data[field.key])}
         </span>
       );
     },
-    [editingCell, renderEditor, startEditing]
+    [editingCell, renderEditor]
   );
 
   // ── Per-record cell-level conditional format map ────────────────────────
@@ -908,10 +1238,15 @@ export function GridView({
           case "eq": match = String(val ?? "") === String(rule.condition.value); break;
           case "ne": match = String(val ?? "") !== String(rule.condition.value); break;
           case "contains": match = String(val ?? "").includes(String(rule.condition.value)); break;
+          case "notcontains": match = !String(val ?? "").includes(String(rule.condition.value)); break;
+          case "startswith": match = String(val ?? "").startsWith(String(rule.condition.value)); break;
+          case "endswith": match = String(val ?? "").endsWith(String(rule.condition.value)); break;
           case "isempty": match = val === undefined || val === null || val === ""; break;
           case "isnotempty": match = val !== undefined && val !== null && val !== ""; break;
           case "gt": match = Number(val) > Number(rule.condition.value); break;
           case "lt": match = Number(val) < Number(rule.condition.value); break;
+          case "gte": match = Number(val) >= Number(rule.condition.value); break;
+          case "lte": match = Number(val) <= Number(rule.condition.value); break;
         }
         if (match) {
           const style: React.CSSProperties = { backgroundColor: rule.backgroundColor };
@@ -951,9 +1286,21 @@ export function GridView({
           )}
           {orderedVisibleFields.map((field, fieldIndex) => {
             const frozenTdStyle = getFrozenStyle(fieldIndex, frozenFieldCountValue, orderedVisibleFields, columnWidths);
+            const rhClasses = getRowHeightClasses(rowHeight ?? 40);
             const isActive =
               stableActiveCell?.rowIndex === flatRowIndex &&
               stableActiveCell?.colIndex === fieldIndex;
+            const isInRange = selectionRange &&
+              flatRowIndex >= Math.min(selectionRange.startRow, selectionRange.endRow) &&
+              flatRowIndex <= Math.max(selectionRange.startRow, selectionRange.endRow) &&
+              fieldIndex >= Math.min(selectionRange.startCol, selectionRange.endCol) &&
+              fieldIndex <= Math.max(selectionRange.startCol, selectionRange.endCol);
+            const isFillTarget = fillRange &&
+              !isActive &&
+              flatRowIndex >= fillRange.startRow &&
+              flatRowIndex <= fillRange.endRow &&
+              fieldIndex >= fillRange.startCol &&
+              fieldIndex <= fillRange.endCol;
             const cellStyle = cellRuleMap[field.key];
             const mergedStyle: React.CSSProperties = {
               ...(frozenTdStyle ?? {}),
@@ -966,17 +1313,38 @@ export function GridView({
                 data-col={fieldIndex}
                 style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                 className={cn(
-                  "p-2 align-middle whitespace-nowrap",
+                  "align-middle overflow-hidden", rhClasses.td,
+                  (rowHeight ?? 40) < 56 && "whitespace-nowrap",
+                  rhClasses.text,
                   frozenTdStyle && "bg-background",
                   frozenFieldCountValue > 0 &&
                     fieldIndex === frozenFieldCountValue - 1 &&
                     "frozen-last-col relative",
-                  isActive && "ring-2 ring-primary ring-inset"
+                  isActive && "outline outline-2 outline-primary outline-offset-[-2px] relative",
+                  isInRange && !isActive && "bg-primary/20 outline outline-1 outline-offset-[-1px] outline-primary/40",
+                  isFillTarget && "bg-primary/15"
                 )}
                 onClick={(e) => handleCellClick(flatRowIndex, fieldIndex, e)}
+                onDoubleClick={() => {
+                  const canEdit = field.type !== FieldType.RELATION_SUBTABLE
+                    && field.type !== FieldType.AUTO_NUMBER
+                    && field.type !== FieldType.SYSTEM_TIMESTAMP
+                    && field.type !== FieldType.SYSTEM_USER
+                    && field.type !== FieldType.FORMULA
+                    && field.type !== FieldType.BOOLEAN;
+                  if (canEdit) {
+                    startEditing(record.id, field.key);
+                  }
+                }}
                 onContextMenu={(e) => captureCell(e, record.id, field.key, flatRowIndex, fieldIndex)}
               >
                 {renderCell(field, record)}
+                {isActive && !READONLY_FIELD_TYPES.includes(field.type) && !editingCell && (
+                  <div
+                    className="absolute bottom-0 right-0 w-2 h-2 bg-primary cursor-crosshair z-10"
+                    onMouseDown={(e) => handleFillStart(e, record, field)}
+                  />
+                )}
               </td>
             );
           })}
@@ -1041,10 +1409,15 @@ export function GridView({
       toggleRow,
       stableActiveCell,
       handleCellClick,
+      startEditing,
       recordStyles,
       cellRuleMapByRecord,
       captureRowHeader,
       captureCell,
+      rowHeight,
+      fillRange,
+      editingCell,
+      handleFillStart,
     ]
   );
 
@@ -1059,7 +1432,7 @@ export function GridView({
           selectedCount={selectedIdsSet.size}
           onBatchDelete={handleBatchDelete}
           onBatchEdit={() => setBatchEditOpen(true)}
-          onClearSelection={() => updateSelectedIds(() => new Set())}
+          onClearSelection={() => setSelectedIdsSet(new Set())}
         />
       )}
       <BatchEditDialog
@@ -1135,9 +1508,9 @@ export function GridView({
           <Redo2 className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="flex-1 min-h-0 overflow-auto" ref={scrollRef}>
         <table
-          className="w-full caption-bottom text-sm outline-none"
+          className="w-full caption-bottom text-sm outline-none select-none"
           style={{ tableLayout: "fixed" }}
           ref={tableRef}
           tabIndex={0}
@@ -1227,20 +1600,23 @@ export function GridView({
                 暂无记录
               </td>
             </tr>
-          ) : groupedRecords ? (
-            // ── Grouped rendering ────────────────────────────────────────
-            (() => {
-              let flatIdx = 0;
-              return groupedRecords.map((group) => {
-                const isCollapsed = collapsedGroups.has(group.value);
-                flatIdx += 1; // group header row
-                const startRecordFlatIdx = flatIdx;
-                if (!isCollapsed) {
-                  flatIdx += group.records.length;
-                }
-                return (
-                  <Fragment key={`group-${group.value}`}>
+          ) : (
+            <>
+              {/* Top padding for virtual scroll */}
+              {topPadding > 0 && (
+                <tr aria-hidden="true">
+                  <td colSpan={colCount} style={{ height: topPadding, padding: 0 }} />
+                </tr>
+              )}
+              {/* Visible rows only */}
+              {visibleFlatRecords.map((entry, visibleIdx) => {
+                const globalIdx = startIndex + visibleIdx;
+                if (entry.type === "group" && entry.group) {
+                  const group = entry.group;
+                  const isCollapsed = collapsedGroups.has(group.value);
+                  return (
                     <tr
+                      key={`group-${group.value}`}
                       className="border-b transition-colors bg-muted/50 hover:bg-muted/70 cursor-pointer select-none sticky top-[41px] z-[5]"
                       onClick={() => toggleGroup(group.value)}
                     >
@@ -1256,17 +1632,43 @@ export function GridView({
                         </div>
                       </td>
                     </tr>
-                    {!isCollapsed &&
-                      group.records.map((record, idx) =>
-                        renderRecordRow(record, idx, startRecordFlatIdx + idx)
-                      )}
-                  </Fragment>
-                );
-              });
-            })()
-          ) : (
-            // ── Flat rendering ────────────────────────────────────────────
-            records.map((record, idx) => renderRecordRow(record, idx, idx))
+                  );
+                }
+                if (entry.record) {
+                  return renderRecordRow(
+                    entry.record,
+                    visibleIdx,
+                    globalIdx
+                  );
+                }
+                return null;
+              })}
+              {/* Bottom padding for virtual scroll */}
+              {bottomPadding > 0 && (
+                <tr aria-hidden="true">
+                  <td colSpan={colCount} style={{ height: bottomPadding, padding: 0 }} />
+                </tr>
+              )}
+              {/* Quick add row */}
+              {isAdmin && (
+                <tr
+                  className="border-b hover:bg-muted/30 cursor-pointer group"
+                  onClick={handleQuickAddRow}
+                >
+                  <td className="w-10 sticky left-0 z-[5] bg-background border-r" />
+                  {canDragSort && <td className="w-8" />}
+                  <td
+                    colSpan={orderedVisibleFields.length + 1}
+                    className="p-1 align-middle text-muted-foreground text-sm"
+                  >
+                    <span className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-muted/50 transition-colors">
+                      <Plus className="h-3.5 w-3.5" />
+                      <span className="opacity-60 group-hover:opacity-100 transition-opacity">新建行</span>
+                    </span>
+                  </td>
+                </tr>
+              )}
+            </>
           )}
           </DragDropProvider>
         </tbody>
@@ -1303,6 +1705,31 @@ export function GridView({
         </table>
       </div>
       </CellContextMenu>
+      {/* Fill mode toggle popup */}
+      {fillComplete && (
+        <div
+          className="fixed z-50 bg-popover text-popover-foreground border rounded-md shadow-md flex items-center gap-1 p-1"
+          style={{ left: fillComplete.anchorRect.x + 4, top: fillComplete.anchorRect.y + 4 }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Button
+            variant={fillMode === "copy" ? "default" : "ghost"}
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={handleFillModeToggle}
+          >
+            复制
+          </Button>
+          <Button
+            variant={fillMode === "increment" ? "default" : "ghost"}
+            size="sm"
+            className="h-6 px-2 text-xs"
+            onClick={handleFillModeToggle}
+          >
+            递增
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

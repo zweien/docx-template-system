@@ -13,6 +13,18 @@ import type {
 } from "@/types/data-table";
 import { normalizeFilters, parseFieldOptions } from "@/types/data-table";
 import { evaluateFormula } from "@/lib/formula";
+
+// Strip control characters (U+0000-U+001F except TAB/LF/CR) from string values
+const CONTROL_CHAR_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
+
+function sanitizeRecordData(data: Record<string, unknown>): void {
+  for (const key of Object.keys(data)) {
+    const val = data[key];
+    if (typeof val === "string") {
+      data[key] = val.replace(CONTROL_CHAR_RE, "");
+    }
+  }
+}
 import { getTable } from "./data-table.service";
 import {
   removeAllRelationsForRecord,
@@ -620,6 +632,7 @@ export async function createRecord(
     }
 
     normalizeBooleanFields(data, tableResult.data.fields);
+    sanitizeRecordData(data);
 
     const record = await db.$transaction(async (tx) => {
       // ── Auto-number injection (inside transaction for atomicity) ──
@@ -710,6 +723,7 @@ async function doUpdateRecord(
   }
 
   normalizeBooleanFields(data, tableResult.data.fields);
+  sanitizeRecordData(data);
 
   const { scalarData, relationData } = splitRecordDataByFieldType(
     data,
@@ -812,6 +826,11 @@ export async function patchField(
     const field = tableResult.data.fields.find((f) => f.key === fieldKey);
     if (!field) {
       return { success: false, error: { code: "VALIDATION_ERROR", message: `字段 "${fieldKey}" 不存在` } };
+    }
+
+    // Sanitize control characters from string values
+    if (typeof value === "string") {
+      value = value.replace(CONTROL_CHAR_RE, "");
     }
 
     // Validate just this field

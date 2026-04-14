@@ -1287,7 +1287,15 @@ export function GridView({
           return (
             <RelationCellEditor
               value={relId}
-              onCommit={(v) => void commitEdit(v)}
+              onCommit={async (v) => {
+                // Extract raw ID for API
+                const apiValue = v && typeof v === "object" ? v.id : v;
+                await commitEdit(apiValue);
+                // Override local state with resolved {id, display} object
+                if (v && typeof v === "object") {
+                  onUpdateRecordField(record.id, field.key, v);
+                }
+              }}
               onCancel={cancelEdit}
               relationTableId={field.relationTo}
               displayField={field.displayField}

@@ -5,8 +5,8 @@ import { Input } from "@/components/ui/input";
 import type { RelationTargetOption } from "@/components/data/relation-target-picker";
 
 interface RelationCellEditorProps {
-  value: string | null;
-  onCommit: (value: string | null) => void;
+  value: string | { id: string; display?: string } | null;
+  onCommit: (value: string | { id: string; display: string } | null) => void;
   onCancel: () => void;
   relationTableId?: string;
   displayField?: string;
@@ -77,9 +77,10 @@ export function RelationCellEditor({
     return String(value);
   }, [value]);
 
-  function handleSelect(id: string) {
+  function handleSelect(id: string, label: string) {
     committedRef.current = true;
-    onCommit(id);
+    // Return {id, display} so local state matches server-resolved format
+    onCommit({ id, display: label });
   }
 
   function handleClear() {
@@ -168,7 +169,7 @@ export function RelationCellEditor({
                   }`}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    handleSelect(option.id);
+                    handleSelect(option.id, option.label);
                   }}
                 >
                   {option.label}

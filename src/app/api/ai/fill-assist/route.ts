@@ -27,7 +27,8 @@ const SYSTEM_PROMPT = `你是一个文档表单填充助手。用户正在填写
    - 一个 JSON 代码块，格式为 \`\`\`json ... \`\`\`，包含字段填充建议
 4. JSON 格式为 { "field_key": "建议值" }，只包含你能确定值的字段
 5. 对于不确定的字段，不要包含在 JSON 中
-6. 如果用户只提问而不要求填充，正常回答即可，不需要输出 JSON`;
+6. 如果用户只提问而不要求填充，正常回答即可，不需要输出 JSON
+7. **重要**：对于标记为 [CHOICE_SINGLE] 或 [CHOICE_MULTI] 的字段，其可选值会在字段后列出。你必须且只能从列出的选项中选择，不要使用选项以外的值`;
 
 const fillAssistSchema = z.object({
   messages: z.array(
@@ -45,6 +46,7 @@ const fillAssistSchema = z.object({
         label: z.string(),
         type: z.string(),
         description: z.string().optional(),
+        options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
       })
     ),
     currentValues: z.record(z.string(), z.string()),
@@ -70,7 +72,10 @@ export async function POST(request: NextRequest) {
         const current = validated.context.currentValues[f.key];
         const suffix = current ? `（当前值: ${current})` : "";
         const desc = f.description ? ` — ${f.description}` : "";
-        return `- ${f.label} (${f.key}) [${f.type}]${desc}${suffix}`;
+        const options = f.options && f.options.length > 0
+          ? `，可选值: [${f.options.map((o) => o.label).join(", ")}]`
+          : "";
+        return `- ${f.label} (${f.key}) [${f.type}]${desc}${suffix}${options}`;
       })
       .join("\n");
 

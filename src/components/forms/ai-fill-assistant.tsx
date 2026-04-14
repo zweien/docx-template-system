@@ -11,6 +11,7 @@ interface FieldInfo {
   label: string;
   type: string;
   description?: string;
+  options?: { value: string; label: string }[];
 }
 
 interface AiFillAssistantProps {

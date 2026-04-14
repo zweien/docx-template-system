@@ -406,6 +406,7 @@ export function DynamicForm({
           label: ph.label,
           type: ph.inputType,
           description: ph.description ?? undefined,
+          options: ph.choiceConfig?.options,
         }))}
         currentValues={Object.fromEntries(
           Object.entries(formData).map(([k, v]) => [

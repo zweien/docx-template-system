@@ -32,6 +32,9 @@ interface UseKeyboardNavOptions {
   onRedo?: () => void;
   onEditNavigate?: (direction: "left" | "right" | "down") => void;
   onExpandRecord?: () => void;
+  onInsertRowBelow?: () => void;
+  onCutCell?: () => string | null;
+  onDuplicateRow?: () => void;
   onInsertNowDate?: () => void;
 }
 
@@ -53,6 +56,9 @@ export function useKeyboardNav({
   onRedo,
   onEditNavigate,
   onExpandRecord,
+  onInsertRowBelow,
+  onCutCell,
+  onDuplicateRow,
   onInsertNowDate,
 }: UseKeyboardNavOptions) {
   const activeCellRef = useRef<ActiveCell | null>(null);
@@ -248,6 +254,16 @@ export function useKeyboardNav({
           e.preventDefault();
           break;
         case "Enter":
+          if (shift) {
+            setSelectionRange(null);
+            onInsertRowBelow?.();
+            e.preventDefault();
+            break;
+          }
+          setSelectionRange(null);
+          onStartEdit();
+          e.preventDefault();
+          break;
         case "F2":
           setSelectionRange(null);
           onStartEdit();
@@ -287,6 +303,20 @@ export function useKeyboardNav({
             }
             e.preventDefault();
           }
+          if ((e.ctrlKey || e.metaKey) && e.key === "x") {
+            const range = selectionRangeRef.current;
+            if (range && onCopyRange) {
+              onCopyRange(range);
+            } else {
+              const text = onCutCell?.() ?? onCopyCell();
+              if (text !== null) navigator.clipboard.writeText(text);
+            }
+            e.preventDefault();
+          }
+          if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+            onDuplicateRow?.();
+            e.preventDefault();
+          }
           if ((e.ctrlKey || e.metaKey) && e.key === "v") {
             navigator.clipboard
               .readText()
@@ -310,7 +340,7 @@ export function useKeyboardNav({
       editingCell, rowCount, colCount, onMoveTo, onStartEdit, onCancelEdit,
       onClearCell, onCopyCell, onPasteCell, onCopyRange, onPasteRange,
       onSelectionChange, skipGroupRow, onUndo, onRedo, onEditNavigate,
-      onExpandRecord, onInsertNowDate, setSelectionRange,
+      onExpandRecord, onInsertRowBelow, onCutCell, onDuplicateRow, onInsertNowDate, setSelectionRange,
     ]
   );
 

@@ -192,7 +192,7 @@ export function AiFillAssistant({
       <Button
         size="icon"
         className={cn(
-          "fixed bottom-6 right-6 z-50 rounded-full size-12 shadow-lg transition-transform",
+          "fixed top-20 right-6 z-50 rounded-full size-12 shadow-lg transition-transform",
           open && "scale-0"
         )}
         onClick={() => setOpen(true)}
@@ -202,7 +202,7 @@ export function AiFillAssistant({
 
       {/* Panel */}
       {open && (
-        <div className="fixed bottom-6 right-6 z-50 w-[400px] max-h-[520px] flex flex-col rounded-lg border bg-background shadow-xl">
+        <div className="fixed top-20 right-6 z-50 w-[400px] max-h-[520px] flex flex-col rounded-lg border bg-background shadow-xl">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-2">

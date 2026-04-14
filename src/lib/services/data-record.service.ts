@@ -20,6 +20,69 @@ import {
   syncRelationSubtableValues,
 } from "./data-relation.service";
 
+// ── Change history helpers ──
+
+interface FieldChange {
+  fieldKey: string;
+  fieldLabel: string;
+  oldValue: unknown;
+  newValue: unknown;
+}
+
+const SKIP_HISTORY_FIELD_TYPES = new Set([
+  "RELATION_SUBTABLE", "SYSTEM_TIMESTAMP", "SYSTEM_USER", "FORMULA",
+]);
+
+function detectFieldChanges(
+  oldData: Record<string, unknown>,
+  newData: Record<string, unknown>,
+  fields: DataFieldItem[]
+): FieldChange[] {
+  const fieldMap = new Map(fields.map((f) => [f.key, f]));
+  const changes: FieldChange[] = [];
+  const allKeys = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
+
+  for (const key of allKeys) {
+    const field = fieldMap.get(key);
+    if (field && SKIP_HISTORY_FIELD_TYPES.has(field.type)) continue;
+
+    const oldVal = oldData[key];
+    const newVal = newData[key];
+    if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+      changes.push({
+        fieldKey: key,
+        fieldLabel: field?.label ?? key,
+        oldValue: oldVal ?? null,
+        newValue: newVal ?? null,
+      });
+    }
+  }
+  return changes;
+}
+
+type PrismaTx = Parameters<Parameters<typeof db.$transaction>[0]>[0];
+
+async function recordChangeHistory(
+  tx: PrismaTx,
+  recordId: string,
+  tableId: string,
+  changes: FieldChange[],
+  userId: string
+): Promise<void> {
+  if (changes.length === 0) return;
+  await tx.dataRecordChangeHistory.createMany({
+    data: changes.map((c) => ({
+      recordId,
+      tableId,
+      fieldKey: c.fieldKey,
+      fieldLabel: c.fieldLabel,
+      oldValue: c.oldValue != null ? JSON.parse(JSON.stringify(c.oldValue)) : null,
+      newValue: c.newValue != null ? JSON.parse(JSON.stringify(c.newValue)) : null,
+      changedById: userId,
+    })),
+  });
+}
+
 // Helper to convert Record<string, unknown> to Prisma JSON input
 export function toJsonInput(data: Record<string, unknown>): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(data));
@@ -653,16 +716,25 @@ async function doUpdateRecord(
     tableResult.data.fields
   );
 
+  const mergedData = {
+    ...(existingRecord.data as Record<string, unknown>),
+    ...scalarData,
+  };
+  const changes = detectFieldChanges(
+    existingRecord.data as Record<string, unknown>,
+    mergedData,
+    tableResult.data.fields
+  );
+
   await tx.dataRecord.update({
     where: { id },
     data: {
-      data: toJsonInput({
-        ...(existingRecord.data as Record<string, unknown>),
-        ...scalarData,
-      }),
+      data: toJsonInput(mergedData),
       updatedById: userId,
     },
   });
+
+  await recordChangeHistory(tx, id, existingRecord.tableId, changes, userId);
 
   if (Object.keys(scalarData).length > 0) {
     const refreshResult = await refreshSnapshotsForTargetRecord({
@@ -791,27 +863,31 @@ export async function patchField(
 
     const enrichedData = computeFormulaValues(updatedData, tableResult.data.fields);
 
-    await db.dataRecord.update({
-      where: { id: recordId },
-      data: {
-        data: toJsonInput(enrichedData),
-        updatedById: userId,
-      },
-    });
+    const changes = detectFieldChanges(currentData, enrichedData, tableResult.data.fields);
 
-    // Refresh snapshots only for relation fields
-    if (field.type === "RELATION" || field.type === "RELATION_SUBTABLE") {
-      try {
-        await db.$transaction(async (tx) => {
+    await db.$transaction(async (tx) => {
+      await tx.dataRecord.update({
+        where: { id: recordId },
+        data: {
+          data: toJsonInput(enrichedData),
+          updatedById: userId,
+        },
+      });
+
+      await recordChangeHistory(tx, recordId, existingRecord.tableId, changes, userId);
+
+      // Refresh snapshots only for relation fields
+      if (field.type === "RELATION" || field.type === "RELATION_SUBTABLE") {
+        try {
           const refreshResult = await refreshSnapshotsForTargetRecord({ tx, recordId });
           if (!refreshResult.success) {
             throw new Error(`${refreshResult.error.code}:${refreshResult.error.message}`);
           }
-        });
-      } catch {
-        // Snapshot refresh failure should not block the patch
+        } catch {
+          // Snapshot refresh failure should not block the patch
+        }
       }
-    }
+    });
 
     // Fetch updated record with relations
     const updatedRecord = await db.dataRecord.findUnique({

@@ -49,6 +49,7 @@ model User {
   collectionSubmissionVersions DocumentCollectionSubmissionVersion[] @relation("CollectionSubmissionVersions")
   notifications                 Notification[]                       @relation("UserNotifications")
   apiTokens                     ApiToken[]
+  changeHistories               DataRecordChangeHistory[]
 }
 
 enum TemplateStatus {

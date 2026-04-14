@@ -993,6 +993,17 @@ export function GridView({
         onOpenDetail(entry.record.id);
       }
     },
+    onInsertNowDate: () => {
+      if (!stableActiveCell) return;
+      const entry = flatRecords[stableActiveCell.rowIndex];
+      if (entry?.type !== "record" || !entry.record) return;
+      const field = orderedVisibleFields[stableActiveCell.colIndex];
+      if (!field) return;
+      if (field.type === FieldType.DATE || field.type === FieldType.TEXT) {
+        const now = new Date().toISOString().slice(0, 10);
+        void handleCommitWithUndo(entry.record.id, field.key, now);
+      }
+    },
   });
 
   // Wrapper that syncs both ref and state

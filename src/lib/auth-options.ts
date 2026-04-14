@@ -10,6 +10,15 @@ import { logAudit } from "@/lib/services/audit-log.service";
 
 const devBypassAuth = process.env.DEV_BYPASS_AUTH === "true";
 
+// Hard guard: refuse to enable bypass auth outside development
+if (devBypassAuth && process.env.NODE_ENV === "production") {
+  throw new Error(
+    "FATAL: DEV_BYPASS_AUTH is enabled in production. " +
+    "This is a security risk and the server will not start. " +
+    "Remove DEV_BYPASS_AUTH from your environment variables."
+  );
+}
+
 const authentikConfig = getAuthentikConfig();
 
 export const authOptions: NextAuthOptions = {

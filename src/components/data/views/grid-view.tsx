@@ -993,6 +993,27 @@ export function GridView({
         onOpenDetail(entry.record.id);
       }
     },
+    onInsertRowBelow: () => {
+      if (!isAdmin || !stableActiveCell) return;
+      void handleInsertRowBelow(stableActiveCell.rowIndex);
+    },
+    onCutCell: () => {
+      if (!stableActiveCell) return null;
+      const entry = flatRecords[stableActiveCell.rowIndex];
+      if (entry?.type !== "record" || !entry.record) return null;
+      const field = orderedVisibleFields[stableActiveCell.colIndex];
+      if (!field) return null;
+      const value = entry.record.data[field.key];
+      // Clear the cell after copying
+      handleCommit(entry.record.id, field.key, null);
+      return String(value ?? "");
+    },
+    onDuplicateRow: () => {
+      if (!isAdmin || !stableActiveCell) return;
+      const entry = flatRecords[stableActiveCell.rowIndex];
+      if (entry?.type !== "record" || !entry.record) return;
+      void handleDuplicateRow(entry.record);
+    },
   });
 
   // Wrapper that syncs both ref and state
@@ -1037,6 +1058,87 @@ export function GridView({
       }
     } catch {
       toast.error("新建行失败");
+    }
+  }, [tableId, onAddRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing]);
+
+  // Insert a new row below the given row index and start editing
+  const handleInsertRowBelow = useCallback(async (currentRowIndex: number) => {
+    try {
+      const res = await fetch(`/api/data-tables/${tableId}/records`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data: {}, skipRequiredValidation: true }),
+      });
+      if (!res.ok) {
+        toast.error("插入行失败");
+        return;
+      }
+      const record = (await res.json()) as DataRecordItem;
+      onAddRecord(record);
+      // New record is appended to the end; move active cell to it
+      const newRowIndex = flatRecords.length;
+      const firstEditableField = orderedVisibleFields.find(
+        (f) => f.type !== FieldType.RELATION_SUBTABLE
+          && f.type !== FieldType.AUTO_NUMBER
+          && f.type !== FieldType.SYSTEM_TIMESTAMP
+          && f.type !== FieldType.SYSTEM_USER
+          && f.type !== FieldType.FORMULA
+          && f.type !== FieldType.BOOLEAN
+      );
+      if (firstEditableField) {
+        const colIndex = orderedVisibleFields.indexOf(firstEditableField);
+        setTimeout(() => {
+          setActiveCell({ rowIndex: newRowIndex, colIndex });
+          startEditing(record.id, firstEditableField.key);
+        }, 0);
+      }
+    } catch {
+      toast.error("插入行失败");
+    }
+  }, [tableId, onAddRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing]);
+
+  // Duplicate a row: copy all editable fields into a new row below
+  const handleDuplicateRow = useCallback(async (sourceRecord: DataRecordItem) => {
+    const readOnlyTypes: Set<FieldType> = new Set([
+      FieldType.RELATION_SUBTABLE, FieldType.AUTO_NUMBER,
+      FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER, FieldType.FORMULA,
+    ]);
+    const data: Record<string, unknown> = {};
+    for (const field of orderedVisibleFields) {
+      if (readOnlyTypes.has(field.type)) continue;
+      data[field.key] = sourceRecord.data[field.key];
+    }
+    try {
+      const res = await fetch(`/api/data-tables/${tableId}/records`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data }),
+      });
+      if (!res.ok) {
+        toast.error("复制行失败");
+        return;
+      }
+      const record = (await res.json()) as DataRecordItem;
+      onAddRecord(record);
+      const newRowIndex = flatRecords.length;
+      const firstEditableField = orderedVisibleFields.find(
+        (f) => f.type !== FieldType.RELATION_SUBTABLE
+          && f.type !== FieldType.AUTO_NUMBER
+          && f.type !== FieldType.SYSTEM_TIMESTAMP
+          && f.type !== FieldType.SYSTEM_USER
+          && f.type !== FieldType.FORMULA
+          && f.type !== FieldType.BOOLEAN
+      );
+      if (firstEditableField) {
+        const colIndex = orderedVisibleFields.indexOf(firstEditableField);
+        setTimeout(() => {
+          setActiveCell({ rowIndex: newRowIndex, colIndex });
+          startEditing(record.id, firstEditableField.key);
+        }, 0);
+      }
+      toast.success("已复制行");
+    } catch {
+      toast.error("复制行失败");
     }
   }, [tableId, onAddRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing]);
 

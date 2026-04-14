@@ -416,7 +416,13 @@ export function DynamicForm({
           ])
         )}
         onFill={(values) => {
-          setFormData((prev) => ({ ...prev, ...values }));
+          setFormData((prev) => {
+            const updated = { ...prev };
+            for (const [k, v] of Object.entries(values)) {
+              updated[k] = v;
+            }
+            return updated;
+          });
           // Clear errors for filled fields
           setErrors((prev) => {
             const next = { ...prev };

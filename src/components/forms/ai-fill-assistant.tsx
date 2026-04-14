@@ -19,7 +19,7 @@ interface AiFillAssistantProps {
   templateName: string;
   fields: FieldInfo[];
   currentValues: Record<string, string>;
-  onFill: (values: Record<string, string>) => void;
+  onFill: (values: Record<string, string | string[]>) => void;
 }
 
 interface ChatMessage {
@@ -27,8 +27,10 @@ interface ChatMessage {
   content: string;
 }
 
+type FillValue = string | string[];
+
 /** Extract JSON block from AI response */
-function extractFillValues(text: string): Record<string, string> | null {
+function extractFillValues(text: string): Record<string, FillValue> | null {
   // Try to find ```json ... ``` block
   const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
   if (!jsonMatch) return null;
@@ -36,11 +38,12 @@ function extractFillValues(text: string): Record<string, string> | null {
   try {
     const parsed = JSON.parse(jsonMatch[1]);
     if (typeof parsed === "object" && parsed !== null) {
-      // Only keep string values
-      const result: Record<string, string> = {};
+      const result: Record<string, FillValue> = {};
       for (const [k, v] of Object.entries(parsed)) {
         if (typeof v === "string" || typeof v === "number") {
           result[k] = String(v);
+        } else if (Array.isArray(v) && v.every((item) => typeof item === "string")) {
+          result[k] = v as string[];
         }
       }
       return Object.keys(result).length > 0 ? result : null;
@@ -62,7 +65,7 @@ export function AiFillAssistant({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [suggestions, setSuggestions] = useState<Record<string, string> | null>(null);
+  const [suggestions, setSuggestions] = useState<Record<string, FillValue> | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [applied, setApplied] = useState(false);
 
@@ -160,7 +163,7 @@ export function AiFillAssistant({
 
   const handleApply = () => {
     if (!suggestions) return;
-    const toApply: Record<string, string> = {};
+    const toApply: Record<string, FillValue> = {};
     for (const key of selectedKeys) {
       if (suggestions[key] !== undefined) {
         toApply[key] = suggestions[key];
@@ -277,7 +280,7 @@ export function AiFillAssistant({
                           <span className="text-amber-500 text-[10px]">覆盖</span>
                         )}
                       </div>
-                      <div className="text-muted-foreground truncate">{value}</div>
+                      <div className="text-muted-foreground truncate">{Array.isArray(value) ? value.join(", ") : value}</div>
                     </div>
                   </button>
                 ))}

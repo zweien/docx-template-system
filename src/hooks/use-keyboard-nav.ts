@@ -35,6 +35,7 @@ interface UseKeyboardNavOptions {
   onInsertRowBelow?: () => void;
   onCutCell?: () => string | null;
   onDuplicateRow?: () => void;
+  onInsertNowDate?: () => void;
 }
 
 export function useKeyboardNav({
@@ -58,6 +59,7 @@ export function useKeyboardNav({
   onInsertRowBelow,
   onCutCell,
   onDuplicateRow,
+  onInsertNowDate,
 }: UseKeyboardNavOptions) {
   const activeCellRef = useRef<ActiveCell | null>(null);
   const selectionRangeRef = useRef<CellRange | null>(null);
@@ -129,42 +131,74 @@ export function useKeyboardNav({
       const maxRow = rowCount - 1;
       const maxCol = colCount - 1;
       const shift = e.shiftKey;
+      const ctrl = e.ctrlKey || e.metaKey;
+
+      // Helper: find edge row in a direction (skipping group rows)
+      const findEdgeRow = (fromRow: number, dir: 1 | -1): number => {
+        let row = fromRow;
+        while (true) {
+          const next = row + dir;
+          if (next < 0 || next > maxRow) break;
+          if (!isGroupRow?.(next)) row = next;
+          else break; // stop at group boundary
+          // For non-Ctrl: would stop here; for Ctrl: keep going
+        }
+        return row;
+      };
 
       switch (e.key) {
         case "ArrowUp": {
-          const next = skipGroupRow(active.rowIndex - 1, -1);
-          if (next >= 0) {
-            activeCellRef.current = { ...active, rowIndex: next };
-            if (shift) {
-              const range = selectionRangeRef.current ?? { startRow: active.rowIndex, startCol: active.colIndex, endRow: active.rowIndex, endCol: active.colIndex };
-              selectionRangeRef.current = { ...range, endRow: next };
-              onSelectionChange?.(selectionRangeRef.current);
-            } else {
-              setSelectionRange(null);
+          let next: number;
+          if (ctrl) {
+            // Jump to first data row
+            for (let r = 0; r <= maxRow; r++) {
+              if (!isGroupRow?.(r)) { next = r; break; }
             }
-            onMoveTo(activeCellRef.current);
+            next = next!;
+          } else {
+            next = skipGroupRow(active.rowIndex - 1, -1);
+            if (next < 0) { e.preventDefault(); break; }
           }
+          activeCellRef.current = { ...active, rowIndex: next! };
+          if (shift) {
+            const range = selectionRangeRef.current ?? { startRow: active.rowIndex, startCol: active.colIndex, endRow: active.rowIndex, endCol: active.colIndex };
+            selectionRangeRef.current = { ...range, endRow: next! };
+            onSelectionChange?.(selectionRangeRef.current);
+          } else {
+            setSelectionRange(null);
+          }
+          onMoveTo(activeCellRef.current);
           e.preventDefault();
           break;
         }
         case "ArrowDown": {
-          const next = skipGroupRow(active.rowIndex + 1, 1);
-          if (next <= maxRow) {
-            activeCellRef.current = { ...active, rowIndex: next };
-            if (shift) {
-              const range = selectionRangeRef.current ?? { startRow: active.rowIndex, startCol: active.colIndex, endRow: active.rowIndex, endCol: active.colIndex };
-              selectionRangeRef.current = { ...range, endRow: next };
-              onSelectionChange?.(selectionRangeRef.current);
-            } else {
-              setSelectionRange(null);
+          let next: number;
+          if (ctrl) {
+            // Jump to last data row
+            next = maxRow;
+            for (let r = maxRow; r >= 0; r--) {
+              if (!isGroupRow?.(r)) { next = r; break; }
             }
-            onMoveTo(activeCellRef.current);
+          } else {
+            next = skipGroupRow(active.rowIndex + 1, 1);
+            if (next > maxRow) { e.preventDefault(); break; }
           }
+          activeCellRef.current = { ...active, rowIndex: next };
+          if (shift) {
+            const range = selectionRangeRef.current ?? { startRow: active.rowIndex, startCol: active.colIndex, endRow: active.rowIndex, endCol: active.colIndex };
+            selectionRangeRef.current = { ...range, endRow: next };
+            onSelectionChange?.(selectionRangeRef.current);
+          } else {
+            setSelectionRange(null);
+          }
+          onMoveTo(activeCellRef.current);
           e.preventDefault();
           break;
         }
         case "ArrowRight":
-          if (active.colIndex < maxCol) {
+          if (ctrl) {
+            activeCellRef.current = { ...active, colIndex: maxCol };
+          } else if (active.colIndex < maxCol) {
             activeCellRef.current = { ...active, colIndex: active.colIndex + 1 };
           } else if (active.rowIndex < maxRow) {
             const next = skipGroupRow(active.rowIndex + 1, 1);
@@ -181,7 +215,9 @@ export function useKeyboardNav({
           e.preventDefault();
           break;
         case "ArrowLeft":
-          if (active.colIndex > 0) {
+          if (ctrl) {
+            activeCellRef.current = { ...active, colIndex: 0 };
+          } else if (active.colIndex > 0) {
             activeCellRef.current = { ...active, colIndex: active.colIndex - 1 };
           } else if (active.rowIndex > 0) {
             const next = skipGroupRow(active.rowIndex - 1, -1);
@@ -250,6 +286,12 @@ export function useKeyboardNav({
           onClearCell();
           e.preventDefault();
           break;
+        case ";":
+          if (ctrl) {
+            onInsertNowDate?.();
+            e.preventDefault();
+          }
+          break;
         default:
           if ((e.ctrlKey || e.metaKey) && e.key === "c") {
             const range = selectionRangeRef.current;
@@ -298,7 +340,7 @@ export function useKeyboardNav({
       editingCell, rowCount, colCount, onMoveTo, onStartEdit, onCancelEdit,
       onClearCell, onCopyCell, onPasteCell, onCopyRange, onPasteRange,
       onSelectionChange, skipGroupRow, onUndo, onRedo, onEditNavigate,
-      onExpandRecord, onInsertRowBelow, onCutCell, onDuplicateRow, setSelectionRange,
+      onExpandRecord, onInsertRowBelow, onCutCell, onDuplicateRow, onInsertNowDate, setSelectionRange,
     ]
   );
 

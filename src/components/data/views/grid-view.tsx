@@ -1281,14 +1281,19 @@ export function GridView({
             />
           );
         }
-        case FieldType.RELATION:
+        case FieldType.RELATION: {
+          const relValue = originalValue as { id?: string; display?: string } | string | null;
+          const relId = relValue && typeof relValue === "object" ? relValue.id ?? null : typeof relValue === "string" ? relValue : null;
           return (
             <RelationCellEditor
-              value={String(originalValue ?? "")}
+              value={relId}
               onCommit={(v) => void commitEdit(v)}
               onCancel={cancelEdit}
+              relationTableId={field.relationTo}
+              displayField={field.displayField}
             />
           );
+        }
         case FieldType.RELATION_SUBTABLE:
           // Not editable inline
           return null;

@@ -400,6 +400,7 @@ export function DynamicForm({
 
       {/* AI Fill Assistant */}
       <AiFillAssistant
+        templateId={templateId}
         templateName={templateId}
         fields={sorted.map((ph) => ({
           key: ph.key,

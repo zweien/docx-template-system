@@ -15,6 +15,7 @@ interface FieldInfo {
 }
 
 interface AiFillAssistantProps {
+  templateId: string;
   templateName: string;
   fields: FieldInfo[];
   currentValues: Record<string, string>;
@@ -51,6 +52,7 @@ function extractFillValues(text: string): Record<string, string> | null {
 }
 
 export function AiFillAssistant({
+  templateId,
   templateName,
   fields,
   currentValues,
@@ -97,6 +99,7 @@ export function AiFillAssistant({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          templateId,
           context: {
             templateName,
             fields,

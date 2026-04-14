@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { resolveModel } from "@/lib/agent2/model-resolver";
 import { createTools } from "@/lib/agent2/tools";
+import { db } from "@/lib/db";
 
 const SYSTEM_PROMPT = `你是一个文档表单填充助手。用户正在填写一个文档模板的表单，你需要根据用户的需求，为表单字段生成合适的填充建议。
 
@@ -38,6 +39,7 @@ const fillAssistSchema = z.object({
     })
   ),
   model: z.string().optional(),
+  templateId: z.string().optional(),
   context: z.object({
     templateName: z.string(),
     fields: z.array(
@@ -79,9 +81,21 @@ export async function POST(request: NextRequest) {
       })
       .join("\n");
 
+    // Fetch template-specific prompt if templateId provided
+    let customPrompt = "";
+    if (validated.templateId) {
+      const template = await db.template.findUnique({
+        where: { id: validated.templateId },
+        select: { fillAssistPrompt: true },
+      });
+      if (template?.fillAssistPrompt) {
+        customPrompt = `\n## 模板专属指令\n${template.fillAssistPrompt}\n`;
+      }
+    }
+
     const systemPrompt = [
       SYSTEM_PROMPT,
-      "",
+      customPrompt,
       "## 当前表单信息",
       `模板: ${validated.context.templateName}`,
       "",

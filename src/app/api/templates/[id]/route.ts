@@ -69,6 +69,7 @@ export async function PUT(
       fieldMapping?: Record<string, string | null>;
       categoryId?: string | null;
       tagIds?: string[];
+      fillAssistPrompt?: string | null;
     } = {};
 
     if (parsed.name !== undefined) updateData.name = parsed.name;
@@ -78,6 +79,7 @@ export async function PUT(
     if (parsed.fieldMapping !== undefined) updateData.fieldMapping = parsed.fieldMapping;
     if (parsed.categoryId !== undefined) updateData.categoryId = parsed.categoryId;
     if (parsed.tagIds !== undefined) updateData.tagIds = parsed.tagIds;
+    if (parsed.fillAssistPrompt !== undefined) updateData.fillAssistPrompt = parsed.fillAssistPrompt;
 
     // Only call updateTemplate if there's something to update
     if (Object.keys(updateData).length > 0) {

@@ -27,6 +27,8 @@ const actionLabels: Record<string, string> = {
   DATA_TABLE_UPDATE: "更新数据表",
   DATA_TABLE_DELETE: "删除数据表",
   DATA_RECORD_CREATE: "创建数据记录",
+  DATA_RECORD_UPDATE: "更新数据记录",
+  DATA_RECORD_DELETE: "删除数据记录",
   DATA_IMPORT: "导入数据",
   DATA_EXPORT: "导出数据",
   USER_CREATE: "创建用户",
@@ -265,9 +267,33 @@ export default function AuditLogsPage() {
                     {expandedId === log.id && log.detail && (
                       <tr key={`${log.id}-detail`} className="border-t bg-muted/20">
                         <td colSpan={5} className="p-3">
-                          <pre className="text-xs whitespace-pre-wrap break-all max-h-40 overflow-auto">
-                            {JSON.stringify(log.detail, null, 2)}
-                          </pre>
+                          {log.action === "DATA_RECORD_UPDATE" && log.detail.changes ? (
+                            <div className="space-y-1.5">
+                              <div className="text-xs font-medium text-muted-foreground mb-1">字段变更</div>
+                              {Object.entries(log.detail.changes as Record<string, { label?: string; oldValue?: unknown; newValue?: unknown }>).map(([key, change]) => (
+                                <div key={key} className="text-xs flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium min-w-[80px]">{change.label ?? key}</span>
+                                  <span className="text-destructive line-through opacity-70">{String(change.oldValue ?? "")}</span>
+                                  <span className="text-muted-foreground">→</span>
+                                  <span className="text-green-700 dark:text-green-400">{String(change.newValue ?? "")}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : log.action === "DATA_RECORD_DELETE" && log.detail.fields ? (
+                            <div className="space-y-1.5">
+                              <div className="text-xs font-medium text-muted-foreground mb-1">已删除记录数据</div>
+                              {Object.entries(log.detail.fields as Record<string, { label?: string; value?: unknown }>).map(([key, field]) => (
+                                <div key={key} className="text-xs flex items-center gap-2">
+                                  <span className="font-medium min-w-[80px]">{field.label ?? key}</span>
+                                  <span className="text-muted-foreground">{String(field.value ?? "")}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <pre className="text-xs whitespace-pre-wrap break-all max-h-40 overflow-auto">
+                              {JSON.stringify(log.detail, null, 2)}
+                            </pre>
+                          )}
                         </td>
                       </tr>
                     )}

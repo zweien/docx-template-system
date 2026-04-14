@@ -1281,14 +1281,27 @@ export function GridView({
             />
           );
         }
-        case FieldType.RELATION:
+        case FieldType.RELATION: {
+          const relValue = originalValue as { id?: string; display?: string } | string | null;
+          const relId = relValue && typeof relValue === "object" ? relValue.id ?? null : typeof relValue === "string" ? relValue : null;
           return (
             <RelationCellEditor
-              value={String(originalValue ?? "")}
-              onCommit={(v) => void commitEdit(v)}
+              value={relId}
+              onCommit={async (v) => {
+                // Extract raw ID for API
+                const apiValue = v && typeof v === "object" ? v.id : v;
+                await commitEdit(apiValue);
+                // Override local state with resolved {id, display} object
+                if (v && typeof v === "object") {
+                  onUpdateRecordField(record.id, field.key, v);
+                }
+              }}
               onCancel={cancelEdit}
+              relationTableId={field.relationTo}
+              displayField={field.displayField}
             />
           );
+        }
         case FieldType.RELATION_SUBTABLE:
           // Not editable inline
           return null;

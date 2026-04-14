@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { DataPickerDialog } from "./data-picker-dialog";
 import { DynamicTableField } from "./dynamic-table-field";
 import { ChoicePickerField } from "./choice-picker-field";
+import { AiFillAssistant } from "./ai-fill-assistant";
 
 interface Placeholder {
   id: string;
@@ -395,6 +396,42 @@ export function DynamicForm({
         placeholderId={activePickerPlaceholder?.id ?? ""}
         fields={tableFields}
         onSelect={handlePickerSelect}
+      />
+
+      {/* AI Fill Assistant */}
+      <AiFillAssistant
+        templateId={templateId}
+        templateName={templateId}
+        fields={sorted.map((ph) => ({
+          key: ph.key,
+          label: ph.label,
+          type: ph.inputType,
+          description: ph.description ?? undefined,
+          options: ph.choiceConfig?.options,
+        }))}
+        currentValues={Object.fromEntries(
+          Object.entries(formData).map(([k, v]) => [
+            k,
+            typeof v === "string" ? v : JSON.stringify(v),
+          ])
+        )}
+        onFill={(values) => {
+          setFormData((prev) => {
+            const updated = { ...prev };
+            for (const [k, v] of Object.entries(values)) {
+              updated[k] = v;
+            }
+            return updated;
+          });
+          // Clear errors for filled fields
+          setErrors((prev) => {
+            const next = { ...prev };
+            for (const key of Object.keys(values)) {
+              delete next[key];
+            }
+            return next;
+          });
+        }}
       />
     </div>
   );

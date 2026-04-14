@@ -37,6 +37,7 @@ import { VersionHistoryDialogWrapper } from "./version-history-wrapper";
 import { PlaceholderEditButton } from "./placeholder-edit-wrapper";
 import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
 import { ScreenshotViewer } from "@/components/templates/screenshot-viewer";
+import { FillAssistPromptEditor } from "@/components/templates/fill-assist-prompt-editor";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
@@ -250,6 +251,24 @@ export default async function TemplateDetailPage({
                 label: ph.label,
                 required: ph.required,
               }))}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Fill Assist Prompt — admin only */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>AI 填充助手配置</CardTitle>
+            <CardDescription>
+              为此模板配置专属的 AI 填充提示词，指导 AI 助手在用户填表时生成更精准的建议
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <FillAssistPromptEditor
+              templateId={template.id}
+              initialValue={template.fillAssistPrompt}
             />
           </CardContent>
         </Card>

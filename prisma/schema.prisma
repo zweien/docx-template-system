@@ -37,6 +37,7 @@ model User {
   dataTables    DataTable[]
   dataRecords   DataRecord[]
   updatedDataRecords DataRecord[]  @relation("UpdatedByUser")
+  changeHistories     DataRecordChangeHistory[]
   batchGenerations BatchGeneration[]
   publishedTemplateVersions TemplateVersion[]
   aiConversations AiConversation[]
@@ -181,8 +182,9 @@ model Template {
   categoryId    String?
   category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags          TagOnTemplate[]
-  fieldMapping  Json?
-  placeholders  Placeholder[]
+  fieldMapping     Json?
+  fillAssistPrompt String?
+  placeholders     Placeholder[]
   drafts        Draft[]
   records       Record[]
   batchGenerations BatchGeneration[]
@@ -726,6 +728,8 @@ enum AuditAction {
   DATA_TABLE_UPDATE
   DATA_TABLE_DELETE
   DATA_RECORD_CREATE
+  DATA_RECORD_UPDATE
+  DATA_RECORD_DELETE
   DATA_IMPORT
   DATA_EXPORT
   USER_CREATE

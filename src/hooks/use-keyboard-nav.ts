@@ -36,6 +36,7 @@ interface UseKeyboardNavOptions {
   onCutCell?: () => string | null;
   onDuplicateRow?: () => void;
   onInsertNowDate?: () => void;
+  onFindBar?: () => void;
 }
 
 export function useKeyboardNav({
@@ -60,6 +61,7 @@ export function useKeyboardNav({
   onCutCell,
   onDuplicateRow,
   onInsertNowDate,
+  onFindBar,
 }: UseKeyboardNavOptions) {
   const activeCellRef = useRef<ActiveCell | null>(null);
   const selectionRangeRef = useRef<CellRange | null>(null);
@@ -292,6 +294,13 @@ export function useKeyboardNav({
             e.preventDefault();
           }
           break;
+        case "f":
+        case "g":
+          if (ctrl) {
+            onFindBar?.();
+            e.preventDefault();
+          }
+          break;
         default:
           if ((e.ctrlKey || e.metaKey) && e.key === "c") {
             const range = selectionRangeRef.current;
@@ -340,7 +349,7 @@ export function useKeyboardNav({
       editingCell, rowCount, colCount, onMoveTo, onStartEdit, onCancelEdit,
       onClearCell, onCopyCell, onPasteCell, onCopyRange, onPasteRange,
       onSelectionChange, skipGroupRow, onUndo, onRedo, onEditNavigate,
-      onExpandRecord, onInsertRowBelow, onCutCell, onDuplicateRow, onInsertNowDate, setSelectionRange,
+      onExpandRecord, onInsertRowBelow, onCutCell, onDuplicateRow, onInsertNowDate, onFindBar, setSelectionRange,
     ]
   );
 

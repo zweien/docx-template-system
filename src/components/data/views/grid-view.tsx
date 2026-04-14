@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
 import { BatchActionBar } from "@/components/data/batch-action-bar";
 import { BatchEditDialog } from "@/components/data/batch-edit-dialog";
+import { FindReplaceBar } from "@/components/data/views/find-replace-bar";
 import { DragDropProvider } from "@dnd-kit/react";
 import { useSortable } from "@dnd-kit/react/sortable";
 import { FieldType } from "@/generated/prisma/enums";
@@ -382,6 +383,7 @@ export function GridView({
 
   // ── Batch selection state ────────────────────────────────────────────────
   const [batchEditOpen, setBatchEditOpen] = useState(false);
+  const [findBarOpen, setFindBarOpen] = useState(false);
 
   // ── Collapsed groups state ──────────────────────────────────────────────
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
@@ -1025,6 +1027,7 @@ export function GridView({
       if (entry?.type !== "record" || !entry.record) return;
       void handleDuplicateRow(entry.record);
     },
+    onFindBar: () => setFindBarOpen(true),
   });
 
   // Wrapper that syncs both ref and state
@@ -1621,7 +1624,20 @@ export function GridView({
           <Redo2 className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto" ref={scrollRef}>
+      <div className="flex-1 min-h-0 overflow-auto relative" ref={scrollRef}>
+        <FindReplaceBar
+          open={findBarOpen}
+          onClose={() => setFindBarOpen(false)}
+          records={flatRecords.filter(e => e.type === "record").map(e => ({ id: e.record!.id, data: e.record!.data }))}
+          fieldKeys={orderedVisibleFields.map(f => f.key)}
+          isGroupRow={(rowIndex) => groupRowIndices.has(rowIndex)}
+          onNavigateTo={(rowIndex, colIndex) => {
+            setActiveCell({ rowIndex, colIndex });
+          }}
+          onReplace={(recordId, fieldKey, _oldValue, newValue) => {
+            handleCommit(recordId, fieldKey, newValue);
+          }}
+        />
         <table
           className="w-full caption-bottom text-sm outline-none select-none"
           style={{ tableLayout: "fixed" }}

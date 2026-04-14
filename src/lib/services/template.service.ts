@@ -249,6 +249,7 @@ export async function updateTemplate(
     fieldMapping?: Record<string, string | null>;
     categoryId?: string | null;
     tagIds?: string[];
+    fillAssistPrompt?: string | null;
   }
 ): Promise<ServiceResult<TemplateListItem>> {
   try {
@@ -261,6 +262,7 @@ export async function updateTemplate(
       updateData.fieldMapping = data.fieldMapping;
     }
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+    if (data.fillAssistPrompt !== undefined) updateData.fillAssistPrompt = data.fillAssistPrompt;
 
     const template = await db.template.update({
       where: { id },

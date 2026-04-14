@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { getGlobalSettings } from "@/lib/services/agent2-global-settings.service";
-import { runBackup, getCronExpression } from "@/lib/services/backup.service";
+import { runBackup } from "@/lib/services/backup.service";
 import type { BackupConfig } from "@/types/agent2";
 
 function isBackupDue(schedule: BackupConfig["schedule"], lastBackupAt: string | null): boolean {

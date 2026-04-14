@@ -1628,11 +1628,20 @@ export function GridView({
         <FindReplaceBar
           open={findBarOpen}
           onClose={() => setFindBarOpen(false)}
-          records={flatRecords.filter(e => e.type === "record").map(e => ({ id: e.record!.id, data: e.record!.data }))}
+          records={flatRecords.map(e => e.type === "record" && e.record ? { id: e.record.id, data: e.record.data } : null).filter(Boolean) as { id: string; data: Record<string, unknown> }[]}
           fieldKeys={orderedVisibleFields.map(f => f.key)}
           isGroupRow={(rowIndex) => groupRowIndices.has(rowIndex)}
           onNavigateTo={(rowIndex, colIndex) => {
-            setActiveCell({ rowIndex, colIndex });
+            // Find the flatRecords index for this filtered row index
+            let dataRowIdx = -1;
+            for (let i = 0; i < flatRecords.length; i++) {
+              if (flatRecords[i].type !== "record") continue;
+              dataRowIdx++;
+              if (dataRowIdx === rowIndex) {
+                setActiveCell({ rowIndex: i, colIndex });
+                return;
+              }
+            }
           }}
           onReplace={(recordId, fieldKey, _oldValue, newValue) => {
             handleCommit(recordId, fieldKey, newValue);

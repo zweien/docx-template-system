@@ -38,6 +38,9 @@ export async function POST(
   if (!session?.user) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
+  if (session.user.role !== "ADMIN") {
+    return NextResponse.json({ error: "仅管理员可创建分享链接" }, { status: 403 });
+  }
 
   const { viewId } = await params;
   const body = await request.json().catch(() => ({}));

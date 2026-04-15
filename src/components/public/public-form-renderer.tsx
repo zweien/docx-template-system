@@ -27,47 +27,39 @@ function buildSchema(fields: PublicFormConfig["fields"]) {
   return z.object(
     Object.fromEntries(
       fields.map((field) => {
+        const label = field.label;
         let fieldSchema: z.ZodTypeAny;
 
         switch (field.type) {
           case "NUMBER":
-            fieldSchema = z.coerce.number().nullable().optional();
+            fieldSchema = field.required
+              ? z.coerce.number({ message: `${label}必须是数字` })
+              : z.coerce.number().nullable().optional();
             break;
           case "DATE":
-            fieldSchema = z.string().nullable().optional();
+            fieldSchema = field.required
+              ? z.string().min(1, { message: `${label}不能为空` })
+              : z.string().nullable().optional();
             break;
           case "MULTISELECT":
-            fieldSchema = z.array(z.string()).nullable().optional();
+            fieldSchema = field.required
+              ? z.array(z.string()).min(1, { message: `${label}至少选择一项` })
+              : z.array(z.string()).nullable().optional();
             break;
           case "EMAIL":
-            fieldSchema = z
-              .string()
-              .email()
-              .nullable()
-              .optional()
-              .or(z.literal(""));
+            fieldSchema = field.required
+              ? z.string().min(1, { message: `${label}不能为空` }).email({ message: `${label}格式不正确` })
+              : z.string().email().nullable().optional().or(z.literal(""));
             break;
           case "BOOLEAN":
-            fieldSchema = z.boolean().nullable().optional();
+            fieldSchema = field.required
+              ? z.boolean().refine((v) => v === true, { message: `${label}必须勾选` })
+              : z.boolean().nullable().optional();
             break;
           default:
-            fieldSchema = z.string().nullable().optional();
-        }
-
-        if (field.required) {
-          if (field.type === "NUMBER") {
-            fieldSchema = z.coerce.number({
-              message: `${field.label}必须是数字`,
-            });
-          } else if (field.type === "MULTISELECT") {
-            fieldSchema = z
-              .array(z.string())
-              .min(1, { message: `${field.label}至少选择一项` });
-          } else {
-            fieldSchema = z.string().min(1, {
-              message: `${field.label}不能为空`,
-            });
-          }
+            fieldSchema = field.required
+              ? z.string().min(1, { message: `${label}不能为空` })
+              : z.string().nullable().optional();
         }
 
         return [field.key, fieldSchema];
@@ -83,7 +75,10 @@ export function PublicFormRenderer({ config, token }: PublicFormRendererProps) {
 
   const schema = buildSchema(config.fields);
   const defaultValues = Object.fromEntries(
-    config.fields.map((f) => [f.key, null])
+    config.fields.map((f) => [
+      f.key,
+      f.type === "MULTISELECT" ? [] : f.type === "BOOLEAN" ? false : null,
+    ])
   );
 
   const {
@@ -284,13 +279,49 @@ function PublicFormField({
       );
     }
 
-    case "MULTISELECT":
+    case "MULTISELECT": {
+      const multiOpts = parseSelectOptions(field.options);
+      const currentValues: string[] = Array.isArray(watch(field.key))
+        ? watch(field.key)
+        : [];
       return (
-        <Input
-          {...register(field.key)}
-          placeholder="多个值用逗号分隔"
-        />
+        <div className="flex flex-wrap gap-2">
+          {multiOpts.map((option) => {
+            const checked = currentValues.includes(option.label);
+            return (
+              <label
+                key={option.label}
+                className="flex items-center gap-1.5 cursor-pointer text-sm"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => {
+                    const next = checked
+                      ? currentValues.filter((v) => v !== option.label)
+                      : [...currentValues, option.label];
+                    setValue(field.key, next);
+                  }}
+                  className="h-4 w-4 rounded"
+                />
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs"
+                  style={{
+                    backgroundColor: option.color,
+                    color: "var(--fg, inherit)",
+                  }}
+                >
+                  {option.label}
+                </span>
+              </label>
+            );
+          })}
+          {multiOpts.length === 0 && (
+            <span className="text-sm text-muted-foreground">无选项</span>
+          )}
+        </div>
       );
+    }
 
     case "EMAIL":
       return (

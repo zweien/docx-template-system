@@ -245,7 +245,16 @@ export async function submitPublicForm(
   const config = configResult.data;
   const userId = await getSystemUserId();
 
-  const result = await createRecord(userId, config.tableId, data, {
+  // Only allow keys that are declared in the public form fields
+  const allowedKeys = new Set(config.fields.map((f) => f.key));
+  const filteredData: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (allowedKeys.has(key)) {
+      filteredData[key] = value;
+    }
+  }
+
+  const result = await createRecord(userId, config.tableId, filteredData, {
     skipRequiredValidation: false,
   });
 

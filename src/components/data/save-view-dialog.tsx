@@ -14,13 +14,14 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { DataViewConfig } from "@/types/data-table";
+import type { DataViewConfig, ViewType } from "@/types/data-table";
 
 interface SaveViewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tableId: string;
   currentConfig: DataViewConfig;
+  viewType?: ViewType;
   onSaved: (viewId: string) => void;
 }
 
@@ -29,6 +30,7 @@ export function SaveViewDialog({
   onOpenChange,
   tableId,
   currentConfig,
+  viewType,
   onSaved,
 }: SaveViewDialogProps) {
   const [name, setName] = useState("");
@@ -58,6 +60,7 @@ export function SaveViewDialog({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
+          type: viewType,
           filters: currentConfig.filters,
           sortBy: currentConfig.sortBy,
           visibleFields: currentConfig.visibleFields,

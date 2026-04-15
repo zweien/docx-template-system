@@ -49,7 +49,7 @@ model User {
   collectionSubmissionVersions DocumentCollectionSubmissionVersion[] @relation("CollectionSubmissionVersions")
   notifications                 Notification[]                       @relation("UserNotifications")
   apiTokens                     ApiToken[]
-  changeHistories               DataRecordChangeHistory[]
+  formShareTokens               FormShareToken[]
 }
 
 enum TemplateStatus {
@@ -295,6 +295,7 @@ enum ViewType {
   KANBAN
   GALLERY
   TIMELINE
+  FORM
 }
 
 enum RelationCardinality {
@@ -428,6 +429,7 @@ model DataView {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   table         DataTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  shareTokens   FormShareToken[]
 
   @@unique([tableId, name])
 }
@@ -737,6 +739,9 @@ enum AuditAction {
   USER_DELETE
   API_TOKEN_CREATE
   API_TOKEN_REVOKE
+  FORM_SHARE_CREATE
+  FORM_SHARE_DELETE
+  FORM_SUBMIT
 }
 
 model AuditLog {
@@ -783,5 +788,23 @@ model ApiToken {
   @@index([tokenHash])
   @@index([userId])
   @@map("api_tokens")
+}
+
+model FormShareToken {
+  id             String    @id @default(cuid())
+  token          String    @unique @default(cuid())
+  viewId         String
+  view           DataView  @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  label          String?
+  isActive       Boolean   @default(true)
+  createdById    String
+  createdBy      User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime?
+  submissionCount Int      @default(0)
+
+  @@index([token])
+  @@index([viewId])
+  @@map("form_share_tokens")
 }
 

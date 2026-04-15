@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { ViewType } from "@/types/data-table";
 import {
+  ClipboardList,
   Columns3,
   GalleryHorizontal,
   GanttChart,
@@ -44,6 +45,11 @@ const VIEW_ITEMS: Array<{
     type: "TIMELINE",
     label: "时间线",
     Icon: GanttChart,
+  },
+  {
+    type: "FORM",
+    label: "表单",
+    Icon: ClipboardList,
   },
 ];
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,15 @@ import { FieldConfigPopover } from "@/components/data/field-config-popover";
 import { ConditionalFormatDialog } from "@/components/data/conditional-format-dialog";
 import { FilterPanel } from "@/components/data/filter-panel";
 import { ViewSelector } from "@/components/data/view-selector";
+import { ViewSwitcher } from "@/components/data/view-switcher";
 import { SaveViewDialog } from "@/components/data/save-view-dialog";
+import { KeyboardShortcutsDialog } from "@/components/data/views/keyboard-shortcuts-dialog";
 import { useTableData } from "@/hooks/use-table-data";
 import { GridView } from "@/components/data/views/grid-view";
 import { KanbanView } from "@/components/data/views/kanban/kanban-view";
 import { GalleryView } from "@/components/data/views/gallery/gallery-view";
 import { TimelineView } from "@/components/data/views/timeline/timeline-view";
+import { FormView } from "@/components/data/views/form/form-view";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -37,7 +40,6 @@ interface RecordTableProps {
   tableId: string;
   fields: DataFieldItem[];
   isAdmin: boolean;
-  viewType?: ViewType;
   onOpenDetail?: (recordId: string) => void;
 }
 
@@ -67,10 +69,10 @@ export function RecordTable({
   tableId,
   fields,
   isAdmin,
-  viewType = "GRID",
   onOpenDetail,
 }: RecordTableProps) {
   const router = useRouter();
+  const [viewType, setViewType] = useState<ViewType>("GRID");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [quickFormatField, setQuickFormatField] = useState<string | undefined>();
   const [quickFormatValue, setQuickFormatValue] = useState<string | undefined>();
@@ -106,6 +108,13 @@ export function RecordTable({
     const base = currentView ?? buildFallbackView(tableId, fields);
     return { ...base, viewOptions: currentConfig.viewOptions };
   }, [currentConfig.viewOptions, currentView, tableId, fields]);
+
+  // Sync viewType from loaded view
+  useEffect(() => {
+    if (currentView?.type) {
+      setViewType(currentView.type as ViewType);
+    }
+  }, [viewId, currentView?.type]);
 
   // ── Patch single field (for Kanban drag-and-drop) ────────────────────────
   const handlePatchRecord = useCallback(
@@ -343,6 +352,15 @@ export function RecordTable({
             onViewOptionsChange={setViewOptions}
           />
         );
+      case "FORM":
+        return (
+          <FormView
+            fields={fields}
+            view={activeView}
+            onViewOptionsChange={setViewOptions}
+            tableId={tableId}
+          />
+        );
       default:
         return (
           <div className="rounded-md border flex items-center justify-center py-20 text-zinc-400 text-sm">
@@ -363,6 +381,7 @@ export function RecordTable({
             onViewChange={switchView}
             onSaveNewView={() => setSaveDialogOpen(true)}
           />
+          <ViewSwitcher currentType={viewType} onTypeChange={setViewType} />
           <FilterPanel
             fields={fields}
             filters={currentConfig.filters}
@@ -403,6 +422,7 @@ export function RecordTable({
           </form>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <KeyboardShortcutsDialog />
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -494,6 +514,7 @@ export function RecordTable({
         onOpenChange={setSaveDialogOpen}
         tableId={tableId}
         currentConfig={currentConfig}
+        viewType={viewType}
         onSaved={switchView}
       />
     </div>

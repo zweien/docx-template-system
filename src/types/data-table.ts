@@ -301,3 +301,35 @@ export interface DataViewItem {
   createdAt: Date;
   updatedAt: Date;
 }
+
+// ========== Form View Types ==========
+
+export interface FormFieldGroup {
+  id: string;
+  title: string;
+  fieldKeys: string[];
+}
+
+export interface FormViewOptions {
+  formTitle: string;
+  formDescription: string;
+  submitButtonText: string;
+  successMessage: string;
+  allowMultipleSubmissions: boolean;
+  layout: {
+    version: 1;
+    groups: FormFieldGroup[];
+  };
+}
+
+export interface FormShareTokenItem {
+  id: string;
+  token: string;
+  viewId: string;
+  label: string | null;
+  isActive: boolean;
+  createdAt: string;
+  expiresAt: string | null;
+  submissionCount: number;
+  url?: string;
+}

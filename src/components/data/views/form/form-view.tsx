@@ -225,10 +225,13 @@ export function FormView({
     setTimeout(() => setCopiedToken(null), 2000);
   }, []);
 
+  const isFallbackView = view.id === "fallback";
+
   const openShareDialog = useCallback(() => {
+    if (isFallbackView) return;
     setShareDialogOpen(true);
     void loadShareTokens();
-  }, [loadShareTokens]);
+  }, [isFallbackView, loadShareTokens]);
 
   return (
     <div className="flex flex-col h-full">
@@ -252,15 +255,21 @@ export function FormView({
             预览
           </Button>
         </div>
-        <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
-          <DialogTrigger
-            render={
-              <Button size="sm" variant="outline" onClick={openShareDialog}>
-                <Share2 className="size-3.5 mr-1" />
-                分享
-              </Button>
-            }
-          />
+        {isFallbackView ? (
+          <Button size="sm" variant="outline" disabled title="请先保存视图再分享">
+            <Share2 className="size-3.5 mr-1" />
+            分享
+          </Button>
+        ) : (
+          <Dialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+            <DialogTrigger
+              render={
+                <Button size="sm" variant="outline" onClick={openShareDialog}>
+                  <Share2 className="size-3.5 mr-1" />
+                  分享
+                </Button>
+              }
+            />
           <DialogContent>
             <DialogHeader>
               <DialogTitle>分享表单</DialogTitle>
@@ -313,6 +322,7 @@ export function FormView({
             </div>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Content */}

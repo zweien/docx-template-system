@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import { FieldConfigPopover } from "@/components/data/field-config-popover";
 import { ConditionalFormatDialog } from "@/components/data/conditional-format-dialog";
 import { FilterPanel } from "@/components/data/filter-panel";
 import { ViewSelector } from "@/components/data/view-selector";
+import { ViewSwitcher } from "@/components/data/view-switcher";
 import { SaveViewDialog } from "@/components/data/save-view-dialog";
 import { KeyboardShortcutsDialog } from "@/components/data/views/keyboard-shortcuts-dialog";
 import { useTableData } from "@/hooks/use-table-data";
@@ -39,7 +40,6 @@ interface RecordTableProps {
   tableId: string;
   fields: DataFieldItem[];
   isAdmin: boolean;
-  viewType?: ViewType;
   onOpenDetail?: (recordId: string) => void;
 }
 
@@ -69,10 +69,10 @@ export function RecordTable({
   tableId,
   fields,
   isAdmin,
-  viewType = "GRID",
   onOpenDetail,
 }: RecordTableProps) {
   const router = useRouter();
+  const [viewType, setViewType] = useState<ViewType>("GRID");
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [quickFormatField, setQuickFormatField] = useState<string | undefined>();
   const [quickFormatValue, setQuickFormatValue] = useState<string | undefined>();
@@ -108,6 +108,13 @@ export function RecordTable({
     const base = currentView ?? buildFallbackView(tableId, fields);
     return { ...base, viewOptions: currentConfig.viewOptions };
   }, [currentConfig.viewOptions, currentView, tableId, fields]);
+
+  // Sync viewType from loaded view
+  useEffect(() => {
+    if (currentView?.type) {
+      setViewType(currentView.type);
+    }
+  }, [currentView?.type]);
 
   // ── Patch single field (for Kanban drag-and-drop) ────────────────────────
   const handlePatchRecord = useCallback(
@@ -374,6 +381,7 @@ export function RecordTable({
             onViewChange={switchView}
             onSaveNewView={() => setSaveDialogOpen(true)}
           />
+          <ViewSwitcher currentType={viewType} onTypeChange={setViewType} />
           <FilterPanel
             fields={fields}
             filters={currentConfig.filters}

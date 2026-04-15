@@ -7,14 +7,13 @@ import { Separator } from "@/components/ui/separator";
 import { Bot } from "lucide-react";
 import { toast } from "sonner";
 import { RecordTable } from "@/components/data/record-table";
-import { ViewSwitcher } from "@/components/data/view-switcher";
 import { RecordDetailDrawer } from "@/components/data/record-detail-drawer";
 import { ChatArea } from "@/components/agent2/chat-area";
 import {
   Sheet,
   SheetContent,
 } from "@/components/ui/sheet";
-import type { DataTableDetail, ViewType } from "@/types/data-table";
+import type { DataTableDetail } from "@/types/data-table";
 
 interface TableDetailContentProps {
   tableId: string;
@@ -23,7 +22,6 @@ interface TableDetailContentProps {
 }
 
 export function TableDetailContent({ tableId, table, isAdmin }: TableDetailContentProps) {
-  const [viewType, setViewType] = useState<ViewType>("GRID");
   const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -176,7 +174,6 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
             {table.recordCount} 条记录
           </div>
         </div>
-        <ViewSwitcher currentType={viewType} onTypeChange={setViewType} />
       </div>
 
       <Separator />
@@ -186,7 +183,6 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
         tableId={tableId}
         fields={table.fields}
         isAdmin={isAdmin}
-        viewType={viewType}
         onOpenDetail={(recordId) => {
           setDetailRecordId(recordId);
           setDetailOpen(true);

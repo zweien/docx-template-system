@@ -12,7 +12,7 @@ export async function DELETE(
   }
 
   const { tokenId } = await params;
-  const result = await deleteShareToken(tokenId, session.user.id);
+  const result = await deleteShareToken(tokenId, session.user.id, session.user.name);
 
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 404 });

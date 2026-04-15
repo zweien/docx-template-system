@@ -739,6 +739,9 @@ enum AuditAction {
   USER_DELETE
   API_TOKEN_CREATE
   API_TOKEN_REVOKE
+  FORM_SHARE_CREATE
+  FORM_SHARE_DELETE
+  FORM_SUBMIT
 }
 
 model AuditLog {
@@ -788,16 +791,17 @@ model ApiToken {
 }
 
 model FormShareToken {
-  id          String    @id @default(cuid())
-  token       String    @unique @default(cuid())
-  viewId      String
-  view        DataView  @relation(fields: [viewId], references: [id], onDelete: Cascade)
-  label       String?
-  isActive    Boolean   @default(true)
-  createdById String
-  createdBy   User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  expiresAt   DateTime?
+  id             String    @id @default(cuid())
+  token          String    @unique @default(cuid())
+  viewId         String
+  view           DataView  @relation(fields: [viewId], references: [id], onDelete: Cascade)
+  label          String?
+  isActive       Boolean   @default(true)
+  createdById    String
+  createdBy      User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt      DateTime  @default(now())
+  expiresAt      DateTime?
+  submissionCount Int      @default(0)
 
   @@index([token])
   @@index([viewId])

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { createRecord } from "./data-record.service";
-import { getTable } from "./data-table.service";
+import { logAudit } from "./audit-log.service";
 import type { FormShareTokenItem, FormViewOptions, ServiceResult } from "@/types/data-table";
 
 // Fields not shown on public forms
@@ -21,6 +21,7 @@ function mapTokenItem(row: {
   isActive: boolean;
   createdAt: Date;
   expiresAt: Date | null;
+  submissionCount: number;
 }): FormShareTokenItem {
   return {
     id: row.id,
@@ -30,6 +31,7 @@ function mapTokenItem(row: {
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     expiresAt: row.expiresAt?.toISOString() ?? null,
+    submissionCount: row.submissionCount,
   };
 }
 
@@ -38,6 +40,7 @@ function mapTokenItem(row: {
 export async function createShareToken(
   viewId: string,
   userId: string,
+  userName?: string | null,
   options?: { label?: string; expiresAt?: string }
 ): Promise<ServiceResult<FormShareTokenItem>> {
   const token = await db.formShareToken.create({
@@ -48,6 +51,18 @@ export async function createShareToken(
       expiresAt: options?.expiresAt ? new Date(options.expiresAt) : null,
     },
   });
+
+  // Audit log
+  await logAudit({
+    userId,
+    userName,
+    action: "FORM_SHARE_CREATE",
+    targetType: "FormShareToken",
+    targetId: token.id,
+    targetName: options?.label ?? null,
+    detail: { viewId, token: token.token, expiresAt: options?.expiresAt ?? null },
+  });
+
   return { success: true, data: mapTokenItem(token) };
 }
 
@@ -80,7 +95,8 @@ export async function revokeShareToken(
 
 export async function deleteShareToken(
   tokenId: string,
-  userId: string
+  userId: string,
+  userName?: string | null
 ): Promise<ServiceResult<{ id: string }>> {
   const token = await db.formShareToken.findFirst({
     where: { id: tokenId, createdById: userId },
@@ -88,7 +104,20 @@ export async function deleteShareToken(
   if (!token) {
     return { success: false, error: { code: "NOT_FOUND", message: "分享链接不存在" } };
   }
+
   await db.formShareToken.delete({ where: { id: tokenId } });
+
+  // Audit log
+  await logAudit({
+    userId,
+    userName,
+    action: "FORM_SHARE_DELETE",
+    targetType: "FormShareToken",
+    targetId: tokenId,
+    targetName: token.label ?? null,
+    detail: { viewId: token.viewId, token: token.token },
+  });
+
   return { success: true, data: { id: tokenId } };
 }
 
@@ -197,6 +226,19 @@ export async function submitPublicForm(
   token: string,
   data: Record<string, unknown>
 ): Promise<ServiceResult<{ message: string }>> {
+  // First validate the token and get shareToken record
+  const shareToken = await db.formShareToken.findUnique({
+    where: { token },
+  });
+
+  if (!shareToken || !shareToken.isActive) {
+    return { success: false, error: { code: "NOT_FOUND", message: "表单链接无效或已失效" } };
+  }
+
+  if (shareToken.expiresAt && shareToken.expiresAt < new Date()) {
+    return { success: false, error: { code: "EXPIRED", message: "表单链接已过期" } };
+  }
+
   const configResult = await resolvePublicForm(token);
   if (!configResult.success) return configResult as ServiceResult<{ message: string }>;
 
@@ -213,6 +255,22 @@ export async function submitPublicForm(
       error: { code: "SUBMIT_FAILED", message: result.error.message },
     };
   }
+
+  // Increment submission count
+  await db.formShareToken.update({
+    where: { id: shareToken.id },
+    data: { submissionCount: { increment: 1 } },
+  });
+
+  // Audit log for form submission
+  await logAudit({
+    userId,
+    action: "FORM_SUBMIT",
+    targetType: "FormShareToken",
+    targetId: shareToken.id,
+    targetName: shareToken.label ?? null,
+    detail: { token: shareToken.token, viewId: shareToken.viewId, tableId: config.tableId },
+  });
 
   return {
     success: true,

@@ -330,4 +330,6 @@ export interface FormShareTokenItem {
   isActive: boolean;
   createdAt: string;
   expiresAt: string | null;
+  submissionCount: number;
+  url?: string;
 }

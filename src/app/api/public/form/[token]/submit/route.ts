@@ -28,7 +28,8 @@ export async function POST(
     }
 
     return NextResponse.json({ success: true, data: result.data });
-  } catch {
+  } catch (error) {
+    console.error("[FormSubmit] Error:", error);
     return NextResponse.json(
       { error: { code: "INVALID_REQUEST", message: "请求处理失败" } },
       { status: 400 }

@@ -12,6 +12,8 @@ import {
   GripVertical,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -103,6 +106,11 @@ export function FormView({
   const [shareTokens, setShareTokens] = useState<FormShareTokenItem[]>([]);
   const [shareLoading, setShareLoading] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  // New share form state
+  const [newLabel, setNewLabel] = useState("");
+  const [newExpiresAt, setNewExpiresAt] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const update = useCallback(
     (patch: Partial<FormViewOptions>) => {
@@ -187,19 +195,35 @@ export function FormView({
   }, [tableId, view.id]);
 
   const handleCreateShare = useCallback(async () => {
+    setCreating(true);
     try {
+      const body: Record<string, string> = {};
+      if (newLabel.trim()) body.label = newLabel.trim();
+      if (newExpiresAt) body.expiresAt = newExpiresAt;
+
       const res = await fetch(
         `/api/data-tables/${tableId}/views/${view.id}/share`,
-        { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
       );
       const data = await res.json();
       if (data.success) {
         setShareTokens((prev) => [data.data, ...prev]);
+        setNewLabel("");
+        setNewExpiresAt("");
+        toast.success("分享链接已创建");
+      } else {
+        toast.error(data.error?.message ?? "创建失败");
       }
     } catch {
-      /* ignore */
+      toast.error("创建失败");
+    } finally {
+      setCreating(false);
     }
-  }, [tableId, view.id]);
+  }, [tableId, view.id, newLabel, newExpiresAt]);
 
   const handleDeleteShare = useCallback(
     async (tokenId: string) => {
@@ -211,9 +235,10 @@ export function FormView({
         const data = await res.json();
         if (data.success) {
           setShareTokens((prev) => prev.filter((t) => t.id !== tokenId));
+          toast.success("链接已删除");
         }
       } catch {
-        /* ignore */
+        toast.error("删除失败");
       }
     },
     [tableId, view.id]
@@ -224,6 +249,10 @@ export function FormView({
     navigator.clipboard.writeText(url);
     setCopiedToken(token);
     setTimeout(() => setCopiedToken(null), 2000);
+  }, []);
+
+  const handleOpenLink = useCallback((token: string) => {
+    window.open(`/f/${token}`, "_blank");
   }, []);
 
   const isFallbackView = view.id === "fallback";
@@ -271,15 +300,41 @@ export function FormView({
                 </Button>
               }
             />
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>分享表单</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <Button onClick={handleCreateShare} size="sm">
-                <Plus className="size-3.5 mr-1" />
-                生成新链接
-              </Button>
+              {/* Create new share */}
+              <div className="space-y-3 p-3 border rounded-lg bg-muted/30">
+                <h4 className="text-sm font-medium">创建新链接</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">标签/备注</Label>
+                    <Input
+                      placeholder="如：客户填报"
+                      value={newLabel}
+                      onChange={(e) => setNewLabel(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs">过期时间（可选）</Label>
+                    <Input
+                      type="datetime-local"
+                      value={newExpiresAt}
+                      onChange={(e) => setNewExpiresAt(e.target.value)}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+                <Button onClick={handleCreateShare} size="sm" disabled={creating}>
+                  <Plus className="size-3.5 mr-1" />
+                  {creating ? "创建中..." : "生成链接"}
+                </Button>
+              </div>
+
+              {/* Existing tokens list */}
               {shareLoading ? (
                 <div className="text-sm text-muted-foreground text-center py-4">
                   加载中...
@@ -289,33 +344,60 @@ export function FormView({
                   暂无分享链接
                 </div>
               ) : (
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="space-y-2 max-h-72 overflow-y-auto">
                   {shareTokens.map((t) => (
                     <div
                       key={t.id}
-                      className="flex items-center gap-2 p-2 rounded border text-sm"
+                      className="flex items-start gap-2 p-3 rounded border text-sm"
                     >
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate text-xs text-muted-foreground">
-                          /f/{t.token}
+                      <div className="flex-1 min-w-0 space-y-1">
+                        {/* Label */}
+                        <div className="font-medium truncate">
+                          {t.label || <span className="text-muted-foreground italic">无标签</span>}
+                        </div>
+                        {/* URL */}
+                        <div className="truncate text-xs text-muted-foreground font-mono">
+                          {t.url ?? `/f/${t.token}`}
+                        </div>
+                        {/* Meta row */}
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>{t.submissionCount} 次提交</span>
+                          <span>{new Date(t.createdAt).toLocaleDateString()}</span>
+                          {t.expiresAt && (
+                            <span className={new Date(t.expiresAt) < new Date() ? "text-destructive" : ""}>
+                              <Calendar className="size-3 inline mr-0.5" />
+                              {new Date(t.expiresAt) < new Date() ? "已过期" : `过期: ${new Date(t.expiresAt).toLocaleDateString()}`}
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="shrink-0"
-                        onClick={() => handleCopyLink(t.token)}
-                      >
-                        {copiedToken === t.token ? "已复制" : "复制链接"}
-                      </Button>
-                      <Button
-                        size="icon-xs"
-                        variant="ghost"
-                        className="shrink-0 text-destructive"
-                        onClick={() => handleDeleteShare(t.id)}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          title="打开表单"
+                          onClick={() => handleOpenLink(t.token)}
+                        >
+                          <ExternalLink className="size-3.5" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs"
+                          onClick={() => handleCopyLink(t.token)}
+                        >
+                          {copiedToken === t.token ? "已复制" : "复制"}
+                        </Button>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          className="text-destructive"
+                          onClick={() => handleDeleteShare(t.id)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

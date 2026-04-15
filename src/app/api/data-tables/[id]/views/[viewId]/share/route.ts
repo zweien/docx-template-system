@@ -20,7 +20,14 @@ export async function GET(
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  return NextResponse.json({ success: true, data: result.data });
+  // Build full URLs for each token
+  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || "";
+  const tokensWithUrl = result.data.map((t) => ({
+    ...t,
+    url: baseUrl ? `${baseUrl}/f/${t.token}` : `/f/${t.token}`,
+  }));
+
+  return NextResponse.json({ success: true, data: tokensWithUrl });
 }
 
 export async function POST(
@@ -35,10 +42,15 @@ export async function POST(
   const { viewId } = await params;
   const body = await request.json().catch(() => ({}));
 
-  const result = await createShareToken(viewId, session.user.id, {
-    label: body.label,
-    expiresAt: body.expiresAt,
-  });
+  const result = await createShareToken(
+    viewId,
+    session.user.id,
+    session.user.name,
+    {
+      label: body.label,
+      expiresAt: body.expiresAt,
+    }
+  );
 
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });

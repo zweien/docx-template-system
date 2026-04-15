@@ -514,6 +514,7 @@ export function RecordTable({
         onOpenChange={setSaveDialogOpen}
         tableId={tableId}
         currentConfig={currentConfig}
+        viewType={viewType}
         onSaved={switchView}
       />
     </div>

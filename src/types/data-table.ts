@@ -37,6 +37,41 @@ export interface RelationSchemaConfig {
 
 // ========== Field Options (stored in DataField.options JSON) ==========
 
+/** A single option for SELECT / MULTISELECT fields */
+export interface SelectOption {
+  label: string;
+  color: string;
+}
+
+/** Preset color palette for select options (bg = background, fg = text) */
+export const SELECT_COLORS = [
+  { name: "蓝色", bg: "#dbeafe", fg: "#1e40af" },
+  { name: "绿色", bg: "#dcfce7", fg: "#166534" },
+  { name: "黄色", bg: "#fef9c3", fg: "#854d0e" },
+  { name: "红色", bg: "#fee2e2", fg: "#991b1b" },
+  { name: "紫色", bg: "#f3e8ff", fg: "#6b21a8" },
+  { name: "粉色", bg: "#fce7f3", fg: "#9d174d" },
+  { name: "橙色", bg: "#ffedd5", fg: "#9a3412" },
+  { name: "青色", bg: "#cffafe", fg: "#155e75" },
+  { name: "靛蓝", bg: "#e0e7ff", fg: "#3730a3" },
+  { name: "灰色", bg: "#f3f4f6", fg: "#374151" },
+] as const;
+
+/** Parse field.options into SelectOption[] with backward compatibility */
+export function parseSelectOptions(raw: unknown): SelectOption[] {
+  if (!Array.isArray(raw)) return [];
+  if (raw.length === 0) return [];
+  // New format: { label, color }[]
+  if (typeof raw[0] === "object" && raw[0] !== null && "color" in raw[0]) {
+    return raw as SelectOption[];
+  }
+  // Legacy format: string[] → auto-assign colors
+  return (raw as string[]).map((label, i) => ({
+    label,
+    color: SELECT_COLORS[i % SELECT_COLORS.length].bg,
+  }));
+}
+
 export interface FieldOptions {
   /** AUTO_NUMBER: next auto-increment value */
   nextValue?: number;

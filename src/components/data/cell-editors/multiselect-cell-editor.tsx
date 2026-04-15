@@ -2,12 +2,13 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import type { SelectOption } from "@/types/data-table";
+import { SELECT_COLORS } from "@/types/data-table";
 
 interface MultiselectCellEditorProps {
   value: string[];
-  options: string[];
+  options: SelectOption[];
   onCommit: (value: string[]) => void;
   onCancel: () => void;
 }
@@ -22,16 +23,27 @@ export function MultiselectCellEditor({
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const colorMap = new Map(options.map((o) => {
+    const preset = SELECT_COLORS.find(c => c.bg === o.color);
+    return [o.label, { bg: o.color, fg: preset?.fg ?? "#374151" }];
+  }));
+
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  const availableOptions = options.filter((o) => !selected.includes(o));
+  const availableOptions = options.filter((o) => !selected.includes(o.label));
 
   return (
     <div className="relative flex flex-wrap gap-1 p-1 border border-primary rounded bg-background min-w-[200px]">
-      {selected.map((item) => (
-        <Badge key={item} variant="secondary" className="text-xs gap-0.5">
+      {selected.map((item) => {
+        const c = colorMap.get(item) ?? { bg: "#f3f4f6", fg: "#374151" };
+        return (
+        <span
+          key={item}
+          className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium gap-0.5"
+          style={{ backgroundColor: c.bg, color: c.fg }}
+        >
           {item}
           <button
             type="button"
@@ -40,8 +52,9 @@ export function MultiselectCellEditor({
           >
             <X className="h-3 w-3" />
           </button>
-        </Badge>
-      ))}
+        </span>
+        );
+      })}
       <Input
         ref={inputRef}
         value={inputValue}
@@ -49,8 +62,11 @@ export function MultiselectCellEditor({
         onKeyDown={(e) => {
           if (e.key === "Enter") {
             e.preventDefault();
-            if (inputValue && availableOptions.includes(inputValue)) {
-              setSelected([...selected, inputValue]);
+            const match = availableOptions.find(
+              (o) => o.label.toLowerCase() === inputValue.toLowerCase()
+            );
+            if (inputValue && match) {
+              setSelected([...selected, match.label]);
               setInputValue("");
             }
           }
@@ -63,24 +79,27 @@ export function MultiselectCellEditor({
         placeholder={selected.length === 0 ? "输入选项..." : ""}
         className="h-6 text-xs border-0 p-0 flex-1 min-w-[80px] focus-visible:ring-0"
       />
-      {/* Autocomplete dropdown */}
-      {inputValue && availableOptions.filter((o) => o.toLowerCase().includes(inputValue.toLowerCase())).length > 0 && (
+      {inputValue && availableOptions.filter((o) => o.label.toLowerCase().includes(inputValue.toLowerCase())).length > 0 && (
         <div className="absolute top-full left-0 mt-1 bg-background border rounded shadow-md z-50 max-h-32 overflow-auto">
           {availableOptions
-            .filter((o) => o.toLowerCase().includes(inputValue.toLowerCase()))
+            .filter((o) => o.label.toLowerCase().includes(inputValue.toLowerCase()))
             .map((option) => (
               <button
-                key={option}
+                key={option.label}
                 type="button"
-                className="block w-full text-left px-2 py-1 text-xs hover:bg-muted"
+                className="flex items-center gap-2 w-full text-left px-2 py-1 text-xs hover:bg-muted"
                 onMouseDown={(e) => {
-                  e.preventDefault(); // prevent blur
-                  setSelected([...selected, option]);
+                  e.preventDefault();
+                  setSelected([...selected, option.label]);
                   setInputValue("");
                   inputRef.current?.focus();
                 }}
               >
-                {option}
+                <span
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: option.color }}
+                />
+                {option.label}
               </button>
             ))}
         </div>

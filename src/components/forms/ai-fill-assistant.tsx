@@ -1,10 +1,17 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Sparkles, X, Send, Loader2, Check, Undo2 } from "lucide-react";
+import { Sparkles, X, Send, Loader2, Check, Undo2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+
+interface ModelItem {
+  id: string;
+  name: string;
+  providerId: string;
+  modelId: string;
+}
 
 interface FieldInfo {
   key: string;
@@ -68,9 +75,60 @@ export function AiFillAssistant({
   const [suggestions, setSuggestions] = useState<Record<string, FillValue> | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [applied, setApplied] = useState(false);
+  const [models, setModels] = useState<ModelItem[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [modelName, setModelName] = useState("默认模型");
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const modelMenuRef = useRef<HTMLDivElement>(null);
+
+  // Fetch available models on mount
+  useEffect(() => {
+    let active = true;
+    fetch("/api/agent2/models")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active || !data?.success) return;
+        setModels(data.data);
+        // Try to load saved default model from settings
+        fetch("/api/agent2/settings")
+          .then((r) => r.json())
+          .then((settings) => {
+            if (!active) return;
+            const saved = settings.success ? settings.data.defaultModel : null;
+            if (saved) {
+              setSelectedModel(saved);
+              const found = data.data.find((m: ModelItem) => m.id === saved);
+              setModelName(found ? found.name : saved);
+            } else if (data.data.length > 0) {
+              // Default to first model (usually env-configured default)
+              setSelectedModel(data.data[0].id);
+              setModelName(data.data[0].name);
+            }
+          })
+          .catch(() => {
+            if (!active || data.data.length === 0) return;
+            setSelectedModel(data.data[0].id);
+            setModelName(data.data[0].name);
+          });
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  // Close model menu on outside click
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
+        setModelMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [modelMenuOpen]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -102,6 +160,7 @@ export function AiFillAssistant({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          ...(selectedModel ? { model: selectedModel } : {}),
           templateId,
           context: {
             templateName,
@@ -159,7 +218,7 @@ export function AiFillAssistant({
       setLoading(false);
       abortRef.current = null;
     }
-  }, [input, loading, messages, templateName, fields, currentValues]);
+  }, [input, loading, messages, templateName, fields, currentValues, selectedModel]);
 
   const handleApply = () => {
     if (!suggestions) return;
@@ -216,9 +275,51 @@ export function AiFillAssistant({
               <Sparkles className="size-4 text-primary" />
               <span className="text-sm font-medium">AI 填充助手</span>
             </div>
-            <Button variant="ghost" size="icon-xs" onClick={() => setOpen(false)}>
-              <X className="size-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {/* Model selector */}
+              {models.length > 0 && (
+                <div className="relative" ref={modelMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setModelMenuOpen(!modelMenuOpen)}
+                    className="flex items-center gap-1 rounded-md px-1.5 py-1 text-xs text-muted-foreground hover:bg-muted transition-colors max-w-[160px]"
+                  >
+                    <span className="truncate">{modelName}</span>
+                    <ChevronDown className="size-3 shrink-0" />
+                  </button>
+                  {modelMenuOpen && (
+                    <div className="absolute right-0 top-full mt-1 z-50 min-w-[180px] max-h-60 overflow-y-auto rounded-md border bg-popover p-1 shadow-md">
+                      {models.map((m) => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-xs hover:bg-accent transition-colors",
+                            m.id === selectedModel && "bg-accent"
+                          )}
+                          onClick={() => {
+                            setSelectedModel(m.id);
+                            setModelName(m.name);
+                            setModelMenuOpen(false);
+                          }}
+                        >
+                          <span className="size-4 shrink-0 flex items-center justify-center rounded bg-muted text-[9px] font-semibold text-muted-foreground uppercase">
+                            {m.providerId.slice(0, 2)}
+                          </span>
+                          <span className="flex-1 truncate text-left">{m.name}</span>
+                          {m.id === selectedModel && (
+                            <Check className="size-3 shrink-0 text-primary" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              <Button variant="ghost" size="icon-xs" onClick={() => setOpen(false)}>
+                <X className="size-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Messages */}

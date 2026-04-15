@@ -22,6 +22,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { generateFieldKey } from "@/lib/utils";
 import type { FieldType } from "@/generated/prisma/enums";
+import type { SelectOption } from "@/types/data-table";
+import { SELECT_COLORS } from "@/types/data-table";
 
 const FIELD_TYPES: { value: FieldType; label: string }[] = [
   { value: "TEXT", label: "文本" },
@@ -40,7 +42,7 @@ export interface CreateFieldFormData {
   label: string;
   type: FieldType;
   required: boolean;
-  options: string[];
+  options: SelectOption[];
   defaultValue: string;
 }
 
@@ -63,7 +65,7 @@ export function CreateFieldDialog({
   const [label, setLabel] = useState("");
   const [type, setType] = useState<FieldType>("TEXT");
   const [required, setRequired] = useState(false);
-  const [optionsInput, setOptionsInput] = useState("");
+  const [selectOptions, setSelectOptions] = useState<SelectOption[]>([]);
   const [defaultValue, setDefaultValue] = useState("");
   const [keyError, setKeyError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -75,7 +77,7 @@ export function CreateFieldDialog({
       setKey(generateFieldKey(columnLabel, existingKeys));
       setType("TEXT");
       setRequired(false);
-      setOptionsInput("");
+      setSelectOptions([]);
       setDefaultValue("");
       setKeyError("");
     }
@@ -102,10 +104,7 @@ export function CreateFieldDialog({
     }
 
     const options = ["SELECT", "MULTISELECT"].includes(type)
-      ? optionsInput
-          .split("\n")
-          .map((s) => s.trim())
-          .filter(Boolean)
+      ? selectOptions.filter((o) => o.label.trim())
       : [];
 
     setIsLoading(true);
@@ -191,16 +190,60 @@ export function CreateFieldDialog({
 
             {needsOptions && (
               <div className="grid gap-2">
-                <Label htmlFor="field-options">选项列表</Label>
-                <textarea
-                  id="field-options"
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="每行一个选项"
-                  value={optionsInput}
-                  onChange={(e) => setOptionsInput(e.target.value)}
-                  disabled={isLoading}
-                  rows={3}
-                />
+                <Label>选项列表</Label>
+                <div className="space-y-2">
+                  {selectOptions.map((opt, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="w-5 h-5 rounded-full border flex-shrink-0"
+                        style={{ backgroundColor: opt.color }}
+                        onClick={() => {
+                          const currentIdx = SELECT_COLORS.findIndex((c) => c.bg === opt.color);
+                          const nextIdx = (currentIdx + 1) % SELECT_COLORS.length;
+                          const updated = [...selectOptions];
+                          updated[i] = { ...updated[i], color: SELECT_COLORS[nextIdx].bg };
+                          setSelectOptions(updated);
+                        }}
+                      />
+                      <Input
+                        value={opt.label}
+                        onChange={(e) => {
+                          const updated = [...selectOptions];
+                          updated[i] = { ...updated[i], label: e.target.value };
+                          setSelectOptions(updated);
+                        }}
+                        className="h-8 text-sm flex-1"
+                        placeholder={`选项 ${i + 1}`}
+                        disabled={isLoading}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setSelectOptions(selectOptions.filter((_, idx) => idx !== i))}
+                        disabled={isLoading}
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={isLoading}
+                    onClick={() =>
+                      setSelectOptions([
+                        ...selectOptions,
+                        { label: "", color: SELECT_COLORS[selectOptions.length % SELECT_COLORS.length].bg },
+                      ])
+                    }
+                  >
+                    + 添加选项
+                  </Button>
+                </div>
               </div>
             )}
 

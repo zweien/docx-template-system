@@ -46,6 +46,7 @@ export const dataFieldItemSchema = z.object({
   required: z.boolean().default(false),
   options: z.union([
     z.array(z.string()),
+    z.array(z.object({ label: z.string(), color: z.string() })),
     z.object({ formula: z.string() }),
     z.object({ nextValue: z.number() }),
     z.object({ kind: z.enum(["created", "updated"]) }),

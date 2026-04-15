@@ -25,11 +25,13 @@ import { ConditionalFormatDialog } from "@/components/data/conditional-format-di
 import { FilterPanel } from "@/components/data/filter-panel";
 import { ViewSelector } from "@/components/data/view-selector";
 import { SaveViewDialog } from "@/components/data/save-view-dialog";
+import { KeyboardShortcutsDialog } from "@/components/data/views/keyboard-shortcuts-dialog";
 import { useTableData } from "@/hooks/use-table-data";
 import { GridView } from "@/components/data/views/grid-view";
 import { KanbanView } from "@/components/data/views/kanban/kanban-view";
 import { GalleryView } from "@/components/data/views/gallery/gallery-view";
 import { TimelineView } from "@/components/data/views/timeline/timeline-view";
+import { FormView } from "@/components/data/views/form/form-view";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -343,6 +345,15 @@ export function RecordTable({
             onViewOptionsChange={setViewOptions}
           />
         );
+      case "FORM":
+        return (
+          <FormView
+            fields={fields}
+            view={activeView}
+            onViewOptionsChange={setViewOptions}
+            tableId={tableId}
+          />
+        );
       default:
         return (
           <div className="rounded-md border flex items-center justify-center py-20 text-zinc-400 text-sm">
@@ -403,6 +414,7 @@ export function RecordTable({
           </form>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <KeyboardShortcutsDialog />
           <DropdownMenu>
             <DropdownMenuTrigger
               render={

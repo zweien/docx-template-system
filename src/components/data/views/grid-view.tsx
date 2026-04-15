@@ -19,6 +19,7 @@ import type {
   FilterGroup,
   SortConfig,
 } from "@/types/data-table";
+import { parseSelectOptions } from "@/types/data-table";
 import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
@@ -1263,7 +1264,7 @@ export function GridView({
           return (
             <SelectCellEditor
               value={String(originalValue ?? "")}
-              options={Array.isArray(field.options) ? field.options : []}
+              options={parseSelectOptions(field.options)}
               onCommit={(v) => void commitEdit(v)}
               onCancel={cancelEdit}
             />
@@ -1275,7 +1276,7 @@ export function GridView({
           return (
             <MultiselectCellEditor
               value={arrValue}
-              options={Array.isArray(field.options) ? field.options : []}
+              options={parseSelectOptions(field.options)}
               onCommit={(v) => void commitEdit(v)}
               onCancel={cancelEdit}
             />

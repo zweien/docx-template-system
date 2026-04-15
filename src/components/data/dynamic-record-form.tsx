@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
 import type { RelationSubtableValueItem } from "@/types/data-table";
+import { parseSelectOptions } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
 import { RelationSubtableEditor } from "./relation-subtable-editor";
 import { RelationSelect } from "./relation-select";
@@ -272,7 +273,8 @@ export function DynamicRecordForm({
           />
         );
 
-      case FieldType.SELECT:
+      case FieldType.SELECT: {
+        const selectOpts = parseSelectOptions(field.options);
         return (
           <Select
             value={watch(field.key) ?? ""}
@@ -282,14 +284,21 @@ export function DynamicRecordForm({
               <SelectValue placeholder={`选择${field.label}`} />
             </SelectTrigger>
             <SelectContent>
-              {Array.isArray(field.options) && field.options.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option}
+              {selectOpts.map((option) => (
+                <SelectItem key={option.label} value={option.label}>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="w-3 h-3 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: option.color }}
+                    />
+                    {option.label}
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         );
+      }
 
       case FieldType.MULTISELECT:
         // Simplified: comma-separated input for now

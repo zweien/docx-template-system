@@ -26,7 +26,9 @@ import type {
   DataFieldItem,
   RelationCardinality,
   RelationSchemaField,
+  SelectOption,
 } from "@/types/data-table";
+import { parseSelectOptions, SELECT_COLORS } from "@/types/data-table";
 import { parseFieldOptions } from "@/types/data-table";
 import type { DataFieldInput } from "@/validators/data-table";
 
@@ -150,8 +152,8 @@ export function FieldConfigForm({
   const [fieldType, setFieldType] = useState<FieldType>(() => field?.type ?? FieldType.TEXT);
   const [required, setRequired] = useState(() => field?.required ?? false);
   const [defaultValue, setDefaultValue] = useState(() => field?.defaultValue ?? "");
-  const [optionsText, setOptionsText] = useState(() =>
-    Array.isArray(field?.options) ? field.options.join("\n") : ""
+  const [selectOptions, setSelectOptions] = useState<SelectOption[]>(() =>
+    parseSelectOptions(field?.options)
   );
   const [selectedTableId, setSelectedTableId] = useState(() => field?.relationTo ?? "");
   const [selectedDisplayField, setSelectedDisplayField] = useState(() => field?.displayField ?? "");
@@ -341,10 +343,7 @@ export function FieldConfigForm({
 
     let fieldOptions: DataFieldInput["options"] = undefined;
     if (fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT) {
-      fieldOptions = optionsText
-        .split("\n")
-        .map((item) => item.trim())
-        .filter(Boolean);
+      fieldOptions = selectOptions.filter((o) => o.label.trim());
     } else if (fieldType === FieldType.FORMULA) {
       fieldOptions = { formula: formulaExpression.trim() };
     } else if (fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) {
@@ -449,15 +448,67 @@ export function FieldConfigForm({
 
             {(fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT) && (
               <div className="grid gap-2">
-                <Label htmlFor="options">选项列表</Label>
-                <Textarea
-                  id="options"
-                  placeholder="每行一个选项，例如：&#10;进行中&#10;已完成&#10;已取消"
-                  value={optionsText}
-                  onChange={(event) => setOptionsText(event.target.value)}
-                  rows={4}
-                />
-                <p className="text-xs text-zinc-500">每行一个选项值</p>
+                <Label>选项列表</Label>
+                <div className="space-y-2">
+                  {selectOptions.map((opt, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="w-6 h-6 rounded-full border flex-shrink-0 relative group"
+                        style={{ backgroundColor: opt.color }}
+                        title="点击更换颜色"
+                        onClick={() => {
+                          const currentIdx = SELECT_COLORS.findIndex((c) => c.hex === opt.color);
+                          const nextIdx = (currentIdx + 1) % SELECT_COLORS.length;
+                          const updated = [...selectOptions];
+                          updated[i] = { ...updated[i], color: SELECT_COLORS[nextIdx].hex };
+                          setSelectOptions(updated);
+                        }}
+                      >
+                        <span className="absolute inset-0 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                          ↻
+                        </span>
+                      </button>
+                      <Input
+                        value={opt.label}
+                        onChange={(e) => {
+                          const updated = [...selectOptions];
+                          updated[i] = { ...updated[i], label: e.target.value };
+                          setSelectOptions(updated);
+                        }}
+                        className="h-8 text-sm flex-1"
+                        placeholder={`选项 ${i + 1}`}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() =>
+                          setSelectOptions(selectOptions.filter((_, idx) => idx !== i))
+                        }
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setSelectOptions([
+                        ...selectOptions,
+                        {
+                          label: "",
+                          color: SELECT_COLORS[selectOptions.length % SELECT_COLORS.length].hex,
+                        },
+                      ])
+                    }
+                  >
+                    + 添加选项
+                  </Button>
+                </div>
               </div>
             )}
 

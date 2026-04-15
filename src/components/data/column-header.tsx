@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { parseSelectOptions } from "@/types/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -339,9 +340,9 @@ export function ColumnHeader({
                   <SelectValue placeholder="选择值" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(field.options as string[]).map((opt) => (
-                    <SelectItem key={opt} value={opt}>
-                      {opt}
+                  {parseSelectOptions(field.options).map((opt) => (
+                    <SelectItem key={opt.label} value={opt.label}>
+                      {opt.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

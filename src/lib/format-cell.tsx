@@ -1,8 +1,28 @@
 import { Badge } from "@/components/ui/badge";
 import { FieldType } from "@/generated/prisma/enums";
 import type { ReactNode } from "react";
-import type { DataFieldItem, RelationSubtableValueItem } from "@/types/data-table";
+import type { DataFieldItem, RelationSubtableValueItem, SelectOption } from "@/types/data-table";
+import { parseSelectOptions, SELECT_COLORS } from "@/types/data-table";
 import { FileIcon } from "lucide-react";
+
+/** Build a color lookup map from field.options */
+function buildColorMap(field: DataFieldItem): Map<string, string> {
+  const options = parseSelectOptions(field.options);
+  const map = new Map<string, string>();
+  for (const opt of options) {
+    map.set(opt.label, opt.color);
+  }
+  return map;
+}
+
+/** Get color for a select value, fallback to hash-based color */
+function getSelectColor(value: string, colorMap: Map<string, string>): string {
+  if (colorMap.has(value)) return colorMap.get(value)!;
+  // Fallback: deterministic color based on string hash
+  let hash = 0;
+  for (let i = 0; i < value.length; i++) hash = value.charCodeAt(i) + ((hash << 5) - hash);
+  return SELECT_COLORS[Math.abs(hash) % SELECT_COLORS.length].hex;
+}
 
 function isEmptyCell(value: unknown): boolean {
   return value === null || value === undefined || value === "";
@@ -65,21 +85,40 @@ export function formatCellValue(
           <span className="truncate">{getFileName(String(value))}</span>
         </a>
       );
-    case FieldType.SELECT:
-      return <Badge variant="secondary">{String(value)}</Badge>;
-    case FieldType.MULTISELECT:
+    case FieldType.SELECT: {
+      const colorMap = buildColorMap(field);
+      const color = getSelectColor(String(value), colorMap);
+      return (
+        <span
+          className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium max-w-full truncate"
+          style={{ backgroundColor: color }}
+        >
+          {String(value)}
+        </span>
+      );
+    }
+    case FieldType.MULTISELECT: {
       if (Array.isArray(value)) {
+        const colorMap = buildColorMap(field);
         return (
           <div className="flex flex-wrap gap-1">
-            {value.map((item, index) => (
-              <Badge key={index} variant="secondary" className="text-xs">
-                {String(item)}
-              </Badge>
-            ))}
+            {value.map((item, index) => {
+              const color = getSelectColor(String(item), colorMap);
+              return (
+                <span
+                  key={index}
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
+                  style={{ backgroundColor: color }}
+                >
+                  {String(item)}
+                </span>
+              );
+            })}
           </div>
         );
       }
       return String(value);
+    }
     case FieldType.EMAIL:
       return (
         <a href={`mailto:${value}`} className="text-blue-600 hover:underline">

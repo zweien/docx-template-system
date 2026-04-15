@@ -37,6 +37,41 @@ export interface RelationSchemaConfig {
 
 // ========== Field Options (stored in DataField.options JSON) ==========
 
+/** A single option for SELECT / MULTISELECT fields */
+export interface SelectOption {
+  label: string;
+  color: string;
+}
+
+/** Preset color palette for select options */
+export const SELECT_COLORS = [
+  { name: "蓝色", bg: "bg-blue-100", text: "text-blue-800", hex: "#dbeafe" },
+  { name: "绿色", bg: "bg-green-100", text: "text-green-800", hex: "#dcfce7" },
+  { name: "黄色", bg: "bg-yellow-100", text: "text-yellow-800", hex: "#fef9c3" },
+  { name: "红色", bg: "bg-red-100", text: "text-red-800", hex: "#fee2e2" },
+  { name: "紫色", bg: "bg-purple-100", text: "text-purple-800", hex: "#f3e8ff" },
+  { name: "粉色", bg: "bg-pink-100", text: "text-pink-800", hex: "#fce7f3" },
+  { name: "橙色", bg: "bg-orange-100", text: "text-orange-800", hex: "#ffedd5" },
+  { name: "青色", bg: "bg-cyan-100", text: "text-cyan-800", hex: "#cffafe" },
+  { name: "靛蓝", bg: "bg-indigo-100", text: "text-indigo-800", hex: "#e0e7ff" },
+  { name: "灰色", bg: "bg-gray-100", text: "text-gray-800", hex: "#f3f4f6" },
+] as const;
+
+/** Parse field.options into SelectOption[] with backward compatibility */
+export function parseSelectOptions(raw: unknown): SelectOption[] {
+  if (!Array.isArray(raw)) return [];
+  if (raw.length === 0) return [];
+  // New format: { label, color }[]
+  if (typeof raw[0] === "object" && raw[0] !== null && "color" in raw[0]) {
+    return raw as SelectOption[];
+  }
+  // Legacy format: string[] → auto-assign colors
+  return (raw as string[]).map((label, i) => ({
+    label,
+    color: SELECT_COLORS[i % SELECT_COLORS.length].hex,
+  }));
+}
+
 export interface FieldOptions {
   /** AUTO_NUMBER: next auto-increment value */
   nextValue?: number;

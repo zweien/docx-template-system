@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FieldConfigForm } from "./field-config-form";
 import type { DataFieldItem, DataTableListItem } from "@/types/data-table";
+import { parseSelectOptions } from "@/types/data-table";
 import type { DataFieldInput } from "@/validators/data-table";
 import { FieldType } from "@/generated/prisma/enums";
 
@@ -310,10 +311,20 @@ export function FieldConfigList({
                   <TableCell className="max-w-[200px]">
                     {field.type === FieldType.SELECT ||
                     field.type === FieldType.MULTISELECT ? (
-                      <span className="text-sm text-zinc-500">
-                        {Array.isArray(field.options) && field.options.slice(0, 3).join(", ")}
-                        {Array.isArray(field.options) && field.options.length > 3 && "..."}
-                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {parseSelectOptions(field.options).slice(0, 4).map((opt, i) => (
+                          <span
+                            key={i}
+                              className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium"
+                            style={{ backgroundColor: opt.color }}
+                          >
+                            {opt.label}
+                          </span>
+                        ))}
+                        {parseSelectOptions(field.options).length > 4 && (
+                          <span className="text-xs text-zinc-400">+{parseSelectOptions(field.options).length - 4}</span>
+                        )}
+                      </div>
                     ) : field.type === FieldType.RELATION_SUBTABLE ? (
                       <div className="space-y-1 text-sm text-zinc-500">
                         <div>

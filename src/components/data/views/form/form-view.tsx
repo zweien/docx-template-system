@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
+import { toast } from "sonner";
 import {
   ClipboardList,
   Eye,
@@ -256,7 +257,7 @@ export function FormView({
           </Button>
         </div>
         {isFallbackView ? (
-          <Button size="sm" variant="outline" disabled title="请先保存视图再分享">
+          <Button size="sm" variant="outline" onClick={() => toast.info("请先保存视图再分享：点击顶部视图选择器 →「+ 新建视图」，输入名称保存即可。")}>
             <Share2 className="size-3.5 mr-1" />
             分享
           </Button>

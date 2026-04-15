@@ -112,9 +112,9 @@ export function RecordTable({
   // Sync viewType from loaded view
   useEffect(() => {
     if (currentView?.type) {
-      setViewType(currentView.type);
+      setViewType(currentView.type as ViewType);
     }
-  }, [currentView?.type]);
+  }, [viewId, currentView?.type]);
 
   // ── Patch single field (for Kanban drag-and-drop) ────────────────────────
   const handlePatchRecord = useCallback(

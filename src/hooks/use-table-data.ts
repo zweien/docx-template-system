@@ -162,17 +162,6 @@ export function useTableData({
     [debouncedSyncSearch]
   );
 
-  const switchView = useCallback(
-    (nextViewId: string | null) => {
-      latestFetchIdRef.current += 1;
-      setIsViewConfigReady(nextViewId === null);
-      setIsLoading(true);
-      setViewId(nextViewId);
-      syncUrlQuery({ viewId: nextViewId }, "push");
-    },
-    [syncUrlQuery]
-  );
-
   const refreshViews = useCallback(async () => {
     try {
       const response = await fetch(`/api/data-tables/${tableId}/views`);
@@ -189,6 +178,21 @@ export function useTableData({
       // 视图列表加载失败时沿用已有状态
     }
   }, [tableId]);
+
+  const switchView = useCallback(
+    (nextViewId: string | null) => {
+      latestFetchIdRef.current += 1;
+      setIsViewConfigReady(nextViewId === null);
+      setIsLoading(true);
+      setViewId(nextViewId);
+      syncUrlQuery({ viewId: nextViewId }, "push");
+      // Refresh views list to ensure newly saved views are available
+      if (nextViewId) {
+        void refreshViews();
+      }
+    },
+    [syncUrlQuery, refreshViews]
+  );
 
   const refresh = useCallback(() => {
     setRefreshTick((value) => value + 1);

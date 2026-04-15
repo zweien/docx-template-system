@@ -5,23 +5,31 @@ import type { DataFieldItem, RelationSubtableValueItem, SelectOption } from "@/t
 import { parseSelectOptions, SELECT_COLORS } from "@/types/data-table";
 import { FileIcon } from "lucide-react";
 
+type ColorPair = { bg: string; fg: string };
+
 /** Build a color lookup map from field.options */
-function buildColorMap(field: DataFieldItem): Map<string, string> {
+function buildColorMap(field: DataFieldItem): Map<string, ColorPair> {
   const options = parseSelectOptions(field.options);
-  const map = new Map<string, string>();
+  const map = new Map<string, ColorPair>();
   for (const opt of options) {
-    map.set(opt.label, opt.color);
+    map.set(opt.label, { bg: opt.color, fg: findFg(opt.color) });
   }
   return map;
 }
 
-/** Get color for a select value, fallback to hash-based color */
-function getSelectColor(value: string, colorMap: Map<string, string>): string {
+/** Find matching foreground color for a given background hex */
+function findFg(bgHex: string): string {
+  const preset = SELECT_COLORS.find((c) => c.bg === bgHex);
+  return preset?.fg ?? "#374151";
+}
+
+/** Get color pair for a select value, with hash-based fallback */
+function getSelectColor(value: string, colorMap: Map<string, ColorPair>): ColorPair {
   if (colorMap.has(value)) return colorMap.get(value)!;
-  // Fallback: deterministic color based on string hash
   let hash = 0;
   for (let i = 0; i < value.length; i++) hash = value.charCodeAt(i) + ((hash << 5) - hash);
-  return SELECT_COLORS[Math.abs(hash) % SELECT_COLORS.length].hex;
+  const preset = SELECT_COLORS[Math.abs(hash) % SELECT_COLORS.length];
+  return { bg: preset.bg, fg: preset.fg };
 }
 
 function isEmptyCell(value: unknown): boolean {
@@ -87,11 +95,11 @@ export function formatCellValue(
       );
     case FieldType.SELECT: {
       const colorMap = buildColorMap(field);
-      const color = getSelectColor(String(value), colorMap);
+      const { bg, fg } = getSelectColor(String(value), colorMap);
       return (
         <span
           className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium max-w-full truncate"
-          style={{ backgroundColor: color }}
+          style={{ backgroundColor: bg, color: fg }}
         >
           {String(value)}
         </span>
@@ -103,12 +111,12 @@ export function formatCellValue(
         return (
           <div className="flex flex-wrap gap-1">
             {value.map((item, index) => {
-              const color = getSelectColor(String(item), colorMap);
+              const { bg, fg } = getSelectColor(String(item), colorMap);
               return (
                 <span
                   key={index}
                   className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                  style={{ backgroundColor: color }}
+                  style={{ backgroundColor: bg, color: fg }}
                 >
                   {String(item)}
                 </span>

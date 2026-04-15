@@ -458,10 +458,10 @@ export function FieldConfigForm({
                         style={{ backgroundColor: opt.color }}
                         title="点击更换颜色"
                         onClick={() => {
-                          const currentIdx = SELECT_COLORS.findIndex((c) => c.hex === opt.color);
+                          const currentIdx = SELECT_COLORS.findIndex((c) => c.bg === opt.color);
                           const nextIdx = (currentIdx + 1) % SELECT_COLORS.length;
                           const updated = [...selectOptions];
-                          updated[i] = { ...updated[i], color: SELECT_COLORS[nextIdx].hex };
+                          updated[i] = { ...updated[i], color: SELECT_COLORS[nextIdx].bg };
                           setSelectOptions(updated);
                         }}
                       >
@@ -501,7 +501,7 @@ export function FieldConfigForm({
                         ...selectOptions,
                         {
                           label: "",
-                          color: SELECT_COLORS[selectOptions.length % SELECT_COLORS.length].hex,
+                          color: SELECT_COLORS[selectOptions.length % SELECT_COLORS.length].bg,
                         },
                       ])
                     }

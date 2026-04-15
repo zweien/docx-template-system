@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { X } from "lucide-react";
 import type { SelectOption } from "@/types/data-table";
+import { SELECT_COLORS } from "@/types/data-table";
 
 interface MultiselectCellEditorProps {
   value: string[];
@@ -22,7 +23,10 @@ export function MultiselectCellEditor({
   const [inputValue, setInputValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const colorMap = new Map(options.map((o) => [o.label, o.color]));
+  const colorMap = new Map(options.map((o) => {
+    const preset = SELECT_COLORS.find(c => c.bg === o.color);
+    return [o.label, { bg: o.color, fg: preset?.fg ?? "#374151" }];
+  }));
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -32,11 +36,13 @@ export function MultiselectCellEditor({
 
   return (
     <div className="relative flex flex-wrap gap-1 p-1 border border-primary rounded bg-background min-w-[200px]">
-      {selected.map((item) => (
+      {selected.map((item) => {
+        const c = colorMap.get(item) ?? { bg: "#f3f4f6", fg: "#374151" };
+        return (
         <span
           key={item}
           className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-medium gap-0.5"
-          style={{ backgroundColor: colorMap.get(item) ?? "#f3f4f6" }}
+          style={{ backgroundColor: c.bg, color: c.fg }}
         >
           {item}
           <button
@@ -47,7 +53,8 @@ export function MultiselectCellEditor({
             <X className="h-3 w-3" />
           </button>
         </span>
-      ))}
+        );
+      })}
       <Input
         ref={inputRef}
         value={inputValue}

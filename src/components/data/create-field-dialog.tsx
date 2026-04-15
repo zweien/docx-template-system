@@ -199,10 +199,10 @@ export function CreateFieldDialog({
                         className="w-5 h-5 rounded-full border flex-shrink-0"
                         style={{ backgroundColor: opt.color }}
                         onClick={() => {
-                          const currentIdx = SELECT_COLORS.findIndex((c) => c.hex === opt.color);
+                          const currentIdx = SELECT_COLORS.findIndex((c) => c.bg === opt.color);
                           const nextIdx = (currentIdx + 1) % SELECT_COLORS.length;
                           const updated = [...selectOptions];
-                          updated[i] = { ...updated[i], color: SELECT_COLORS[nextIdx].hex };
+                          updated[i] = { ...updated[i], color: SELECT_COLORS[nextIdx].bg };
                           setSelectOptions(updated);
                         }}
                       />
@@ -237,7 +237,7 @@ export function CreateFieldDialog({
                     onClick={() =>
                       setSelectOptions([
                         ...selectOptions,
-                        { label: "", color: SELECT_COLORS[selectOptions.length % SELECT_COLORS.length].hex },
+                        { label: "", color: SELECT_COLORS[selectOptions.length % SELECT_COLORS.length].bg },
                       ])
                     }
                   >

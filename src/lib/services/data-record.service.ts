@@ -761,6 +761,16 @@ async function doUpdateRecord(
     if (!refreshResult.success) {
       throw new Error(`${refreshResult.error.code}:${refreshResult.error.message}`);
     }
+    // Refresh current record's COUNT/LOOKUP fields when RELATION fields changed
+    const hasRelationFields = tableResult.data.fields.some(
+      (f) => f.type === "RELATION" && scalarData[f.key] !== undefined
+    );
+    if (hasRelationFields) {
+      const sourceRefresh = await refreshSnapshotsForSourceRecords({ tx, recordIds: [id] });
+      if (!sourceRefresh.success) {
+        throw new Error(`${sourceRefresh.error.code}:${sourceRefresh.error.message}`);
+      }
+    }
   }
 
   if (Object.keys(relationData).length > 0) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
@@ -36,6 +36,10 @@ const actionLabels: Record<string, string> = {
   USER_DELETE: "删除用户",
   API_TOKEN_CREATE: "创建API令牌",
   API_TOKEN_REVOKE: "撤销API令牌",
+  FORM_SHARE_CREATE: "创建表单分享",
+  FORM_SHARE_DELETE: "删除表单分享",
+  FORM_SUBMIT: "表单提交",
+  DATA_TABLE_FIELD_UPDATE: "更新字段配置",
 };
 
 const actionOptions = Object.entries(actionLabels);
@@ -236,9 +240,8 @@ export default function AuditLogsPage() {
               </thead>
               <tbody>
                 {logs.map((log) => (
-                  <>
+                  <Fragment key={log.id}>
                     <tr
-                      key={log.id}
                       className="border-t hover:bg-muted/30 cursor-pointer"
                       onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
                     >
@@ -289,6 +292,44 @@ export default function AuditLogsPage() {
                                 </div>
                               ))}
                             </div>
+                          ) : log.action === "DATA_TABLE_FIELD_UPDATE" ? (
+                            <div className="space-y-2">
+                              {Array.isArray(log.detail.addedFields) && (log.detail.addedFields as { key: string; label: string; type: string }[]).length > 0 && (
+                                <div>
+                                  <div className="text-xs font-medium text-green-700 dark:text-green-400 mb-1">新增字段</div>
+                                  {(log.detail.addedFields as { key: string; label: string; type: string }[]).map((f) => (
+                                    <div key={f.key} className="text-xs flex items-center gap-2">
+                                      <span className="font-mono">{f.key}</span>
+                                      <span className="text-muted-foreground">{f.label}</span>
+                                      <Badge variant="outline" className="text-[10px] px-1 py-0">{f.type}</Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {Array.isArray(log.detail.removedFields) && (log.detail.removedFields as { key: string; label: string; type: string }[]).length > 0 && (
+                                <div>
+                                  <div className="text-xs font-medium text-destructive mb-1">删除字段</div>
+                                  {(log.detail.removedFields as { key: string; label: string; type: string }[]).map((f) => (
+                                    <div key={f.key} className="text-xs flex items-center gap-2">
+                                      <span className="font-mono">{f.key}</span>
+                                      <span className="text-muted-foreground">{f.label}</span>
+                                      <Badge variant="outline" className="text-[10px] px-1 py-0">{f.type}</Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {Array.isArray(log.detail.updatedFieldKeys) && (log.detail.updatedFieldKeys as string[]).length > 0 && (
+                                <div>
+                                  <div className="text-xs font-medium text-muted-foreground mb-1">修改字段</div>
+                                  <div className="text-xs font-mono text-muted-foreground">
+                                    {(log.detail.updatedFieldKeys as string[]).join(", ")}
+                                  </div>
+                                </div>
+                              )}
+                              <div className="text-xs text-muted-foreground">
+                                共 {String(log.detail.totalFields ?? "?")} 个字段
+                              </div>
+                            </div>
                           ) : (
                             <pre className="text-xs whitespace-pre-wrap break-all max-h-40 overflow-auto">
                               {JSON.stringify(log.detail, null, 2)}
@@ -297,7 +338,7 @@ export default function AuditLogsPage() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))}
                 {logs.length === 0 && (
                   <tr>

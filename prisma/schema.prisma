@@ -288,6 +288,7 @@ enum FieldType {
   SYSTEM_TIMESTAMP
   SYSTEM_USER
   FORMULA
+  COUNT         // 自动计数关联记录
 }
 
 enum ViewType {
@@ -742,6 +743,7 @@ enum AuditAction {
   FORM_SHARE_CREATE
   FORM_SHARE_DELETE
   FORM_SUBMIT
+  DATA_TABLE_FIELD_UPDATE
 }
 
 model AuditLog {

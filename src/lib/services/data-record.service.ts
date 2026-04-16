@@ -42,7 +42,7 @@ interface FieldChange {
 }
 
 const SKIP_HISTORY_FIELD_TYPES = new Set([
-  "RELATION_SUBTABLE", "SYSTEM_TIMESTAMP", "SYSTEM_USER", "FORMULA",
+  "RELATION_SUBTABLE", "SYSTEM_TIMESTAMP", "SYSTEM_USER", "FORMULA", "COUNT",
 ]);
 
 function detectFieldChanges(
@@ -241,7 +241,8 @@ function splitRecordDataByFieldType(
   > = {};
 
   for (const [fieldKey, value] of Object.entries(data)) {
-    if (fieldTypeByKey.get(fieldKey) === "RELATION_SUBTABLE") {
+    if (fieldTypeByKey.get(fieldKey) === "RELATION_SUBTABLE" ||
+        fieldTypeByKey.get(fieldKey) === "COUNT") {
       relationData[fieldKey] = value as
         | RelationSubtableValueItem[]
         | RelationSubtableValueItem
@@ -1212,7 +1213,8 @@ export function validateRecordData(
       field.type === "AUTO_NUMBER" ||
       field.type === "SYSTEM_TIMESTAMP" ||
       field.type === "SYSTEM_USER" ||
-      field.type === "FORMULA"
+      field.type === "FORMULA" ||
+      field.type === "COUNT"
     ) {
       continue;
     }

@@ -79,6 +79,8 @@ export interface FieldOptions {
   kind?: "created" | "updated";
   /** FORMULA: formula expression string */
   formula?: string;
+  /** COUNT: ID of the RELATION or RELATION_SUBTABLE field to count */
+  countSourceFieldId?: string;
 }
 
 export function parseFieldOptions(raw: unknown): FieldOptions {

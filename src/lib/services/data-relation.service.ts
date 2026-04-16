@@ -3,12 +3,15 @@ import type {
   RelationSubtableValueItem,
   ServiceResult,
 } from "@/types/data-table";
+import { parseFieldOptions } from "@/types/data-table";
+import { db } from "@/lib/db";
 
 type RelationFieldRow = {
   id: string;
   tableId: string;
   key: string;
   type: string;
+  options: unknown;
   relationTo: string | null;
   displayField: string | null;
   relationCardinality: RelationCardinality | null;
@@ -373,8 +376,39 @@ async function refreshRelationSnapshotsForRecords(
     },
   });
 
-  if (relationFields.length === 0) {
+  // Load COUNT fields for count computation
+  const countFields = await tx.dataField.findMany({
+    where: {
+      tableId: { in: tableIds },
+      type: "COUNT",
+    },
+  });
+
+  // Load RELATION fields for COUNT source resolution (single-link: 0 or 1)
+  const relationLinkFields = await tx.dataField.findMany({
+    where: {
+      tableId: { in: tableIds },
+      type: "RELATION",
+    },
+  });
+
+  if (relationFields.length === 0 && countFields.length === 0) {
     return;
+  }
+
+  // Build source field lookup (RELATION + RELATION_SUBTABLE) for COUNT resolution
+  const sourceFieldById = new Map<string, RelationFieldRow>();
+  for (const field of [...relationFields, ...relationLinkFields]) {
+    sourceFieldById.set(field.id, field);
+  }
+
+  // Group countFields by tableId
+  const countFieldsByTableId = new Map<string, RelationFieldRow[]>();
+  for (const field of countFields) {
+    countFieldsByTableId.set(field.tableId, [
+      ...(countFieldsByTableId.get(field.tableId) ?? []),
+      field,
+    ]);
   }
 
   const relationFieldById = new Map(relationFields.map((field) => [field.id, field]));
@@ -388,17 +422,20 @@ async function refreshRelationSnapshotsForRecords(
     inverseFieldIds.add(field.id);
   }
 
-  const relationRows = await tx.dataRelationRow.findMany({
-    where: {
-      OR: [
-        { sourceRecordId: { in: affectedRecordIds } },
-        { targetRecordId: { in: affectedRecordIds } },
-      ],
-    },
-    include: {
-      field: true,
-    },
-  });
+  // Only query relation rows when there are RELATION_SUBTABLE fields
+  const relationRows = relationFields.length > 0
+    ? await tx.dataRelationRow.findMany({
+        where: {
+          OR: [
+            { sourceRecordId: { in: affectedRecordIds } },
+            { targetRecordId: { in: affectedRecordIds } },
+          ],
+        },
+        include: {
+          field: true,
+        },
+      })
+    : [];
 
   const relatedRecordIds = new Set<string>();
   for (const row of relationRows) {
@@ -473,11 +510,69 @@ async function refreshRelationSnapshotsForRecords(
       );
     }
 
+    // Compute COUNT field values
+    for (const countField of countFieldsByTableId.get(record.tableId) ?? []) {
+      const opts = parseFieldOptions(countField.options);
+      if (!opts.countSourceFieldId) continue;
+
+      const sourceField = sourceFieldById.get(opts.countSourceFieldId);
+      if (!sourceField) continue;
+
+      if (sourceField.type === "RELATION_SUBTABLE") {
+        // Count = snapshot array length
+        nextData[countField.key] = snapshotItemsByFieldId.get(opts.countSourceFieldId)?.length ?? 0;
+      } else if (sourceField.type === "RELATION") {
+        // Single-link: 1 if linked, 0 if not
+        const sourceValue = nextData[sourceField.key];
+        nextData[countField.key] = (sourceValue != null && sourceValue !== "") ? 1 : 0;
+      }
+    }
+
     await tx.dataRecord.update({
       where: { id: record.id },
       data: { data: nextData },
     });
   }
+}
+
+/**
+ * Backfill COUNT field values for all records in a table.
+ * Called after a new COUNT field is created.
+ */
+export async function backfillCountFieldValues(
+  tableId: string
+): Promise<ServiceResult<null>> {
+  const BATCH_SIZE = 500;
+
+  const countFields = await db.dataField.findMany({
+    where: { tableId, type: "COUNT" },
+  });
+
+  if (countFields.length === 0) {
+    return { success: true, data: null };
+  }
+
+  const totalRecords = await db.dataRecord.count({ where: { tableId } });
+  if (totalRecords === 0) {
+    return { success: true, data: null };
+  }
+
+  // Process in batches to avoid large transactions
+  for (let offset = 0; offset < totalRecords; offset += BATCH_SIZE) {
+    const records = await db.dataRecord.findMany({
+      where: { tableId },
+      select: { id: true },
+      skip: offset,
+      take: BATCH_SIZE,
+    });
+
+    const recordIds = records.map((r) => r.id);
+    await db.$transaction(async (tx) => {
+      await refreshRelationSnapshotsForRecords(asTxClient(tx), recordIds);
+    });
+  }
+
+  return { success: true, data: null };
 }
 
 export async function syncRelationSubtableValues(input: {

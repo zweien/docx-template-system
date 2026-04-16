@@ -201,6 +201,9 @@ export function formatCellValue(
       if (value === null || value === undefined) return <span className="text-zinc-400">-</span>;
       if (typeof value === "number") return value.toLocaleString();
       return String(value);
+    case FieldType.COUNT:
+      if (value === null || value === undefined) return <span className="text-zinc-400">0</span>;
+      return <span className="text-muted-foreground font-mono">{Number(value).toLocaleString()}</span>;
     default:
       return String(value);
   }
@@ -222,6 +225,7 @@ export function formatCellText(field: DataFieldItem, value: unknown): string {
     case FieldType.SYSTEM_TIMESTAMP:
     case FieldType.SYSTEM_USER:
     case FieldType.FORMULA:
+    case FieldType.COUNT:
       return String(value ?? "");
     default:
       return String(value);

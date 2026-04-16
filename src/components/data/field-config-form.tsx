@@ -60,6 +60,7 @@ const FIELD_TYPES = [
   { value: FieldType.SYSTEM_TIMESTAMP, label: "创建/修改时间" },
   { value: FieldType.SYSTEM_USER, label: "创建/修改人" },
   { value: FieldType.FORMULA, label: "公式" },
+  { value: FieldType.COUNT, label: "计数" },
   { value: FieldType.RELATION, label: "关联字段" },
   { value: FieldType.RELATION_SUBTABLE, label: "关系子表格" },
 ];
@@ -184,6 +185,10 @@ export function FieldConfigForm({
     const opts = parseFieldOptions(field?.options);
     return opts.formula ?? "";
   });
+  const [countSourceFieldId, setCountSourceFieldId] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return opts.countSourceFieldId ?? "";
+  });
 
   // Formula validation
   const formulaError = useMemo(() => {
@@ -250,6 +255,7 @@ export function FieldConfigForm({
       : undefined;
     setRelationFields(relTable?.fields ?? []);
     setFormulaExpression(opts.formula ?? "");
+    setCountSourceFieldId(opts.countSourceFieldId ?? "");
     setSystemFieldKind(opts.kind ?? "created");
     setError("");
   }, [field, availableTables]);
@@ -426,11 +432,18 @@ export function FieldConfigForm({
       return;
     }
 
+    if (fieldType === FieldType.COUNT && !countSourceFieldId) {
+      setError("请选择要计数的关联字段");
+      return;
+    }
+
     let fieldOptions: DataFieldInput["options"] = undefined;
     if (fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT) {
       fieldOptions = selectOptions.filter((o) => o.label.trim());
     } else if (fieldType === FieldType.FORMULA) {
       fieldOptions = { formula: formulaExpression.trim() };
+    } else if (fieldType === FieldType.COUNT) {
+      fieldOptions = { countSourceFieldId };
     } else if (fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) {
       fieldOptions = { kind: systemFieldKind };
     }
@@ -526,10 +539,14 @@ export function FieldConfigForm({
               </Select>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="required">是否必填</Label>
-              <Switch id="required" checked={required} onCheckedChange={setRequired} />
-            </div>
+            {fieldType !== FieldType.COUNT && fieldType !== FieldType.FORMULA &&
+              fieldType !== FieldType.AUTO_NUMBER && fieldType !== FieldType.SYSTEM_TIMESTAMP &&
+              fieldType !== FieldType.SYSTEM_USER && (
+              <div className="flex items-center justify-between">
+                <Label htmlFor="required">是否必填</Label>
+                <Switch id="required" checked={required} onCheckedChange={setRequired} />
+              </div>
+            )}
 
             {(fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT) && (
               <div className="grid gap-2">
@@ -607,6 +624,46 @@ export function FieldConfigForm({
                   error={formulaError}
                   livePreview={formulaPreview}
                 />
+              </div>
+            )}
+
+            {fieldType === FieldType.COUNT && (
+              <div className="grid gap-2">
+                <Label>计数字段</Label>
+                {allFields.filter(
+                  (f) => f.type === FieldType.RELATION || f.type === FieldType.RELATION_SUBTABLE
+                ).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    当前表没有关联字段，无法创建计数字段
+                  </p>
+                ) : (
+                  <Select
+                    value={countSourceFieldId}
+                    onValueChange={(value) => setCountSourceFieldId(value ?? "")}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择要计数的关联字段">
+                        {countSourceFieldId
+                          ? allFields.find((f) => f.id === countSourceFieldId)?.label ??
+                            countSourceFieldId
+                          : null}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allFields
+                        .filter((f) => f.type === FieldType.RELATION || f.type === FieldType.RELATION_SUBTABLE)
+                        .map((f) => (
+                          <SelectItem key={f.id} value={f.id!}>
+                            {f.label}
+                            {f.type === FieldType.RELATION && "（单值关联，结果为 0 或 1）"}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  自动统计关联记录数量，当关联记录增删时自动更新
+                </p>
               </div>
             )}
 
@@ -916,15 +973,19 @@ export function FieldConfigForm({
               </>
             )}
 
-            <div className="grid gap-2">
-              <Label htmlFor="defaultValue">默认值</Label>
-              <Input
-                id="defaultValue"
-                placeholder="可选"
-                value={defaultValue}
-                onChange={(event) => setDefaultValue(event.target.value)}
-              />
-            </div>
+            {fieldType !== FieldType.COUNT && fieldType !== FieldType.FORMULA &&
+              fieldType !== FieldType.AUTO_NUMBER && fieldType !== FieldType.SYSTEM_TIMESTAMP &&
+              fieldType !== FieldType.SYSTEM_USER && (
+              <div className="grid gap-2">
+                <Label htmlFor="defaultValue">默认值</Label>
+                <Input
+                  id="defaultValue"
+                  placeholder="可选"
+                  value={defaultValue}
+                  onChange={(event) => setDefaultValue(event.target.value)}
+                />
+              </div>
+            )}
 
             {error && <p className="text-sm text-red-500">{error}</p>}
           </div>

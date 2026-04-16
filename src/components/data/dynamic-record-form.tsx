@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -134,11 +134,6 @@ export function DynamicRecordForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Check if any computed fields exist (COUNT/LOOKUP)
-  const computedFieldKeys = fields
-    .filter((f) => f.type === FieldType.COUNT || f.type === FieldType.LOOKUP)
-    .map((f) => f.key);
-
   // Build schema from fields
   const schema = z.object(
     Object.fromEntries(
@@ -231,33 +226,6 @@ export function DynamicRecordForm({
     resolver: zodResolver(schema),
     defaultValues,
   });
-
-  // Refresh COUNT/LOOKUP fields after RELATION field changes
-  const refreshComputedFields = useCallback(async (fieldKey: string, value: unknown) => {
-    if (!initialData?.id || computedFieldKeys.length === 0) return;
-    try {
-      const res = await fetch(
-        `/api/data-tables/${tableId}/records/${initialData.id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fieldKey, value }),
-        }
-      );
-      if (!res.ok) return;
-      const updated = await res.json();
-      // Backfill computed field values from server response
-      if (updated?.data) {
-        for (const key of computedFieldKeys) {
-          if (updated.data[key] !== undefined) {
-            setValue(key, updated.data[key]);
-          }
-        }
-      }
-    } catch {
-      // Silently ignore — computed fields will update on full save
-    }
-  }, [tableId, initialData?.id, computedFieldKeys, setValue]);
 
   const handleFormSubmit = async (data: Record<string, unknown>) => {
     setError("");
@@ -378,7 +346,6 @@ export function DynamicRecordForm({
             value={String(watch(field.key) ?? "")}
             onChange={(v) => {
               setValue(field.key, v);
-              void refreshComputedFields(field.key, v);
             }}
             relationTableId={field.relationTo ?? ""}
             displayField={field.displayField ?? "id"}

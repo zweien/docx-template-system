@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.5.0](https://github.com/zweien/docx-template-system/compare/v0.4.0...v0.5.0) (2026-04-16)
+
+
+### Features
+
+* **data-table:** 关联字段搜索选择器 ([#75](https://github.com/zweien/docx-template-system/issues/75)) ([f644b9a](https://github.com/zweien/docx-template-system/commit/f644b9a64a5cf3d119f815e22509859f635195b6))
+* **data-table:** Select/MultiSelect 字段颜色标签 ([#77](https://github.com/zweien/docx-template-system/issues/77)) ([6c0cbf9](https://github.com/zweien/docx-template-system/commit/6c0cbf93b5d611e99686e1b5d7d9624a5d70f591))
+* **fill-assist:** AI 填充助手增加模型选择功能 ([3fb44ba](https://github.com/zweien/docx-template-system/commit/3fb44ba755439c0eb8e723eb95968d013ba8cd59))
+* **formula:** 增强函数说明展示与可扩展性 ([#84](https://github.com/zweien/docx-template-system/issues/84)) ([#85](https://github.com/zweien/docx-template-system/issues/85)) ([ec72783](https://github.com/zweien/docx-template-system/commit/ec72783732007ef5bb67d31f6a6a9a2f897f8081))
+
+
+### Bug Fixes
+
+* **data-table:** 关联字段选择后本地即时显示名称 ([255e1f9](https://github.com/zweien/docx-template-system/commit/255e1f9a0dee6321d14606302208c6eb33c903f5))
+* **data-table:** 深色模式下彩色标签文字不可见 ([46fdf3d](https://github.com/zweien/docx-template-system/commit/46fdf3d1eb79e1906a843b500193b2e617496d90))
+
 ## [0.4.0](https://github.com/zweien/docx-template-system/compare/v0.3.10...v0.4.0) (2026-04-14)
 
 

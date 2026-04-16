@@ -1644,6 +1644,7 @@ export function GridView({
           open={findBarOpen}
           onClose={() => setFindBarOpen(false)}
           rows={flatRecords.map(e => e.type === "record" && e.record ? { id: e.record.id, data: e.record.data } : null)}
+          fields={orderedVisibleFields}
           fieldKeys={orderedVisibleFields.map(f => f.key)}
           onNavigateTo={(flatRowIndex, colIndex) => setActiveCell({ rowIndex: flatRowIndex, colIndex })}
           onReplace={(recordId, fieldKey, newValue) => handleCommit(recordId, fieldKey, newValue)}

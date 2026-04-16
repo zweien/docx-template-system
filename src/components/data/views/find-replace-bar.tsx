@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { X, ChevronUp, ChevronDown, Replace } from "lucide-react";
+import { formatCellText } from "@/lib/format-cell";
+import type { DataFieldItem } from "@/types/data-table";
 
 interface FindResult {
   /** Index in flatRecords (the full array including group rows) */
@@ -20,6 +22,7 @@ interface FindReplaceBarProps {
   /** Full flatRecords array — each entry is null for group rows, or { id, data } for data rows */
   rows: Array<{ id: string; data: Record<string, unknown> } | null>;
   fieldKeys: string[];
+  fields: DataFieldItem[];
   onNavigateTo: (flatRowIndex: number, colIndex: number) => void;
   onReplace: (recordId: string, fieldKey: string, newValue: string) => void;
 }
@@ -29,6 +32,7 @@ export function FindReplaceBar({
   onClose,
   rows,
   fieldKeys,
+  fields,
   onNavigateTo,
   onReplace,
 }: FindReplaceBarProps) {
@@ -38,6 +42,15 @@ export function FindReplaceBar({
   const [results, setResults] = useState<FindResult[]>([]);
   const [currentIdx, setCurrentIdx] = useState(-1);
   const findInputRef = useRef<HTMLInputElement>(null);
+
+  // Build field map for lookup during search
+  const fieldMap = useMemo(() => {
+    const map = new Map<string, DataFieldItem>();
+    for (const field of fields) {
+      map.set(field.key, field);
+    }
+    return map;
+  }, [fields]);
 
   // Perform search — rows[] is indexed identically to flatRecords
   const doSearch = useCallback(
@@ -53,16 +66,20 @@ export function FindReplaceBar({
         const row = rows[r];
         if (!row?.data) continue; // skip group rows / nulls
         for (let c = 0; c < fieldKeys.length; c++) {
-          const val = String(row.data[fieldKeys[c]] ?? "");
+          const fieldKey = fieldKeys[c];
+          const field = fieldMap.get(fieldKey);
+          const rawValue = row.data[fieldKey];
+          // Use formatCellText to get searchable text that matches display
+          const val = field ? formatCellText(field, rawValue) : String(rawValue ?? "");
           if (val.toLowerCase().includes(lower)) {
-            found.push({ flatRowIndex: r, colIndex: c, recordId: row.id, fieldKey: fieldKeys[c] });
+            found.push({ flatRowIndex: r, colIndex: c, recordId: row.id, fieldKey: fieldKey });
           }
         }
       }
       setResults(found);
       setCurrentIdx(found.length > 0 ? 0 : -1);
     },
-    [rows, fieldKeys]
+    [rows, fieldKeys, fieldMap]
   );
 
   // Search on text change
@@ -106,24 +123,26 @@ export function FindReplaceBar({
     const r = results[currentIdx];
     const row = rows[r.flatRowIndex];
     if (!row) return;
-    const oldVal = String(row.data[r.fieldKey] ?? "");
-    const newVal = oldVal.replace(new RegExp(escapeRegex(findText), "gi"), replaceText);
+    const field = fieldMap.get(r.fieldKey);
+    const displayVal = field ? formatCellText(field, row.data[r.fieldKey]) : String(row.data[r.fieldKey] ?? "");
+    const newVal = displayVal.replace(new RegExp(escapeRegex(findText), "gi"), replaceText);
     onReplace(r.recordId, r.fieldKey, newVal);
     setTimeout(() => doSearch(findText), 100);
-  }, [currentIdx, results, rows, findText, replaceText, onReplace, doSearch]);
+  }, [currentIdx, results, rows, fieldMap, findText, replaceText, onReplace, doSearch]);
 
   const handleReplaceAll = useCallback(() => {
     for (const r of results) {
       const row = rows[r.flatRowIndex];
       if (!row) continue;
-      const oldVal = String(row.data[r.fieldKey] ?? "");
-      const newVal = oldVal.replace(new RegExp(escapeRegex(findText), "gi"), replaceText);
-      if (oldVal !== newVal) {
+      const field = fieldMap.get(r.fieldKey);
+      const displayVal = field ? formatCellText(field, row.data[r.fieldKey]) : String(row.data[r.fieldKey] ?? "");
+      const newVal = displayVal.replace(new RegExp(escapeRegex(findText), "gi"), replaceText);
+      if (displayVal !== newVal) {
         onReplace(r.recordId, r.fieldKey, newVal);
       }
     }
     setTimeout(() => doSearch(findText), 100);
-  }, [results, rows, findText, replaceText, onReplace, doSearch]);
+  }, [results, rows, fieldMap, findText, replaceText, onReplace, doSearch]);
 
   // Keyboard: Enter = next, Shift+Enter = prev, Escape = close
   const handleKeyDown = useCallback(

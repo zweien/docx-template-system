@@ -171,6 +171,10 @@ export function DynamicRecordForm({
           case FieldType.RELATION_SUBTABLE:
             fieldSchema = buildRelationSubtableFieldSchema(field);
             break;
+          case FieldType.COUNT:
+          case FieldType.LOOKUP:
+            fieldSchema = z.unknown().nullable().optional();
+            break;
           default:
             fieldSchema = z.string().nullable().optional();
         }

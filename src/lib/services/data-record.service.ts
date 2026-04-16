@@ -1231,7 +1231,8 @@ export function validateRecordData(
       field.type === "SYSTEM_TIMESTAMP" ||
       field.type === "SYSTEM_USER" ||
       field.type === "FORMULA" ||
-      field.type === "COUNT"
+      field.type === "COUNT" ||
+      field.type === "LOOKUP"
     ) {
       continue;
     }

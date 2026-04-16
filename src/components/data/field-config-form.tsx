@@ -228,6 +228,32 @@ export function FieldConfigForm({
     return () => { cancelled = true; };
   }, [open, fieldType, tableId]);
 
+  // Reset all state when field prop changes (edit vs create)
+  useEffect(() => {
+    const opts = parseFieldOptions(field?.options);
+    setKey(field?.key ?? "");
+    setLabel(field?.label ?? "");
+    setFieldType(field?.type ?? FieldType.TEXT);
+    setRequired(field?.required ?? false);
+    setDefaultValue(field?.defaultValue ?? "");
+    setSelectOptions(parseSelectOptions(field?.options));
+    setSelectedTableId(field?.relationTo ?? "");
+    setSelectedDisplayField(field?.displayField ?? "");
+    setRelationCardinality(field?.relationCardinality ?? "SINGLE");
+    setInverseRelationCardinality(
+      field?.inverseRelationCardinality ??
+        (field?.relationCardinality === "MULTIPLE" ? "MULTIPLE" : "SINGLE")
+    );
+    setRelationSchemaFields(buildRelationSchemaDraft(field?.relationSchema?.fields));
+    const relTable = field?.relationTo
+      ? availableTables.find((t) => t.id === field.relationTo)
+      : undefined;
+    setRelationFields(relTable?.fields ?? []);
+    setFormulaExpression(opts.formula ?? "");
+    setSystemFieldKind(opts.kind ?? "created");
+    setError("");
+  }, [field, availableTables]);
+
   const formulaPreview = useMemo(() => {
     const expr = formulaExpression.trim();
     if (!expr || formulaError || !sampleData) return undefined;

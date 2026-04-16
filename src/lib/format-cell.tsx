@@ -136,8 +136,9 @@ export function formatCellValue(
     case FieldType.PHONE:
       return <span className="font-mono">{String(value)}</span>;
     case FieldType.RELATION: {
+      const obj = value as Record<string, unknown> | null;
       const displayValue =
-        (value as Record<string, unknown>)?.display ?? value;
+        obj?.display ?? obj?.displayValue ?? value;
       return <Badge variant="outline">{String(displayValue)}</Badge>;
     }
     case FieldType.RELATION_SUBTABLE: {
@@ -223,8 +224,10 @@ export function formatCellText(field: DataFieldItem, value: unknown): string {
   switch (field.type) {
     case FieldType.DATE:
       return formatDateValue(value);
-    case FieldType.RELATION:
-      return String((value as Record<string, unknown>)?.display ?? value);
+    case FieldType.RELATION: {
+      const obj = value as Record<string, unknown> | null;
+      return String(obj?.display ?? obj?.displayValue ?? value);
+    }
     case FieldType.URL:
     case FieldType.BOOLEAN:
     case FieldType.AUTO_NUMBER:

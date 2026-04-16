@@ -272,8 +272,9 @@ function computeFormulaValues(
 }
 
 function getComparableValue(value: unknown): unknown {
-  if (typeof value === "object" && value !== null && "display" in value) {
-    return (value as { display: unknown }).display;
+  if (typeof value === "object" && value !== null) {
+    const obj = value as Record<string, unknown>;
+    return obj.display ?? obj.displayValue ?? value;
   }
 
   return value;
@@ -534,8 +535,8 @@ export async function listRecords(
         memoryFilterGroups.some((group) =>
           group.conditions.every((cond) => {
             const raw = record.data[cond.fieldKey];
-            const val = typeof raw === "object" && raw !== null && "display" in raw
-              ? (raw as { display: unknown }).display
+            const val = typeof raw === "object" && raw !== null
+              ? ((raw as Record<string, unknown>).display ?? (raw as Record<string, unknown>).displayValue ?? raw)
               : raw;
             switch (cond.op) {
               case "between": {

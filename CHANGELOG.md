@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.5.2](https://github.com/zweien/docx-template-system/compare/v0.5.1...v0.5.2) (2026-04-16)
+
+
+### Bug Fixes
+
+* **agent2:** PersistableMessage 类型添加 id 字段修复构建失败 ([2a1ed03](https://github.com/zweien/docx-template-system/commit/2a1ed03e5160d6b8be4630ddb2262c6731895650))
+
 ## [0.5.1](https://github.com/zweien/docx-template-system/compare/v0.5.0...v0.5.1) (2026-04-16)
 
 

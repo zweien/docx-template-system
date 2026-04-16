@@ -44,6 +44,7 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   [FieldType.FORMULA]: "公式",
   [FieldType.COUNT]: "计数",
   [FieldType.LOOKUP]: "查找",
+  [FieldType.ROLLUP]: "汇总",
 };
 
 function buildInverseFieldPreview(key: string): string {

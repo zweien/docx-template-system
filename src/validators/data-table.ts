@@ -52,6 +52,14 @@ export const dataFieldItemSchema = z.object({
     z.object({ kind: z.enum(["created", "updated"]) }),
     z.object({ countSourceFieldId: z.string() }),
     z.object({ lookupSourceFieldId: z.string(), lookupTargetFieldKey: z.string() }),
+    z.object({
+      rollupSourceFieldId: z.string(),
+      rollupTargetFieldKey: z.string(),
+      rollupAggregateType: z.enum([
+        "SUM", "AVG", "MIN", "MAX", "COUNT", "COUNTA",
+        "ARRAYJOIN", "ARRAYUNIQUE", "TRUE_COUNT", "FALSE_COUNT",
+      ]),
+    }),
   ]).nullable().optional(),
   relationTo: z.string().nullable().optional(),
   displayField: z.string().nullable().optional(),

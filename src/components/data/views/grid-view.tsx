@@ -152,7 +152,6 @@ function getFrozenStyle(
     position: "sticky",
     left,
     zIndex: index === frozenFieldCount - 1 ? 4 : 3,
-    backgroundColor: "hsl(var(--background))",
   };
 }
 
@@ -186,9 +185,9 @@ function DraggableColumnHeader({
     <th
       ref={ref}
       className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 relative border-r border-border",
-        isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing",
-        frozenStyle && "bg-muted",
+        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 relative border-r border-neutral-400",
+        isDragging ? "opacity-50 bg-muted" : "bg-muted cursor-grab active:cursor-grabbing",
+        frozenStyle && "bg-muted isolate",
         frozenFieldCount && frozenFieldCount > 0 && index === frozenFieldCount - 1 && "frozen-last-col"
       )}
       style={{ width: columnWidth, ...(frozenStyle ?? {}) }}
@@ -679,6 +678,7 @@ export function GridView({
   const READONLY_FIELD_TYPES: readonly string[] = [
     FieldType.AUTO_NUMBER, FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER,
     FieldType.FORMULA, FieldType.RELATION_SUBTABLE, FieldType.COUNT, FieldType.LOOKUP,
+    FieldType.ROLLUP,
   ];
 
   const computeFillValue = useCallback((fieldType: string, originalValue: unknown, step: number, mode: "increment" | "copy"): unknown => {
@@ -1125,6 +1125,7 @@ export function GridView({
     const readOnlyTypes: Set<FieldType> = new Set([
       FieldType.RELATION_SUBTABLE, FieldType.AUTO_NUMBER,
       FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER, FieldType.FORMULA,
+      FieldType.ROLLUP,
     ]);
     const data: Record<string, unknown> = {};
     for (const field of orderedVisibleFields) {
@@ -1409,7 +1410,7 @@ export function GridView({
       const rowContent = (
         <>
           <td
-            className="w-10 sticky left-0 z-[5] bg-background border-r px-1"
+            className="w-10 sticky left-0 z-[5] bg-background isolate border-r px-1"
             onContextMenu={(e) => captureRowHeader(e, record.id, flatRowIndex)}
           >
             <Checkbox
@@ -1454,12 +1455,12 @@ export function GridView({
                 data-col={fieldIndex}
                 style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                 className={cn(
-                  "align-middle border-r border-border", rhClasses.td,
+                  "align-middle border-r border-neutral-400", rhClasses.td,
                   // Only apply overflow-hidden when NOT editing a field with a dropdown (RELATION)
                   !(isEditing && field.type === FieldType.RELATION) && "overflow-hidden",
                   (rowHeight ?? 40) < 56 && "whitespace-nowrap",
                   rhClasses.text,
-                  frozenTdStyle && "bg-background",
+                  frozenTdStyle && "bg-background isolate",
                   frozenFieldCountValue > 0 &&
                     fieldIndex === frozenFieldCountValue - 1 &&
                     "frozen-last-col relative",
@@ -1679,7 +1680,7 @@ export function GridView({
           </colgroup>
           <DragDropProvider onDragEnd={handleColumnDragEnd}>
             <thead className="[&_tr]:border-b">
-              <tr className="border-b transition-colors hover:bg-muted/50 sticky top-0 z-10 bg-muted">
+              <tr className="border-b sticky top-0 z-10 bg-muted">
               <th className="w-10 h-10 sticky left-0 z-[13] bg-muted border-r px-1">
                 <Checkbox
                   checked={records.length > 0 && selectedIdsSet.size === records.length}
@@ -1732,7 +1733,7 @@ export function GridView({
                 </DraggableColumnHeader>
               );
               })}
-              <th className="h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 w-[80px]">操作</th>
+              <th className="h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 w-[80px] bg-muted">操作</th>
             </tr>
           </thead>
         </DragDropProvider>
@@ -1808,7 +1809,7 @@ export function GridView({
                   className="border-b hover:bg-primary/5 cursor-pointer group"
                   onClick={handleQuickAddRow}
                 >
-                  <td className="w-10 sticky left-0 z-[5] bg-background border-r" />
+                  <td className="w-10 sticky left-0 z-[5] bg-background isolate border-r" />
                   {canDragSort && <td className="w-8" />}
                   <td
                     colSpan={orderedVisibleFields.length + 1}
@@ -1831,12 +1832,12 @@ export function GridView({
               <td className="p-2 text-xs text-muted-foreground w-10" />
               {orderedVisibleFields.map((field) => {
                 const agg = columnAggregations?.[field.key];
-                if (!agg) return <td key={field.key} className="p-2 border-r border-border" />;
+                if (!agg) return <td key={field.key} className="p-2 border-r border-neutral-400" />;
                 const summary = summaryData[field.key];
                 return (
                   <td
                     key={field.key}
-                    className="p-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted/50 border-r border-border"
+                    className="p-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted/50 border-r border-neutral-400"
                     style={{ width: columnWidths[field.key] ?? DEFAULT_COL_WIDTH }}
                     onClick={() => {
                       const cycle = getAvailableAggTypes(field.type);

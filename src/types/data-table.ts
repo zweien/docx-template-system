@@ -85,6 +85,12 @@ export interface FieldOptions {
   lookupSourceFieldId?: string;
   /** LOOKUP: target field key in the related table to read from */
   lookupTargetFieldKey?: string;
+  /** ROLLUP: source relation field ID */
+  rollupSourceFieldId?: string;
+  /** ROLLUP: target field key in the related table to aggregate */
+  rollupTargetFieldKey?: string;
+  /** ROLLUP: aggregation function */
+  rollupAggregateType?: RollupAggregateType;
 }
 
 export function parseFieldOptions(raw: unknown): FieldOptions {
@@ -257,6 +263,11 @@ export type AggregateType =
   | "latest"
   | "checked"
   | "unchecked";
+
+export type RollupAggregateType =
+  | "SUM" | "AVG" | "MIN" | "MAX" | "COUNT" | "COUNTA"
+  | "ARRAYJOIN" | "ARRAYUNIQUE"
+  | "TRUE_COUNT" | "FALSE_COUNT";
 
 export interface SummaryRowData {
   [fieldKey: string]: {

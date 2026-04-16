@@ -43,7 +43,7 @@ interface FieldChange {
 }
 
 const SKIP_HISTORY_FIELD_TYPES = new Set([
-  "RELATION_SUBTABLE", "SYSTEM_TIMESTAMP", "SYSTEM_USER", "FORMULA", "COUNT",
+  "RELATION_SUBTABLE", "SYSTEM_TIMESTAMP", "SYSTEM_USER", "FORMULA", "COUNT", "ROLLUP",
 ]);
 
 function detectFieldChanges(
@@ -251,7 +251,7 @@ function splitRecordDataByFieldType(
       continue;
     }
     // Skip computed read-only fields — they are recalculated by refreshRelationSnapshots
-    if (fieldType === "COUNT" || fieldType === "LOOKUP") {
+    if (fieldType === "COUNT" || fieldType === "LOOKUP" || fieldType === "ROLLUP") {
       continue;
     }
 
@@ -1236,7 +1236,8 @@ export function validateRecordData(
       field.type === "SYSTEM_USER" ||
       field.type === "FORMULA" ||
       field.type === "COUNT" ||
-      field.type === "LOOKUP"
+      field.type === "LOOKUP" ||
+      field.type === "ROLLUP"
     ) {
       continue;
     }

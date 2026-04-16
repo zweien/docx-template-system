@@ -174,6 +174,7 @@ export function DynamicRecordForm({
             break;
           case FieldType.COUNT:
           case FieldType.LOOKUP:
+          case FieldType.ROLLUP:
             fieldSchema = z.unknown().nullable().optional();
             break;
           default:
@@ -233,7 +234,6 @@ export function DynamicRecordForm({
     const fieldById = new Map(fields.map((f) => [f.id, f]));
 
     for (const cf of fields) {
-      if (cf.type !== FieldType.COUNT && cf.type !== FieldType.LOOKUP) continue;
       const opts = parseFieldOptions(cf.options);
 
       if (cf.type === FieldType.COUNT && opts.countSourceFieldId) {
@@ -257,6 +257,26 @@ export function DynamicRecordForm({
           if (res.ok) {
             const record = await res.json();
             setValue(cf.key, record?.data?.[opts.lookupTargetFieldKey] ?? null);
+          }
+        } catch {
+          // ignore — value will update on full save
+        }
+      }
+
+      if (cf.type === FieldType.ROLLUP && opts.rollupSourceFieldId && opts.rollupTargetFieldKey) {
+        const src = fieldById.get(opts.rollupSourceFieldId);
+        if (!src || src.key !== fieldKey || src.type !== FieldType.RELATION) continue;
+        const recordId = typeof value === 'string' ? value : null;
+        if (!recordId || !src.relationTo) {
+          setValue(cf.key, null);
+          continue;
+        }
+        try {
+          const res = await fetch(`/api/data-tables/${src.relationTo}/records/${recordId}`);
+          if (res.ok) {
+            const record = await res.json();
+            // SINGLE relation: take value directly, no aggregation
+            setValue(cf.key, record?.data?.[opts.rollupTargetFieldKey] ?? null);
           }
         } catch {
           // ignore — value will update on full save
@@ -421,7 +441,8 @@ export function DynamicRecordForm({
         );
 
       case FieldType.COUNT:
-      case FieldType.LOOKUP: {
+      case FieldType.LOOKUP:
+      case FieldType.ROLLUP: {
         const rawVal = watch(field.key);
         const displayVal = Array.isArray(rawVal) ? rawVal.join(", ") : String(rawVal ?? "");
         return (

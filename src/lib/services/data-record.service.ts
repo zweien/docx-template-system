@@ -242,12 +242,16 @@ function splitRecordDataByFieldType(
   > = {};
 
   for (const [fieldKey, value] of Object.entries(data)) {
-    if (fieldTypeByKey.get(fieldKey) === "RELATION_SUBTABLE" ||
-        fieldTypeByKey.get(fieldKey) === "COUNT") {
+    const fieldType = fieldTypeByKey.get(fieldKey);
+    if (fieldType === "RELATION_SUBTABLE") {
       relationData[fieldKey] = value as
         | RelationSubtableValueItem[]
         | RelationSubtableValueItem
         | null;
+      continue;
+    }
+    // Skip computed read-only fields — they are recalculated by refreshRelationSnapshots
+    if (fieldType === "COUNT" || fieldType === "LOOKUP") {
       continue;
     }
 

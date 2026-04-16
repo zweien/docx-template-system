@@ -63,4 +63,28 @@ describe("evaluateFormula", () => {
   it("should evaluate NOT", () => {
     expect(evaluateFormula("NOT({ active })", data)).toBe(false);
   });
+
+  describe("parameter validation", () => {
+    it("should error on SUM with no args", () => {
+      expect(evaluateFormula("SUM()", data)).toBe("#ERROR:SUM 至少需要 1 个参数");
+    });
+
+    it("should error on IF with one arg", () => {
+      expect(evaluateFormula("IF({ active })", data)).toBe("#ERROR:IF 至少需要 2 个参数");
+    });
+
+    it("should error on unknown function", () => {
+      expect(evaluateFormula("FAKE(1)", data)).toBe("#ERROR");
+    });
+
+    it("should allow optional args in ROUND", () => {
+      expect(evaluateFormula("ROUND(3.456)", data)).toBe(3);
+    });
+
+    it("should allow NOW with no args", () => {
+      const result = evaluateFormula("NOW()", data);
+      expect(typeof result).toBe("string");
+      expect(result).toContain("20");
+    });
+  });
 });

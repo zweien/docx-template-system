@@ -3,7 +3,7 @@
 import { useRef, useState, useCallback, useMemo } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import type { DataFieldItem } from "@/types/data-table";
-import { ALL_FUNCTIONS, FUNCTION_CATALOG } from "@/lib/formula/function-catalog";
+import { ALL_FUNCTIONS, FUNCTION_CATALOG, type FunctionEntry } from "@/lib/formula/function-catalog";
 
 interface FormulaEditorProps {
   initialValue: string;
@@ -12,6 +12,14 @@ interface FormulaEditorProps {
   error?: string | null;
   livePreview?: unknown;
 }
+
+const TYPE_LABELS: Record<string, string> = {
+  number: "数字",
+  string: "文本",
+  boolean: "布尔",
+  date: "日期",
+  any: "任意",
+};
 
 export function FormulaEditor({
   initialValue,
@@ -25,6 +33,7 @@ export function FormulaEditor({
   const [pickerFilter, setPickerFilter] = useState("");
   const [pickerMode, setPickerMode] = useState<"field" | "function">("field");
   const [showRef, setShowRef] = useState(false);
+  const [selectedFn, setSelectedFn] = useState<FunctionEntry | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const editableFields = useMemo(
@@ -204,7 +213,7 @@ export function FormulaEditor({
 
         {/* Autocomplete picker */}
         {showPicker && (
-          <div className="absolute z-50 top-full mt-1 w-72 max-h-52 overflow-auto border rounded-md bg-background shadow-lg">
+          <div className="absolute z-50 top-full mt-1 w-80 max-h-52 overflow-auto border rounded-md bg-background shadow-lg">
             <div className="p-1.5 border-b">
               <input
                 placeholder={pickerMode === "field" ? "搜索字段..." : "搜索函数..."}
@@ -241,8 +250,13 @@ export function FormulaEditor({
                   className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50"
                   onClick={() => insertFunction(fn)}
                 >
-                  <span className="font-mono font-medium">{fn.name}</span>
-                  <span className="text-xs text-muted-foreground ml-2">
+                  <div className="flex items-baseline gap-1">
+                    <span className="font-mono font-medium">{fn.name}</span>
+                    <span className="text-xs text-muted-foreground truncate">
+                      {fn.syntax.replace(fn.name, "")}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground block">
                     {fn.description}
                   </span>
                 </button>
@@ -271,13 +285,16 @@ export function FormulaEditor({
         <button
           type="button"
           className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-muted-foreground hover:bg-muted/30"
-          onClick={() => setShowRef(!showRef)}
+          onClick={() => {
+            setShowRef(!showRef);
+            if (showRef) setSelectedFn(null);
+          }}
         >
           <span>函数参考</span>
           <span>{showRef ? "▴" : "▾"}</span>
         </button>
         {showRef && (
-          <div className="border-t px-3 py-2 max-h-48 overflow-y-auto">
+          <div className="border-t px-3 py-2 max-h-64 overflow-y-auto">
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
               {FUNCTION_CATALOG.map((cat) => (
                 <div key={cat.label}>
@@ -288,16 +305,70 @@ export function FormulaEditor({
                     <button
                       key={fn.name}
                       type="button"
-                      className="block font-mono text-muted-foreground hover:text-foreground truncate w-full text-left"
-                      title={`${fn.syntax} — ${fn.description}`}
-                      onClick={() => insertFromRef(fn)}
+                      className={`block w-full text-left rounded px-1 py-0.5 ${
+                        selectedFn?.name === fn.name
+                          ? "bg-muted font-medium text-foreground"
+                          : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"
+                      }`}
+                      onClick={() =>
+                        setSelectedFn(selectedFn?.name === fn.name ? null : fn)
+                      }
                     >
-                      {fn.name}
+                      <span className="font-mono">{fn.name}</span>
+                      <span className="ml-1">{fn.description}</span>
                     </button>
                   ))}
                 </div>
               ))}
             </div>
+
+            {/* Detail panel */}
+            {selectedFn && (
+              <div className="mt-2 pt-2 border-t text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <p className="font-mono font-medium text-sm">{selectedFn.syntax}</p>
+                  <button
+                    type="button"
+                    className="text-primary hover:underline shrink-0 ml-2"
+                    onClick={() => insertFromRef(selectedFn)}
+                  >
+                    插入
+                  </button>
+                </div>
+                <p className="text-muted-foreground">{selectedFn.description}</p>
+                {selectedFn.params.length > 0 && (
+                  <div>
+                    <p className="font-medium mb-0.5">参数:</p>
+                    <ul className="list-disc list-inside space-y-0.5 text-muted-foreground">
+                      {selectedFn.params.map((p) => (
+                        <li key={p.name}>
+                          <span className="font-mono text-foreground">{p.name}</span>
+                          <span className="ml-1">
+                            ({TYPE_LABELS[p.type]}{p.optional ? "，可选" : ""}{p.repeated ? "，可重复" : ""})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                <p>
+                  返回: <span className="text-muted-foreground">{TYPE_LABELS[selectedFn.returnType]}</span>
+                </p>
+                {selectedFn.example && (
+                  <div>
+                    <p className="font-medium mb-0.5">示例:</p>
+                    <p className="font-mono bg-muted/30 rounded px-1.5 py-0.5">
+                      {selectedFn.example}
+                      {selectedFn.exampleResult && (
+                        <span className="text-muted-foreground ml-1">
+                          = {selectedFn.exampleResult}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>

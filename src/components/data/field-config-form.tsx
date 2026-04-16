@@ -198,6 +198,47 @@ export function FieldConfigForm({
     const opts = parseFieldOptions(field?.options);
     return opts.lookupTargetFieldKey ?? "";
   });
+  const [lookupTargetFields, setLookupTargetFields] = useState<DataFieldItem[]>(() => {
+    if (field?.relationTo) {
+      const table = availableTables.find((item) => item.id === field.relationTo);
+      return table?.fields ?? [];
+    }
+    return [];
+  });
+
+  // Load target table fields when lookup source field changes
+  useEffect(() => {
+    if (!lookupSourceFieldId) {
+      setLookupTargetFields([]);
+      return;
+    }
+    const sourceField = allFields.find((f) => f.id === lookupSourceFieldId);
+    if (!sourceField?.relationTo) {
+      setLookupTargetFields([]);
+      return;
+    }
+
+    // Check if we already have fields from availableTables
+    const localTable = availableTables.find((t) => t.id === sourceField.relationTo);
+    if (localTable?.fields?.length) {
+      setLookupTargetFields(localTable.fields);
+      return;
+    }
+
+    let cancelled = false;
+    fetch(`/api/data-tables/${sourceField.relationTo}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const fields = data.data?.fields ?? data.fields ?? [];
+        setLookupTargetFields(fields);
+      })
+      .catch(() => {
+        if (!cancelled) setLookupTargetFields([]);
+      });
+
+    return () => { cancelled = true; };
+  }, [lookupSourceFieldId, allFields, availableTables]);
 
   // Formula validation
   const formulaError = useMemo(() => {
@@ -728,16 +769,14 @@ export function FieldConfigForm({
                 {lookupSourceFieldId && (() => {
                   const sourceField = allFields.find((f) => f.id === lookupSourceFieldId);
                   if (!sourceField?.relationTo) return null;
-                  const targetTableFields = availableTables
-                    .find((t) => t.id === sourceField.relationTo)
-                    ?.fields.filter(
-                      (f) =>
-                        f.type !== FieldType.RELATION &&
-                        f.type !== FieldType.RELATION_SUBTABLE &&
-                        f.type !== FieldType.COUNT &&
-                        f.type !== FieldType.LOOKUP &&
-                        f.type !== FieldType.FORMULA
-                    ) ?? [];
+                  const targetTableFields = lookupTargetFields.filter(
+                    (f) =>
+                      f.type !== FieldType.RELATION &&
+                      f.type !== FieldType.RELATION_SUBTABLE &&
+                      f.type !== FieldType.COUNT &&
+                      f.type !== FieldType.LOOKUP &&
+                      f.type !== FieldType.FORMULA
+                  );
                   if (targetTableFields.length === 0) return null;
                   return (
                     <>

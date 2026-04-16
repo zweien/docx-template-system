@@ -631,7 +631,15 @@ export function GridView({
       if (!response.ok) {
         throw new Error("保存失败");
       }
-      onUpdateRecordField(recordId, fieldKey, value);
+      // Use server-returned data to update all fields (including computed COUNT/LOOKUP)
+      const updatedRecord = (await response.json()) as DataRecordItem | null;
+      if (updatedRecord?.data) {
+        for (const [key, val] of Object.entries(updatedRecord.data)) {
+          onUpdateRecordField(recordId, key, val);
+        }
+      } else {
+        onUpdateRecordField(recordId, fieldKey, value);
+      }
     },
     [tableId, onUpdateRecordField]
   );

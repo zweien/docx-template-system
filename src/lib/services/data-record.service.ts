@@ -29,6 +29,7 @@ import { getTable } from "./data-table.service";
 import {
   removeAllRelationsForRecord,
   refreshSnapshotsForTargetRecord,
+  refreshSnapshotsForSourceRecords,
   syncRelationSubtableValues,
 } from "./data-relation.service";
 
@@ -903,6 +904,11 @@ export async function patchField(
           const refreshResult = await refreshSnapshotsForTargetRecord({ tx, recordId });
           if (!refreshResult.success) {
             throw new Error(`${refreshResult.error.code}:${refreshResult.error.message}`);
+          }
+          // Also refresh the current record's COUNT/LOOKUP computed fields
+          const sourceRefresh = await refreshSnapshotsForSourceRecords({ tx, recordIds: [recordId] });
+          if (!sourceRefresh.success) {
+            throw new Error(`${sourceRefresh.error.code}:${sourceRefresh.error.message}`);
           }
         } catch {
           // Snapshot refresh failure should not block the patch

@@ -913,3 +913,28 @@ export async function refreshSnapshotsForTargetRecord(input: {
     };
   }
 }
+
+/**
+ * Refresh relation snapshots (including COUNT/LOOKUP) for specific source records.
+ * Use this after editing a RELATION field on a source record to recompute its computed fields.
+ */
+export async function refreshSnapshotsForSourceRecords(input: {
+  tx: unknown;
+  recordIds: string[];
+}): Promise<ServiceResult<null>> {
+  const tx = asTxClient(input.tx);
+
+  try {
+    await refreshRelationSnapshotsForRecords(tx, input.recordIds);
+    return { success: true, data: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "刷新源记录快照失败";
+    return {
+      success: false,
+      error: {
+        code: "REFRESH_SOURCE_SNAPSHOTS_FAILED",
+        message,
+      },
+    };
+  }
+}

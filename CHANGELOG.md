@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.5.4](https://github.com/zweien/docx-template-system/compare/v0.5.3...v0.5.4) (2026-04-16)
+
+
+### Bug Fixes
+
+* code review 修复 — backfill 性能、查找替换安全性、LOOKUP 边界 ([62fd2b7](https://github.com/zweien/docx-template-system/commit/62fd2b74da1e75bedeace73f9bd1e951700912cf))
+
 ## [0.5.3](https://github.com/zweien/docx-template-system/compare/v0.5.2...v0.5.3) (2026-04-16)
 
 ## [0.5.2](https://github.com/zweien/docx-template-system/compare/v0.5.1...v0.5.2) (2026-04-16)

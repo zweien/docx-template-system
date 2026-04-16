@@ -10,26 +10,69 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
+> **v0.4.0**
+
 模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。
 
-当前开发环境已接入 `authentik` 统一认证，默认不再使用本地账号密码登录。
-
 ## 功能特性
+
+### 模板与文档
 
 - **模板管理** — 上传、编辑、发布、归档 Word 模板，支持版本历史
 - **智能解析** — 自动从 DOCX 文件中提取占位符，支持简单字段和动态表格块
 - **动态表单** — 根据模板占位符自动生成填写表单，支持文本、多行文本、明细表
 - **文档生成** — Python 服务替换模板占位符，保留原始格式（含合并单元格）
-- **主数据管理** — 自定义数据表与字段，支持数据选择器绑定
 - **批量生成** — 上传 Excel 数据批量生成文档，支持字段自动映射
 - **草稿系统** — 表单数据自动保存，随时恢复编辑
-- **导入导出** — Excel 导入主数据，记录数据导出为 Excel
+
+### 主数据管理
+
+- **自定义数据表** — 创建数据表，配置多种字段类型
+- **15 种字段类型** — 文本、数字、日期、单选/多选（彩色标签）、邮箱、电话、附件、URL、勾选框、关联、关系子表格、自动编号、创建/修改时间、创建/修改人、公式
+- **5 种视图** — 表格（Grid）、看板（Kanban）、画廊（Gallery）、时间线（Timeline）、表单（Form）
+- **Excel 导入导出** — Excel 导入主数据（支持字段映射和去重），记录数据导出为 Excel
+- **数据表备份** — 完整导出/导入数据表结构（字段配置）和数据记录
+
+### 表格视图高级功能
+
+- **单元格编辑** — 双击编辑、批量填充、拖拽复制、撤销/重做
+- **查找替换** — Ctrl+F 搜索单元格内容，支持替换
+- **排序筛选** — 多字段排序、条件筛选、字段筛选器
+- **条件格式** — 基于规则自动设置行/单元格背景色和文字颜色
+- **列冻结** — 固定左侧列不随横向滚动
+- **行高调整** — 紧凑/标准/宽松三种行高模式
+- **分组折叠** — 按字段值分组显示，支持折叠/展开
+
+### 公式引擎
+
+- **26 个内置函数** — 数学（SUM, AVERAGE, MIN, MAX, ROUND, ABS, CEILING, FLOOR）、逻辑（IF, AND, OR, NOT）、文本（CONCAT, LEN, LEFT, RIGHT, MID, UPPER, LOWER, TRIM）、日期（NOW, YEAR, MONTH, DAY, DATE_DIFF）、类型转换（NUMBER, TEXT）
+- **公式编辑器** — 字段引用补全（输入 `{` 触发）、函数自动补全、函数参考面板（语法+参数+示例）、实时预览、语法错误提示、循环引用检测
+- **可扩展设计** — 统一函数元数据（参数类型、返回值、示例），新增函数只需编辑 catalog + evaluator 两个文件
+
+### 表单视图与分享
+
+- **可视化表单构建** — 拖拽排序字段、字段分组、自定义标题/描述/提交按钮文字
+- **公开分享链接** — 生成带过期时间的公开表单 URL，支持提交次数统计
+- **公开表单提交** — 无需登录即可填写提交，字段类型安全校验
+
+### AI 智能助手
+
+- **AI 对话** — 多模型聊天界面，流式响应，支持附件上传和文本提取
+- **AI 填充助手** — 对话式表单填写，AI 智能推荐字段值，支持模型选择
+- **工具调用** — MCP (Model Context Protocol) 集成，支持工具确认工作流
+- **对话管理** — 历史记录、收藏、建议系统
+
+### 系统管理
+
+- **审计日志** — 记录数据创建/更新/删除、表单分享/提交等关键操作
+- **用户管理** — 管理员/普通用户角色，邮箱身份映射
+- **系统设置** — AI 模型配置、MCP 服务器管理
 
 ## 技术栈
 
 | 层级 | 技术 |
 |------|------|
-| 前端框架 | Next.js 16 (App Router) |
+| 前端框架 | Next.js 16 (App Router, Turbopack) |
 | UI 组件 | shadcn/ui v4 (Base UI), Tailwind CSS 4 |
 | 数据库 | PostgreSQL + Prisma 7 (Driver Adapter) |
 | 认证 | NextAuth v4 + authentik OIDC |
@@ -68,7 +111,14 @@ AUTHENTIK_ADMIN_EMAILS="admin@example.com,asfd@qqc.co"
 - `AUTHENTIK_ISSUER` 必须指向 authentik 中对应应用的 issuer，例如 `http://127.0.0.1:9000/application/o/docx-template-system`
 - `AUTHENTIK_CLIENT_ID` 和 `AUTHENTIK_CLIENT_SECRET` 只能从 authentik 后台复制
 - `AUTHENTIK_ADMIN_EMAILS` 只用于首次统一登录时自动赋予本地 `ADMIN` 角色
-- 本地 `User.role` 仍然保留，统一认证只负责“是谁”，业务权限仍由本系统负责
+- 本地 `User.role` 仍然保留，统一认证只负责"是谁"，业务权限仍由本系统负责
+
+### 开发模式绕过认证
+
+设置 `DEV_BYPASS_AUTH=true` 和 `NEXT_PUBLIC_DEV_BYPASS_AUTH=true` 后，登录页显示管理员/普通用户快捷登录按钮，无需启动 Authentik。使用种子用户账号（`npx prisma db seed` 初始化）：
+
+- 管理员：`admin@example.com` / `admin123`
+- 普通用户：`user@example.com` / `user123`
 
 ### 安装与运行
 
@@ -95,23 +145,7 @@ cd ..
 npm run dev
 ```
 
-说明：
-
-- `npm run dev` 默认使用 Turbopack（Next.js 16）
-- `npm run build` 使用 Turbopack 构建
-
-打开 http://localhost:8060/login ，点击“前往统一登录”：
-
-- `akadmin`
-- 密码使用当前 authentik 实例中的管理员密码
-
-如果 `authentik` 中用户邮箱与本地用户邮箱一致，会自动认领本地角色：
-
-- `admin@example.com` -> `ADMIN`
-- `asfd@qqc.co` -> `ADMIN`
-- 其它首次登录用户默认会创建为 `USER`
-
-如果你需要先在本地库里准备角色映射，可直接在“用户管理”中新增邮箱和角色。该页面不再维护本地密码，只维护本地业务身份映射。
+打开 http://localhost:8060/login ，使用 authentik 登录或开发模式快捷登录。
 
 ### 常用命令
 
@@ -120,14 +154,12 @@ npm run dev          # 启动开发服务器 (Turbopack, 端口 8060)
 npm run build        # 生产构建 (Turbopack)
 npm run start        # 启动生产服务
 npm run lint         # ESLint 检查
-npm run test         # 运行测试 (watch 模式)
 npm run test:run     # 运行测试 (单次)
-npm run release      # 发布新版本 (自动 bump + CHANGELOG + git tag)
-npm run release:minor # 发布 minor 版本
-npm run release:major # 发布 major 版本
+npx tsc --noEmit     # 类型检查
 npx prisma db push   # 同步数据库 schema
 npx prisma generate  # 生成 Prisma Client
 npx prisma studio    # 数据库可视化工具
+npm run release      # 发布新版本 (自动 bump + CHANGELOG + git tag)
 ```
 
 ### 数据迁移
@@ -152,11 +184,41 @@ npx tsx scripts/migrate-relation-fields.ts
 
 **注意：** 执行前务必先运行 `--dry-run` 检查数据完整性。
 
-## 文档索引
+## 键盘快捷键
 
-- [认证接入说明](./docs/authentication.md)
-- [开发运行说明](./docs/development.md)
-- [故障排查](./docs/troubleshooting.md)
+### 导航
+
+| 快捷键 | 功能 |
+|--------|------|
+| 方向键 | 移动单元格 |
+| Ctrl + 方向键 | 跳转到边缘（首/末行、行首/末） |
+| Tab / Shift+Tab | 右移 / 左移 |
+| Space | 展开/折叠分组行 |
+
+### 编辑
+
+| 快捷键 | 功能 |
+|--------|------|
+| Enter / F2 | 编辑单元格 |
+| Esc | 退出编辑 |
+| Delete / Backspace | 清除单元格 |
+| Shift+Enter | 插入新行 |
+
+### 剪贴板与操作
+
+| 快捷键 | 功能 |
+|--------|------|
+| Ctrl+C / X / V | 复制 / 剪切 / 粘贴 |
+| Ctrl+D | 复制行 |
+| Ctrl+Z / Y | 撤销 / 重做 |
+
+### 搜索与特殊
+
+| 快捷键 | 功能 |
+|--------|------|
+| Ctrl+F | 查找替换 |
+| Ctrl+; | 填入当前日期 |
+| Shift+方向键 | 扩展选区 |
 
 ## 模板语法
 
@@ -190,52 +252,13 @@ npx tsx scripts/migrate-relation-fields.ts
 └──────────┴──────────────┴──────────┘
 ```
 
-对应在 Word 中的实际输入：
-
-| 单元格      | 内容          |
-|------------|---------------|
-| A2         | `{{#材料}}`    |
-| B3         | `{{名称}}`     |
-| C3         | `{{数量}}`     |
-| A3         | `{{序号}}`     |
-| A4         | `{{/材料}}`    |
-
 #### 规则
 
 - **块名** 支持中文、英文和下划线（如 `材料`、`items`、`费用明细`）
 - 每个块名只能出现一对 `{{#name}}` / `{{/name}}` 标记
 - 起始标记和结束标记必须在**同一个 Word 表格**中
 - 起始标记行和结束标记行之间的 `{{ key }}` 会被识别为列定义
-- 列定义的 key 同样支持中文（如 `{{名称}}`、`{{数量}}`）
-
-#### 使用流程
-
-1. **上传模板** — 上传包含动态表格标记的 `.docx` 文件
-2. **解析占位符** — 系统自动识别简单字段和表格块，表格块的输入类型为「明细表」
-3. **配置占位符** — 在模板编辑页可修改标签、备注、是否必填
-4. **填写表单** — 表格块呈现为可编辑的明细表，支持添加/删除行
-5. **生成文档** — Python 服务将每行数据复制模板行，替换占位符后输出
-
-#### 生成效果
-
-假设用户填写了两行数据：
-
-| 序号 | 名称   | 数量 |
-|------|--------|------|
-| 1    | 钢材   | 100  |
-| 2    | 水泥   | 200  |
-
-生成的文档中，模板行会被复制为两行，标记行被移除：
-
-```
-┌──────────┬──────────────┬──────────┐
-│ 序号     │ 名称         │ 数量     │
-├──────────┼──────────────┼──────────┤
-│ 1        │ 钢材         │ 100      │
-├──────────┼──────────────┼──────────┤
-│ 2        │ 水泥         │ 200      │
-└──────────┴──────────────┴──────────┘
-```
+- 列定义的 key 同样支持中文
 
 #### 多个表格块
 
@@ -255,12 +278,16 @@ src/
 │   ├── (auth)/           # 登录页面
 │   └── (dashboard)/      # 主应用页面
 ├── components/
-│   ├── forms/            # 动态表单组件
+│   ├── agent2/           # AI 智能助手组件
+│   ├── forms/            # 动态表单组件 + AI 填充助手
 │   ├── templates/        # 模板管理组件
 │   ├── data/             # 主数据组件
+│   │   ├── views/        # 5 种视图 (Grid/Kanban/Gallery/Timeline/Form)
+│   │   └── formula-editor.tsx  # 公式编辑器
 │   └── ui/               # shadcn/ui 基础组件
 ├── lib/
 │   ├── services/         # 业务逻辑层 (ServiceResult 模式)
+│   ├── formula/          # 公式引擎 (tokenizer/AST/evaluator)
 │   ├── docx-parser.ts    # DOCX 占位符解析
 │   └── db.ts             # Prisma 客户端单例
 ├── types/                # TypeScript 接口
@@ -272,14 +299,18 @@ python-service/
 
 三层后端模式：`types/` → `validators/` → `services/` → API Routes。
 
+## 文档索引
+
+- [认证接入说明](./docs/authentication.md)
+- [开发运行说明](./docs/development.md)
+- [故障排查](./docs/troubleshooting.md)
+
 ## 认证边界
 
 - `authentik` 负责统一登录、OIDC 授权、退出登录
 - `NextAuth` 负责把 OIDC 用户映射为本地 Session
 - 本地数据库 `User` 表继续保留 `role`
 - 页面和 API 权限判断仍以本地 `role` 为准
-
-也就是说，这次改造只替换了“登录来源”，没有把业务权限搬到统一认证中心。
 
 ## License
 

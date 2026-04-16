@@ -386,6 +386,8 @@ export function FieldConfigList({
           if (!open) setEditingField(null);
         }}
         field={editingField}
+        fields={fields}
+        tableId={tableId}
         availableTables={tablesWithFields}
         existingFieldKeys={fields.map((f) => f.key)}
         onSubmit={editingField ? handleEditField : handleAddField}

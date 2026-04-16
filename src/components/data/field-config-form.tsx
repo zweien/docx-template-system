@@ -31,11 +31,15 @@ import type {
 import { parseSelectOptions, SELECT_COLORS } from "@/types/data-table";
 import { parseFieldOptions } from "@/types/data-table";
 import type { DataFieldInput } from "@/validators/data-table";
+import { FormulaEditor } from "@/components/data/formula-editor";
+import { parseFormula, evaluateFormula, detectCircularRefs } from "@/lib/formula";
 
 interface FieldConfigFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   field?: DataFieldItem | null;
+  fields?: DataFieldItem[];
+  tableId?: string;
   availableTables: { id: string; name: string; fields: DataFieldItem[] }[];
   existingFieldKeys?: string[];
   onSubmit: (data: DataFieldInput) => void;
@@ -142,6 +146,8 @@ export function FieldConfigForm({
   open,
   onOpenChange,
   field,
+  fields: allFields = [],
+  tableId,
   availableTables,
   existingFieldKeys = [],
   onSubmit,
@@ -178,6 +184,85 @@ export function FieldConfigForm({
     const opts = parseFieldOptions(field?.options);
     return opts.formula ?? "";
   });
+
+  // Formula validation
+  const formulaError = useMemo(() => {
+    const expr = formulaExpression.trim();
+    if (!expr) return null;
+    try {
+      parseFormula(expr);
+    } catch (e) {
+      return e instanceof Error ? e.message : "公式语法错误";
+    }
+    // Circular reference check
+    if (allFields.length > 0 && field?.key) {
+      const formulaMap: Record<string, string> = {};
+      for (const f of allFields) {
+        if (f.type === "FORMULA") {
+          const opts = parseFieldOptions(f.options);
+          if (opts.formula) formulaMap[f.key] = opts.formula;
+        }
+      }
+      formulaMap[field.key] = expr;
+      const cycle = detectCircularRefs(formulaMap);
+      if (cycle) return cycle;
+    }
+    return null;
+  }, [formulaExpression, allFields, field?.key]);
+
+  // Live preview: fetch sample record once when form opens
+  const [sampleData, setSampleData] = useState<Record<string, unknown> | null>(null);
+
+  useEffect(() => {
+    if (!open || fieldType !== FieldType.FORMULA || !tableId) return;
+    let cancelled = false;
+    fetch(`/api/data-tables/${tableId}/records?pageSize=1`)
+      .then((res) => res.json())
+      .then((result) => {
+        if (cancelled) return;
+        if (result.records?.[0]?.data) {
+          setSampleData(result.records[0].data);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [open, fieldType, tableId]);
+
+  // Reset all state when field prop changes (edit vs create)
+  useEffect(() => {
+    const opts = parseFieldOptions(field?.options);
+    setKey(field?.key ?? "");
+    setLabel(field?.label ?? "");
+    setFieldType(field?.type ?? FieldType.TEXT);
+    setRequired(field?.required ?? false);
+    setDefaultValue(field?.defaultValue ?? "");
+    setSelectOptions(parseSelectOptions(field?.options));
+    setSelectedTableId(field?.relationTo ?? "");
+    setSelectedDisplayField(field?.displayField ?? "");
+    setRelationCardinality(field?.relationCardinality ?? "SINGLE");
+    setInverseRelationCardinality(
+      field?.inverseRelationCardinality ??
+        (field?.relationCardinality === "MULTIPLE" ? "MULTIPLE" : "SINGLE")
+    );
+    setRelationSchemaFields(buildRelationSchemaDraft(field?.relationSchema?.fields));
+    const relTable = field?.relationTo
+      ? availableTables.find((t) => t.id === field.relationTo)
+      : undefined;
+    setRelationFields(relTable?.fields ?? []);
+    setFormulaExpression(opts.formula ?? "");
+    setSystemFieldKind(opts.kind ?? "created");
+    setError("");
+  }, [field, availableTables]);
+
+  const formulaPreview = useMemo(() => {
+    const expr = formulaExpression.trim();
+    if (!expr || formulaError || !sampleData) return undefined;
+    try {
+      return evaluateFormula(expr, sampleData);
+    } catch {
+      return undefined;
+    }
+  }, [formulaExpression, formulaError, sampleData]);
   const [systemFieldKind, setSystemFieldKind] = useState<"created" | "updated">(() => {
     const opts = parseFieldOptions(field?.options);
     return opts.kind ?? "created";
@@ -514,18 +599,14 @@ export function FieldConfigForm({
 
             {fieldType === FieldType.FORMULA && (
               <div className="grid gap-2">
-                <Label htmlFor="formula">公式表达式</Label>
-                <Textarea
-                  id="formula"
-                  placeholder="例如：price * quantity&#10;支持：+ - * / () 及函数 SUM, AVG, MIN, MAX, IF 等"
-                  value={formulaExpression}
-                  onChange={(event) => setFormulaExpression(event.target.value)}
-                  rows={4}
-                  className="font-mono text-sm"
+                <Label>公式表达式</Label>
+                <FormulaEditor
+                  initialValue={formulaExpression}
+                  fields={allFields}
+                  onChange={setFormulaExpression}
+                  error={formulaError}
+                  livePreview={formulaPreview}
                 />
-                <p className="text-xs text-zinc-500">
-                  使用其他字段标识作为变量，例如 <code className="bg-muted px-1 rounded">price * quantity</code>
-                </p>
               </div>
             )}
 

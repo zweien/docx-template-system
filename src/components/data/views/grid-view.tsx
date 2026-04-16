@@ -186,9 +186,9 @@ function DraggableColumnHeader({
     <th
       ref={ref}
       className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 relative border-r border-neutral-400",
+        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 relative border-r border-border",
         isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing",
-        frozenStyle && "bg-background",
+        frozenStyle && "bg-muted",
         frozenFieldCount && frozenFieldCount > 0 && index === frozenFieldCount - 1 && "frozen-last-col"
       )}
       style={{ width: columnWidth, ...(frozenStyle ?? {}) }}
@@ -1454,7 +1454,7 @@ export function GridView({
                 data-col={fieldIndex}
                 style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                 className={cn(
-                  "align-middle border-r border-neutral-400", rhClasses.td,
+                  "align-middle border-r border-border", rhClasses.td,
                   // Only apply overflow-hidden when NOT editing a field with a dropdown (RELATION)
                   !(isEditing && field.type === FieldType.RELATION) && "overflow-hidden",
                   (rowHeight ?? 40) < 56 && "whitespace-nowrap",
@@ -1679,8 +1679,8 @@ export function GridView({
           </colgroup>
           <DragDropProvider onDragEnd={handleColumnDragEnd}>
             <thead className="[&_tr]:border-b">
-              <tr className="border-b transition-colors hover:bg-muted/50 sticky top-0 z-10 bg-background">
-              <th className="w-10 h-10 sticky left-0 z-[13] bg-background border-r px-1">
+              <tr className="border-b transition-colors hover:bg-muted/50 sticky top-0 z-10 bg-muted">
+              <th className="w-10 h-10 sticky left-0 z-[13] bg-muted border-r px-1">
                 <Checkbox
                   checked={records.length > 0 && selectedIdsSet.size === records.length}
                   ref={(el) => {
@@ -1831,12 +1831,12 @@ export function GridView({
               <td className="p-2 text-xs text-muted-foreground w-10" />
               {orderedVisibleFields.map((field) => {
                 const agg = columnAggregations?.[field.key];
-                if (!agg) return <td key={field.key} className="p-2 border-r border-neutral-400" />;
+                if (!agg) return <td key={field.key} className="p-2 border-r border-border" />;
                 const summary = summaryData[field.key];
                 return (
                   <td
                     key={field.key}
-                    className="p-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted/50 border-r border-neutral-400"
+                    className="p-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted/50 border-r border-border"
                     style={{ width: columnWidths[field.key] ?? DEFAULT_COL_WIDTH }}
                     onClick={() => {
                       const cycle = getAvailableAggTypes(field.type);

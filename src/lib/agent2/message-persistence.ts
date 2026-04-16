@@ -2,6 +2,7 @@ import type { UIMessage } from "ai"
 import { parseThinkTaggedText } from "@/lib/agent2/think-parser"
 
 type PersistableMessage = {
+  id?: string
   role: "user" | "assistant"
   parts: UIMessage["parts"]
   attachments?: unknown

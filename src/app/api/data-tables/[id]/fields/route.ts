@@ -59,7 +59,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const existingTable = await getTable(id);
     const existingFields = existingTable.success ? existingTable.data.fields : [];
     const existingFieldIds = new Set(existingFields.map((f) => f.id));
+    const existingFieldById = new Map(existingFields.map((f) => [f.id, f]));
     const tableName = existingTable.success ? existingTable.data.name : id;
+    const existingBusinessKeys = existingTable.success ? existingTable.data.businessKeys ?? [] : [];
 
     const result = await updateFields(id, validated.fields, validated.businessKeys);
 
@@ -81,6 +83,44 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       (f) => f.id && existingFieldIds.has(f.id)
     );
 
+    // Build changedFields with old/new values for updated fields
+    const changedFields = updatedFields
+      .map((f) => {
+        const oldField = existingFieldById.get(f.id!);
+        if (!oldField) return null;
+        const oldVal = JSON.stringify({
+          label: oldField.label,
+          type: oldField.type,
+          required: oldField.required,
+          options: oldField.options,
+          relationTo: oldField.relationTo,
+          displayField: oldField.displayField,
+        });
+        const newVal = JSON.stringify({
+          label: f.label,
+          type: f.type,
+          required: f.required,
+          options: f.options,
+          relationTo: f.relationTo,
+          displayField: f.displayField,
+        });
+        if (oldVal === newVal) return null;
+        return {
+          key: f.key,
+          oldLabel: oldField.label,
+          newLabel: f.label,
+          oldType: oldField.type,
+          newType: f.type,
+        };
+      })
+      .filter(Boolean);
+
+    // Detect business key changes
+    const oldBk = new Set(existingBusinessKeys);
+    const newBk = new Set(validated.businessKeys ?? []);
+    const addedBusinessKeys = [...newBk].filter((k) => !oldBk.has(k));
+    const removedBusinessKeys = [...oldBk].filter((k) => !newBk.has(k));
+
     await logAudit({
       userId: session.user.id,
       userName: session.user.name,
@@ -92,9 +132,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       detail: {
         addedFields: addedFields.map((f) => ({ key: f.key, label: f.label, type: f.type })),
         removedFields: removedFields.map((f) => ({ key: f.key, label: f.label, type: f.type })),
-        updatedFieldKeys: updatedFields.map((f) => f.key),
+        changedFields,
+        addedBusinessKeys,
+        removedBusinessKeys,
         totalFields: validated.fields.length,
-        businessKeys: validated.businessKeys,
       },
       ipAddress: getClientIp(request),
       userAgent: getUserAgent(request),
@@ -102,13 +143,17 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Backfill COUNT field values for newly added COUNT fields
     const hasNewCountFields = addedFields.some((f) => f.type === FieldType.COUNT);
+    let backfillWarning = false;
     if (hasNewCountFields) {
-      backfillCountFieldValues(id).catch((err) => {
+      try {
+        await backfillCountFieldValues(id);
+      } catch (err) {
         console.error("COUNT 字段回填失败:", err);
-      });
+        backfillWarning = true;
+      }
     }
 
-    return NextResponse.json(result.data);
+    return NextResponse.json({ ...result.data, backfillWarning });
   } catch (error) {
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');

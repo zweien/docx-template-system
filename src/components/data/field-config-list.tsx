@@ -170,7 +170,11 @@ export function FieldConfigList({
       }
 
       router.refresh();
-      alert("字段配置已保存");
+      if (result.backfillWarning) {
+        alert("字段配置已保存，但计数字段回填失败，请稍后重试");
+      } else {
+        alert("字段配置已保存");
+      }
     } catch (error) {
       console.error("保存失败:", error);
       alert("保存失败");

@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.5.1](https://github.com/zweien/docx-template-system/compare/v0.5.0...v0.5.1) (2026-04-16)
+
+
+### Features
+
+* **audit:** 字段配置变更写入审计日志 ([ff455c1](https://github.com/zweien/docx-template-system/commit/ff455c1ab73056ac6c61e19527ac407fefea2d18))
+* **data-table:** 编辑页面 RELATION 变更后立即刷新 COUNT/LOOKUP ([9b3c9a6](https://github.com/zweien/docx-template-system/commit/9b3c9a61d4c0f19540833156c4442c9bc35fe518))
+* **data-table:** 新增 COUNT 字段类型，支持统计关联记录数量 ([d6e2fc4](https://github.com/zweien/docx-template-system/commit/d6e2fc40e2efec90589f438b380b677a297815e5))
+* **data-table:** 新增 LOOKUP 字段类型 ([dcb9eda](https://github.com/zweien/docx-template-system/commit/dcb9eda051693d19ad25bd8dd0d0a2fd1738ba90))
+
+
+### Bug Fixes
+
+* **data-table:** 编辑 RELATION 字段后刷新 COUNT/LOOKUP 计算值 ([ba69132](https://github.com/zweien/docx-template-system/commit/ba691323026baef141f80dbed66f90a3f0f1bf33))
+* **data-table:** 编辑页面 RELATION 变更后本地计算 COUNT/LOOKUP，不持久化 ([ca82125](https://github.com/zweien/docx-template-system/commit/ca821250eceac902a628820aad290ce811983402))
+* **data-table:** 编辑页面 RelationSelect 搜索不完整，改用 relation-options API ([cd30bd4](https://github.com/zweien/docx-template-system/commit/cd30bd44a9f1ada5e204f7507f06dcbed83d21bb))
+* **data-table:** 编辑页面取消不应保存数据，移除 RELATION onChange 实时写入 ([3b78d92](https://github.com/zweien/docx-template-system/commit/3b78d921f7ef54e60dc11cb7f87d6459703172f7))
+* **data-table:** COUNT/LOOKUP 只读计算字段不参与数据分割 ([8d614a2](https://github.com/zweien/docx-template-system/commit/8d614a2023a2addef87d8e78bcca5c4ae8d71ddb))
+* **data-table:** COUNT/LOOKUP 字段表单验证和后端验证修复 ([95aa8cd](https://github.com/zweien/docx-template-system/commit/95aa8cd478dbd282b37766109ef9f9f690f8580e))
+* **data-table:** RELATION 单元格编辑器下拉列表被 overflow-hidden 裁掉 ([d9b9cd4](https://github.com/zweien/docx-template-system/commit/d9b9cd4e6519e027e530af24174337b97cdc1f74))
+* **data-table:** RELATION 下拉用 createPortal 渲染到 body 避免被表格行遮挡 ([867f384](https://github.com/zweien/docx-template-system/commit/867f3841d1aff1abd827c6eee05379b30c04c3f4))
+* **data-table:** RELATION 选项下拉搜索不完整 ([39d9684](https://github.com/zweien/docx-template-system/commit/39d9684bd508f2a425226ba51786f59f64b24d6a))
+* **data-table:** RELATION 字段搜索显示值 ([14493bf](https://github.com/zweien/docx-template-system/commit/14493bfea391a1fd9fbf141c26ec08e9ebbc2b1a)), closes [#12](https://github.com/zweien/docx-template-system/issues/12)
+* **data-table:** RELATION 字段值同时兼容 display/displayValue 属性 ([8b03184](https://github.com/zweien/docx-template-system/commit/8b0318432f3b60491e288f1129d1933318952675))
+* **data-table:** updateRecord 路径也刷新 COUNT/LOOKUP 计算值 ([3f789ee](https://github.com/zweien/docx-template-system/commit/3f789ee44a89042129f6e322c706fdece32827a9))
+* **lookup:** 目标表字段动态加载 ([24146f7](https://github.com/zweien/docx-template-system/commit/24146f74e228c4ab0fcfc01760e11a11d62918d7))
+* **lookup:** 修复 RELATION 源 LOOKUP 字段值计算失败 ([173f715](https://github.com/zweien/docx-template-system/commit/173f7154f1248399683fa6c18aa3e141d5cc32b5))
+* review 修复 — 移除 COUNT font-mono、回填失败 alert、审计日志字段变更对比 ([ce3c7f7](https://github.com/zweien/docx-template-system/commit/ce3c7f7f62e20f110446012b681e96b8023d6a35))
+
 ## [0.5.0](https://github.com/zweien/docx-template-system/compare/v0.4.0...v0.5.0) (2026-04-16)
 
 

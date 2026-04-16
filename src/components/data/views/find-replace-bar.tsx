@@ -6,6 +6,18 @@ import { Input } from "@/components/ui/input";
 import { X, ChevronUp, ChevronDown, Replace } from "lucide-react";
 import { formatCellText } from "@/lib/format-cell";
 import type { DataFieldItem } from "@/types/data-table";
+import { FieldType } from "@/generated/prisma/enums";
+
+/** Field types where find-replace should not write back */
+const SKIP_REPLACE_TYPES: Set<string> = new Set([
+  FieldType.RELATION,
+  FieldType.RELATION_SUBTABLE,
+  FieldType.COUNT,
+  FieldType.LOOKUP,
+  FieldType.FORMULA,
+  FieldType.FILE,
+  FieldType.BOOLEAN,
+]);
 
 interface FindResult {
   /** Index in flatRecords (the full array including group rows) */
@@ -124,6 +136,7 @@ export function FindReplaceBar({
     const row = rows[r.flatRowIndex];
     if (!row) return;
     const field = fieldMap.get(r.fieldKey);
+    if (field && SKIP_REPLACE_TYPES.has(field.type)) return;
     const displayVal = field ? formatCellText(field, row.data[r.fieldKey]) : String(row.data[r.fieldKey] ?? "");
     const newVal = displayVal.replace(new RegExp(escapeRegex(findText), "gi"), replaceText);
     onReplace(r.recordId, r.fieldKey, newVal);
@@ -135,6 +148,7 @@ export function FindReplaceBar({
       const row = rows[r.flatRowIndex];
       if (!row) continue;
       const field = fieldMap.get(r.fieldKey);
+      if (field && SKIP_REPLACE_TYPES.has(field.type)) continue;
       const displayVal = field ? formatCellText(field, row.data[r.fieldKey]) : String(row.data[r.fieldKey] ?? "");
       const newVal = displayVal.replace(new RegExp(escapeRegex(findText), "gi"), replaceText);
       if (displayVal !== newVal) {

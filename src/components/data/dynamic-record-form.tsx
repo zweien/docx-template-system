@@ -239,19 +239,21 @@ export function DynamicRecordForm({
       if (cf.type === FieldType.COUNT && opts.countSourceFieldId) {
         const src = fieldById.get(opts.countSourceFieldId);
         if (src && src.key === fieldKey && src.type === FieldType.RELATION) {
-          setValue(cf.key, value ? 1 : 0);
+          const hasValue = typeof value === 'string' && value.length > 0;
+          setValue(cf.key, hasValue ? 1 : 0);
         }
       }
 
       if (cf.type === FieldType.LOOKUP && opts.lookupSourceFieldId && opts.lookupTargetFieldKey) {
         const src = fieldById.get(opts.lookupSourceFieldId);
         if (!src || src.key !== fieldKey || src.type !== FieldType.RELATION) continue;
-        if (!value || !src.relationTo) {
+        const recordId = typeof value === 'string' ? value : null;
+        if (!recordId || !src.relationTo) {
           setValue(cf.key, null);
           continue;
         }
         try {
-          const res = await fetch(`/api/data-tables/${src.relationTo}/records/${value}`);
+          const res = await fetch(`/api/data-tables/${src.relationTo}/records/${recordId}`);
           if (res.ok) {
             const record = await res.json();
             setValue(cf.key, record?.data?.[opts.lookupTargetFieldKey] ?? null);

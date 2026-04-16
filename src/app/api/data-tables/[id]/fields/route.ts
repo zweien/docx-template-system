@@ -141,15 +141,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       userAgent: getUserAgent(request),
     });
 
-    // Backfill COUNT / LOOKUP field values for newly added fields
+    // Backfill COUNT / LOOKUP field values for newly added fields only
     const hasNewCountFields = addedFields.some((f) => f.type === FieldType.COUNT);
     const hasNewLookupFields = addedFields.some((f) => f.type === FieldType.LOOKUP);
-    // Also backfill if existing COUNT/LOOKUP fields have no computed values yet
-    const hasExistingComputedFields = validated.fields.some(
-      (f) => f.type === FieldType.COUNT || f.type === FieldType.LOOKUP
-    );
     let backfillWarning = false;
-    if (hasNewCountFields || hasNewLookupFields || hasExistingComputedFields) {
+    if (hasNewCountFields || hasNewLookupFields) {
       try {
         await backfillCountFieldValues(id);
       } catch (err) {

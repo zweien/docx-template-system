@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
+import { parseFieldOptions } from "@/types/data-table";
 import type { RelationSubtableValueItem } from "@/types/data-table";
 import { parseSelectOptions } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
@@ -227,6 +228,41 @@ export function DynamicRecordForm({
     defaultValues,
   });
 
+  // Client-side computed field refresh (no API persistence)
+  const refreshComputedFieldsLocal = useCallback(async (fieldKey: string, value: unknown) => {
+    const fieldById = new Map(fields.map((f) => [f.id, f]));
+
+    for (const cf of fields) {
+      if (cf.type !== FieldType.COUNT && cf.type !== FieldType.LOOKUP) continue;
+      const opts = parseFieldOptions(cf.options);
+
+      if (cf.type === FieldType.COUNT && opts.countSourceFieldId) {
+        const src = fieldById.get(opts.countSourceFieldId);
+        if (src && src.key === fieldKey && src.type === FieldType.RELATION) {
+          setValue(cf.key, value ? 1 : 0);
+        }
+      }
+
+      if (cf.type === FieldType.LOOKUP && opts.lookupSourceFieldId && opts.lookupTargetFieldKey) {
+        const src = fieldById.get(opts.lookupSourceFieldId);
+        if (!src || src.key !== fieldKey || src.type !== FieldType.RELATION) continue;
+        if (!value || !src.relationTo) {
+          setValue(cf.key, null);
+          continue;
+        }
+        try {
+          const res = await fetch(`/api/data-tables/${src.relationTo}/records/${value}`);
+          if (res.ok) {
+            const record = await res.json();
+            setValue(cf.key, record?.data?.[opts.lookupTargetFieldKey] ?? null);
+          }
+        } catch {
+          // ignore — value will update on full save
+        }
+      }
+    }
+  }, [fields, setValue]);
+
   const handleFormSubmit = async (data: Record<string, unknown>) => {
     setError("");
     setIsSubmitting(true);
@@ -346,6 +382,7 @@ export function DynamicRecordForm({
             value={String(watch(field.key) ?? "")}
             onChange={(v) => {
               setValue(field.key, v);
+              void refreshComputedFieldsLocal(field.key, v);
             }}
             relationTableId={field.relationTo ?? ""}
             displayField={field.displayField ?? "id"}

@@ -464,6 +464,24 @@ async function refreshRelationSnapshotsForRecords(
     }
   }
 
+  // Collect linked record IDs from RELATION fields for LOOKUP resolution
+  if (lookupFields.length > 0 || countFields.length > 0) {
+    for (const record of records) {
+      const recordData = toRecordData(record.data);
+      for (const lookupField of lookupFieldsByTableId.get(record.tableId) ?? []) {
+        const opts = parseFieldOptions(lookupField.options);
+        if (!opts.lookupSourceFieldId || !opts.lookupTargetFieldKey) continue;
+        const sourceField = sourceFieldById.get(opts.lookupSourceFieldId);
+        if (sourceField?.type === "RELATION") {
+          const linkedId = recordData[sourceField.key];
+          if (typeof linkedId === "string" && linkedId) {
+            relatedRecordIds.add(linkedId);
+          }
+        }
+      }
+    }
+  }
+
   const relatedRecords = relatedRecordIds.size > 0
     ? await tx.dataRecord.findMany({
       where: {
@@ -550,7 +568,9 @@ async function refreshRelationSnapshotsForRecords(
       const opts = parseFieldOptions(lookupField.options);
       if (!opts.lookupSourceFieldId || !opts.lookupTargetFieldKey) continue;
       const sourceField = sourceFieldById.get(opts.lookupSourceFieldId);
-      if (!sourceField) continue;
+      if (!sourceField) {
+        continue;
+      }
 
       if (sourceField.type === "RELATION_SUBTABLE") {
         // Pull target field value from each related record snapshot
@@ -563,8 +583,13 @@ async function refreshRelationSnapshotsForRecords(
         });
       } else if (sourceField.type === "RELATION") {
         // Pull target field value from single linked record
-        const sourceValue = nextData[opts.lookupSourceFieldId] as Record<string, unknown> | null;
-        const linkedRecordId = sourceValue?.id as string | undefined;
+        // RELATION field stores the linked record ID directly as a string
+        const sourceValue = nextData[sourceField.key];
+        const linkedRecordId = (typeof sourceValue === "object" && sourceValue !== null)
+          ? (sourceValue as Record<string, unknown>).id as string | undefined
+          : typeof sourceValue === "string" && sourceValue
+            ? sourceValue
+            : undefined;
         if (linkedRecordId) {
           const linkedRecordData = relatedRecordById.get(linkedRecordId);
           nextData[lookupField.key] = linkedRecordData?.[opts.lookupTargetFieldKey] ?? null;

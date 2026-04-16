@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
 import type { RelationTargetOption } from "@/components/data/relation-target-picker";
 
@@ -24,6 +25,7 @@ export function RelationCellEditor({
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
   const committedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -68,7 +70,24 @@ export function RelationCellEditor({
   useEffect(() => {
     inputRef.current?.focus();
     updatePosition();
+    setMounted(true);
   }, [updatePosition]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!isOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      const target = e.target as Node;
+      if (containerRef.current?.contains(target)) return;
+      const dropdown = document.getElementById("relation-dropdown-portal");
+      if (dropdown?.contains(target)) return;
+      if (committedRef.current) return;
+      committedRef.current = true;
+      onCancel();
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, onCancel]);
 
   const optionMap = useMemo(
     () => new Map(options.map((o) => [o.id, o])),
@@ -77,12 +96,10 @@ export function RelationCellEditor({
 
   const currentLabel = useMemo(() => {
     if (!value) return null;
-    // value may already be "{ id, display }" object from resolved data
     if (typeof value === "object") return (value as { display?: string }).display;
     return optionMap.get(value)?.label ?? value;
   }, [value, optionMap]);
 
-  // Parse initial value to get the raw record ID
   const rawId = useMemo(() => {
     if (!value) return null;
     if (typeof value === "object" && "id" in (value as object)) {
@@ -99,17 +116,6 @@ export function RelationCellEditor({
   function handleClear() {
     committedRef.current = true;
     onCommit(null);
-  }
-
-  function handleBlur(e: React.FocusEvent) {
-    // Don't commit if clicking inside the dropdown
-    if (containerRef.current?.contains(e.relatedTarget as Node)) return;
-    // Also check the portal dropdown
-    const dropdownEl = document.getElementById("relation-dropdown-portal");
-    if (dropdownEl?.contains(e.relatedTarget as Node)) return;
-    if (committedRef.current) return;
-    committedRef.current = true;
-    onCancel();
   }
 
   // Fallback: plain text input when no relationTableId configured
@@ -135,8 +141,50 @@ export function RelationCellEditor({
       )
     : options;
 
+  const dropdown = isOpen && dropdownPos ? createPortal(
+    <div
+      id="relation-dropdown-portal"
+      style={{
+        position: "fixed",
+        top: dropdownPos.top,
+        left: dropdownPos.left,
+        zIndex: 9999,
+      }}
+      className="w-64 bg-background border rounded-md shadow-lg"
+    >
+      <div className="max-h-48 overflow-auto">
+        {isLoading ? (
+          <div className="p-3 text-center text-sm text-muted-foreground">
+            加载中...
+          </div>
+        ) : filteredOptions.length === 0 ? (
+          <div className="p-3 text-center text-sm text-muted-foreground">
+            {search ? "无匹配结果" : "暂无记录"}
+          </div>
+        ) : (
+          filteredOptions.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
+                option.id === rawId ? "bg-muted font-medium" : ""
+              }`}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                handleSelect(option.id, option.label);
+              }}
+            >
+              {option.label}
+            </button>
+          ))
+        )}
+      </div>
+    </div>,
+    document.body
+  ) : null;
+
   return (
-    <div ref={containerRef} className="relative" onBlur={handleBlur}>
+    <div ref={containerRef} className="relative">
       <Input
         ref={inputRef}
         value={search}
@@ -160,47 +208,7 @@ export function RelationCellEditor({
           {currentLabel ?? rawId}
         </span>
       )}
-
-      {isOpen && dropdownPos && typeof window !== "undefined" && (
-        <div
-          id="relation-dropdown-portal"
-          style={{
-            position: "fixed",
-            top: dropdownPos.top,
-            left: dropdownPos.left,
-            zIndex: 9999,
-          }}
-          className="w-64 bg-background border rounded-md shadow-lg"
-        >
-          <div className="max-h-48 overflow-auto">
-            {isLoading ? (
-              <div className="p-3 text-center text-sm text-muted-foreground">
-                加载中...
-              </div>
-            ) : filteredOptions.length === 0 ? (
-              <div className="p-3 text-center text-sm text-muted-foreground">
-                {search ? "无匹配结果" : "暂无记录"}
-              </div>
-            ) : (
-              filteredOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
-                    option.id === rawId ? "bg-muted font-medium" : ""
-                  }`}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    handleSelect(option.id, option.label);
-                  }}
-                >
-                  {option.label}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-      )}
+      {mounted && dropdown}
     </div>
   );
 }

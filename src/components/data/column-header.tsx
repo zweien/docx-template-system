@@ -87,6 +87,8 @@ function getOperatorsForType(type: FieldType): FilterOperator[] {
       return ["eq", "gt", "lt", "gte", "lte", "between", "isempty"];
     case FieldType.FORMULA:
       return ["eq", "ne", "gt", "lt", "gte", "lte", "between", "isempty", "isnotempty"];
+    case FieldType.COUNT:
+      return ["eq", "ne", "gt", "lt", "gte", "lte", "between", "isempty"];
     default:
       return ["eq", "ne", "contains", "isempty", "isnotempty"];
   }

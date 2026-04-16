@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { updateFields, getTable } from "@/lib/services/data-table.service";
+import { backfillCountFieldValues } from "@/lib/services/data-relation.service";
 import { updateFieldsSchema } from "@/validators/data-table";
 import { logAudit } from "@/lib/services/audit-log.service";
 import { getClientIp, getUserAgent } from "@/lib/request-utils";
 import { ZodError } from "zod";
+import { FieldType } from "@/generated/prisma/enums";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -97,6 +99,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       ipAddress: getClientIp(request),
       userAgent: getUserAgent(request),
     });
+
+    // Backfill COUNT field values for newly added COUNT fields
+    const hasNewCountFields = addedFields.some((f) => f.type === FieldType.COUNT);
+    if (hasNewCountFields) {
+      backfillCountFieldValues(id).catch((err) => {
+        console.error("COUNT 字段回填失败:", err);
+      });
+    }
 
     return NextResponse.json(result.data);
   } catch (error) {

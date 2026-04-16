@@ -288,6 +288,7 @@ enum FieldType {
   SYSTEM_TIMESTAMP
   SYSTEM_USER
   FORMULA
+  COUNT         // 自动计数关联记录
 }
 
 enum ViewType {

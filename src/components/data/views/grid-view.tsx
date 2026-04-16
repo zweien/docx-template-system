@@ -186,7 +186,7 @@ function DraggableColumnHeader({
     <th
       ref={ref}
       className={cn(
-        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 relative",
+        "h-10 px-2 text-left align-middle font-medium whitespace-nowrap text-foreground [&:has([role=checkbox])]:pr-0 relative border-r border-neutral-400",
         isDragging ? "opacity-50 bg-muted" : "cursor-grab active:cursor-grabbing",
         frozenStyle && "bg-background",
         frozenFieldCount && frozenFieldCount > 0 && index === frozenFieldCount - 1 && "frozen-last-col"
@@ -670,7 +670,7 @@ export function GridView({
 
   const READONLY_FIELD_TYPES: readonly string[] = [
     FieldType.AUTO_NUMBER, FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER,
-    FieldType.FORMULA, FieldType.RELATION_SUBTABLE,
+    FieldType.FORMULA, FieldType.RELATION_SUBTABLE, FieldType.COUNT,
   ];
 
   const computeFillValue = useCallback((fieldType: string, originalValue: unknown, step: number, mode: "increment" | "copy"): unknown => {
@@ -1443,7 +1443,7 @@ export function GridView({
                 data-col={fieldIndex}
                 style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                 className={cn(
-                  "align-middle overflow-hidden", rhClasses.td,
+                  "align-middle overflow-hidden border-r border-neutral-400", rhClasses.td,
                   (rowHeight ?? 40) < 56 && "whitespace-nowrap",
                   rhClasses.text,
                   frozenTdStyle && "bg-background",
@@ -1461,7 +1461,8 @@ export function GridView({
                     && field.type !== FieldType.SYSTEM_TIMESTAMP
                     && field.type !== FieldType.SYSTEM_USER
                     && field.type !== FieldType.FORMULA
-                    && field.type !== FieldType.BOOLEAN;
+                    && field.type !== FieldType.BOOLEAN
+                    && field.type !== FieldType.COUNT;
                   if (canEdit) {
                     startEditing(record.id, field.key);
                   }
@@ -1520,7 +1521,7 @@ export function GridView({
       }
 
       return (
-        <tr key={record.id} className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted" style={rowStyle}>
+        <tr key={record.id} className="border-b transition-colors hover:bg-primary/8 data-[state=selected]:bg-muted" style={rowStyle}>
           {rowContent}
         </tr>
       );
@@ -1790,7 +1791,7 @@ export function GridView({
               {/* Quick add row */}
               {isAdmin && (
                 <tr
-                  className="border-b hover:bg-muted/30 cursor-pointer group"
+                  className="border-b hover:bg-primary/5 cursor-pointer group"
                   onClick={handleQuickAddRow}
                 >
                   <td className="w-10 sticky left-0 z-[5] bg-background border-r" />
@@ -1816,12 +1817,12 @@ export function GridView({
               <td className="p-2 text-xs text-muted-foreground w-10" />
               {orderedVisibleFields.map((field) => {
                 const agg = columnAggregations?.[field.key];
-                if (!agg) return <td key={field.key} className="p-2" />;
+                if (!agg) return <td key={field.key} className="p-2 border-r border-neutral-400" />;
                 const summary = summaryData[field.key];
                 return (
                   <td
                     key={field.key}
-                    className="p-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted/50"
+                    className="p-2 text-xs text-muted-foreground cursor-pointer hover:bg-muted/50 border-r border-neutral-400"
                     style={{ width: columnWidths[field.key] ?? DEFAULT_COL_WIDTH }}
                     onClick={() => {
                       const cycle = getAvailableAggTypes(field.type);

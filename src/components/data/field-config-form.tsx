@@ -30,7 +30,7 @@ import type {
 } from "@/types/data-table";
 import { parseSelectOptions, SELECT_COLORS } from "@/types/data-table";
 import { parseFieldOptions } from "@/types/data-table";
-import type { RollupAggregateType } from "@/types/data-table";
+import type { RollupAggregateType, FilterCondition, FilterGroup } from "@/types/data-table";
 import type { DataFieldInput } from "@/validators/data-table";
 import { FormulaEditor } from "@/components/data/formula-editor";
 import { parseFormula, evaluateFormula, detectCircularRefs } from "@/lib/formula";
@@ -264,6 +264,10 @@ export function FieldConfigForm({
     return (opts.rollupAggregateType as RollupAggregateType) ?? "";
   });
   const [rollupTargetFields, setRollupTargetFields] = useState<DataFieldItem[]>([]);
+  const [rollupConditions, setRollupConditions] = useState<FilterGroup[]>(() => {
+    const opts = parseFieldOptions(field?.options);
+    return (opts.rollupConditions as FilterGroup[]) ?? [];
+  });
 
   // Load target table fields when lookup source field changes
   useEffect(() => {
@@ -607,7 +611,11 @@ export function FieldConfigForm({
     } else if (fieldType === FieldType.LOOKUP) {
       fieldOptions = { lookupSourceFieldId, lookupTargetFieldKey };
     } else if (fieldType === FieldType.ROLLUP) {
-      fieldOptions = { rollupSourceFieldId, rollupTargetFieldKey, rollupAggregateType: rollupAggregateType as RollupAggregateType };
+      const srcField = allFields.find((f) => f.id === rollupSourceFieldId);
+      const hasConditions = srcField?.type === "RELATION_SUBTABLE" && rollupConditions.some((g) => g.conditions.length > 0);
+      fieldOptions = hasConditions
+        ? { rollupSourceFieldId, rollupTargetFieldKey, rollupAggregateType: rollupAggregateType as RollupAggregateType, rollupConditions: rollupConditions.filter((g) => g.conditions.length > 0) }
+        : { rollupSourceFieldId, rollupTargetFieldKey, rollupAggregateType: rollupAggregateType as RollupAggregateType };
     } else if (fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) {
       fieldOptions = { kind: systemFieldKind };
     }
@@ -922,6 +930,7 @@ export function FieldConfigForm({
                   setRollupSourceFieldId(value ?? "");
                   setRollupTargetFieldKey("");
                   setRollupAggregateType("");
+                  setRollupConditions([]);
                 }}>
                   <SelectTrigger>
                     <SelectValue placeholder="选择源关联字段">
@@ -999,6 +1008,166 @@ export function FieldConfigForm({
                           ))}
                         </SelectContent>
                       </Select>
+                    </>
+                  );
+                })()}
+
+                {/* Rollup filter conditions — only for RELATION_SUBTABLE source */}
+                {rollupSourceFieldId && allFields.find((f) => f.id === rollupSourceFieldId)?.type === "RELATION_SUBTABLE" && (() => {
+                  const condTargetFields = rollupTargetFields.filter(
+                    (f) =>
+                      f.type !== "RELATION" &&
+                      f.type !== "RELATION_SUBTABLE" &&
+                      f.type !== "COUNT" &&
+                      f.type !== "LOOKUP" &&
+                      f.type !== "FORMULA" &&
+                      f.type !== "ROLLUP"
+                  );
+                  const OPERATOR_OPTIONS = [
+                    { value: "eq", label: "等于" }, { value: "ne", label: "不等于" },
+                    { value: "contains", label: "包含" }, { value: "notcontains", label: "不包含" },
+                    { value: "startswith", label: "开头是" }, { value: "endswith", label: "结尾是" },
+                    { value: "isempty", label: "为空" }, { value: "isnotempty", label: "不为空" },
+                    { value: "gt", label: "大于" }, { value: "lt", label: "小于" },
+                    { value: "gte", label: "大于等于" }, { value: "lte", label: "小于等于" },
+                    { value: "between", label: "范围" },
+                    { value: "in", label: "属于" }, { value: "notin", label: "不属于" },
+                  ];
+                  const NO_VALUE_OPS = ["isempty", "isnotempty"];
+
+                  if (condTargetFields.length === 0) return null;
+                  return (
+                    <>
+                      <Label>筛选条件（可选）</Label>
+                      <p className="text-xs text-muted-foreground -mt-1">仅汇总满足条件的关联记录</p>
+                      {rollupConditions.map((group, gi) => (
+                        <div key={gi} className="border rounded-md p-2 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-muted-foreground">条件组 {gi + 1}</span>
+                              <Select
+                                value={group.operator}
+                                onValueChange={(v) => {
+                                  const updated = [...rollupConditions];
+                                  updated[gi] = { ...updated[gi], operator: (v ?? "AND") as "AND" | "OR" };
+                                  setRollupConditions(updated);
+                                }}
+                              >
+                                <SelectTrigger className="h-7 w-[80px] text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="AND">AND</SelectItem>
+                                  <SelectItem value="OR">OR</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            {rollupConditions.length > 1 && (
+                              <Button variant="ghost" size="sm" className="h-7 px-1 text-xs" onClick={() => {
+                                setRollupConditions(rollupConditions.filter((_, i) => i !== gi));
+                              }}>
+                                删除组
+                              </Button>
+                            )}
+                          </div>
+                          {group.conditions.map((cond, ci) => (
+                            <div key={ci} className="flex items-center gap-1">
+                              <Select value={cond.fieldKey} onValueChange={(v) => {
+                                const updated = [...rollupConditions];
+                                const conds = [...updated[gi].conditions];
+                                conds[ci] = { ...conds[ci], fieldKey: v ?? "" };
+                                updated[gi] = { ...updated[gi], conditions: conds };
+                                setRollupConditions(updated);
+                              }}>
+                                <SelectTrigger className="h-7 flex-1 text-xs">
+                                  <SelectValue placeholder="选择字段" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {condTargetFields.map((f) => (
+                                    <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <Select value={cond.op} onValueChange={(v) => {
+                                const updated = [...rollupConditions];
+                                const conds = [...updated[gi].conditions];
+                                conds[ci] = { ...conds[ci], op: (v ?? "eq") as FilterCondition["op"] };
+                                updated[gi] = { ...updated[gi], conditions: conds };
+                                setRollupConditions(updated);
+                              }}>
+                                <SelectTrigger className="h-7 w-[100px] text-xs">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {OPERATOR_OPTIONS.map((o) => (
+                                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              {!NO_VALUE_OPS.includes(cond.op) && (
+                                <Input
+                                  className="h-7 flex-1 text-xs"
+                                  value={
+                                    cond.op === "between"
+                                      ? `${(cond.value as { min: unknown; max: unknown }).min ?? ""}-${(cond.value as { min: unknown; max: unknown }).max ?? ""}`
+                                      : Array.isArray(cond.value)
+                                        ? cond.value.join(",")
+                                        : String(cond.value ?? "")
+                                  }
+                                  onChange={(e) => {
+                                    const raw = e.target.value;
+                                    let newVal: string | number | (string | number)[] | { min: string | number; max: string | number };
+                                    if (cond.op === "between") {
+                                      const parts = raw.split("-").map((s) => s.trim());
+                                      newVal = { min: parts[0] ?? "", max: parts[1] ?? "" };
+                                    } else if (cond.op === "in" || cond.op === "notin") {
+                                      newVal = raw.split(",").map((s) => s.trim()).filter(Boolean);
+                                    } else {
+                                      newVal = raw;
+                                    }
+                                    const updated = [...rollupConditions];
+                                    const conds = [...updated[gi].conditions];
+                                    conds[ci] = { ...conds[ci], value: newVal };
+                                    updated[gi] = { ...updated[gi], conditions: conds };
+                                    setRollupConditions(updated);
+                                  }}
+                                  placeholder={
+                                    cond.op === "between" ? "最小值-最大值"
+                                      : cond.op === "in" || cond.op === "notin" ? "逗号分隔"
+                                      : "值"
+                                  }
+                                />
+                              )}
+                              <Button variant="ghost" size="sm" className="h-7 px-1 text-xs" onClick={() => {
+                                const updated = [...rollupConditions];
+                                const conds = updated[gi].conditions.filter((_, i) => i !== ci);
+                                updated[gi] = { ...updated[gi], conditions: conds };
+                                setRollupConditions(updated);
+                              }}>
+                                ×
+                              </Button>
+                            </div>
+                          ))}
+                          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => {
+                            const updated = [...rollupConditions];
+                            updated[gi] = {
+                              ...updated[gi],
+                              conditions: [...updated[gi].conditions, { fieldKey: condTargetFields[0]?.key ?? "", op: "eq" as const, value: "" }],
+                            };
+                            setRollupConditions(updated);
+                          }}>
+                            + 添加条件
+                          </Button>
+                        </div>
+                      ))}
+                      <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => {
+                        setRollupConditions([...rollupConditions, {
+                          operator: "AND" as const,
+                          conditions: [{ fieldKey: condTargetFields[0]?.key ?? "", op: "eq" as const, value: "" }],
+                        }]);
+                      }}>
+                        + 添加条件组
+                      </Button>
                     </>
                   );
                 })()}

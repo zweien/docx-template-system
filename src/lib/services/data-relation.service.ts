@@ -1,4 +1,6 @@
 import type {
+  FilterCondition,
+  FilterGroup,
   RelationCardinality,
   RelationSubtableValueItem,
   RollupAggregateType,
@@ -347,6 +349,68 @@ async function lockRelationRecords(
   );
 }
 
+// ─── Rollup condition filtering ──────────────────────────────────────────
+
+function evaluateFilterCondition(
+  recordData: Record<string, unknown>,
+  condition: FilterCondition
+): boolean {
+  const raw = recordData[condition.fieldKey];
+  switch (condition.op) {
+    case "eq":
+      return String(raw ?? "") === String(condition.value);
+    case "ne":
+      return String(raw ?? "") !== String(condition.value);
+    case "contains":
+      return String(raw ?? "").includes(String(condition.value));
+    case "notcontains":
+      return !String(raw ?? "").includes(String(condition.value));
+    case "startswith":
+      return String(raw ?? "").startsWith(String(condition.value));
+    case "endswith":
+      return String(raw ?? "").endsWith(String(condition.value));
+    case "isempty":
+      return raw === undefined || raw === null || raw === "";
+    case "isnotempty":
+      return raw !== undefined && raw !== null && raw !== "";
+    case "gt":
+      return Number(raw) > Number(condition.value);
+    case "lt":
+      return Number(raw) < Number(condition.value);
+    case "gte":
+      return Number(raw) >= Number(condition.value);
+    case "lte":
+      return Number(raw) <= Number(condition.value);
+    case "between": {
+      const range = condition.value as { min: number | string; max: number | string };
+      const num = Number(raw);
+      return num >= Number(range.min) && num <= Number(range.max);
+    }
+    case "in":
+      return Array.isArray(condition.value) &&
+        condition.value.some((v) => String(raw ?? "") === String(v));
+    case "notin":
+      return !Array.isArray(condition.value) ||
+        !condition.value.some((v) => String(raw ?? "") === String(v));
+    default:
+      return true;
+  }
+}
+
+function recordMatchesFilterGroups(
+  recordData: Record<string, unknown>,
+  groups: FilterGroup[] | undefined
+): boolean {
+  if (!groups || groups.length === 0) return true;
+  // Groups are OR-combined; conditions within a group follow group.operator
+  return groups.some((group) => {
+    if (group.conditions.length === 0) return true;
+    return group.operator === "OR"
+      ? group.conditions.some((c) => evaluateFilterCondition(recordData, c))
+      : group.conditions.every((c) => evaluateFilterCondition(recordData, c));
+  });
+}
+
 // ─── Rollup aggregation ──────────────────────────────────────────────
 
 function computeRollupAggregate(
@@ -680,8 +744,16 @@ async function refreshRelationSnapshotsForRecords(
       if (!sourceField) continue;
 
       if (sourceField.type === "RELATION_SUBTABLE") {
-        const snapshots = snapshotItemsByFieldId.get(opts.rollupSourceFieldId) ?? [];
+        let snapshots = snapshotItemsByFieldId.get(opts.rollupSourceFieldId) ?? [];
         const targetKey = opts.rollupTargetFieldKey;
+        const conditions = opts.rollupConditions as FilterGroup[] | undefined;
+        // Apply filter conditions before aggregation
+        if (conditions && conditions.length > 0) {
+          snapshots = snapshots.filter((r: RelationSubtableValueItem) => {
+            const recordData = relatedRecordById.get(r.targetRecordId);
+            return recordData ? recordMatchesFilterGroups(recordData, conditions) : true;
+          });
+        }
         const values = snapshots.map((r: RelationSubtableValueItem) => {
           const recordData = relatedRecordById.get(r.targetRecordId);
           if (recordData && targetKey) return recordData[targetKey as keyof typeof recordData] as unknown;

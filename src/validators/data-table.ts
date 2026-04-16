@@ -59,6 +59,23 @@ export const dataFieldItemSchema = z.object({
         "SUM", "AVG", "MIN", "MAX", "COUNT", "COUNTA",
         "ARRAYJOIN", "ARRAYUNIQUE", "TRUE_COUNT", "FALSE_COUNT",
       ]),
+      rollupConditions: z.array(z.object({
+        operator: z.enum(["AND", "OR"]),
+        conditions: z.array(z.object({
+          fieldKey: z.string(),
+          op: z.enum([
+            "eq", "ne", "gt", "lt", "gte", "lte",
+            "contains", "notcontains", "startswith", "endswith",
+            "isempty", "isnotempty",
+            "between", "in", "notin",
+          ]),
+          value: z.union([
+            z.string(), z.number(),
+            z.array(z.union([z.string(), z.number()])),
+            z.object({ min: z.union([z.string(), z.number()]), max: z.union([z.string(), z.number()]) }),
+          ]),
+        })),
+      })).optional(),
     }),
   ]).nullable().optional(),
   relationTo: z.string().nullable().optional(),

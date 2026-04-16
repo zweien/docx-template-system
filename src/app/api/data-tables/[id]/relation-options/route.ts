@@ -51,7 +51,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
   const result = await listRecords(id, {
     page: 1,
-    pageSize: 100,
+    pageSize: search ? 50 : 500,
+    search: search || undefined,
   });
 
   if (!result.success) {
@@ -61,8 +62,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const normalizedSearch = (search ?? "").trim().toLowerCase();
-
   const options = result.data.records
     .map((record) => ({
       id: record.id,
@@ -71,11 +70,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           record.id
       ),
     }))
-    .filter((option) =>
-      normalizedSearch
-        ? option.label.toLowerCase().includes(normalizedSearch)
-        : true
-    );
+    .filter((option) => {
+      if (!search) return true;
+      // Client-side filter as fallback for non-text fields
+      return option.label.toLowerCase().includes(search.toLowerCase());
+    });
 
   return NextResponse.json(options);
 }

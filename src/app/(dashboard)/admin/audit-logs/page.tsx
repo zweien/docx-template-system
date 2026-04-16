@@ -318,12 +318,20 @@ export default function AuditLogsPage() {
                                   ))}
                                 </div>
                               )}
-                              {Array.isArray(log.detail.updatedFieldKeys) && (log.detail.updatedFieldKeys as string[]).length > 0 && (
+                              {Array.isArray(log.detail.changedFields) && (log.detail.changedFields as { key: string; oldLabel: string; newLabel: string; oldType: string; newType: string }[]).length > 0 && (
                                 <div>
                                   <div className="text-xs font-medium text-muted-foreground mb-1">修改字段</div>
-                                  <div className="text-xs font-mono text-muted-foreground">
-                                    {(log.detail.updatedFieldKeys as string[]).join(", ")}
-                                  </div>
+                                  {(log.detail.changedFields as { key: string; oldLabel: string; newLabel: string; oldType: string; newType: string }[]).map((f) => (
+                                    <div key={f.key} className="text-xs flex flex-col gap-0.5">
+                                      <span className="font-mono">{f.key}</span>
+                                      {f.oldLabel !== f.newLabel && (
+                                        <span className="text-muted-foreground">名称: <s>{f.oldLabel}</s> → {f.newLabel}</span>
+                                      )}
+                                      {f.oldType !== f.newType && (
+                                        <span className="text-muted-foreground">类型: <s>{f.oldType}</s> → {f.newType}</span>
+                                      )}
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                               <div className="text-xs text-muted-foreground">

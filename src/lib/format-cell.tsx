@@ -203,7 +203,7 @@ export function formatCellValue(
       return String(value);
     case FieldType.COUNT:
       if (value === null || value === undefined) return <span className="text-zinc-400">0</span>;
-      return <span className="text-muted-foreground font-mono">{Number(value).toLocaleString()}</span>;
+      return <span className="text-muted-foreground">{Number(value).toLocaleString()}</span>;
     default:
       return String(value);
   }

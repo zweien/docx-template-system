@@ -211,6 +211,11 @@ export function formatCellValue(
         return <span className="text-muted-foreground">{value.join(", ")}</span>;
       }
       return <span className="text-muted-foreground">{String(value)}</span>;
+    case FieldType.ROLLUP:
+      if (value === null || value === undefined) return <span className="text-zinc-400">-</span>;
+      if (typeof value === "number") return <span className="text-muted-foreground">{value.toLocaleString()}</span>;
+      if (Array.isArray(value)) return <span className="text-muted-foreground">{value.join(", ")}</span>;
+      return <span className="text-muted-foreground">{String(value)}</span>;
     default:
       return String(value);
   }
@@ -236,6 +241,7 @@ export function formatCellText(field: DataFieldItem, value: unknown): string {
     case FieldType.FORMULA:
     case FieldType.COUNT:
     case FieldType.LOOKUP:
+    case FieldType.ROLLUP:
       return String(value ?? "");
     default:
       return String(value);

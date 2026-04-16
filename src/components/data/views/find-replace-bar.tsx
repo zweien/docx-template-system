@@ -14,6 +14,7 @@ const SKIP_REPLACE_TYPES: Set<string> = new Set([
   FieldType.RELATION_SUBTABLE,
   FieldType.COUNT,
   FieldType.LOOKUP,
+  FieldType.ROLLUP,
   FieldType.FORMULA,
   FieldType.FILE,
   FieldType.BOOLEAN,

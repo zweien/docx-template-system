@@ -141,11 +141,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       userAgent: getUserAgent(request),
     });
 
-    // Backfill COUNT / LOOKUP field values for newly added fields only
+    // Backfill COUNT / LOOKUP / ROLLUP field values for newly added fields only
     const hasNewCountFields = addedFields.some((f) => f.type === FieldType.COUNT);
     const hasNewLookupFields = addedFields.some((f) => f.type === FieldType.LOOKUP);
+    const hasNewRollupFields = addedFields.some((f) => f.type === FieldType.ROLLUP);
     let backfillWarning = false;
-    if (hasNewCountFields || hasNewLookupFields) {
+    if (hasNewCountFields || hasNewLookupFields || hasNewRollupFields) {
       try {
         await backfillCountFieldValues(id);
       } catch (err) {

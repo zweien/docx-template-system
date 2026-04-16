@@ -1,6 +1,7 @@
 import type {
   RelationCardinality,
   RelationSubtableValueItem,
+  RollupAggregateType,
   ServiceResult,
 } from "@/types/data-table";
 import { parseFieldOptions } from "@/types/data-table";
@@ -346,6 +347,50 @@ async function lockRelationRecords(
   );
 }
 
+// ─── Rollup aggregation ──────────────────────────────────────────────
+
+function computeRollupAggregate(
+  values: unknown[],
+  aggregateType: RollupAggregateType
+): unknown {
+  if (values.length === 0) {
+    if (aggregateType === "COUNT" || aggregateType === "COUNTA" ||
+        aggregateType === "TRUE_COUNT" || aggregateType === "FALSE_COUNT") {
+      return 0;
+    }
+    return null;
+  }
+
+  switch (aggregateType) {
+    case "SUM":
+      return values.reduce((s: number, v) => s + (Number(v) || 0), 0);
+    case "AVG": {
+      const nums = values.map(Number).filter((n) => !isNaN(n));
+      return nums.length > 0 ? nums.reduce((s, v) => s + v, 0) / nums.length : null;
+    }
+    case "MIN": {
+      const nums = values.map(Number).filter((n) => !isNaN(n));
+      return nums.length > 0 ? Math.min(...nums) : null;
+    }
+    case "MAX": {
+      const nums = values.map(Number).filter((n) => !isNaN(n));
+      return nums.length > 0 ? Math.max(...nums) : null;
+    }
+    case "COUNT":
+      return values.length;
+    case "COUNTA":
+      return values.filter((v) => v !== null && v !== undefined && v !== "").length;
+    case "ARRAYJOIN":
+      return values.map(String).join(", ");
+    case "ARRAYUNIQUE":
+      return [...new Set(values.map(String))];
+    case "TRUE_COUNT":
+      return values.filter((v) => v === true || v === 1 || v === "true").length;
+    case "FALSE_COUNT":
+      return values.filter((v) => v !== true && v !== 1 && v !== "true").length;
+  }
+}
+
 async function refreshRelationSnapshotsForRecords(
   tx: RelationTxClient,
   recordIds: Iterable<string>
@@ -392,7 +437,15 @@ async function refreshRelationSnapshotsForRecords(
     },
   });
 
-  // Load RELATION fields for COUNT/Lookup source resolution
+  // Load ROLLUP fields for aggregation computation
+  const rollupFields = await tx.dataField.findMany({
+    where: {
+      tableId: { in: tableIds },
+      type: "ROLLUP",
+    },
+  });
+
+  // Load RELATION fields for COUNT/Lookup/Rollup source resolution
   const relationLinkFields = await tx.dataField.findMany({
     where: {
       tableId: { in: tableIds },
@@ -400,7 +453,7 @@ async function refreshRelationSnapshotsForRecords(
     },
   });
 
-  if (relationFields.length === 0 && countFields.length === 0 && lookupFields.length === 0) {
+  if (relationFields.length === 0 && countFields.length === 0 && lookupFields.length === 0 && rollupFields.length === 0) {
     return;
   }
 
@@ -424,6 +477,15 @@ async function refreshRelationSnapshotsForRecords(
   for (const field of lookupFields) {
     lookupFieldsByTableId.set(field.tableId, [
       ...(lookupFieldsByTableId.get(field.tableId) ?? []),
+      field,
+    ]);
+  }
+
+  // Group rollupFields by tableId
+  const rollupFieldsByTableId = new Map<string, RelationFieldRow[]>();
+  for (const field of rollupFields) {
+    rollupFieldsByTableId.set(field.tableId, [
+      ...(rollupFieldsByTableId.get(field.tableId) ?? []),
       field,
     ]);
   }
@@ -464,14 +526,25 @@ async function refreshRelationSnapshotsForRecords(
     }
   }
 
-  // Collect linked record IDs from RELATION fields for LOOKUP resolution
-  if (lookupFields.length > 0 || countFields.length > 0) {
+  // Collect linked record IDs from RELATION fields for LOOKUP/ROLLUP resolution
+  if (lookupFields.length > 0 || countFields.length > 0 || rollupFields.length > 0) {
     for (const record of records) {
       const recordData = toRecordData(record.data);
       for (const lookupField of lookupFieldsByTableId.get(record.tableId) ?? []) {
         const opts = parseFieldOptions(lookupField.options);
         if (!opts.lookupSourceFieldId || !opts.lookupTargetFieldKey) continue;
         const sourceField = sourceFieldById.get(opts.lookupSourceFieldId);
+        if (sourceField?.type === "RELATION") {
+          const linkedId = recordData[sourceField.key];
+          if (typeof linkedId === "string" && linkedId) {
+            relatedRecordIds.add(linkedId);
+          }
+        }
+      }
+      for (const rollupField of rollupFieldsByTableId.get(record.tableId) ?? []) {
+        const opts = parseFieldOptions(rollupField.options);
+        if (!opts.rollupSourceFieldId || !opts.rollupTargetFieldKey) continue;
+        const sourceField = sourceFieldById.get(opts.rollupSourceFieldId);
         if (sourceField?.type === "RELATION") {
           const linkedId = recordData[sourceField.key];
           if (typeof linkedId === "string" && linkedId) {
@@ -599,6 +672,38 @@ async function refreshRelationSnapshotsForRecords(
       }
     }
 
+    // Compute ROLLUP field values
+    for (const rollupField of rollupFieldsByTableId.get(record.tableId) ?? []) {
+      const opts = parseFieldOptions(rollupField.options);
+      if (!opts.rollupSourceFieldId || !opts.rollupTargetFieldKey || !opts.rollupAggregateType) continue;
+      const sourceField = sourceFieldById.get(opts.rollupSourceFieldId);
+      if (!sourceField) continue;
+
+      if (sourceField.type === "RELATION_SUBTABLE") {
+        const snapshots = snapshotItemsByFieldId.get(opts.rollupSourceFieldId) ?? [];
+        const targetKey = opts.rollupTargetFieldKey;
+        const values = snapshots.map((r: RelationSubtableValueItem) => {
+          const recordData = relatedRecordById.get(r.targetRecordId);
+          if (recordData && targetKey) return recordData[targetKey as keyof typeof recordData] as unknown;
+          return r.attributes?.[targetKey] ?? null;
+        });
+        nextData[rollupField.key] = computeRollupAggregate(values, opts.rollupAggregateType as RollupAggregateType);
+      } else if (sourceField.type === "RELATION") {
+        const sourceValue = nextData[sourceField.key];
+        const linkedRecordId = (typeof sourceValue === "object" && sourceValue !== null)
+          ? (sourceValue as Record<string, unknown>).id as string | undefined
+          : typeof sourceValue === "string" && sourceValue
+            ? sourceValue
+            : undefined;
+        if (linkedRecordId) {
+          const linkedRecordData = relatedRecordById.get(linkedRecordId);
+          nextData[rollupField.key] = linkedRecordData?.[opts.rollupTargetFieldKey] ?? null;
+        } else {
+          nextData[rollupField.key] = null;
+        }
+      }
+    }
+
     await tx.dataRecord.update({
       where: { id: record.id },
       data: { data: nextData },
@@ -623,7 +728,11 @@ export async function backfillCountFieldValues(
     where: { tableId, type: "LOOKUP" },
   });
 
-  if (countFields.length === 0 && lookupFields.length === 0) {
+  const rollupFields = await db.dataField.findMany({
+    where: { tableId, type: "ROLLUP" },
+  });
+
+  if (countFields.length === 0 && lookupFields.length === 0 && rollupFields.length === 0) {
     return { success: true, data: null };
   }
 

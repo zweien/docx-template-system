@@ -30,6 +30,7 @@ import type {
 } from "@/types/data-table";
 import { parseSelectOptions, SELECT_COLORS } from "@/types/data-table";
 import { parseFieldOptions } from "@/types/data-table";
+import type { RollupAggregateType } from "@/types/data-table";
 import type { DataFieldInput } from "@/validators/data-table";
 import { FormulaEditor } from "@/components/data/formula-editor";
 import { parseFormula, evaluateFormula, detectCircularRefs } from "@/lib/formula";
@@ -62,6 +63,7 @@ const FIELD_TYPES = [
   { value: FieldType.FORMULA, label: "公式" },
   { value: FieldType.COUNT, label: "计数" },
   { value: FieldType.LOOKUP, label: "查找" },
+  { value: FieldType.ROLLUP, label: "汇总" },
   { value: FieldType.RELATION, label: "关联字段" },
   { value: FieldType.RELATION_SUBTABLE, label: "关系子表格" },
 ];
@@ -144,6 +146,48 @@ function hasDuplicateRelationSchemaKeys(fields: RelationSchemaFieldDraft[]): boo
   return false;
 }
 
+function getAvailableRollupAggregates(targetFieldType: FieldType): { value: RollupAggregateType; label: string }[] {
+  switch (targetFieldType) {
+    case FieldType.NUMBER:
+      return [
+        { value: "SUM", label: "求和 (SUM)" },
+        { value: "AVG", label: "平均值 (AVG)" },
+        { value: "MIN", label: "最小值 (MIN)" },
+        { value: "MAX", label: "最大值 (MAX)" },
+        { value: "COUNT", label: "计数 (COUNT)" },
+        { value: "COUNTA", label: "非空计数 (COUNTA)" },
+      ];
+    case FieldType.TEXT:
+    case FieldType.EMAIL:
+    case FieldType.PHONE:
+    case FieldType.URL:
+      return [
+        { value: "COUNT", label: "计数 (COUNT)" },
+        { value: "COUNTA", label: "非空计数 (COUNTA)" },
+        { value: "ARRAYJOIN", label: "连接 (ARRAYJOIN)" },
+        { value: "ARRAYUNIQUE", label: "去重连接 (ARRAYUNIQUE)" },
+      ];
+    case FieldType.DATE:
+    case FieldType.SYSTEM_TIMESTAMP:
+      return [
+        { value: "MIN", label: "最早 (MIN)" },
+        { value: "MAX", label: "最晚 (MAX)" },
+        { value: "COUNT", label: "计数 (COUNT)" },
+      ];
+    case FieldType.BOOLEAN:
+      return [
+        { value: "COUNT", label: "计数 (COUNT)" },
+        { value: "TRUE_COUNT", label: "真值计数 (TRUE_COUNT)" },
+        { value: "FALSE_COUNT", label: "假值计数 (FALSE_COUNT)" },
+      ];
+    default:
+      return [
+        { value: "COUNT", label: "计数 (COUNT)" },
+        { value: "COUNTA", label: "非空计数 (COUNTA)" },
+      ];
+  }
+}
+
 export function FieldConfigForm({
   open,
   onOpenChange,
@@ -206,6 +250,21 @@ export function FieldConfigForm({
     return [];
   });
 
+  // ROLLUP state
+  const [rollupSourceFieldId, setRollupSourceFieldId] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return opts.rollupSourceFieldId ?? "";
+  });
+  const [rollupTargetFieldKey, setRollupTargetFieldKey] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return opts.rollupTargetFieldKey ?? "";
+  });
+  const [rollupAggregateType, setRollupAggregateType] = useState<RollupAggregateType | "">(() => {
+    const opts = parseFieldOptions(field?.options);
+    return (opts.rollupAggregateType as RollupAggregateType) ?? "";
+  });
+  const [rollupTargetFields, setRollupTargetFields] = useState<DataFieldItem[]>([]);
+
   // Load target table fields when lookup source field changes
   useEffect(() => {
     if (!lookupSourceFieldId) {
@@ -239,6 +298,36 @@ export function FieldConfigForm({
 
     return () => { cancelled = true; };
   }, [lookupSourceFieldId, allFields, availableTables]);
+
+  // Load target table fields when rollup source field changes
+  useEffect(() => {
+    if (!rollupSourceFieldId) {
+      setRollupTargetFields([]);
+      return;
+    }
+    const sourceField = allFields.find((f) => f.id === rollupSourceFieldId);
+    if (!sourceField?.relationTo) {
+      setRollupTargetFields([]);
+      return;
+    }
+    const localTable = availableTables.find((t) => t.id === sourceField.relationTo);
+    if (localTable?.fields?.length) {
+      setRollupTargetFields(localTable.fields);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/data-tables/${sourceField.relationTo}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const fields = data.data?.fields ?? data.fields ?? [];
+        setRollupTargetFields(fields);
+      })
+      .catch(() => {
+        if (!cancelled) setRollupTargetFields([]);
+      });
+    return () => { cancelled = true; };
+  }, [rollupSourceFieldId, allFields, availableTables]);
 
   // Formula validation
   const formulaError = useMemo(() => {
@@ -495,6 +584,18 @@ export function FieldConfigForm({
       setError("请选择要拉取的字段");
       return;
     }
+    if (fieldType === FieldType.ROLLUP && !rollupSourceFieldId) {
+      setError("请选择源关联字段");
+      return;
+    }
+    if (fieldType === FieldType.ROLLUP && !rollupTargetFieldKey) {
+      setError("请选择要汇总的字段");
+      return;
+    }
+    if (fieldType === FieldType.ROLLUP && !rollupAggregateType) {
+      setError("请选择聚合方式");
+      return;
+    }
 
     let fieldOptions: DataFieldInput["options"] = undefined;
     if (fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT) {
@@ -505,6 +606,8 @@ export function FieldConfigForm({
       fieldOptions = { countSourceFieldId };
     } else if (fieldType === FieldType.LOOKUP) {
       fieldOptions = { lookupSourceFieldId, lookupTargetFieldKey };
+    } else if (fieldType === FieldType.ROLLUP) {
+      fieldOptions = { rollupSourceFieldId, rollupTargetFieldKey, rollupAggregateType: rollupAggregateType as RollupAggregateType };
     } else if (fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) {
       fieldOptions = { kind: systemFieldKind };
     }
@@ -601,6 +704,7 @@ export function FieldConfigForm({
             </div>
 
             {fieldType !== FieldType.COUNT && fieldType !== FieldType.LOOKUP &&
+              fieldType !== FieldType.ROLLUP &&
               fieldType !== FieldType.FORMULA &&
               fieldType !== FieldType.AUTO_NUMBER && fieldType !== FieldType.SYSTEM_TIMESTAMP &&
               fieldType !== FieldType.SYSTEM_USER && (
@@ -807,6 +911,100 @@ export function FieldConfigForm({
 
                 <p className="text-xs text-muted-foreground">
                   从关联记录拉取指定字段值，只读展示
+                </p>
+              </div>
+            )}
+
+            {fieldType === FieldType.ROLLUP && (
+              <div className="grid gap-2">
+                <Label>源关联字段</Label>
+                <Select value={rollupSourceFieldId} onValueChange={(value) => {
+                  setRollupSourceFieldId(value ?? "");
+                  setRollupTargetFieldKey("");
+                  setRollupAggregateType("");
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="选择源关联字段">
+                      {rollupSourceFieldId
+                        ? allFields.find((f) => f.id === rollupSourceFieldId)?.label ?? rollupSourceFieldId
+                        : null}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allFields
+                      .filter((f) => f.type === FieldType.RELATION || f.type === FieldType.RELATION_SUBTABLE)
+                      .map((f) => (
+                        <SelectItem key={f.id!} value={f.id!}>
+                          {f.label}
+                          {f.type === FieldType.RELATION && "（单值关联，直接取值）"}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+
+                {rollupSourceFieldId && (() => {
+                  const sourceField = allFields.find((f) => f.id === rollupSourceFieldId);
+                  if (!sourceField?.relationTo) return null;
+                  const targetFields = rollupTargetFields.filter(
+                    (f) =>
+                      f.type !== FieldType.RELATION &&
+                      f.type !== FieldType.RELATION_SUBTABLE &&
+                      f.type !== FieldType.COUNT &&
+                      f.type !== FieldType.LOOKUP &&
+                      f.type !== FieldType.FORMULA &&
+                      f.type !== FieldType.ROLLUP
+                  );
+                  return (
+                    <>
+                      <Label>汇总字段</Label>
+                      <Select value={rollupTargetFieldKey} onValueChange={(value) => {
+                        setRollupTargetFieldKey(value ?? "");
+                        setRollupAggregateType("");
+                      }}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择要汇总的字段">
+                            {rollupTargetFieldKey
+                              ? targetFields.find((f) => f.key === rollupTargetFieldKey)?.label ?? rollupTargetFieldKey
+                              : null}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {targetFields.map((f) => (
+                            <SelectItem key={f.key} value={f.key}>
+                              {f.label} ({f.type})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  );
+                })()}
+
+                {rollupTargetFieldKey && (() => {
+                  const targetField = rollupTargetFields.find((f) => f.key === rollupTargetFieldKey);
+                  if (!targetField) return null;
+                  const aggs = getAvailableRollupAggregates(targetField.type as FieldType);
+                  return (
+                    <>
+                      <Label>聚合方式</Label>
+                      <Select value={rollupAggregateType} onValueChange={(v) => setRollupAggregateType(v as RollupAggregateType)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择聚合方式" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {aggs.map((agg) => (
+                            <SelectItem key={agg.value} value={agg.value}>
+                              {agg.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  );
+                })()}
+
+                <p className="text-xs text-muted-foreground">
+                  从关联记录聚合指定字段值，只读展示
                 </p>
               </div>
             )}
@@ -1118,6 +1316,7 @@ export function FieldConfigForm({
             )}
 
             {fieldType !== FieldType.COUNT && fieldType !== FieldType.LOOKUP &&
+              fieldType !== FieldType.ROLLUP &&
               fieldType !== FieldType.FORMULA &&
               fieldType !== FieldType.AUTO_NUMBER && fieldType !== FieldType.SYSTEM_TIMESTAMP &&
               fieldType !== FieldType.SYSTEM_USER && (

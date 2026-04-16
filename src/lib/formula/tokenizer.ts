@@ -15,15 +15,11 @@ export interface Token {
   value: string;
 }
 
+import { ALL_FUNCTIONS } from "./function-catalog";
+
 const OPERATORS = new Set(["+", "-", "*", "/", "%"]);
 const COMPARISONS = new Set(["=", "!=", ">", "<", ">=", "<="]);
-const FUNCTIONS = new Set([
-  "SUM", "AVERAGE", "MIN", "MAX", "ROUND", "ABS", "CEILING", "FLOOR",
-  "IF", "AND", "OR", "NOT",
-  "CONCAT", "LEN", "LEFT", "RIGHT", "MID", "UPPER", "LOWER", "TRIM",
-  "DATE_DIFF", "NOW", "YEAR", "MONTH", "DAY",
-  "NUMBER", "TEXT",
-]);
+const FUNCTIONS = new Set(ALL_FUNCTIONS.keys());
 
 export function tokenize(formula: string): Token[] {
   const tokens: Token[] = [];

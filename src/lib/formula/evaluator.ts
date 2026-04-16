@@ -1,4 +1,5 @@
 import { parseFormula, type AstNode } from "./ast";
+import { ALL_FUNCTIONS } from "./function-catalog";
 
 type FormulaValue = number | string | boolean | null;
 
@@ -76,6 +77,10 @@ function toString(v: FormulaValue): string {
 }
 
 function evaluateFunction(name: string, argNodes: AstNode[], data: Record<string, unknown>): FormulaValue {
+  const entry = ALL_FUNCTIONS.get(name);
+  if (entry && argNodes.length < entry.minArgs) {
+    return `#ERROR:${name} 至少需要 ${entry.minArgs} 个参数`;
+  }
   switch (name) {
     case "SUM": return argNodes.reduce((s, n) => s + toNumber(evaluateNode(n, data)), 0);
     case "AVERAGE": {
@@ -131,6 +136,6 @@ function evaluateFunction(name: string, argNodes: AstNode[], data: Record<string
     }
     case "NUMBER": return toNumber(evaluateNode(argNodes[0], data));
     case "TEXT": return toString(evaluateNode(argNodes[0], data));
-    default: return "#ERROR";
+    default: return `#ERROR:未知函数 ${name}`;
   }
 }

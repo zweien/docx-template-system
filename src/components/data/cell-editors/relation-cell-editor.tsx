@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import type { RelationTargetOption } from "@/components/data/relation-target-picker";
 
@@ -23,9 +23,18 @@ export function RelationCellEditor({
   const [options, setOptions] = useState<RelationTargetOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(true);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const committedRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate dropdown position using fixed positioning
+  const updatePosition = useCallback(() => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 2, left: rect.left });
+    }
+  }, []);
 
   // Fetch options from API
   useEffect(() => {
@@ -56,6 +65,11 @@ export function RelationCellEditor({
     return () => controller.abort();
   }, [relationTableId, displayField, search]);
 
+  useEffect(() => {
+    inputRef.current?.focus();
+    updatePosition();
+  }, [updatePosition]);
+
   const optionMap = useMemo(
     () => new Map(options.map((o) => [o.id, o])),
     [options]
@@ -79,7 +93,6 @@ export function RelationCellEditor({
 
   function handleSelect(id: string, label: string) {
     committedRef.current = true;
-    // Return {id, display} so local state matches server-resolved format
     onCommit({ id, display: label });
   }
 
@@ -91,14 +104,13 @@ export function RelationCellEditor({
   function handleBlur(e: React.FocusEvent) {
     // Don't commit if clicking inside the dropdown
     if (containerRef.current?.contains(e.relatedTarget as Node)) return;
+    // Also check the portal dropdown
+    const dropdownEl = document.getElementById("relation-dropdown-portal");
+    if (dropdownEl?.contains(e.relatedTarget as Node)) return;
     if (committedRef.current) return;
     committedRef.current = true;
     onCancel();
   }
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
 
   // Fallback: plain text input when no relationTableId configured
   if (!relationTableId) {
@@ -139,6 +151,7 @@ export function RelationCellEditor({
             handleClear();
           }
         }}
+        onFocus={updatePosition}
         className="h-8 text-sm border-primary pr-6"
         placeholder={rawId ? currentLabel ?? rawId : "搜索关联记录..."}
       />
@@ -148,8 +161,17 @@ export function RelationCellEditor({
         </span>
       )}
 
-      {isOpen && (
-        <div className="absolute top-full left-0 mt-0.5 w-64 bg-background border rounded-md shadow-lg z-50">
+      {isOpen && dropdownPos && typeof window !== "undefined" && (
+        <div
+          id="relation-dropdown-portal"
+          style={{
+            position: "fixed",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            zIndex: 9999,
+          }}
+          className="w-64 bg-background border rounded-md shadow-lg"
+        >
           <div className="max-h-48 overflow-auto">
             {isLoading ? (
               <div className="p-3 text-center text-sm text-muted-foreground">

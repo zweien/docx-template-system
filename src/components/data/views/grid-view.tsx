@@ -1440,6 +1440,9 @@ export function GridView({
               fieldIndex >= fillRange.startCol &&
               fieldIndex <= fillRange.endCol;
             const cellStyle = cellRuleMap[field.key];
+            const isEditing =
+              editingCell?.recordId === record.id &&
+              editingCell?.fieldKey === field.key;
             const mergedStyle: React.CSSProperties = {
               ...(frozenTdStyle ?? {}),
               ...(cellStyle ?? {}),
@@ -1451,7 +1454,9 @@ export function GridView({
                 data-col={fieldIndex}
                 style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                 className={cn(
-                  "align-middle overflow-hidden border-r border-neutral-400", rhClasses.td,
+                  "align-middle border-r border-neutral-400", rhClasses.td,
+                  // Only apply overflow-hidden when NOT editing a field with a dropdown (RELATION)
+                  !(isEditing && field.type === FieldType.RELATION) && "overflow-hidden",
                   (rowHeight ?? 40) < 56 && "whitespace-nowrap",
                   rhClasses.text,
                   frozenTdStyle && "bg-background",

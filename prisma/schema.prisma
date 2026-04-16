@@ -742,6 +742,7 @@ enum AuditAction {
   FORM_SHARE_CREATE
   FORM_SHARE_DELETE
   FORM_SUBMIT
+  DATA_TABLE_FIELD_UPDATE
 }
 
 model AuditLog {

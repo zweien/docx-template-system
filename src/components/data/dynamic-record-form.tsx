@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -124,7 +124,7 @@ function serializeRelationSubtableValue(
 }
 
 export function DynamicRecordForm({
-  tableId: _tableId,
+  tableId,
   fields,
   initialData,
   onSubmit,
@@ -133,6 +133,11 @@ export function DynamicRecordForm({
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+
+  // Check if any computed fields exist (COUNT/LOOKUP)
+  const computedFieldKeys = fields
+    .filter((f) => f.type === FieldType.COUNT || f.type === FieldType.LOOKUP)
+    .map((f) => f.key);
 
   // Build schema from fields
   const schema = z.object(
@@ -220,11 +225,39 @@ export function DynamicRecordForm({
     handleSubmit,
     setValue,
     watch,
+    getValues,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),
     defaultValues,
   });
+
+  // Refresh COUNT/LOOKUP fields after RELATION field changes
+  const refreshComputedFields = useCallback(async (fieldKey: string, value: unknown) => {
+    if (!initialData?.id || computedFieldKeys.length === 0) return;
+    try {
+      const res = await fetch(
+        `/api/data-tables/${tableId}/records/${initialData.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fieldKey, value }),
+        }
+      );
+      if (!res.ok) return;
+      const updated = await res.json();
+      // Backfill computed field values from server response
+      if (updated?.data) {
+        for (const key of computedFieldKeys) {
+          if (updated.data[key] !== undefined) {
+            setValue(key, updated.data[key]);
+          }
+        }
+      }
+    } catch {
+      // Silently ignore — computed fields will update on full save
+    }
+  }, [tableId, initialData?.id, computedFieldKeys, setValue]);
 
   const handleFormSubmit = async (data: Record<string, unknown>) => {
     setError("");
@@ -343,7 +376,10 @@ export function DynamicRecordForm({
         return (
           <RelationSelect
             value={String(watch(field.key) ?? "")}
-            onChange={(v) => setValue(field.key, v)}
+            onChange={(v) => {
+              setValue(field.key, v);
+              void refreshComputedFields(field.key, v);
+            }}
             relationTableId={field.relationTo ?? ""}
             displayField={field.displayField ?? "id"}
             placeholder={`选择${field.label}`}
@@ -377,6 +413,20 @@ export function DynamicRecordForm({
             </label>
           </div>
         );
+
+      case FieldType.COUNT:
+      case FieldType.LOOKUP: {
+        const rawVal = watch(field.key);
+        const displayVal = Array.isArray(rawVal) ? rawVal.join(", ") : String(rawVal ?? "");
+        return (
+          <Input
+            readOnly
+            value={displayVal}
+            placeholder="自动计算"
+            className="bg-muted"
+          />
+        );
+      }
 
       default:
         return (

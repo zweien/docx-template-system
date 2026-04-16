@@ -670,7 +670,7 @@ export function GridView({
 
   const READONLY_FIELD_TYPES: readonly string[] = [
     FieldType.AUTO_NUMBER, FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER,
-    FieldType.FORMULA, FieldType.RELATION_SUBTABLE, FieldType.COUNT,
+    FieldType.FORMULA, FieldType.RELATION_SUBTABLE, FieldType.COUNT, FieldType.LOOKUP,
   ];
 
   const computeFillValue = useCallback((fieldType: string, originalValue: unknown, step: number, mode: "increment" | "copy"): unknown => {

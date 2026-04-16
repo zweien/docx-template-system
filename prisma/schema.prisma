@@ -289,6 +289,7 @@ enum FieldType {
   SYSTEM_USER
   FORMULA
   COUNT         // 自动计数关联记录
+  LOOKUP        // 从关联记录拉取指定字段值
 }
 
 enum ViewType {

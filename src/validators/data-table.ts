@@ -51,6 +51,7 @@ export const dataFieldItemSchema = z.object({
     z.object({ nextValue: z.number() }),
     z.object({ kind: z.enum(["created", "updated"]) }),
     z.object({ countSourceFieldId: z.string() }),
+    z.object({ lookupSourceFieldId: z.string(), lookupTargetFieldKey: z.string() }),
   ]).nullable().optional(),
   relationTo: z.string().nullable().optional(),
   displayField: z.string().nullable().optional(),

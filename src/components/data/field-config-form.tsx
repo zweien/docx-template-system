@@ -61,6 +61,7 @@ const FIELD_TYPES = [
   { value: FieldType.SYSTEM_USER, label: "创建/修改人" },
   { value: FieldType.FORMULA, label: "公式" },
   { value: FieldType.COUNT, label: "计数" },
+  { value: FieldType.LOOKUP, label: "查找" },
   { value: FieldType.RELATION, label: "关联字段" },
   { value: FieldType.RELATION_SUBTABLE, label: "关系子表格" },
 ];
@@ -188,6 +189,14 @@ export function FieldConfigForm({
   const [countSourceFieldId, setCountSourceFieldId] = useState(() => {
     const opts = parseFieldOptions(field?.options);
     return opts.countSourceFieldId ?? "";
+  });
+  const [lookupSourceFieldId, setLookupSourceFieldId] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return opts.lookupSourceFieldId ?? "";
+  });
+  const [lookupTargetFieldKey, setLookupTargetFieldKey] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return opts.lookupTargetFieldKey ?? "";
   });
 
   // Formula validation
@@ -437,6 +446,15 @@ export function FieldConfigForm({
       return;
     }
 
+    if (fieldType === FieldType.LOOKUP && !lookupSourceFieldId) {
+      setError("请选择源关联字段");
+      return;
+    }
+    if (fieldType === FieldType.LOOKUP && !lookupTargetFieldKey) {
+      setError("请选择要拉取的字段");
+      return;
+    }
+
     let fieldOptions: DataFieldInput["options"] = undefined;
     if (fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT) {
       fieldOptions = selectOptions.filter((o) => o.label.trim());
@@ -444,6 +462,8 @@ export function FieldConfigForm({
       fieldOptions = { formula: formulaExpression.trim() };
     } else if (fieldType === FieldType.COUNT) {
       fieldOptions = { countSourceFieldId };
+    } else if (fieldType === FieldType.LOOKUP) {
+      fieldOptions = { lookupSourceFieldId, lookupTargetFieldKey };
     } else if (fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) {
       fieldOptions = { kind: systemFieldKind };
     }
@@ -539,7 +559,8 @@ export function FieldConfigForm({
               </Select>
             </div>
 
-            {fieldType !== FieldType.COUNT && fieldType !== FieldType.FORMULA &&
+            {fieldType !== FieldType.COUNT && fieldType !== FieldType.LOOKUP &&
+              fieldType !== FieldType.FORMULA &&
               fieldType !== FieldType.AUTO_NUMBER && fieldType !== FieldType.SYSTEM_TIMESTAMP &&
               fieldType !== FieldType.SYSTEM_USER && (
               <div className="flex items-center justify-between">
@@ -663,6 +684,90 @@ export function FieldConfigForm({
                 )}
                 <p className="text-xs text-muted-foreground">
                   自动统计关联记录数量，当关联记录增删时自动更新
+                </p>
+              </div>
+            )}
+
+            {fieldType === FieldType.LOOKUP && (
+              <div className="grid gap-2">
+                <Label>源关联字段</Label>
+                {allFields.filter(
+                  (f) => f.type === FieldType.RELATION || f.type === FieldType.RELATION_SUBTABLE
+                ).length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    当前表没有关联字段，无法创建查找字段
+                  </p>
+                ) : (
+                  <Select
+                    value={lookupSourceFieldId}
+                    onValueChange={(value) => {
+                      setLookupSourceFieldId(value ?? "");
+                      setLookupTargetFieldKey("");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="选择源关联字段">
+                        {lookupSourceFieldId
+                          ? allFields.find((f) => f.id === lookupSourceFieldId)?.label ??
+                            lookupSourceFieldId
+                          : null}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allFields
+                        .filter((f) => f.type === FieldType.RELATION || f.type === FieldType.RELATION_SUBTABLE)
+                        .map((f) => (
+                          <SelectItem key={f.id} value={f.id!}>
+                            {f.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {lookupSourceFieldId && (() => {
+                  const sourceField = allFields.find((f) => f.id === lookupSourceFieldId);
+                  if (!sourceField?.relationTo) return null;
+                  const targetTableFields = availableTables
+                    .find((t) => t.id === sourceField.relationTo)
+                    ?.fields.filter(
+                      (f) =>
+                        f.type !== FieldType.RELATION &&
+                        f.type !== FieldType.RELATION_SUBTABLE &&
+                        f.type !== FieldType.COUNT &&
+                        f.type !== FieldType.LOOKUP &&
+                        f.type !== FieldType.FORMULA
+                    ) ?? [];
+                  if (targetTableFields.length === 0) return null;
+                  return (
+                    <>
+                      <Label>拉取字段</Label>
+                      <Select
+                        value={lookupTargetFieldKey}
+                        onValueChange={(value) => setLookupTargetFieldKey(value ?? "")}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="选择要拉取的字段">
+                            {lookupTargetFieldKey
+                              ? targetTableFields.find((f) => f.key === lookupTargetFieldKey)?.label ??
+                                lookupTargetFieldKey
+                              : null}
+                          </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                          {targetTableFields.map((f) => (
+                            <SelectItem key={f.key} value={f.key}>
+                              {f.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </>
+                  );
+                })()}
+
+                <p className="text-xs text-muted-foreground">
+                  从关联记录拉取指定字段值，只读展示
                 </p>
               </div>
             )}
@@ -973,7 +1078,8 @@ export function FieldConfigForm({
               </>
             )}
 
-            {fieldType !== FieldType.COUNT && fieldType !== FieldType.FORMULA &&
+            {fieldType !== FieldType.COUNT && fieldType !== FieldType.LOOKUP &&
+              fieldType !== FieldType.FORMULA &&
               fieldType !== FieldType.AUTO_NUMBER && fieldType !== FieldType.SYSTEM_TIMESTAMP &&
               fieldType !== FieldType.SYSTEM_USER && (
               <div className="grid gap-2">

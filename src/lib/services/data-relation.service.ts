@@ -384,7 +384,15 @@ async function refreshRelationSnapshotsForRecords(
     },
   });
 
-  // Load RELATION fields for COUNT source resolution (single-link: 0 or 1)
+  // Load LOOKUP fields for field value pulling
+  const lookupFields = await tx.dataField.findMany({
+    where: {
+      tableId: { in: tableIds },
+      type: "LOOKUP",
+    },
+  });
+
+  // Load RELATION fields for COUNT/Lookup source resolution
   const relationLinkFields = await tx.dataField.findMany({
     where: {
       tableId: { in: tableIds },
@@ -392,7 +400,7 @@ async function refreshRelationSnapshotsForRecords(
     },
   });
 
-  if (relationFields.length === 0 && countFields.length === 0) {
+  if (relationFields.length === 0 && countFields.length === 0 && lookupFields.length === 0) {
     return;
   }
 
@@ -407,6 +415,15 @@ async function refreshRelationSnapshotsForRecords(
   for (const field of countFields) {
     countFieldsByTableId.set(field.tableId, [
       ...(countFieldsByTableId.get(field.tableId) ?? []),
+      field,
+    ]);
+  }
+
+  // Group lookupFields by tableId
+  const lookupFieldsByTableId = new Map<string, RelationFieldRow[]>();
+  for (const field of lookupFields) {
+    lookupFieldsByTableId.set(field.tableId, [
+      ...(lookupFieldsByTableId.get(field.tableId) ?? []),
       field,
     ]);
   }
@@ -528,6 +545,35 @@ async function refreshRelationSnapshotsForRecords(
       }
     }
 
+    // Compute LOOKUP field values
+    for (const lookupField of lookupFieldsByTableId.get(record.tableId) ?? []) {
+      const opts = parseFieldOptions(lookupField.options);
+      if (!opts.lookupSourceFieldId || !opts.lookupTargetFieldKey) continue;
+      const sourceField = sourceFieldById.get(opts.lookupSourceFieldId);
+      if (!sourceField) continue;
+
+      if (sourceField.type === "RELATION_SUBTABLE") {
+        // Pull target field value from each related record snapshot
+        const snapshots: typeof snapshotItemsByFieldId extends Map<string, infer V> ? V : never = snapshotItemsByFieldId.get(opts.lookupSourceFieldId) ?? [];
+        const targetKey = opts.lookupTargetFieldKey;
+        nextData[lookupField.key] = (snapshots ?? []).map((r: RelationSubtableValueItem) => {
+          const recordData = relatedRecordById.get(r.targetRecordId);
+          if (recordData && targetKey) return recordData[targetKey as keyof typeof recordData] as unknown;
+          return r.attributes?.[targetKey] ?? null;
+        });
+      } else if (sourceField.type === "RELATION") {
+        // Pull target field value from single linked record
+        const sourceValue = nextData[opts.lookupSourceFieldId] as Record<string, unknown> | null;
+        const linkedRecordId = sourceValue?.id as string | undefined;
+        if (linkedRecordId) {
+          const linkedRecordData = relatedRecordById.get(linkedRecordId);
+          nextData[lookupField.key] = linkedRecordData?.[opts.lookupTargetFieldKey] ?? null;
+        } else {
+          nextData[lookupField.key] = null;
+        }
+      }
+    }
+
     await tx.dataRecord.update({
       where: { id: record.id },
       data: { data: nextData },
@@ -548,7 +594,11 @@ export async function backfillCountFieldValues(
     where: { tableId, type: "COUNT" },
   });
 
-  if (countFields.length === 0) {
+  const lookupFields = await db.dataField.findMany({
+    where: { tableId, type: "LOOKUP" },
+  });
+
+  if (countFields.length === 0 && lookupFields.length === 0) {
     return { success: true, data: null };
   }
 

@@ -81,6 +81,10 @@ export interface FieldOptions {
   formula?: string;
   /** COUNT: ID of the RELATION or RELATION_SUBTABLE field to count */
   countSourceFieldId?: string;
+  /** LOOKUP: source relation field ID */
+  lookupSourceFieldId?: string;
+  /** LOOKUP: target field key in the related table to read from */
+  lookupTargetFieldKey?: string;
 }
 
 export function parseFieldOptions(raw: unknown): FieldOptions {

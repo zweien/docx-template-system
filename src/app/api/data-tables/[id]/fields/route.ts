@@ -141,14 +141,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       userAgent: getUserAgent(request),
     });
 
-    // Backfill COUNT field values for newly added COUNT fields
+    // Backfill COUNT / LOOKUP field values for newly added fields
     const hasNewCountFields = addedFields.some((f) => f.type === FieldType.COUNT);
+    const hasNewLookupFields = addedFields.some((f) => f.type === FieldType.LOOKUP);
     let backfillWarning = false;
-    if (hasNewCountFields) {
+    if (hasNewCountFields || hasNewLookupFields) {
       try {
         await backfillCountFieldValues(id);
       } catch (err) {
-        console.error("COUNT 字段回填失败:", err);
+        console.error("字段回填失败:", err);
         backfillWarning = true;
       }
     }

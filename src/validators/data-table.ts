@@ -32,7 +32,7 @@ export const businessKeySchema = z.object({
 // ========== Filter Schemas (shared by views and rollup conditions) ==========
 
 export const filterConditionSchema = z.object({
-  fieldKey: z.string(),
+  fieldKey: z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/),
   op: z.enum([
     "eq", "ne", "gt", "lt", "gte", "lte",
     "contains", "notcontains", "startswith", "endswith",

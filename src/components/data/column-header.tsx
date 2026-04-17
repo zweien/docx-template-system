@@ -160,19 +160,21 @@ export function ColumnHeader({
       setTargetFieldKey(tfk);
 
       // Load related fields if needed
+      let loadedRelatedFields = relatedFields;
       if (isRelationField && relationTableId && onFetchRelatedFields) {
         setLoadingRelated(true);
         try {
           const fields = await onFetchRelatedFields(relationTableId);
-          setRelatedFields(fields.filter((f) =>
+          loadedRelatedFields = fields.filter((f) =>
             f.type !== "RELATION" && f.type !== "RELATION_SUBTABLE"
-          ));
+          );
+          setRelatedFields(loadedRelatedFields);
         } catch { /* ignore */ }
         setLoadingRelated(false);
       }
 
       const resolvedType = isRelationField
-        ? (tfk ? (relatedFields.find((f) => f.key === tfk)?.type ?? "TEXT") : "TEXT")
+        ? (tfk ? (loadedRelatedFields.find((f) => f.key === tfk)?.type ?? "TEXT") : "TEXT")
         : field.type;
 
       setFilterOp(filter?.op ?? getOperatorsForType(resolvedType as FieldType)[0]);

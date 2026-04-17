@@ -350,22 +350,36 @@ export async function listRecords(
     // Build view-level filter conditions from FilterCondition[]
     // Separate cross-table (dot-notation) from local conditions
     const normalizedFilterGroups = normalizeFilters(filters.filterConditions ?? []);
-    const { localGroups, crossFilters } = separateFilterConditions(
+    const { localGroups, crossFilterGroups } = separateFilterConditions(
       normalizedFilterGroups,
       tableResult.data.fields
     );
 
     // Resolve cross-table filters to matching source record IDs
     let crossTableSourceIds: Set<string> | null = null;
-    if (crossFilters.length > 0) {
-      for (const cf of crossFilters) {
-        const ids = await resolveCrossTableFilter(cf);
+    if (crossFilterGroups.length > 0) {
+      // Groups are AND-combined; conditions within each group use the group's operator
+      for (const group of crossFilterGroups) {
+        let groupIds: Set<string> | null = null;
+        for (const cf of group.filters) {
+          const ids = await resolveCrossTableFilter(cf);
+          if (groupIds === null) {
+            groupIds = ids;
+          } else if (group.operator === "OR") {
+            for (const id of ids) groupIds.add(id);
+          } else {
+            // AND: intersection
+            for (const id of groupIds) {
+              if (!ids.has(id)) groupIds.delete(id);
+            }
+          }
+        }
+        // Merge group result into overall result (groups are AND-combined)
         if (crossTableSourceIds === null) {
-          crossTableSourceIds = ids;
+          crossTableSourceIds = groupIds ?? new Set();
         } else {
-          // AND intersection
           for (const id of crossTableSourceIds) {
-            if (!ids.has(id)) crossTableSourceIds.delete(id);
+            if (!groupIds?.has(id)) crossTableSourceIds.delete(id);
           }
         }
       }
@@ -1289,13 +1303,19 @@ interface CrossTableFilter {
   condition: FilterCondition;
 }
 
+interface CrossTableFilterGroup {
+  operator: "AND" | "OR";
+  filters: CrossTableFilter[];
+}
+
 function separateFilterConditions(
   groups: FilterGroup[],
   fields: DataFieldItem[]
-): { localGroups: FilterGroup[]; crossFilters: CrossTableFilter[] } {
-  const crossFilters: CrossTableFilter[] = [];
+): { localGroups: FilterGroup[]; crossFilterGroups: CrossTableFilterGroup[] } {
+  const crossFilterGroups: CrossTableFilterGroup[] = [];
   const localGroups = groups.map((group) => {
     const localConditions: FilterCondition[] = [];
+    const crossConditions: CrossTableFilter[] = [];
     for (const cond of group.conditions) {
       const ref = parseRelationFieldRef(cond.fieldKey);
       if (ref) {
@@ -1305,7 +1325,7 @@ function separateFilterConditions(
           (relField.type === "RELATION" || relField.type === "RELATION_SUBTABLE") &&
           relField.relationTo
         ) {
-          crossFilters.push({
+          crossConditions.push({
             relationField: relField,
             targetFieldKey: ref.targetFieldKey,
             condition: { ...cond, fieldKey: ref.targetFieldKey },
@@ -1315,9 +1335,12 @@ function separateFilterConditions(
       }
       localConditions.push(cond);
     }
+    if (crossConditions.length > 0) {
+      crossFilterGroups.push({ operator: group.operator, filters: crossConditions });
+    }
     return { ...group, conditions: localConditions };
   });
-  return { localGroups, crossFilters };
+  return { localGroups, crossFilterGroups };
 }
 
 /** In-memory condition evaluation (for between/in/notin operators on target records) */
@@ -1385,6 +1408,7 @@ async function resolveCrossTableFilter(
     // In-memory filter for between/in/notin operators
     const allTarget = await db.dataRecord.findMany({
       where: { tableId: targetTableId },
+      take: 10000,
     });
     targetIds = allTarget
       .filter((r) => {

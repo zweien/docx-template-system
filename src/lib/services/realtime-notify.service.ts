@@ -8,6 +8,16 @@ const CHANNEL = "table_changes";
 const listeners = new Map<string, Set<RealtimeListener>>();
 let listenClient: Client | null = null;
 let initPromise: Promise<void> | null = null;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleReconnect(): void {
+  if (reconnectTimer) return;
+  if (listeners.size === 0) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    void ensureListening();
+  }, 3000);
+}
 
 async function ensureListening(): Promise<void> {
   if (listenClient) return;
@@ -40,11 +50,13 @@ async function ensureListening(): Promise<void> {
     client.on("error", () => {
       listenClient = null;
       initPromise = null;
+      scheduleReconnect();
     });
 
     client.on("end", () => {
       listenClient = null;
       initPromise = null;
+      scheduleReconnect();
     });
 
     listenClient = client;

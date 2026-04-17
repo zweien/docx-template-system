@@ -31,12 +31,6 @@ function formatTimeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString("zh-CN");
 }
 
-function formatValue(val: unknown): string {
-  if (val === null || val === undefined) return "(空)";
-  if (typeof val === "object") return JSON.stringify(val);
-  return String(val);
-}
-
 export function ActivityStream({ tableId, liveActivities }: ActivityStreamProps) {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [loading, setLoading] = useState(true);

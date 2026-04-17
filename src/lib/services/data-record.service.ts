@@ -1019,7 +1019,7 @@ export async function patchField(
     // Fetch updated record with relations
     const updatedRecord = await db.dataRecord.findUnique({
       where: { id: recordId },
-      include: { createdBy: { select: { name: true } } },
+      include: { createdBy: { select: { name: true } }, updatedBy: { select: { name: true } } },
     });
 
     if (!updatedRecord) {
@@ -1035,7 +1035,7 @@ export async function patchField(
       fieldLabel: field?.label ?? fieldKey,
       value,
       changedById: userId,
-      changedByName: mapped.createdByName ?? "",
+      changedByName: mapped.updatedByName ?? mapped.createdByName ?? "",
       changedAt: new Date().toISOString(),
     }).catch(() => {});
 
@@ -1072,6 +1072,12 @@ export async function deleteRecord(
       return { success: false, error: { code: "NOT_FOUND", message: "记录不存在" } };
     }
 
+    let deletedByName = "";
+    if (userId) {
+      const user = await db.user.findUnique({ where: { id: userId }, select: { name: true } });
+      deletedByName = user?.name ?? "";
+    }
+
     await db.$transaction(tx => doDeleteRecord(tx, id));
 
     void publishRealtimeEvent({
@@ -1079,7 +1085,7 @@ export async function deleteRecord(
       tableId: record.tableId,
       recordId: id,
       deletedById: userId ?? "",
-      deletedByName: "",
+      deletedByName,
       deletedAt: new Date().toISOString(),
     }).catch(() => {});
 

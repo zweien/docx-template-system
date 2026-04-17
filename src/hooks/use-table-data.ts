@@ -51,6 +51,15 @@ export interface UseTableDataReturn {
   refresh: () => void;
   isConnected: boolean;
   activityFeed: import("@/types/realtime").ActivityEntry[];
+  onlineUsers: import("@/types/realtime").OnlineUser[];
+  cellLocks: Map<string, import("@/types/realtime").CellLock>;
+  acquireCellLock: (recordId: string, fieldKey: string) => Promise<{ acquired: boolean; lockedBy?: { userId: string; userName: string } }>;
+  releaseCellLock: (recordId: string, fieldKey: string) => Promise<void>;
+  isCellLockedByOther: (recordId: string, fieldKey: string) => boolean;
+  getLockOwner: (recordId: string, fieldKey: string) => { userId: string; userName: string } | null;
+  broadcastCursor: (recordId: string, fieldKey: string) => void;
+  myColor: string;
+  onLockLost: (callback: (recordId: string, fieldKey: string) => void) => () => void;
 }
 
 function buildTablePath(tableId: string, params: URLSearchParams): string {
@@ -232,7 +241,19 @@ export function useTableData({
     []
   );
 
-  const { isConnected, activityFeed } = useRealtimeTable({
+  const {
+    isConnected,
+    activityFeed,
+    onlineUsers,
+    cellLocks,
+    acquireCellLock,
+    releaseCellLock,
+    isCellLockedByOther,
+    getLockOwner,
+    broadcastCursor,
+    myColor,
+    onLockLost,
+  } = useRealtimeTable({
     tableId,
     onUpdateRecordField: updateRecordField,
     onRefresh: refresh,
@@ -533,5 +554,14 @@ export function useTableData({
     refresh,
     isConnected,
     activityFeed,
+    onlineUsers,
+    cellLocks,
+    acquireCellLock,
+    releaseCellLock,
+    isCellLockedByOther,
+    getLockOwner,
+    broadcastCursor,
+    myColor,
+    onLockLost,
   };
 }

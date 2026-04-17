@@ -32,9 +32,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params;
-  const search = request.nextUrl.searchParams.get("search") || undefined;
-  const displayFieldParam =
-    request.nextUrl.searchParams.get("displayField") || undefined;
+  const sp = request.nextUrl.searchParams;
+  const search = sp.get("search") || undefined;
+  const displayFieldParam = sp.get("displayField") || undefined;
+  const pageParam = sp.get("page");
+  const pageSizeParam = sp.get("pageSize");
 
   const tableResult = await getTable(id);
   if (!tableResult.success) {
@@ -49,9 +51,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     displayFieldParam
   );
 
+  const isPaginated = pageParam !== null;
+  const page = isPaginated ? Math.max(1, parseInt(pageParam, 10) || 1) : 1;
+  const pageSize = isPaginated
+    ? Math.min(200, Math.max(1, parseInt(pageSizeParam || "50", 10) || 50))
+    : (search ? 50 : 500);
+
   const result = await listRecords(id, {
-    page: 1,
-    pageSize: search ? 50 : 500,
+    page,
+    pageSize,
     search: search || undefined,
   });
 
@@ -76,5 +84,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return option.label.toLowerCase().includes(search.toLowerCase());
     });
 
+  if (isPaginated) {
+    return NextResponse.json({
+      options,
+      total: result.data.total,
+      page,
+      pageSize,
+      hasMore: page * pageSize < result.data.total,
+    });
+  }
+
+  // Backward-compatible: flat array
   return NextResponse.json(options);
 }

@@ -1,14 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
+import { toast } from "sonner";
+import { useRelationOptions, type RelationOption } from "@/hooks/use-relation-options";
+import { RelationQuickCreateForm } from "@/components/data/relation-quick-create-form";
 
 export interface RelationTargetOption {
   id: string;
@@ -23,6 +28,12 @@ interface RelationTargetPickerProps {
   triggerId?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** Enable multi-select mode */
+  multiSelect?: boolean;
+  /** Selected items in multi-select mode */
+  valueMulti?: RelationTargetOption[];
+  /** Callback for multi-select changes */
+  onChangeMulti?: (items: RelationTargetOption[]) => void;
 }
 
 export function RelationTargetPicker({
@@ -33,133 +44,273 @@ export function RelationTargetPicker({
   triggerId,
   placeholder = "选择目标记录",
   disabled = false,
+  multiSelect = false,
+  valueMulti = [],
+  onChangeMulti,
 }: RelationTargetPickerProps) {
-  const [options, setOptions] = useState<RelationTargetOption[]>([]);
-  const [search, setSearch] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const [open, setOpen] = useState(false);
+
+  const {
+    options,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    search,
+    setSearch,
+    sentinelRef,
+    selectedIds,
+    toggleSelect,
+    removeSelect,
+    selectedItems,
+    createRecord,
+    isCreating,
+    showCreateForm,
+    setShowCreateForm,
+    requiredFields,
+  } = useRelationOptions({
+    relationTableId,
+    displayField,
+    multiSelect,
+  });
+
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (!relationTableId) {
-      setOptions([]);
-      setErrorMessage("");
-      return;
+    if (!open) {
+      setSearch("");
+      setShowCreateForm(false);
     }
+  }, [open, setSearch, setShowCreateForm]);
 
-    const controller = new AbortController();
+  // Sync multi-select external state
+  useEffect(() => {
+    if (multiSelect && onChangeMulti && open) {
+      onChangeMulti(selectedItems);
+    }
+  }, [selectedItems, multiSelect, onChangeMulti, open]);
 
-    async function fetchOptions() {
-      setIsLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (search) {
-          params.set("search", search);
-        }
-        if (displayField) {
-          params.set("displayField", displayField);
-        }
+  const handleSingleSelect = (option: RelationOption) => {
+    onChange({ id: option.id, label: option.label });
+    setOpen(false);
+  };
 
-        const response = await fetch(
-          `/api/data-tables/${relationTableId}/relation-options?${params.toString()}`,
-          { signal: controller.signal }
-        );
+  const handleMultiSelect = (option: RelationOption) => {
+    toggleSelect(option.id, option.label);
+  };
 
-        if (!response.ok) {
-          setOptions([]);
-          setErrorMessage("加载关联记录失败");
-          return;
-        }
-
-        const result = (await response.json()) as RelationTargetOption[];
-        setOptions(Array.isArray(result) ? result : []);
-        setErrorMessage("");
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          error.name !== "AbortError"
-        ) {
-          console.error("加载目标记录失败:", error);
-          setOptions([]);
-          setErrorMessage("加载关联记录失败");
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
+  const handleCreate = async (data: Record<string, unknown>) => {
+    try {
+      const newOption = await createRecord(data);
+      if (newOption) {
+        if (multiSelect) {
+          // Already auto-selected by hook
+        } else {
+          onChange({ id: newOption.id, label: newOption.label });
+          setOpen(false);
         }
       }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "创建失败");
     }
+  };
 
-    fetchOptions();
+  const handleRemoveMulti = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeSelect(id);
+  };
 
-    return () => {
-      controller.abort();
-    };
-  }, [displayField, relationTableId, search]);
-
-  const optionMap = useMemo(() => {
-    return new Map(options.map((option) => [option.id, option]));
-  }, [options]);
-
-  const selectedLabel = value?.id
-    ? optionMap.get(value.id)?.label ?? value.label
-    : null;
-
-  return (
-    <Select
-      value={value?.id ?? ""}
-      onValueChange={(nextId) => {
-        if (!nextId) {
-          onChange(null);
-          return;
-        }
-
-        const nextOption = optionMap.get(nextId);
-        onChange(
-          nextOption ?? { id: nextId, label: nextId }
-        );
-      }}
-      disabled={disabled || !relationTableId}
-    >
-      <SelectTrigger id={triggerId} className="w-full">
-        {selectedLabel ? (
-          <span className="flex-1 truncate text-left">
-            {selectedLabel}
-          </span>
-        ) : (
-          <SelectValue placeholder={placeholder} />
-        )}
-      </SelectTrigger>
-      <SelectContent>
-        <div className="border-b p-2">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索..."
-            className="h-8"
-          />
-        </div>
-        <div className="max-h-60 overflow-auto">
-          {isLoading ? (
-            <div className="p-2 text-center text-sm text-zinc-500">
-              加载中...
-            </div>
-          ) : errorMessage ? (
-            <div className="p-2 text-center text-sm text-red-500">
-              {errorMessage}
-            </div>
-          ) : options.length === 0 ? (
-            <div className="p-2 text-center text-sm text-zinc-500">
-              {search ? "无匹配结果" : "暂无记录"}
-            </div>
+  // Multi-select trigger with badges
+  if (multiSelect) {
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <button
+              id={triggerId}
+              ref={triggerRef}
+              className="flex min-h-9 w-full flex-wrap items-center gap-1 rounded-md border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-left"
+              disabled={disabled || !relationTableId}
+            />
+          }
+        >
+          {selectedItems.length === 0 ? (
+            <span className="text-muted-foreground">{placeholder}</span>
           ) : (
-            options.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
+            selectedItems.map((item) => (
+              <Badge key={item.id} variant="secondary" className="gap-1 text-xs">
+                {item.label}
+                <button
+                  type="button"
+                  className="hover:text-destructive"
+                  onClick={(e) => handleRemoveMulti(item.id, e)}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
             ))
           )}
-        </div>
-      </SelectContent>
-    </Select>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-[var(--trigger-width)] p-0" style={{ minWidth: 200 }}>
+          {showCreateForm ? (
+            <RelationQuickCreateForm
+              fields={requiredFields}
+              onSubmit={handleCreate}
+              onCancel={() => setShowCreateForm(false)}
+              isSubmitting={isCreating}
+            />
+          ) : (
+            <>
+              <div className="p-2 border-b">
+                <Input
+                  placeholder="搜索..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="h-8"
+                />
+              </div>
+              <div className="max-h-60 overflow-auto">
+                {isLoading ? (
+                  <div className="p-3 text-center text-sm text-muted-foreground">加载中...</div>
+                ) : options.length === 0 ? (
+                  <div className="p-3 text-center text-sm text-muted-foreground">
+                    {search ? "无匹配结果" : "暂无记录"}
+                  </div>
+                ) : (
+                  <>
+                    {options.map((option) => (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-2 ${
+                          selectedIds.has(option.id) ? "bg-muted font-medium" : ""
+                        }`}
+                        onClick={() => handleMultiSelect(option)}
+                      >
+                        <span className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                          selectedIds.has(option.id) ? "bg-primary border-primary" : "border-input"
+                        }`}>
+                          {selectedIds.has(option.id) && (
+                            <svg className="w-3 h-3 text-primary-foreground" viewBox="0 0 12 12" fill="none">
+                              <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </span>
+                        <span className="truncate">{option.label}</span>
+                      </button>
+                    ))}
+                    {hasMore && (
+                      <div ref={sentinelRef} className="p-2 text-center text-xs text-muted-foreground">
+                        {isLoadingMore ? "加载更多..." : ""}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+              {isAdmin && (
+                <div className="border-t p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-xs"
+                    onClick={() => setShowCreateForm(true)}
+                  >
+                    新建记录
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
+  // Single-select mode
+  const currentOption = options.find((o) => o.id === value?.id);
+  const selectedLabel = currentOption?.label ?? value?.label;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            id={triggerId}
+            ref={triggerRef}
+            className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-left"
+            disabled={disabled || !relationTableId}
+          />
+        }
+      >
+        {selectedLabel ? (
+          <span className="truncate">{selectedLabel}</span>
+        ) : (
+          <span className="text-muted-foreground">{placeholder}</span>
+        )}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[var(--trigger-width)] p-0" style={{ minWidth: 200 }}>
+        {showCreateForm ? (
+          <RelationQuickCreateForm
+            fields={requiredFields}
+            onSubmit={handleCreate}
+            onCancel={() => setShowCreateForm(false)}
+            isSubmitting={isCreating}
+          />
+        ) : (
+          <>
+            <div className="p-2 border-b">
+              <Input
+                placeholder="搜索..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8"
+              />
+            </div>
+            <div className="max-h-60 overflow-auto">
+              {isLoading ? (
+                <div className="p-3 text-center text-sm text-muted-foreground">加载中...</div>
+              ) : options.length === 0 ? (
+                <div className="p-3 text-center text-sm text-muted-foreground">
+                  {search ? "无匹配结果" : "暂无记录"}
+                </div>
+              ) : (
+                <>
+                  {options.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
+                        option.id === value?.id ? "bg-muted font-medium" : ""
+                      }`}
+                      onClick={() => handleSingleSelect(option)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                  {hasMore && (
+                    <div ref={sentinelRef} className="p-2 text-center text-xs text-muted-foreground">
+                      {isLoadingMore ? "加载更多..." : ""}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {isAdmin && (
+              <div className="border-t p-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full h-7 text-xs"
+                  onClick={() => setShowCreateForm(true)}
+                >
+                  新建记录
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }

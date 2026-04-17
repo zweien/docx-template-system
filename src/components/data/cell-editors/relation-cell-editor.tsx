@@ -1,9 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
-import type { RelationTargetOption } from "@/components/data/relation-target-picker";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { useRelationOptions } from "@/hooks/use-relation-options";
+import { RelationQuickCreateForm } from "@/components/data/relation-quick-create-form";
 
 interface RelationCellEditorProps {
   value: string | { id: string; display?: string } | null;
@@ -20,9 +24,8 @@ export function RelationCellEditor({
   relationTableId,
   displayField,
 }: RelationCellEditorProps) {
-  const [search, setSearch] = useState("");
-  const [options, setOptions] = useState<RelationTargetOption[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
   const [isOpen, setIsOpen] = useState(true);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -30,48 +33,36 @@ export function RelationCellEditor({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Calculate dropdown position using fixed positioning
-  const updatePosition = useCallback(() => {
+  const {
+    options,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    search,
+    setSearch,
+    sentinelRef,
+    createRecord,
+    isCreating,
+    showCreateForm,
+    setShowCreateForm,
+    requiredFields,
+  } = useRelationOptions({
+    relationTableId: relationTableId ?? "",
+    displayField,
+  });
+
+  const updatePosition = () => {
     if (inputRef.current) {
       const rect = inputRef.current.getBoundingClientRect();
       setDropdownPos({ top: rect.bottom + 2, left: rect.left });
     }
-  }, []);
-
-  // Fetch options from API
-  useEffect(() => {
-    if (!relationTableId) return;
-
-    const controller = new AbortController();
-    async function fetchOptions() {
-      setIsLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (search) params.set("search", search);
-        if (displayField) params.set("displayField", displayField);
-
-        const res = await fetch(
-          `/api/data-tables/${relationTableId}/relation-options?${params}`,
-          { signal: controller.signal }
-        );
-        if (!res.ok) return;
-        const data = (await res.json()) as RelationTargetOption[];
-        setOptions(Array.isArray(data) ? data : []);
-      } catch {
-        // abort is fine
-      } finally {
-        if (!controller.signal.aborted) setIsLoading(false);
-      }
-    }
-    fetchOptions();
-    return () => controller.abort();
-  }, [relationTableId, displayField, search]);
+  };
 
   useEffect(() => {
     inputRef.current?.focus();
     updatePosition();
     setMounted(true);
-  }, [updatePosition]);
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -118,6 +109,18 @@ export function RelationCellEditor({
     onCommit(null);
   }
 
+  async function handleCreate(data: Record<string, unknown>) {
+    try {
+      const newOption = await createRecord(data);
+      if (newOption) {
+        committedRef.current = true;
+        onCommit({ id: newOption.id, display: newOption.label });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "创建失败");
+    }
+  }
+
   // Fallback: plain text input when no relationTableId configured
   if (!relationTableId) {
     return (
@@ -135,12 +138,6 @@ export function RelationCellEditor({
     );
   }
 
-  const filteredOptions = search
-    ? options.filter((o) =>
-        o.label.toLowerCase().includes(search.toLowerCase())
-      )
-    : options;
-
   const dropdown = isOpen && dropdownPos ? createPortal(
     <div
       id="relation-dropdown-portal"
@@ -152,33 +149,73 @@ export function RelationCellEditor({
       }}
       className="w-64 bg-background border rounded-md shadow-lg"
     >
-      <div className="max-h-48 overflow-auto">
-        {isLoading ? (
-          <div className="p-3 text-center text-sm text-muted-foreground">
-            加载中...
+      {showCreateForm ? (
+        <RelationQuickCreateForm
+          fields={requiredFields}
+          onSubmit={handleCreate}
+          onCancel={() => setShowCreateForm(false)}
+          isSubmitting={isCreating}
+        />
+      ) : (
+        <>
+          <div className="max-h-48 overflow-auto">
+            {isLoading ? (
+              <div className="p-3 text-center text-sm text-muted-foreground">加载中...</div>
+            ) : options.length === 0 ? (
+              <div className="p-3 text-center text-sm text-muted-foreground">
+                {search ? "无匹配结果" : "暂无记录"}
+              </div>
+            ) : (
+              <>
+                {options.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
+                      option.id === rawId ? "bg-muted font-medium" : ""
+                    }`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSelect(option.id, option.label);
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+                {hasMore && (
+                  <div ref={sentinelRef} className="p-2 text-center text-xs text-muted-foreground">
+                    {isLoadingMore ? "加载更多..." : ""}
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        ) : filteredOptions.length === 0 ? (
-          <div className="p-3 text-center text-sm text-muted-foreground">
-            {search ? "无匹配结果" : "暂无记录"}
-          </div>
-        ) : (
-          filteredOptions.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
-                option.id === rawId ? "bg-muted font-medium" : ""
-              }`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSelect(option.id, option.label);
-              }}
-            >
-              {option.label}
-            </button>
-          ))
-        )}
-      </div>
+          {(rawId || isAdmin) && (
+            <div className="border-t p-1 flex gap-1">
+              {rawId && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 h-7 text-xs"
+                  onMouseDown={(e) => { e.preventDefault(); handleClear(); }}
+                >
+                  清除
+                </Button>
+              )}
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 h-7 text-xs"
+                  onMouseDown={(e) => { e.preventDefault(); setShowCreateForm(true); }}
+                >
+                  新建记录
+                </Button>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>,
     document.body
   ) : null;

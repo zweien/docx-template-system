@@ -18,6 +18,8 @@ import { formatCellValue } from "@/lib/format-cell";
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
 import type { ChangeHistoryEntry } from "@/lib/services/data-record-change-history.service";
 import { FieldTypeIcon } from "./field-type-icon";
+import { FieldType } from "@/generated/prisma/enums";
+import { RichTextPreview } from "./rich-text-cell-editor";
 
 export interface RecordDetailDrawerProps {
   open: boolean;
@@ -279,7 +281,9 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                         {field.label}
                       </div>
                       <div className="break-words text-sm">
-                        {formatCellValue(field, record.data[field.key])}
+                        {field.type === FieldType.RICH_TEXT
+                          ? <RichTextPreview value={record.data[field.key]} />
+                          : formatCellValue(field, record.data[field.key])}
                       </div>
                     </div>
                   ))}

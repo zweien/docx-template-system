@@ -23,6 +23,7 @@ import { parseSelectOptions } from "@/types/data-table";
 import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { RichTextPreview, RichTextCellEditor, extractPlainText } from "@/components/data/rich-text-cell-editor";
 import { useKeyboardNav, type ActiveCell, type CellRange } from "@/hooks/use-keyboard-nav";
 import { useUndoManager } from "@/hooks/use-undo-manager";
 import { cn } from "@/lib/utils";
@@ -665,6 +666,22 @@ export function GridView({
   const { editingCell, startEditing, commitEdit, cancelEdit } =
     useInlineEdit({ tableId, onCommit: handleCommitWithUndo });
 
+  // Rich text popup editor state
+  const [richEditCell, setRichEditCell] = useState<{
+    recordId: string;
+    fieldKey: string;
+    value: unknown;
+  } | null>(null);
+
+  const handleRichEditSave = useCallback(
+    (value: unknown) => {
+      if (!richEditCell) return;
+      void handleCommitWithUndo(richEditCell.recordId, richEditCell.fieldKey, value);
+      setRichEditCell(null);
+    },
+    [richEditCell, handleCommitWithUndo]
+  );
+
   // ── Fill handle (drag-fill) ──────────────────────────────────────────────
   const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
   const [fillMode, setFillMode] = useState<"increment" | "copy">("increment");
@@ -680,7 +697,7 @@ export function GridView({
   const READONLY_FIELD_TYPES: readonly string[] = [
     FieldType.AUTO_NUMBER, FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER,
     FieldType.FORMULA, FieldType.RELATION_SUBTABLE, FieldType.COUNT, FieldType.LOOKUP,
-    FieldType.ROLLUP,
+    FieldType.ROLLUP, FieldType.RICH_TEXT,
   ];
 
   const computeFillValue = useCallback((fieldType: string, originalValue: unknown, step: number, mode: "increment" | "copy"): unknown => {
@@ -1356,6 +1373,20 @@ export function GridView({
         return renderEditor(field, record);
       }
 
+      if (field.type === FieldType.RICH_TEXT) {
+        return (
+          <div
+            className="cursor-pointer w-full h-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRichEditCell({ recordId: record.id, fieldKey: field.key, value: record.data[field.key] });
+            }}
+          >
+            <RichTextPreview value={record.data[field.key]} />
+          </div>
+        );
+      }
+
       return (
         <span className="block px-1 truncate">
           {formatCellValue(field, record.data[field.key])}
@@ -1886,6 +1917,13 @@ export function GridView({
             递增
           </Button>
         </div>
+      )}
+
+      {richEditCell && (
+        <RichTextCellEditor
+          value={richEditCell.value}
+          onChange={handleRichEditSave}
+        />
       )}
     </div>
   );

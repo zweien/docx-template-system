@@ -216,6 +216,9 @@ export function formatCellValue(
       if (typeof value === "number") return <span className="text-muted-foreground">{value.toLocaleString()}</span>;
       if (Array.isArray(value)) return <span className="text-muted-foreground">{value.join(", ")}</span>;
       return <span className="text-muted-foreground">{String(value)}</span>;
+    case FieldType.RICH_TEXT:
+      if (value === null || value === undefined) return <span className="text-zinc-400">-</span>;
+      return <span className="text-muted-foreground">{extractRichTextPlainText(value)}</span>;
     default:
       return String(value);
   }
@@ -242,8 +245,42 @@ export function formatCellText(field: DataFieldItem, value: unknown): string {
     case FieldType.COUNT:
     case FieldType.LOOKUP:
     case FieldType.ROLLUP:
+    case FieldType.RICH_TEXT:
       return String(value ?? "");
     default:
       return String(value);
   }
+}
+
+function extractRichTextPlainText(value: unknown): string {
+  if (!value) return "";
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return richTextDocToText(parsed);
+    } catch {
+      return value.length > 100 ? value.slice(0, 100) + "..." : value;
+    }
+  }
+  if (typeof value === "object") {
+    const text = richTextDocToText(value as Record<string, unknown>);
+    return text.length > 100 ? text.slice(0, 100) + "..." : text;
+  }
+  return String(value);
+}
+
+function richTextDocToText(doc: Record<string, unknown>): string {
+  if (!doc?.content || !Array.isArray(doc.content)) return "";
+  return (doc.content as Array<Record<string, unknown>>)
+    .map((node) => richTextNodeToText(node))
+    .join(" ")
+    .trim();
+}
+
+function richTextNodeToText(node: Record<string, unknown>): string {
+  if (node.type === "text") return (node.text as string) || "";
+  if (!node.content || !Array.isArray(node.content)) return "";
+  return (node.content as Array<Record<string, unknown>>)
+    .map((n) => richTextNodeToText(n))
+    .join("");
 }

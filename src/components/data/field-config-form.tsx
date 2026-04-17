@@ -65,6 +65,7 @@ const FIELD_TYPES = [
   { value: FieldType.COUNT, label: "计数" },
   { value: FieldType.LOOKUP, label: "查找" },
   { value: FieldType.ROLLUP, label: "汇总" },
+  { value: FieldType.RICH_TEXT, label: "富文本" },
   { value: FieldType.RELATION, label: "关联字段" },
   { value: FieldType.RELATION_SUBTABLE, label: "关系子表格" },
 ];

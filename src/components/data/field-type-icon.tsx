@@ -18,6 +18,7 @@ import {
   Calculator,
   Search,
   BarChart3,
+  FileText,
 } from "lucide-react";
 import { FieldType } from "@/generated/prisma/enums";
 
@@ -41,6 +42,7 @@ const ICON_MAP: Record<FieldType, React.ComponentType<{ className?: string }>> =
   [FieldType.COUNT]: Calculator,
   [FieldType.LOOKUP]: Search,
   [FieldType.ROLLUP]: BarChart3,
+  [FieldType.RICH_TEXT]: FileText,
 };
 
 const COMPUTED_TYPES = new Set<FieldType>([

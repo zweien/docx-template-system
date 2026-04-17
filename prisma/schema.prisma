@@ -291,6 +291,7 @@ enum FieldType {
   COUNT         // 自动计数关联记录
   LOOKUP        // 从关联记录拉取指定字段值
   ROLLUP        // 从关联记录聚合指定字段值
+  RICH_TEXT     // 富文本
 }
 
 enum ViewType {

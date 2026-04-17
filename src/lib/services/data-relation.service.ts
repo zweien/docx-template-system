@@ -386,12 +386,14 @@ function evaluateFilterCondition(
       const num = Number(raw);
       return num >= Number(range.min) && num <= Number(range.max);
     }
-    case "in":
-      return Array.isArray(condition.value) &&
-        condition.value.some((v) => String(raw ?? "") === String(v));
-    case "notin":
-      return !Array.isArray(condition.value) ||
-        !condition.value.some((v) => String(raw ?? "") === String(v));
+    case "in": {
+      const inValues = Array.isArray(condition.value) ? condition.value : [condition.value];
+      return inValues.some((v) => String(raw ?? "") === String(v));
+    }
+    case "notin": {
+      const notInValues = Array.isArray(condition.value) ? condition.value : [condition.value];
+      return !notInValues.some((v) => String(raw ?? "") === String(v));
+    }
     default:
       return true;
   }

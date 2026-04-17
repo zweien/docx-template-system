@@ -72,6 +72,19 @@ const RELATION_SCHEMA_FIELD_TYPES = FIELD_TYPES.filter(
   (item) => item.value !== FieldType.RELATION && item.value !== FieldType.RELATION_SUBTABLE
 );
 
+const ROLLUP_CONDITION_OPERATOR_OPTIONS = [
+  { value: "eq", label: "等于" }, { value: "ne", label: "不等于" },
+  { value: "contains", label: "包含" }, { value: "notcontains", label: "不包含" },
+  { value: "startswith", label: "开头是" }, { value: "endswith", label: "结尾是" },
+  { value: "isempty", label: "为空" }, { value: "isnotempty", label: "不为空" },
+  { value: "gt", label: "大于" }, { value: "lt", label: "小于" },
+  { value: "gte", label: "大于等于" }, { value: "lte", label: "小于等于" },
+  { value: "between", label: "范围" },
+  { value: "in", label: "属于" }, { value: "notin", label: "不属于" },
+];
+
+const NO_VALUE_OPS = ["isempty", "isnotempty"];
+
 type RelationSchemaFieldDraft = {
   key: string;
   label: string;
@@ -399,6 +412,10 @@ export function FieldConfigForm({
     setRelationFields(relTable?.fields ?? []);
     setFormulaExpression(opts.formula ?? "");
     setCountSourceFieldId(opts.countSourceFieldId ?? "");
+    setRollupSourceFieldId(opts.rollupSourceFieldId ?? "");
+    setRollupTargetFieldKey(opts.rollupTargetFieldKey ?? "");
+    setRollupAggregateType((opts.rollupAggregateType as RollupAggregateType) ?? "");
+    setRollupConditions((opts.rollupConditions as FilterGroup[]) ?? []);
     setSystemFieldKind(opts.kind ?? "created");
     setError("");
   }, [field, availableTables]);
@@ -1023,17 +1040,6 @@ export function FieldConfigForm({
                       f.type !== "FORMULA" &&
                       f.type !== "ROLLUP"
                   );
-                  const OPERATOR_OPTIONS = [
-                    { value: "eq", label: "等于" }, { value: "ne", label: "不等于" },
-                    { value: "contains", label: "包含" }, { value: "notcontains", label: "不包含" },
-                    { value: "startswith", label: "开头是" }, { value: "endswith", label: "结尾是" },
-                    { value: "isempty", label: "为空" }, { value: "isnotempty", label: "不为空" },
-                    { value: "gt", label: "大于" }, { value: "lt", label: "小于" },
-                    { value: "gte", label: "大于等于" }, { value: "lte", label: "小于等于" },
-                    { value: "between", label: "范围" },
-                    { value: "in", label: "属于" }, { value: "notin", label: "不属于" },
-                  ];
-                  const NO_VALUE_OPS = ["isempty", "isnotempty"];
 
                   if (condTargetFields.length === 0) return null;
                   return (
@@ -1099,7 +1105,7 @@ export function FieldConfigForm({
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {OPERATOR_OPTIONS.map((o) => (
+                                  {ROLLUP_CONDITION_OPERATOR_OPTIONS.map((o) => (
                                     <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                                   ))}
                                 </SelectContent>

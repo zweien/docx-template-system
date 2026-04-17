@@ -29,6 +29,28 @@ export const businessKeySchema = z.object({
   fieldKeys: z.array(z.string()).min(1).max(5),
 });
 
+// ========== Filter Schemas (shared by views and rollup conditions) ==========
+
+export const filterConditionSchema = z.object({
+  fieldKey: z.string(),
+  op: z.enum([
+    "eq", "ne", "gt", "lt", "gte", "lte",
+    "contains", "notcontains", "startswith", "endswith",
+    "isempty", "isnotempty",
+    "between", "in", "notin",
+  ]),
+  value: z.union([
+    z.string(), z.number(),
+    z.array(z.union([z.string(), z.number()])),
+    z.object({ min: z.union([z.string(), z.number()]), max: z.union([z.string(), z.number()]) }),
+  ]),
+});
+
+export const filterGroupSchema = z.object({
+  operator: z.enum(["AND", "OR"]),
+  conditions: z.array(filterConditionSchema),
+});
+
 // ========== Field Schemas ==========
 
 export const dataFieldItemSchema = z.object({
@@ -59,6 +81,7 @@ export const dataFieldItemSchema = z.object({
         "SUM", "AVG", "MIN", "MAX", "COUNT", "COUNTA",
         "ARRAYJOIN", "ARRAYUNIQUE", "TRUE_COUNT", "FALSE_COUNT",
       ]),
+      rollupConditions: z.array(filterGroupSchema).optional(),
     }),
   ]).nullable().optional(),
   relationTo: z.string().nullable().optional(),
@@ -144,26 +167,6 @@ export const patchFieldSchema = z.object({
 export const sortConfigSchema = z.object({
   fieldKey: z.string(),
   order: z.enum(["asc", "desc"]),
-});
-
-export const filterConditionSchema = z.object({
-  fieldKey: z.string(),
-  op: z.enum([
-    "eq", "ne", "gt", "lt", "gte", "lte",
-    "contains", "notcontains", "startswith", "endswith",
-    "isempty", "isnotempty",
-    "between", "in", "notin",
-  ]),
-  value: z.union([
-    z.string(), z.number(),
-    z.array(z.union([z.string(), z.number()])),
-    z.object({ min: z.union([z.string(), z.number()]), max: z.union([z.string(), z.number()]) }),
-  ]),
-});
-
-export const filterGroupSchema = z.object({
-  operator: z.enum(["AND", "OR"]),
-  conditions: z.array(filterConditionSchema),
 });
 
 export const reorderSchema = z.object({

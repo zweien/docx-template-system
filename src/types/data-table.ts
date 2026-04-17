@@ -91,6 +91,8 @@ export interface FieldOptions {
   rollupTargetFieldKey?: string;
   /** ROLLUP: aggregation function */
   rollupAggregateType?: RollupAggregateType;
+  /** ROLLUP: filter conditions applied to target records before aggregation */
+  rollupConditions?: FilterGroup[];
 }
 
 export function parseFieldOptions(raw: unknown): FieldOptions {

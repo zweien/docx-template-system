@@ -145,8 +145,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const hasNewCountFields = addedFields.some((f) => f.type === FieldType.COUNT);
     const hasNewLookupFields = addedFields.some((f) => f.type === FieldType.LOOKUP);
     const hasNewRollupFields = addedFields.some((f) => f.type === FieldType.ROLLUP);
+    // Detect ROLLUP option changes (e.g. conditions added/modified) to trigger recomputation
+    const rollupOptionChanged = updatedFields.some((f) => {
+      if (f.type !== FieldType.ROLLUP || !f.id) return false;
+      const oldField = existingFieldById.get(f.id);
+      if (!oldField) return false;
+      return JSON.stringify(oldField.options) !== JSON.stringify(f.options);
+    });
     let backfillWarning = false;
-    if (hasNewCountFields || hasNewLookupFields || hasNewRollupFields) {
+    if (hasNewCountFields || hasNewLookupFields || hasNewRollupFields || rollupOptionChanged) {
       try {
         await backfillCountFieldValues(id);
       } catch (err) {

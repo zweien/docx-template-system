@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/popover";
 import { ArrowDown, ArrowUp, Filter } from "lucide-react";
 import { FieldType } from "@/generated/prisma/enums";
+import { FieldTypeIcon } from "./field-type-icon";
 import type {
   DataFieldItem,
   FilterCondition,
@@ -270,6 +271,7 @@ export function ColumnHeader({
           <button className="flex items-center gap-1 text-sm font-medium hover:bg-muted/50 rounded px-1.5 py-0.5 transition-colors select-none min-w-0" />
         }
       >
+        <FieldTypeIcon type={field.type} />
         <span className="truncate">{field.label}</span>
         {sort && (
           <span className="shrink-0 text-primary">

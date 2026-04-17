@@ -17,6 +17,7 @@ import type { DataFieldItem, DataTableListItem } from "@/types/data-table";
 import { parseSelectOptions, SELECT_COLORS } from "@/types/data-table";
 import type { DataFieldInput } from "@/validators/data-table";
 import { FieldType } from "@/generated/prisma/enums";
+import { FieldTypeIcon } from "./field-type-icon";
 
 interface FieldConfigListProps {
   tableId: string;
@@ -304,7 +305,8 @@ export function FieldConfigList({
                   </TableCell>
                   <TableCell>{field.label}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">
+                    <Badge variant="secondary" className="gap-1">
+                      <FieldTypeIcon type={field.type} />
                       {FIELD_TYPE_LABELS[field.type]}
                     </Badge>
                   </TableCell>

@@ -94,6 +94,23 @@ export function RelationSubtableEditor({
   const isSingle = field.relationCardinality === "SINGLE";
   const canAddRow = !isSingle || rows.length === 0;
 
+  const handleMultiAdd = (items: Array<{ id: string; label: string }>) => {
+    const existingIds = new Set(rows.map((r) => r.targetRecordId));
+    const newRows = items
+      .filter((item) => !existingIds.has(item.id))
+      .map((item, i) => ({
+        targetRecordId: item.id,
+        displayValue: item.label,
+        attributes: Object.fromEntries(
+          schemaFields.map((sf) => [sf.key, sf.type === FieldType.MULTISELECT ? [] : null])
+        ),
+        sortOrder: rows.length + i,
+      }));
+    if (newRows.length > 0) {
+      emitRows([...rows, ...newRows]);
+    }
+  };
+
   const emitRows = (nextRows: RelationSubtableValueItem[]) => {
     onChange(
       normalizeRowsByCurrentOrder(
@@ -268,9 +285,21 @@ export function RelationSubtableEditor({
           disabled={!canAddRow}
         >
           <Plus className="h-4 w-4" />
-          添加关联记录
+          {isSingle ? "选择记录" : "添加关联记录"}
         </Button>
       </div>
+
+      {!isSingle && (
+        <RelationTargetPicker
+          value={null}
+          onChange={() => {}}
+          relationTableId={field.relationTo ?? ""}
+          displayField={field.displayField ?? "id"}
+          placeholder="批量选择目标记录..."
+          multiSelect
+          onChangeMulti={handleMultiAdd}
+        />
+      )}
 
       {rows.length === 0 ? (
         <div className="rounded-md bg-muted p-3 text-sm text-muted-foreground">

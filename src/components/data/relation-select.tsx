@@ -1,19 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
-
-interface RelationOption {
-  id: string;
-  label: string;
-}
+import { Button } from "@/components/ui/button";
+import { useRelationOptions, type RelationOption } from "@/hooks/use-relation-options";
+import { RelationQuickCreateForm } from "@/components/data/relation-quick-create-form";
 
 interface RelationSelectProps {
   value: string | null | undefined;
@@ -32,124 +29,143 @@ export function RelationSelect({
   placeholder = "选择关联记录",
   disabled = false,
 }: RelationSelectProps) {
-  const [allOptions, setAllOptions] = useState<RelationOption[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const [open, setOpen] = useState(false);
 
-  // Initial load — fetch all options (pageSize=500)
+  const {
+    options,
+    isLoading,
+    isLoadingMore,
+    hasMore,
+    search,
+    setSearch,
+    sentinelRef,
+    createRecord,
+    isCreating,
+    showCreateForm,
+    setShowCreateForm,
+    requiredFields,
+  } = useRelationOptions({
+    relationTableId,
+    displayField,
+  });
+
+  // Find current label
+  const currentOption = options.find((o) => o.id === value);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  // Reset search when popover closes
   useEffect(() => {
-    const fetchOptions = async () => {
-      setIsLoading(true);
-      try {
-        const params = new URLSearchParams({ pageSize: "500" });
-        if (displayField && displayField !== "id") {
-          params.set("displayField", displayField);
-        }
-        const res = await fetch(
-          `/api/data-tables/${relationTableId}/relation-options?${params}`
-        );
-        if (res.ok) {
-          const data = (await res.json()) as RelationOption[];
-          setAllOptions(Array.isArray(data) ? data : []);
-        }
-      } catch {
-        // ignore
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchOptions();
-  }, [relationTableId, displayField]);
-
-  // Search with debounce — re-query server when typing
-  const [searchResults, setSearchResults] = useState<RelationOption[] | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-
-  useEffect(() => {
-    if (!search) {
-      setSearchResults(null);
-      return;
+    if (!open) {
+      setSearch("");
+      setShowCreateForm(false);
     }
-    const controller = new AbortController();
-    const doSearch = async () => {
-      setIsSearching(true);
-      try {
-        const params = new URLSearchParams({ search });
-        if (displayField && displayField !== "id") {
-          params.set("displayField", displayField);
-        }
-        const res = await fetch(
-          `/api/data-tables/${relationTableId}/relation-options?${params}`,
-          { signal: controller.signal }
-        );
-        if (res.ok) {
-          const data = (await res.json()) as RelationOption[];
-          setSearchResults(Array.isArray(data) ? data : []);
-        }
-      } catch {
-        // abort is fine
-      } finally {
-        if (!controller.signal.aborted) setIsSearching(false);
-      }
-    };
-    const timer = setTimeout(doSearch, 200);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [search, relationTableId, displayField]);
+  }, [open, setSearch, setShowCreateForm]);
 
-  // Merge: use searchResults when searching, otherwise allOptions
-  const displayedOptions = useMemo(() => {
-    if (search && searchResults !== null) return searchResults;
-    if (search) {
-      // Fallback client-side filter while server results are pending
-      const lower = search.toLowerCase();
-      return allOptions.filter((o) => o.label.toLowerCase().includes(lower));
+  const handleSelect = (option: RelationOption) => {
+    onChange(option.id);
+    setOpen(false);
+  };
+
+  const handleClear = () => {
+    onChange(null);
+  };
+
+  const handleCreate = async (data: Record<string, unknown>) => {
+    const newOption = await createRecord(data);
+    if (newOption) {
+      onChange(newOption.id);
+      setOpen(false);
     }
-    return allOptions;
-  }, [search, searchResults, allOptions]);
-
-  const selectedOption = allOptions.find((o) => o.id === value);
+  };
 
   return (
-    <Select
-      value={value ?? ""}
-      onValueChange={(v) => onChange(v || null)}
-      disabled={disabled}
-    >
-      <SelectTrigger>
-        {selectedOption ? (
-          <span className="flex-1 text-left truncate">{selectedOption.label}</span>
-        ) : (
-          <SelectValue placeholder={placeholder} />
-        )}
-      </SelectTrigger>
-      <SelectContent>
-        <div className="p-2 border-b">
-          <Input
-            placeholder="搜索..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-8"
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            ref={triggerRef}
+            className="flex h-9 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-left"
+            disabled={disabled}
           />
-        </div>
-        <div className="max-h-60 overflow-auto">
-          {(isLoading || isSearching) ? (
-            <div className="p-2 text-center text-zinc-500">加载中...</div>
-          ) : displayedOptions.length === 0 ? (
-            <div className="p-2 text-center text-zinc-500">
-              {search ? "无匹配结果" : "暂无记录"}
+        }
+      >
+        {currentOption ? (
+          <span className="truncate">{currentOption.label}</span>
+        ) : (
+          <span className="text-muted-foreground">{placeholder}</span>
+        )}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[var(--trigger-width)] p-0" style={{ minWidth: 200 }}>
+        {showCreateForm ? (
+          <RelationQuickCreateForm
+            fields={requiredFields}
+            onSubmit={handleCreate}
+            onCancel={() => setShowCreateForm(false)}
+            isSubmitting={isCreating}
+          />
+        ) : (
+          <>
+            <div className="p-2 border-b">
+              <Input
+                placeholder="搜索..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8"
+              />
             </div>
-          ) : (
-            displayedOptions.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))
-          )}
-        </div>
-      </SelectContent>
-    </Select>
+            <div className="max-h-60 overflow-auto">
+              {isLoading ? (
+                <div className="p-3 text-center text-sm text-muted-foreground">加载中...</div>
+              ) : options.length === 0 ? (
+                <div className="p-3 text-center text-sm text-muted-foreground">
+                  {search ? "无匹配结果" : "暂无记录"}
+                </div>
+              ) : (
+                <>
+                  {options.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
+                        option.id === value ? "bg-muted font-medium" : ""
+                      }`}
+                      onClick={() => handleSelect(option)}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                  {hasMore && (
+                    <div ref={sentinelRef} className="p-2 text-center text-xs text-muted-foreground">
+                      {isLoadingMore ? "加载更多..." : ""}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            {(value || isAdmin) && (
+              <div className="border-t p-1 flex gap-1">
+                {value && (
+                  <Button variant="ghost" size="sm" className="flex-1 h-7 text-xs" onClick={handleClear}>
+                    清除
+                  </Button>
+                )}
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="flex-1 h-7 text-xs"
+                    onClick={() => setShowCreateForm(true)}
+                  >
+                    新建记录
+                  </Button>
+                )}
+              </div>
+            )}
+          </>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -60,6 +60,13 @@ export function RelationPreviewPopover({
       if (recordRes.ok) {
         const rec = await recordRes.json();
         setRecord(rec);
+        // Evict expired entries when cache grows large
+        if (recordCache.size > 100) {
+          const now = Date.now();
+          for (const [key, val] of recordCache) {
+            if (now - val.timestamp >= CACHE_TTL) recordCache.delete(key);
+          }
+        }
         recordCache.set(recordId, { data: rec, timestamp: Date.now() });
       }
       if (fieldsRes.ok) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,9 +29,16 @@ export function RelationQuickCreateForm({
   onCancel,
   isSubmitting,
 }: RelationQuickCreateFormProps) {
-  const { register, handleSubmit, setValue, watch } = useForm({
+  const { register, handleSubmit, setValue, watch, reset } = useForm({
     defaultValues: Object.fromEntries(fields.map((f) => [f.key, ""])),
   });
+
+  // Re-sync form when fields load asynchronously
+  useEffect(() => {
+    if (fields.length > 0) {
+      reset(Object.fromEntries(fields.map((f) => [f.key, ""])));
+    }
+  }, [fields, reset]);
 
   const handleFormSubmit = async (data: Record<string, unknown>) => {
     // Convert number fields

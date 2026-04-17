@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { useRelationOptions, type RelationOption } from "@/hooks/use-relation-options";
 import { RelationQuickCreateForm } from "@/components/data/relation-quick-create-form";
 
@@ -73,10 +74,14 @@ export function RelationSelect({
   };
 
   const handleCreate = async (data: Record<string, unknown>) => {
-    const newOption = await createRecord(data);
-    if (newOption) {
-      onChange(newOption.id);
-      setOpen(false);
+    try {
+      const newOption = await createRecord(data);
+      if (newOption) {
+        onChange(newOption.id);
+        setOpen(false);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "创建失败");
     }
   };
 

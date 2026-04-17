@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
+import { toast } from "sonner";
 import { useRelationOptions, type RelationOption } from "@/hooks/use-relation-options";
 import { RelationQuickCreateForm } from "@/components/data/relation-quick-create-form";
 
@@ -100,14 +101,18 @@ export function RelationTargetPicker({
   };
 
   const handleCreate = async (data: Record<string, unknown>) => {
-    const newOption = await createRecord(data);
-    if (newOption) {
-      if (multiSelect) {
-        // Already auto-selected by hook
-      } else {
-        onChange({ id: newOption.id, label: newOption.label });
-        setOpen(false);
+    try {
+      const newOption = await createRecord(data);
+      if (newOption) {
+        if (multiSelect) {
+          // Already auto-selected by hook
+        } else {
+          onChange({ id: newOption.id, label: newOption.label });
+          setOpen(false);
+        }
       }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "创建失败");
     }
   };
 

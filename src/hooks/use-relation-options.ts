@@ -89,8 +89,10 @@ export function useRelationOptions({
   }, [buildUrl, relationTableId]);
 
   // ── Load more ──
+  const isLoadingMoreRef = useRef(false);
   const loadMore = useCallback(async () => {
-    if (isLoadingMore || !hasMore) return;
+    if (isLoadingMoreRef.current || !hasMore) return;
+    isLoadingMoreRef.current = true;
     setIsLoadingMore(true);
     const nextPage = page + 1;
     try {
@@ -104,8 +106,9 @@ export function useRelationOptions({
       setHasMore(data.hasMore ?? false);
       setPage(nextPage);
     } catch { /* ignore */ }
+    isLoadingMoreRef.current = false;
     setIsLoadingMore(false);
-  }, [isLoadingMore, hasMore, page, buildUrl]);
+  }, [hasMore, page, buildUrl]);
 
   // ── Infinite scroll sentinel ──
   const { sentinelRef } = useInfiniteScroll(loadMore);
@@ -166,8 +169,11 @@ export function useRelationOptions({
 
         setShowCreateForm(false);
         return newOption;
-      } catch { /* ignore */ }
-      return null;
+      } catch (error) {
+        throw error;
+      } finally {
+        setIsCreating(false);
+      }
     },
     [relationTableId, displayField, requiredFields, multiSelect]
   );

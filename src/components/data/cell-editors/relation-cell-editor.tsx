@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import { useRelationOptions } from "@/hooks/use-relation-options";
 import { RelationQuickCreateForm } from "@/components/data/relation-quick-create-form";
 
@@ -109,10 +110,14 @@ export function RelationCellEditor({
   }
 
   async function handleCreate(data: Record<string, unknown>) {
-    const newOption = await createRecord(data);
-    if (newOption) {
-      committedRef.current = true;
-      onCommit({ id: newOption.id, display: newOption.label });
+    try {
+      const newOption = await createRecord(data);
+      if (newOption) {
+        committedRef.current = true;
+        onCommit({ id: newOption.id, display: newOption.label });
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "创建失败");
     }
   }
 

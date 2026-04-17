@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Pencil, Trash2, History } from "lucide-react";
+import { Pencil, Trash2, History, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -28,6 +28,8 @@ export interface RecordDetailDrawerProps {
   isAdmin: boolean;
   onEdit?: () => void;
   onDelete?: (recordId: string) => void;
+  recordIds?: string[];
+  onNavigate?: (recordId: string) => void;
 }
 
 function formatDateTime(value: string | Date): string {
@@ -41,8 +43,12 @@ function formatChangeValue(value: unknown): string {
 }
 
 export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
-  const { open, onOpenChange, recordId, tableId, fields, isAdmin, onDelete } =
+  const { open, onOpenChange, recordId, tableId, fields, isAdmin, onDelete, recordIds, onNavigate } =
     props;
+
+  const currentIndex = recordId && recordIds ? recordIds.indexOf(recordId) : -1;
+  const hasPrev = currentIndex > 0;
+  const hasNext = recordIds ? currentIndex < recordIds.length - 1 : false;
 
   const [record, setRecord] = useState<DataRecordItem | null>(null);
   const [loading, setLoading] = useState(false);
@@ -164,6 +170,31 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
     onOpenChange(false);
   };
 
+  const handleNavigate = useCallback((direction: -1 | 1) => {
+    if (!recordIds || !onNavigate || currentIndex < 0) return;
+    const nextIndex = currentIndex + direction;
+    if (nextIndex < 0 || nextIndex >= recordIds.length) return;
+    onNavigate(recordIds[nextIndex]);
+  }, [recordIds, onNavigate, currentIndex]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    if (!open || !recordIds || !onNavigate) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        handleNavigate(-1);
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNavigate(1);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
+  }, [open, recordIds, onNavigate, handleNavigate]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
@@ -178,7 +209,34 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
         ) : (
           <div className="space-y-4">
             <SheetHeader className="border-b">
-              <SheetTitle className="text-lg">记录详情</SheetTitle>
+              <div className="flex items-center justify-between">
+                <SheetTitle className="text-lg">记录详情</SheetTitle>
+                {recordIds && recordIds.length > 0 && currentIndex >= 0 && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      disabled={!hasPrev}
+                      onClick={() => handleNavigate(-1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-xs text-muted-foreground tabular-nums min-w-[3rem] text-center">
+                      {currentIndex + 1} / {recordIds.length}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0"
+                      disabled={!hasNext}
+                      onClick={() => handleNavigate(1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
             </SheetHeader>
 
             <Tabs value={activeTab} onValueChange={setActiveTab}>

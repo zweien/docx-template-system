@@ -1924,6 +1924,7 @@ export function GridView({
         <RichTextCellEditor
           value={richEditCell.value}
           onChange={handleRichEditSave}
+          autoOpen
         />
       )}
     </div>

@@ -20,11 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 interface RichTextCellEditorProps {
   value: unknown;
   onChange: (value: unknown) => void;
+  autoOpen?: boolean;
 }
 
 function extractPlainText(value: unknown): string {
@@ -141,8 +142,9 @@ function RichTextToolbar({ editor }: { editor: NonNullable<ReturnType<typeof use
 export function RichTextCellEditor({
   value,
   onChange,
+  autoOpen = false,
 }: RichTextCellEditorProps) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen);
 
   const editor = useEditor({
     extensions: [StarterKit, UnderlineExt],

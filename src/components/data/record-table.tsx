@@ -41,6 +41,7 @@ interface RecordTableProps {
   fields: DataFieldItem[];
   isAdmin: boolean;
   onOpenDetail?: (recordId: string) => void;
+  onRecordIdsChange?: (ids: string[]) => void;
 }
 
 // ─── Fallback view when no saved view is selected ────────────────────────────
@@ -70,6 +71,7 @@ export function RecordTable({
   fields,
   isAdmin,
   onOpenDetail,
+  onRecordIdsChange,
 }: RecordTableProps) {
   const router = useRouter();
   const [viewType, setViewType] = useState<ViewType>("GRID");
@@ -103,6 +105,13 @@ export function RecordTable({
     switchView,
     refresh,
   } = useTableData({ tableId, fields });
+
+  // Sync record IDs to parent for drawer navigation
+  useEffect(() => {
+    if (onRecordIdsChange) {
+      onRecordIdsChange(records.map((r: { id: string }) => r.id));
+    }
+  }, [records, onRecordIdsChange]);
 
   const activeView = useMemo(() => {
     const base = currentView ?? buildFallbackView(tableId, fields);

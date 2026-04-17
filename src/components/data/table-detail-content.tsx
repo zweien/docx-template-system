@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -24,6 +24,7 @@ interface TableDetailContentProps {
 export function TableDetailContent({ tableId, table, isAdmin }: TableDetailContentProps) {
   const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const recordIdsRef = useRef<string[]>([]);
 
   // AI Sheet state
   const [aiOpen, setAiOpen] = useState(false);
@@ -187,6 +188,7 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
           setDetailRecordId(recordId);
           setDetailOpen(true);
         }}
+        onRecordIdsChange={(ids) => { recordIdsRef.current = ids; }}
       />
 
       {/* Record Detail Drawer */}
@@ -202,6 +204,8 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
         tableId={tableId}
         fields={table.fields}
         isAdmin={isAdmin}
+        recordIds={recordIdsRef.current}
+        onNavigate={(id) => setDetailRecordId(id)}
       />
 
       {/* AI Assistant Sheet */}

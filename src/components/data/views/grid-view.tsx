@@ -94,10 +94,11 @@ interface GridViewProps {
   cellLocks?: Map<string, { recordId: string; fieldKey: string; lockedById: string; lockedByName: string; color: string }>;
   isCellLockedByOther?: (recordId: string, fieldKey: string) => boolean;
   getLockOwner?: (recordId: string, fieldKey: string) => { userId: string; userName: string } | null;
-  acquireCellLock?: (recordId: string, fieldKey: string) => Promise<boolean>;
+  acquireCellLock?: (recordId: string, fieldKey: string) => Promise<{ acquired: boolean; lockedBy?: { userId: string; userName: string } }>;
   releaseCellLock?: (recordId: string, fieldKey: string) => Promise<void>;
   broadcastCursor?: (recordId: string, fieldKey: string) => void;
   myColor?: string;
+  onLockLost?: (callback: (recordId: string, fieldKey: string) => void) => () => void;
 }
 
 // ─── Grouping helpers ───────────────────────────────────────────────────────
@@ -282,6 +283,7 @@ export function GridView({
   releaseCellLock,
   broadcastCursor,
   myColor,
+  onLockLost,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
 
@@ -704,8 +706,25 @@ export function GridView({
   );
 
   const handleRichEditClose = useCallback(() => {
+    if (richEditCell) {
+      releaseCellLock?.(richEditCell.recordId, richEditCell.fieldKey);
+    }
     setRichEditCell(null);
-  }, []);
+  }, [richEditCell, releaseCellLock]);
+
+  useEffect(() => {
+    if (!onLockLost) return;
+    return onLockLost((recordId, fieldKey) => {
+      if (editingCell?.recordId === recordId && editingCell?.fieldKey === fieldKey) {
+        cancelEdit();
+        toast.warning("编辑锁已过期，请重新编辑");
+      }
+      if (richEditCell?.recordId === recordId && richEditCell?.fieldKey === fieldKey) {
+        setRichEditCell(null);
+        toast.warning("编辑锁已过期，请重新编辑");
+      }
+    });
+  }, [onLockLost, editingCell, richEditCell, cancelEdit]);
 
   // ── Fill handle (drag-fill) ──────────────────────────────────────────────
   const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
@@ -1404,7 +1423,22 @@ export function GridView({
             className="cursor-pointer w-full h-full"
             onClick={(e) => {
               e.stopPropagation();
-              setRichEditCell({ recordId: record.id, fieldKey: field.key, value: record.data[field.key] });
+              if (isCellLockedByOther?.(record.id, field.key)) {
+                const owner = getLockOwner?.(record.id, field.key);
+                toast.error(`该单元格正在被 ${owner?.userName ?? "其他用户"} 编辑`);
+                return;
+              }
+              if (acquireCellLock) {
+                acquireCellLock(record.id, field.key).then((result) => {
+                  if (!result.acquired) {
+                    toast.error(`该单元格正在被 ${result.lockedBy?.userName ?? "其他用户"} 编辑`);
+                    return;
+                  }
+                  setRichEditCell({ recordId: record.id, fieldKey: field.key, value: record.data[field.key] });
+                });
+              } else {
+                setRichEditCell({ recordId: record.id, fieldKey: field.key, value: record.data[field.key] });
+              }
             }}
           >
             <RichTextPreview value={record.data[field.key]} />

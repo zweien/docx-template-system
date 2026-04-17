@@ -13,7 +13,7 @@ export interface UseInlineEditOptions {
   onCommit: (recordId: string, fieldKey: string, value: unknown) => Promise<void>;
   isCellLockedByOther?: (recordId: string, fieldKey: string) => boolean;
   getLockOwner?: (recordId: string, fieldKey: string) => { userId: string; userName: string } | null;
-  acquireCellLock?: (recordId: string, fieldKey: string) => Promise<boolean>;
+  acquireCellLock?: (recordId: string, fieldKey: string) => Promise<{ acquired: boolean; lockedBy?: { userId: string; userName: string } }>;
   releaseCellLock?: (recordId: string, fieldKey: string) => Promise<void>;
 }
 
@@ -47,9 +47,9 @@ export function useInlineEdit({
       return;
     }
     if (acquireCellLock) {
-      acquireCellLock(recordId, fieldKey).then((acquired) => {
-        if (!acquired) {
-          toast.error("获取编辑锁失败，请稍后重试");
+      acquireCellLock(recordId, fieldKey).then((result) => {
+        if (!result.acquired) {
+          toast.error(`该单元格正在被 ${result.lockedBy?.userName ?? "其他用户"} 编辑`);
           return;
         }
         setEditingCell({ recordId, fieldKey });
@@ -73,10 +73,10 @@ export function useInlineEdit({
             ? null
             : prev
         );
-        releaseCellLock?.(currentCell.recordId, currentCell.fieldKey);
       } catch (error) {
         console.error("内联编辑保存失败:", error);
       } finally {
+        await releaseCellLock?.(currentCell.recordId, currentCell.fieldKey);
         isCommittingRef.current = false;
         setIsCommitting(false);
       }
@@ -85,10 +85,11 @@ export function useInlineEdit({
   );
 
   const cancelEdit = useCallback(() => {
-    if (editingCell) {
-      releaseCellLock?.(editingCell.recordId, editingCell.fieldKey);
-    }
+    const cell = editingCell;
     setEditingCell(null);
+    if (cell) {
+      releaseCellLock?.(cell.recordId, cell.fieldKey);
+    }
   }, [editingCell, releaseCellLock]);
 
   return {

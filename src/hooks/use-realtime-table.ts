@@ -17,12 +17,13 @@ interface UseRealtimeTableReturn {
   activityFeed: ActivityEntry[];
   onlineUsers: OnlineUser[];
   cellLocks: Map<string, CellLock>;
-  acquireCellLock: (recordId: string, fieldKey: string) => Promise<boolean>;
+  acquireCellLock: (recordId: string, fieldKey: string) => Promise<{ acquired: boolean; lockedBy?: { userId: string; userName: string } }>;
   releaseCellLock: (recordId: string, fieldKey: string) => Promise<void>;
   isCellLockedByOther: (recordId: string, fieldKey: string) => boolean;
   getLockOwner: (recordId: string, fieldKey: string) => { userId: string; userName: string } | null;
   broadcastCursor: (recordId: string, fieldKey: string) => void;
   myColor: string;
+  onLockLost: (callback: (recordId: string, fieldKey: string) => void) => () => void;
 }
 
 const MAX_ACTIVITY = 50;
@@ -44,6 +45,8 @@ export function useRealtimeTable({
 
   const callbacksRef = useRef({ onUpdateRecordField, onRefresh });
   callbacksRef.current = { onUpdateRecordField, onRefresh };
+
+  const lockLostCallbacksRef = useRef(new Set<(recordId: string, fieldKey: string) => void>());
 
   const addActivity = useCallback((entry: ActivityEntry) => {
     setActivityFeed((prev) => {
@@ -126,6 +129,11 @@ export function useRealtimeTable({
 
         // ── Cell unlocked ──
         if (event.type === "cell_unlocked") {
+          if (event.unlockedById === currentUserId) {
+            for (const cb of lockLostCallbacksRef.current) {
+              cb(event.recordId, event.fieldKey);
+            }
+          }
           setCellLocks((prev) => {
             const next = new Map(prev);
             next.delete(`${event.recordId}:${event.fieldKey}`);
@@ -189,14 +197,16 @@ export function useRealtimeTable({
     };
   }, [tableId, enabled, currentUserId, addActivity]);
 
-  const acquireCellLock = useCallback(async (recordId: string, fieldKey: string): Promise<boolean> => {
+  const acquireCellLock = useCallback(async (recordId: string, fieldKey: string): Promise<{ acquired: boolean; lockedBy?: { userId: string; userName: string } }> => {
     const res = await fetch(`/api/data-tables/${tableId}/realtime/lock`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "acquire", recordId, fieldKey }),
     });
     const data = await res.json();
-    return data.acquired === true;
+    if (data.acquired) return { acquired: true };
+    if (data.lockedBy) return { acquired: false, lockedBy: { userId: data.lockedBy.lockedById, userName: data.lockedBy.lockedByName } };
+    return { acquired: false };
   }, [tableId]);
 
   const releaseCellLock = useCallback(async (recordId: string, fieldKey: string): Promise<void> => {
@@ -225,6 +235,11 @@ export function useRealtimeTable({
     });
   }, [tableId]);
 
+  const onLockLost = useCallback((callback: (recordId: string, fieldKey: string) => void) => {
+    lockLostCallbacksRef.current.add(callback);
+    return () => { lockLostCallbacksRef.current.delete(callback); };
+  }, []);
+
   return {
     isConnected,
     activityFeed,
@@ -236,5 +251,6 @@ export function useRealtimeTable({
     getLockOwner,
     broadcastCursor,
     myColor,
+    onLockLost,
   };
 }

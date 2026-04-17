@@ -16,11 +16,6 @@ interface UseRealtimeTableReturn {
   activityFeed: ActivityEntry[];
 }
 
-function getSessionToken(): string | null {
-  const match = document.cookie.match(/next-auth\.session-token=([^;]+)/);
-  return match ? match[1] : null;
-}
-
 const MAX_ACTIVITY = 50;
 
 export function useRealtimeTable({
@@ -45,13 +40,9 @@ export function useRealtimeTable({
   }, []);
 
   useEffect(() => {
-    if (!enabled || !tableId) return;
+    if (!enabled || !tableId || !currentUserId) return;
 
-    const token = getSessionToken();
-    if (!token) return;
-
-    const url = `/api/data-tables/${tableId}/realtime?token=${encodeURIComponent(token)}`;
-    const es = new EventSource(url);
+    const es = new EventSource(`/api/data-tables/${tableId}/realtime`);
 
     es.onopen = () => {
       setIsConnected(true);

@@ -8,17 +8,13 @@ interface RouteParams {
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
-  // Authenticate: try cookie-based first, then query param token
-  let token = await getToken({ req: request as never });
+  const token = await getToken({ req: request as never });
   if (!token) {
-    const urlToken = request.nextUrl.searchParams.get("token");
-    if (!urlToken) {
-      return new Response("Unauthorized", { status: 401 });
-    }
+    return new Response("Unauthorized", { status: 401 });
   }
 
   const { id: tableId } = await params;
-  const userId = (token as { sub?: string } | null)?.sub ?? "";
+  const userId = (token as { sub?: string })?.sub ?? "";
 
   const encoder = new TextEncoder();
 

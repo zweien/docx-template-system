@@ -90,6 +90,14 @@ interface GridViewProps {
   onColumnAggregationsChange?: (aggregations: Record<string, AggregateType>) => void;
   rowHeight?: number;
   onFetchRelatedFields?: (tableId: string) => Promise<DataFieldItem[]>;
+  // ── Realtime collaboration ──
+  cellLocks?: Map<string, { recordId: string; fieldKey: string; lockedById: string; lockedByName: string; color: string }>;
+  isCellLockedByOther?: (recordId: string, fieldKey: string) => boolean;
+  getLockOwner?: (recordId: string, fieldKey: string) => { userId: string; userName: string } | null;
+  acquireCellLock?: (recordId: string, fieldKey: string) => Promise<boolean>;
+  releaseCellLock?: (recordId: string, fieldKey: string) => Promise<void>;
+  broadcastCursor?: (recordId: string, fieldKey: string) => void;
+  myColor?: string;
 }
 
 // ─── Grouping helpers ───────────────────────────────────────────────────────
@@ -267,6 +275,13 @@ export function GridView({
   onColumnAggregationsChange,
   rowHeight,
   onFetchRelatedFields,
+  cellLocks,
+  isCellLockedByOther,
+  getLockOwner,
+  acquireCellLock,
+  releaseCellLock,
+  broadcastCursor,
+  myColor,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
 
@@ -664,7 +679,14 @@ export function GridView({
   );
 
   const { editingCell, startEditing, commitEdit, cancelEdit } =
-    useInlineEdit({ tableId, onCommit: handleCommitWithUndo });
+    useInlineEdit({
+      tableId,
+      onCommit: handleCommitWithUndo,
+      isCellLockedByOther,
+      getLockOwner,
+      acquireCellLock,
+      releaseCellLock,
+    });
 
   // Rich text popup editor state
   const [richEditCell, setRichEditCell] = useState<{
@@ -1480,6 +1502,9 @@ export function GridView({
             const isEditing =
               editingCell?.recordId === record.id &&
               editingCell?.fieldKey === field.key;
+            const lockKey = `${record.id}:${field.key}`;
+            const lockInfo = cellLocks?.get(lockKey);
+            const isLockedByOther = !!lockInfo;
             const mergedStyle: React.CSSProperties = {
               ...(frozenTdStyle ?? {}),
               ...(cellStyle ?? {}),
@@ -1492,7 +1517,6 @@ export function GridView({
                 style={Object.keys(mergedStyle).length > 0 ? mergedStyle : undefined}
                 className={cn(
                   "align-middle border-r border-neutral-400", rhClasses.td,
-                  // Only apply overflow-hidden when NOT editing a field with a dropdown (RELATION)
                   !(isEditing && field.type === FieldType.RELATION) && "overflow-hidden",
                   (rowHeight ?? 40) < 56 && "whitespace-nowrap",
                   rhClasses.text,
@@ -1502,7 +1526,8 @@ export function GridView({
                     "frozen-last-col relative",
                   isActive && "outline outline-2 outline-primary outline-offset-[-2px] relative",
                   isInRange && !isActive && "bg-primary/20 outline outline-1 outline-offset-[-1px] outline-primary/40",
-                  isFillTarget && "bg-primary/15"
+                  isFillTarget && "bg-primary/15",
+                  isLockedByOther && "bg-amber-50/60"
                 )}
                 onClick={(e) => handleCellClick(flatRowIndex, fieldIndex, e)}
                 onDoubleClick={() => {
@@ -1520,7 +1545,20 @@ export function GridView({
                 }}
                 onContextMenu={(e) => captureCell(e, record.id, field.key, flatRowIndex, fieldIndex)}
               >
-                {renderCell(field, record)}
+                {isLockedByOther && lockInfo ? (
+                  <div className="flex items-center gap-1 text-xs text-amber-700">
+                    <div
+                      className="size-4 rounded-full flex items-center justify-center text-white text-[10px] font-medium shrink-0"
+                      style={{ backgroundColor: lockInfo.color }}
+                      title={lockInfo.lockedByName}
+                    >
+                      {lockInfo.lockedByName.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="truncate">{lockInfo.lockedByName} 编辑中</span>
+                  </div>
+                ) : (
+                  renderCell(field, record)
+                )}
                 {isActive && !READONLY_FIELD_TYPES.includes(field.type) && !editingCell && (
                   <div
                     className="absolute bottom-0 right-0 w-2 h-2 bg-primary cursor-crosshair z-10"

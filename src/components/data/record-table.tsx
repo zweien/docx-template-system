@@ -34,6 +34,7 @@ import { GalleryView } from "@/components/data/views/gallery/gallery-view";
 import { TimelineView } from "@/components/data/views/timeline/timeline-view";
 import { FormView } from "@/components/data/views/form/form-view";
 import { ActivityStream } from "@/components/data/activity-stream";
+import { OnlinePresenceBar } from "@/components/data/online-presence-bar";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -108,6 +109,14 @@ export function RecordTable({
     refresh,
     isConnected,
     activityFeed,
+    onlineUsers,
+    cellLocks,
+    acquireCellLock,
+    releaseCellLock,
+    isCellLockedByOther,
+    getLockOwner,
+    broadcastCursor,
+    myColor,
   } = useTableData({ tableId, fields });
 
   // Sync record IDs to parent for drawer navigation
@@ -345,6 +354,13 @@ export function RecordTable({
             onOpenFieldsConfig={handleOpenFieldsConfig}
             rowHeight={rowHeight}
             onFetchRelatedFields={handleFetchRelatedFields}
+            cellLocks={cellLocks}
+            isCellLockedByOther={isCellLockedByOther}
+            getLockOwner={getLockOwner}
+            acquireCellLock={acquireCellLock}
+            releaseCellLock={releaseCellLock}
+            broadcastCursor={broadcastCursor}
+            myColor={myColor}
           />
         );
       case "KANBAN":
@@ -520,6 +536,7 @@ export function RecordTable({
               </Button>
             </Link>
           )}
+          <OnlinePresenceBar users={onlineUsers} />
           <Button
             variant={showActivity ? "secondary" : "outline"}
             size="sm"

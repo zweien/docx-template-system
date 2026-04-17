@@ -93,6 +93,15 @@ export function subscribeToTable(
   };
 }
 
+export function broadcastToTable(tableId: string, event: RealtimeEvent): void {
+  const tableListeners = listeners.get(tableId);
+  if (tableListeners) {
+    for (const fn of tableListeners) {
+      fn(event);
+    }
+  }
+}
+
 export function shutdownRealtimeNotify(): void {
   if (listenClient) {
     void listenClient.end();

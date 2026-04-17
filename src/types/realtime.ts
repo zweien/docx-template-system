@@ -1,3 +1,5 @@
+// ── Data change events ──
+
 export interface RecordUpdatedEvent {
   type: "record_updated";
   tableId: string;
@@ -28,10 +30,99 @@ export interface RecordDeletedEvent {
   deletedAt: string;
 }
 
+// ── Presence events ──
+
+export interface UserJoinedEvent {
+  type: "user_joined";
+  tableId: string;
+  userId: string;
+  userName: string;
+  color: string;
+}
+
+export interface UserLeftEvent {
+  type: "user_left";
+  tableId: string;
+  userId: string;
+}
+
+export interface PresenceSnapshotEvent {
+  type: "presence_snapshot";
+  tableId: string;
+  users: Array<{ userId: string; userName: string; color: string }>;
+  locks: Array<{ recordId: string; fieldKey: string; lockedById: string; lockedByName: string; color: string }>;
+}
+
+// ── Cell lock events ──
+
+export interface CellLockedEvent {
+  type: "cell_locked";
+  tableId: string;
+  recordId: string;
+  fieldKey: string;
+  lockedById: string;
+  lockedByName: string;
+  color: string;
+}
+
+export interface CellUnlockedEvent {
+  type: "cell_unlocked";
+  tableId: string;
+  recordId: string;
+  fieldKey: string;
+  unlockedById: string;
+}
+
+// ── Cursor events ──
+
+export interface CursorMovedEvent {
+  type: "cursor_moved";
+  tableId: string;
+  userId: string;
+  userName: string;
+  recordId: string;
+  fieldKey: string;
+  color: string;
+}
+
+// ── Union ──
+
 export type RealtimeEvent =
   | RecordUpdatedEvent
   | RecordCreatedEvent
-  | RecordDeletedEvent;
+  | RecordDeletedEvent
+  | UserJoinedEvent
+  | UserLeftEvent
+  | PresenceSnapshotEvent
+  | CellLockedEvent
+  | CellUnlockedEvent
+  | CursorMovedEvent;
+
+// ── Client-side types ──
+
+const PALETTE = ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316"];
+
+export function getUserColor(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (hash * 31 + userId.charCodeAt(i)) | 0;
+  }
+  return PALETTE[Math.abs(hash) % PALETTE.length];
+}
+
+export interface OnlineUser {
+  userId: string;
+  userName: string;
+  color: string;
+}
+
+export interface CellLock {
+  recordId: string;
+  fieldKey: string;
+  lockedById: string;
+  lockedByName: string;
+  color: string;
+}
 
 export interface ActivityEntry {
   id: string;

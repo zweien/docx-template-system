@@ -218,6 +218,17 @@ export function RecordTable({
     router.push(`/data/${tableId}/fields`);
   }, [router, tableId]);
 
+  // ── Fetch related table fields for cross-table filter/sort ────────────
+  const handleFetchRelatedFields = useCallback(async (targetTableId: string) => {
+    try {
+      const res = await fetch(`/api/data-tables/${targetTableId}/fields`);
+      if (!res.ok) return [];
+      return await res.json();
+    } catch {
+      return [];
+    }
+  }, []);
+
   // ── Frozen fields ──────────────────────────────────────────────────────
   const frozenFieldCount = (currentConfig.viewOptions.frozenFieldCount as number) ?? 0;
 
@@ -320,6 +331,7 @@ export function RecordTable({
             onColumnAggregationsChange={setColumnAggregations}
             onOpenFieldsConfig={handleOpenFieldsConfig}
             rowHeight={rowHeight}
+            onFetchRelatedFields={handleFetchRelatedFields}
           />
         );
       case "KANBAN":

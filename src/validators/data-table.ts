@@ -165,7 +165,7 @@ export const patchFieldSchema = z.object({
 });
 
 export const sortConfigSchema = z.object({
-  fieldKey: z.string(),
+  fieldKey: z.string().regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/),
   order: z.enum(["asc", "desc"]),
 });
 

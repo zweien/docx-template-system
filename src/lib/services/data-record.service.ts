@@ -11,7 +11,7 @@ import type {
   FilterGroup,
   AggregateType,
 } from "@/types/data-table";
-import { normalizeFilters, parseFieldOptions } from "@/types/data-table";
+import { normalizeFilters, parseFieldOptions, parseRelationFieldRef } from "@/types/data-table";
 import { evaluateFormula } from "@/lib/formula";
 
 // Strip control characters (U+0000-U+001F except TAB/LF/CR) from string values
@@ -348,9 +348,42 @@ export async function listRecords(
     }
 
     // Build view-level filter conditions from FilterCondition[]
-    if (filters.filterConditions && filters.filterConditions.length > 0) {
+    // Separate cross-table (dot-notation) from local conditions
+    const normalizedFilterGroups = normalizeFilters(filters.filterConditions ?? []);
+    const { localGroups, crossFilters } = separateFilterConditions(
+      normalizedFilterGroups,
+      tableResult.data.fields
+    );
+
+    // Resolve cross-table filters to matching source record IDs
+    let crossTableSourceIds: Set<string> | null = null;
+    if (crossFilters.length > 0) {
+      for (const cf of crossFilters) {
+        const ids = await resolveCrossTableFilter(cf);
+        if (crossTableSourceIds === null) {
+          crossTableSourceIds = ids;
+        } else {
+          // AND intersection
+          for (const id of crossTableSourceIds) {
+            if (!ids.has(id)) crossTableSourceIds.delete(id);
+          }
+        }
+      }
+      // Early return if no matches
+      if (crossTableSourceIds !== null && crossTableSourceIds.size === 0) {
+        return {
+          success: true,
+          data: { records: [], total: 0, page: filters.page, pageSize: filters.pageSize, totalPages: 0 },
+        };
+      }
+      if (crossTableSourceIds !== null) {
+        where.id = { in: Array.from(crossTableSourceIds) };
+      }
+    }
+
+    if (localGroups.length > 0) {
       const viewFilterConditions = buildFilterConditionsFromSpec(
-        filters.filterConditions,
+        localGroups,
         tableResult.data.fields
       );
       if (viewFilterConditions.length > 0) {
@@ -361,13 +394,16 @@ export async function listRecords(
 
     // 当有 sortBy 或内存过滤运算符时，需要先取全部数据再分页
     const hasSort = filters.sortBy && filters.sortBy.length > 0;
+    const allFields = tableResult.data.fields;
     const sortableFields = hasSort
-      ? filters.sortBy!.filter((sortConfig) =>
-          tableResult.data.fields.some((field) => field.key === sortConfig.fieldKey)
-        )
+      ? filters.sortBy!.filter((sortConfig) => {
+          const ref = parseRelationFieldRef(sortConfig.fieldKey);
+          if (ref) return allFields.some((f) => f.key === ref.relationFieldKey);
+          return allFields.some((f) => f.key === sortConfig.fieldKey);
+        })
       : [];
-    const memoryFilterGroups = (filters.filterConditions && filters.filterConditions.length > 0)
-      ? normalizeFilters(filters.filterConditions).map(g => ({
+    const memoryFilterGroups = localGroups.length > 0
+      ? localGroups.map(g => ({
           ...g,
           conditions: g.conditions.filter(c => c.op === "between" || c.op === "in" || c.op === "notin"),
         })).filter(g => g.conditions.length > 0)
@@ -391,9 +427,34 @@ export async function listRecords(
       ]);
       processedRecords = allRecords.map(mapRecordToItem);
       if (sortableFields.length > 0) {
+        // Pre-resolve dot-notation sort field values for cross-table sorting
+        const sortValueMaps = new Map<string, Map<string, unknown>>();
+        for (const { fieldKey } of sortableFields) {
+          const ref = parseRelationFieldRef(fieldKey);
+          if (ref) {
+            const relField = allFields.find((f) => f.key === ref.relationFieldKey);
+            if (relField?.relationTo) {
+              const valueMap = await resolveSortValuesForRelationField(
+                processedRecords, relField, ref.targetFieldKey
+              );
+              sortValueMaps.set(fieldKey, valueMap);
+            }
+          }
+        }
+
         processedRecords.sort((a, b) => {
           for (const { fieldKey, order } of sortableFields) {
-            const result = compareRecordValues(a.data[fieldKey], b.data[fieldKey], order);
+            const ref = parseRelationFieldRef(fieldKey);
+            let aValue: unknown;
+            let bValue: unknown;
+            if (ref && sortValueMaps.has(fieldKey)) {
+              aValue = sortValueMaps.get(fieldKey)!.get(a.id) ?? null;
+              bValue = sortValueMaps.get(fieldKey)!.get(b.id) ?? null;
+            } else {
+              aValue = a.data[fieldKey];
+              bValue = b.data[fieldKey];
+            }
+            const result = compareRecordValues(aValue, bValue, order);
             if (result !== 0) return result;
           }
           return 0;
@@ -1218,6 +1279,205 @@ function buildFilterConditionsFromSpec(
       return built.length === 1 ? built[0] : { AND: built }
     })
     .filter(Boolean) as Record<string, unknown>[]
+}
+
+// ── Cross-table Relation Filter Helpers ──
+
+interface CrossTableFilter {
+  relationField: DataFieldItem;
+  targetFieldKey: string;
+  condition: FilterCondition;
+}
+
+function separateFilterConditions(
+  groups: FilterGroup[],
+  fields: DataFieldItem[]
+): { localGroups: FilterGroup[]; crossFilters: CrossTableFilter[] } {
+  const crossFilters: CrossTableFilter[] = [];
+  const localGroups = groups.map((group) => {
+    const localConditions: FilterCondition[] = [];
+    for (const cond of group.conditions) {
+      const ref = parseRelationFieldRef(cond.fieldKey);
+      if (ref) {
+        const relField = fields.find((f) => f.key === ref.relationFieldKey);
+        if (
+          relField &&
+          (relField.type === "RELATION" || relField.type === "RELATION_SUBTABLE") &&
+          relField.relationTo
+        ) {
+          crossFilters.push({
+            relationField: relField,
+            targetFieldKey: ref.targetFieldKey,
+            condition: { ...cond, fieldKey: ref.targetFieldKey },
+          });
+          continue;
+        }
+      }
+      localConditions.push(cond);
+    }
+    return { ...group, conditions: localConditions };
+  });
+  return { localGroups, crossFilters };
+}
+
+/** In-memory condition evaluation (for between/in/notin operators on target records) */
+function matchConditionInMemory(val: unknown, cond: FilterCondition): boolean {
+  const resolved = typeof val === "object" && val !== null
+    ? ((val as Record<string, unknown>).display ?? (val as Record<string, unknown>).displayValue ?? val)
+    : val;
+  switch (cond.op) {
+    case "eq": return String(resolved ?? "") === String(cond.value);
+    case "ne": return String(resolved ?? "") !== String(cond.value);
+    case "contains": return String(resolved ?? "").includes(String(cond.value));
+    case "notcontains": return !String(resolved ?? "").includes(String(cond.value));
+    case "startswith": return String(resolved ?? "").startsWith(String(cond.value));
+    case "endswith": return String(resolved ?? "").endsWith(String(cond.value));
+    case "isempty": return resolved == null || resolved === "";
+    case "isnotempty": return resolved != null && resolved !== "";
+    case "gt": return Number(resolved) > Number(cond.value);
+    case "lt": return Number(resolved) < Number(cond.value);
+    case "gte": return Number(resolved) >= Number(cond.value);
+    case "lte": return Number(resolved) <= Number(cond.value);
+    case "between": {
+      const range = cond.value as { min: number | string; max: number | string };
+      const num = Number(resolved);
+      return num >= Number(range.min) && num <= Number(range.max);
+    }
+    case "in": {
+      const list = Array.isArray(cond.value) ? cond.value : [cond.value];
+      return list.some((v) => String(resolved ?? "") === String(v));
+    }
+    case "notin": {
+      const list = Array.isArray(cond.value) ? cond.value : [cond.value];
+      return !list.some((v) => String(resolved ?? "") === String(v));
+    }
+    default: return true;
+  }
+}
+
+/**
+ * Two-step query for cross-table filtering:
+ * 1. Find target record IDs matching the condition on the target table
+ * 2. Find source record IDs linked via DataRelationRow
+ */
+async function resolveCrossTableFilter(
+  crossFilter: CrossTableFilter
+): Promise<Set<string>> {
+  const { relationField, targetFieldKey, condition } = crossFilter;
+  const targetTableId = relationField.relationTo!;
+
+  // Step 1: Get target table fields metadata
+  const targetTableResult = await getTable(targetTableId);
+  if (!targetTableResult.success) return new Set();
+  const targetFields = targetTableResult.data.fields;
+
+  // Step 2: Try Prisma JSONB filter first, fall back to in-memory
+  const prismaCondition = buildConditionFromFilter(condition, targetFields);
+
+  let targetIds: string[];
+  if (prismaCondition) {
+    const matching = await db.dataRecord.findMany({
+      where: { tableId: targetTableId, AND: [prismaCondition] },
+      select: { id: true },
+    });
+    targetIds = matching.map((r) => r.id);
+  } else {
+    // In-memory filter for between/in/notin operators
+    const allTarget = await db.dataRecord.findMany({
+      where: { tableId: targetTableId },
+    });
+    targetIds = allTarget
+      .filter((r) => {
+        const data = r.data as Record<string, unknown>;
+        return matchConditionInMemory(data[targetFieldKey], condition);
+      })
+      .map((r) => r.id);
+  }
+
+  if (targetIds.length === 0) return new Set();
+
+  // Step 3: Find source record IDs via junction table
+  const relationRows = await db.dataRelationRow.findMany({
+    where: {
+      fieldId: relationField.id,
+      targetRecordId: { in: targetIds },
+    },
+    select: { sourceRecordId: true },
+  });
+
+  return new Set(relationRows.map((r) => r.sourceRecordId));
+}
+
+/**
+ * Resolve sort values for a dot-notation relation field reference.
+ * Returns a Map of recordId -> target field value for sorting.
+ */
+async function resolveSortValuesForRelationField(
+  records: DataRecordItem[],
+  relationField: DataFieldItem,
+  targetFieldKey: string
+): Promise<Map<string, unknown>> {
+  const result = new Map<string, unknown>();
+
+  if (relationField.type === "RELATION") {
+    // Collect single target IDs
+    const targetIds = new Set<string>();
+    for (const record of records) {
+      const raw = record.data[relationField.key];
+      if (typeof raw === "string" && raw) targetIds.add(raw);
+      else if (typeof raw === "object" && raw !== null) {
+        const obj = raw as Record<string, unknown>;
+        if (typeof obj.id === "string") targetIds.add(obj.id);
+      }
+    }
+    if (targetIds.size === 0) return result;
+
+    const targetRecords = await db.dataRecord.findMany({
+      where: { id: { in: Array.from(targetIds) } },
+    });
+    const targetDataMap = new Map(targetRecords.map((r) => [r.id, r.data as Record<string, unknown>]));
+
+    for (const record of records) {
+      const raw = record.data[relationField.key];
+      let targetId: string | undefined;
+      if (typeof raw === "string") targetId = raw;
+      else if (typeof raw === "object" && raw !== null) {
+        targetId = (raw as Record<string, unknown>).id as string;
+      }
+      result.set(record.id, targetId ? (targetDataMap.get(targetId)?.[targetFieldKey] ?? null) : null);
+    }
+  } else if (relationField.type === "RELATION_SUBTABLE") {
+    // Collect all target IDs from snapshot arrays
+    const targetIds = new Set<string>();
+    for (const record of records) {
+      const snapshot = record.data[relationField.key];
+      if (Array.isArray(snapshot)) {
+        for (const item of snapshot as RelationSubtableValueItem[]) {
+          if (item.targetRecordId) targetIds.add(item.targetRecordId);
+        }
+      }
+    }
+    if (targetIds.size === 0) return result;
+
+    const targetRecords = await db.dataRecord.findMany({
+      where: { id: { in: Array.from(targetIds) } },
+    });
+    const targetDataMap = new Map(targetRecords.map((r) => [r.id, r.data as Record<string, unknown>]));
+
+    for (const record of records) {
+      const snapshot = record.data[relationField.key];
+      if (Array.isArray(snapshot)) {
+        const items = snapshot as RelationSubtableValueItem[];
+        // Use first related record's value for sorting
+        const firstItem = items[0];
+        result.set(record.id, firstItem ? (targetDataMap.get(firstItem.targetRecordId)?.[targetFieldKey] ?? null) : null);
+      } else {
+        result.set(record.id, null);
+      }
+    }
+  }
+
+  return result;
 }
 
 // ── Validation ──

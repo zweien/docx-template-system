@@ -88,6 +88,7 @@ interface GridViewProps {
   columnAggregations?: Record<string, AggregateType>;
   onColumnAggregationsChange?: (aggregations: Record<string, AggregateType>) => void;
   rowHeight?: number;
+  onFetchRelatedFields?: (tableId: string) => Promise<DataFieldItem[]>;
 }
 
 // ─── Grouping helpers ───────────────────────────────────────────────────────
@@ -264,6 +265,7 @@ export function GridView({
   columnAggregations,
   onColumnAggregationsChange,
   rowHeight,
+  onFetchRelatedFields,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
 
@@ -1715,7 +1717,7 @@ export function GridView({
                     filter={
                       findFilterForField(field.key)
                     }
-                    sort={sorts.find((s) => s.fieldKey === field.key) ?? null}
+                    sort={sorts.find((s) => s.fieldKey === field.key || s.fieldKey.startsWith(field.key + ".")) ?? null}
                     onFilterChange={(filter) =>
                       onFilterChange(filter, field.key)
                     }
@@ -1729,6 +1731,7 @@ export function GridView({
                     frozenFieldCount={frozenFieldCountValue}
                     index={index}
                     onFrozenFieldCountChange={onFrozenFieldCountChange}
+                    onFetchRelatedFields={onFetchRelatedFields}
                   />
                 </DraggableColumnHeader>
               );

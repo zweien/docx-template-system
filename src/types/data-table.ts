@@ -100,6 +100,13 @@ export function parseFieldOptions(raw: unknown): FieldOptions {
   return raw as FieldOptions;
 }
 
+/** Parse "relationFieldKey.targetFieldKey" dot-notation for cross-table filter/sort references */
+export function parseRelationFieldRef(fieldKey: string): { relationFieldKey: string; targetFieldKey: string } | null {
+  const i = fieldKey.indexOf('.');
+  if (i <= 0 || i === fieldKey.length - 1 || fieldKey.indexOf('.', i + 1) !== -1) return null;
+  return { relationFieldKey: fieldKey.slice(0, i), targetFieldKey: fieldKey.slice(i + 1) };
+}
+
 export interface DataFieldItem {
   id: string;
   key: string;

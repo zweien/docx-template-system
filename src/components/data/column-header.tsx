@@ -25,6 +25,7 @@ import type {
   FilterCondition,
   SortConfig,
 } from "@/types/data-table";
+import { parseRelationFieldRef } from "@/types/data-table";
 
 interface ColumnHeaderProps {
   field: DataFieldItem;
@@ -32,6 +33,8 @@ interface ColumnHeaderProps {
   sort: SortConfig | null;
   onFilterChange: (filter: FilterCondition | null) => void;
   onSortChange: (sort: SortConfig | null) => void;
+  /** Fetches fields for a related table (by table ID) */
+  onFetchRelatedFields?: (tableId: string) => Promise<DataFieldItem[]>;
   groupBy?: string | null;
   onGroupByChange?: (fieldKey: string | null) => void;
   frozenFieldCount?: number;
@@ -88,7 +91,10 @@ function getOperatorsForType(type: FieldType): FilterOperator[] {
     case FieldType.FORMULA:
       return ["eq", "ne", "gt", "lt", "gte", "lte", "between", "isempty", "isnotempty"];
     case FieldType.COUNT:
+    case FieldType.ROLLUP:
       return ["eq", "ne", "gt", "lt", "gte", "lte", "between", "isempty"];
+    case FieldType.LOOKUP:
+      return ["eq", "ne", "contains", "notcontains", "isempty", "isnotempty"];
     default:
       return ["eq", "ne", "contains", "isempty", "isnotempty"];
   }
@@ -107,10 +113,32 @@ export function ColumnHeader({
   frozenFieldCount,
   index,
   onFrozenFieldCountChange,
+  onFetchRelatedFields,
 }: ColumnHeaderProps) {
   const [open, setOpen] = useState(false);
+
+  const isRelationField = field.type === FieldType.RELATION || field.type === FieldType.RELATION_SUBTABLE;
+  const relationFieldKey = field.key;
+  const relationTableId = field.relationTo;
+
+  // Parse existing filter to detect cross-table reference
+  const existingRef = filter ? parseRelationFieldRef(filter.fieldKey) : null;
+  const initialTargetFieldKey = existingRef?.relationFieldKey === relationFieldKey ? existingRef.targetFieldKey : "";
+
+  const [targetFieldKey, setTargetFieldKey] = useState<string>(initialTargetFieldKey);
+  const [relatedFields, setRelatedFields] = useState<DataFieldItem[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(false);
+
+  // Resolve target field for operator selection
+  const effectiveFieldType = (() => {
+    if (!isRelationField) return field.type;
+    if (!targetFieldKey) return null; // No target selected yet
+    const tf = relatedFields.find((f) => f.key === targetFieldKey);
+    return tf?.type ?? null;
+  })();
+
   const [filterOp, setFilterOp] = useState<FilterOperator>(
-    filter?.op ?? getOperatorsForType(field.type)[0]
+    filter?.op ?? (effectiveFieldType ? getOperatorsForType(effectiveFieldType)[0] : "eq")
   );
   const [filterValue, setFilterValue] = useState<string>(
     filter
@@ -123,10 +151,31 @@ export function ColumnHeader({
   );
 
   // When popover opens, sync local state with props
-  const handleOpenChange = (nextOpen: boolean) => {
+  const handleOpenChange = async (nextOpen: boolean) => {
     setOpen(nextOpen);
     if (nextOpen) {
-      setFilterOp(filter?.op ?? getOperatorsForType(field.type)[0]);
+      // Parse existing filter for cross-table reference
+      const ref = filter ? parseRelationFieldRef(filter.fieldKey) : null;
+      const tfk = ref?.relationFieldKey === relationFieldKey ? ref.targetFieldKey : "";
+      setTargetFieldKey(tfk);
+
+      // Load related fields if needed
+      if (isRelationField && relationTableId && onFetchRelatedFields) {
+        setLoadingRelated(true);
+        try {
+          const fields = await onFetchRelatedFields(relationTableId);
+          setRelatedFields(fields.filter((f) =>
+            f.type !== "RELATION" && f.type !== "RELATION_SUBTABLE"
+          ));
+        } catch { /* ignore */ }
+        setLoadingRelated(false);
+      }
+
+      const resolvedType = isRelationField
+        ? (tfk ? (relatedFields.find((f) => f.key === tfk)?.type ?? "TEXT") : "TEXT")
+        : field.type;
+
+      setFilterOp(filter?.op ?? getOperatorsForType(resolvedType as FieldType)[0]);
       setFilterValue(
         filter
           ? filter.op === "between"
@@ -140,27 +189,34 @@ export function ColumnHeader({
   };
 
   const handleApplyFilter = () => {
+    const resolvedFieldKey = isRelationField && targetFieldKey
+      ? `${relationFieldKey}.${targetFieldKey}`
+      : field.key;
+    const resolvedType = isRelationField && targetFieldKey
+      ? (relatedFields.find((f) => f.key === targetFieldKey)?.type ?? "TEXT")
+      : field.type;
+
     if (NO_VALUE_OPS.includes(filterOp)) {
-      onFilterChange({ fieldKey: field.key, op: filterOp, value: "" });
+      onFilterChange({ fieldKey: resolvedFieldKey, op: filterOp, value: "" });
     } else if (filterOp === "between") {
       const parts = filterValue.split("-").map((s) => s.trim());
-      const min = field.type === FieldType.NUMBER ? Number(parts[0]) : parts[0] ?? "";
-      const max = field.type === FieldType.NUMBER ? Number(parts[1]) : parts[1] ?? "";
+      const min = resolvedType === FieldType.NUMBER ? Number(parts[0]) : parts[0] ?? "";
+      const max = resolvedType === FieldType.NUMBER ? Number(parts[1]) : parts[1] ?? "";
       if (!isNaN(Number(min)) && !isNaN(Number(max))) {
-        onFilterChange({ fieldKey: field.key, op: filterOp, value: { min, max } });
+        onFilterChange({ fieldKey: resolvedFieldKey, op: filterOp, value: { min, max } });
       }
     } else if (filterOp === "in" || filterOp === "notin") {
       const items = filterValue.split(",").map((s) => s.trim()).filter(Boolean);
       if (items.length > 0) {
-        const value = field.type === FieldType.NUMBER ? items.map(Number) : items;
-        onFilterChange({ fieldKey: field.key, op: filterOp, value });
+        const value = resolvedType === FieldType.NUMBER ? items.map(Number) : items;
+        onFilterChange({ fieldKey: resolvedFieldKey, op: filterOp, value });
       }
     } else if (filterValue) {
       const value: string | number =
-        field.type === FieldType.NUMBER && !isNaN(Number(filterValue))
+        resolvedType === FieldType.NUMBER && !isNaN(Number(filterValue))
           ? Number(filterValue)
           : filterValue;
-      onFilterChange({ fieldKey: field.key, op: filterOp, value });
+      onFilterChange({ fieldKey: resolvedFieldKey, op: filterOp, value });
     }
     setOpen(false);
   };
@@ -171,16 +227,22 @@ export function ColumnHeader({
     setOpen(false);
   };
 
-  const handleSortClick = (order: "asc" | "desc") => {
-    if (sort?.fieldKey === field.key && sort?.order === order) {
-      // Click same sort again -> toggle off
+  const handleSortClick = (order: "asc" | "desc", sortTargetField?: string) => {
+    const resolvedFieldKey = isRelationField && sortTargetField
+      ? `${relationFieldKey}.${sortTargetField}`
+      : field.key;
+    if (sort?.fieldKey === resolvedFieldKey && sort?.order === order) {
       onSortChange(null);
     } else {
-      onSortChange({ fieldKey: field.key, order });
+      onSortChange({ fieldKey: resolvedFieldKey, order });
     }
   };
 
-  const operators = getOperatorsForType(field.type);
+  const operators: FilterOperator[] = effectiveFieldType
+    ? getOperatorsForType(effectiveFieldType)
+    : isRelationField
+      ? (["eq", "isempty"] as FilterOperator[])
+      : getOperatorsForType(field.type);
   const hideValue = NO_VALUE_OPS.includes(filterOp);
 
   // Build filter summary text
@@ -231,12 +293,30 @@ export function ColumnHeader({
         {/* Sort section */}
         <div className="flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground mb-1">排序</Label>
+          {isRelationField && relatedFields.length > 0 && (
+            <Select
+              value={(() => {
+                const sortRef = sort ? parseRelationFieldRef(sort.fieldKey) : null;
+                return sortRef?.relationFieldKey === relationFieldKey ? sortRef.targetFieldKey : field.displayField ?? "";
+              })()}
+              onValueChange={(v) => { if (v) setTargetFieldKey(v); }}
+            >
+              <SelectTrigger size="sm" className="w-full mb-1">
+                <SelectValue placeholder="选择排序依据字段" />
+              </SelectTrigger>
+              <SelectContent>
+                {relatedFields.map((f) => (
+                  <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
           <div className="flex gap-1">
             <Button
               variant={sort?.order === "asc" ? "secondary" : "ghost"}
               size="sm"
               className="flex-1 text-xs"
-              onClick={() => handleSortClick("asc")}
+              onClick={() => handleSortClick("asc", isRelationField ? targetFieldKey || undefined : undefined)}
             >
               <ArrowUp className="h-3 w-3 mr-1" />
               升序
@@ -245,7 +325,7 @@ export function ColumnHeader({
               variant={sort?.order === "desc" ? "secondary" : "ghost"}
               size="sm"
               className="flex-1 text-xs"
-              onClick={() => handleSortClick("desc")}
+              onClick={() => handleSortClick("desc", isRelationField ? targetFieldKey || undefined : undefined)}
             >
               <ArrowDown className="h-3 w-3 mr-1" />
               降序
@@ -310,60 +390,94 @@ export function ColumnHeader({
         {/* Filter section */}
         <div className="flex flex-col gap-2">
           <Label className="text-xs text-muted-foreground">筛选</Label>
-          <Select
-            value={filterOp}
-            onValueChange={(v) => {
-              if (!v) return;
-              setFilterOp(v as FilterOperator);
-            }}
-          >
-            <SelectTrigger size="sm" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {operators.map((op) => (
-                <SelectItem key={op} value={op}>
-                  {OPERATOR_LABELS[op]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {!hideValue &&
-            (field.type === FieldType.SELECT && field.options && filterOp !== "in" && filterOp !== "notin" ? (
-              <Select
-                value={filterValue}
-                onValueChange={(v) => {
-                  if (!v) return;
-                  setFilterValue(v);
-                }}
-              >
-                <SelectTrigger size="sm" className="w-full">
-                  <SelectValue placeholder="选择值" />
-                </SelectTrigger>
-                <SelectContent>
-                  {parseSelectOptions(field.options).map((opt) => (
-                    <SelectItem key={opt.label} value={opt.label}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : (
-              <Input
-                placeholder={
-                  filterOp === "between"
-                    ? "最小值-最大值（如 10-100）"
-                    : filterOp === "in" || filterOp === "notin"
-                      ? "多个值，逗号分隔"
-                      : "输入值"
+          {isRelationField && relatedFields.length > 0 && (
+            <Select
+              value={targetFieldKey}
+              onValueChange={(v) => {
+                if (!v) return;
+                setTargetFieldKey(v);
+                const tf = relatedFields.find((f) => f.key === v);
+                if (tf) {
+                  setFilterOp(getOperatorsForType(tf.type)[0]);
                 }
-                value={filterValue}
-                onChange={(e) => setFilterValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleApplyFilter()}
-                type={field.type === FieldType.NUMBER && filterOp !== "between" ? "number" : "text"}
-              />
-            ))}
+                setFilterValue("");
+              }}
+            >
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue placeholder="选择目标字段" />
+              </SelectTrigger>
+              <SelectContent>
+                {relatedFields.map((f) => (
+                  <SelectItem key={f.key} value={f.key}>{f.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {(isRelationField ? targetFieldKey : true) && (
+            <Select
+              value={filterOp}
+              onValueChange={(v) => {
+                if (!v) return;
+                setFilterOp(v as FilterOperator);
+              }}
+            >
+              <SelectTrigger size="sm" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {operators.map((op) => (
+                  <SelectItem key={op} value={op}>
+                    {OPERATOR_LABELS[op]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {!hideValue && (isRelationField ? targetFieldKey : true) &&
+            (() => {
+              const targetField = isRelationField
+                ? relatedFields.find((f) => f.key === targetFieldKey)
+                : field;
+              const isSelectWithOpts = targetField?.type === FieldType.SELECT && targetField.options && filterOp !== "in" && filterOp !== "notin";
+              if (isSelectWithOpts) {
+                return (
+                  <Select
+                    value={filterValue}
+                    onValueChange={(v) => {
+                      if (!v) return;
+                      setFilterValue(v);
+                    }}
+                  >
+                    <SelectTrigger size="sm" className="w-full">
+                      <SelectValue placeholder="选择值" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parseSelectOptions(targetField!.options).map((opt: { label: string }) => (
+                        <SelectItem key={opt.label} value={opt.label}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              }
+              return (
+                <Input
+                  placeholder={
+                    filterOp === "between"
+                      ? "最小值-最大值（如 10-100）"
+                      : filterOp === "in" || filterOp === "notin"
+                        ? "多个值，逗号分隔"
+                        : "输入值"
+                  }
+                  value={filterValue}
+                  onChange={(e) => setFilterValue(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleApplyFilter()}
+                  type={effectiveFieldType === FieldType.NUMBER && filterOp !== "between" ? "number" : "text"}
+                />
+              );
+            })()}
         </div>
 
         <Separator />

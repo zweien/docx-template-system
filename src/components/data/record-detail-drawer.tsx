@@ -191,8 +191,8 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener("keydown", handleKeyDown, true);
+    return () => document.removeEventListener("keydown", handleKeyDown, true);
   }, [open, recordIds, onNavigate, handleNavigate]);
 
   return (

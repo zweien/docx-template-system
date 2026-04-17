@@ -49,7 +49,8 @@ export async function executeToolAction(
       // Get tableId before deletion for cache invalidation
       const existingResult = await helpers.getRecord(toolInput.recordId as string);
       const result = await recordService.deleteRecord(
-        toolInput.recordId as string
+        toolInput.recordId as string,
+        userId
       );
       if (!result.success)
         return { success: false, error: result.error.message, errorDetails: result.error };

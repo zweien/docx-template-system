@@ -13,6 +13,7 @@ import type {
 } from "@/types/data-table";
 import { normalizeFilters, parseFieldOptions, parseRelationFieldRef } from "@/types/data-table";
 import { evaluateFormula } from "@/lib/formula";
+import { publishRealtimeEvent } from "@/lib/services/realtime-notify.service";
 
 // Strip control characters (U+0000-U+001F except TAB/LF/CR) from string values
 const CONTROL_CHAR_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
@@ -779,7 +780,17 @@ export async function createRecord(
       };
     }
 
-    return { success: true, data: mapRecordToItem(record) };
+    const mapped = mapRecordToItem(record);
+    void publishRealtimeEvent({
+      type: "record_created",
+      tableId,
+      recordId: mapped.id,
+      createdById: userId,
+      createdByName: mapped.createdByName ?? "",
+      createdAt: new Date().toISOString(),
+    }).catch(() => {});
+
+    return { success: true, data: mapped };
   } catch (error) {
     const message = error instanceof Error ? error.message : "创建记录失败";
     return { success: false, error: { code: "CREATE_FAILED", message } };
@@ -1008,14 +1019,27 @@ export async function patchField(
     // Fetch updated record with relations
     const updatedRecord = await db.dataRecord.findUnique({
       where: { id: recordId },
-      include: { createdBy: { select: { name: true } } },
+      include: { createdBy: { select: { name: true } }, updatedBy: { select: { name: true } } },
     });
 
     if (!updatedRecord) {
       return { success: false, error: { code: "NOT_FOUND", message: "记录不存在" } };
     }
 
-    return { success: true, data: mapRecordToItem(updatedRecord) };
+    const mapped = mapRecordToItem(updatedRecord);
+    void publishRealtimeEvent({
+      type: "record_updated",
+      tableId: existingRecord.tableId,
+      recordId,
+      fieldKey,
+      fieldLabel: field?.label ?? fieldKey,
+      value,
+      changedById: userId,
+      changedByName: mapped.updatedByName ?? mapped.createdByName ?? "",
+      changedAt: new Date().toISOString(),
+    }).catch(() => {});
+
+    return { success: true, data: mapped };
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新字段失败";
     return { success: false, error: { code: "PATCH_FAILED", message } };
@@ -1038,14 +1062,33 @@ async function doDeleteRecord(
   await tx.dataRecord.delete({ where: { id } });
 }
 
-export async function deleteRecord(id: string): Promise<ServiceResult<null>> {
+export async function deleteRecord(
+  id: string,
+  userId?: string
+): Promise<ServiceResult<null>> {
   try {
     const record = await db.dataRecord.findUnique({ where: { id } });
     if (!record) {
       return { success: false, error: { code: "NOT_FOUND", message: "记录不存在" } };
     }
 
+    let deletedByName = "";
+    if (userId) {
+      const user = await db.user.findUnique({ where: { id: userId }, select: { name: true } });
+      deletedByName = user?.name ?? "";
+    }
+
     await db.$transaction(tx => doDeleteRecord(tx, id));
+
+    void publishRealtimeEvent({
+      type: "record_deleted",
+      tableId: record.tableId,
+      recordId: id,
+      deletedById: userId ?? "",
+      deletedByName,
+      deletedAt: new Date().toISOString(),
+    }).catch(() => {});
+
     return { success: true, data: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : "删除记录失败";

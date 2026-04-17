@@ -11,7 +11,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ArrowUpDown, Download, Plus, X } from "lucide-react";
+import { ArrowUpDown, Download, Plus, X, Activity } from "lucide-react";
 import type {
   DataFieldItem,
   DataViewItem,
@@ -33,6 +33,7 @@ import { KanbanView } from "@/components/data/views/kanban/kanban-view";
 import { GalleryView } from "@/components/data/views/gallery/gallery-view";
 import { TimelineView } from "@/components/data/views/timeline/timeline-view";
 import { FormView } from "@/components/data/views/form/form-view";
+import { ActivityStream } from "@/components/data/activity-stream";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -78,6 +79,7 @@ export function RecordTable({
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [quickFormatField, setQuickFormatField] = useState<string | undefined>();
   const [quickFormatValue, setQuickFormatValue] = useState<string | undefined>();
+  const [showActivity, setShowActivity] = useState(false);
   const {
     records,
     totalCount,
@@ -104,6 +106,8 @@ export function RecordTable({
     addRecord,
     switchView,
     refresh,
+    isConnected,
+    activityFeed,
   } = useTableData({ tableId, fields });
 
   // Sync record IDs to parent for drawer navigation
@@ -516,11 +520,29 @@ export function RecordTable({
               </Button>
             </Link>
           )}
+          <Button
+            variant={showActivity ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setShowActivity(!showActivity)}
+          >
+            <Activity className="h-4 w-4 mr-1" />
+            动态
+            {isConnected && (
+              <span className="ml-1 w-2 h-2 rounded-full bg-green-500 inline-block" />
+            )}
+          </Button>
         </div>
       </div>
 
-      {/* View content */}
-      {renderView()}
+      {/* View content + Activity panel */}
+      <div className="flex flex-1 min-h-0">
+        <div className="flex-1 min-w-0">
+          {renderView()}
+        </div>
+        {showActivity && (
+          <ActivityStream tableId={tableId} liveActivities={activityFeed} />
+        )}
+      </div>
 
       {/* Record count */}
       {!isLoading && (

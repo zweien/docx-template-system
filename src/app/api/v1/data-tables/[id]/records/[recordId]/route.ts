@@ -71,7 +71,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     return apiErrorResponse("NOT_FOUND", "记录不存在或不属于该数据表", 404);
   }
 
-  const result = await deleteRecord(recordId);
+  const result = await deleteRecord(recordId, authResult.data.userId);
 
   if (!result.success) {
     if (result.error.code === "NOT_FOUND") {

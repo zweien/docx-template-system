@@ -20,12 +20,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 
 interface RichTextCellEditorProps {
   value: unknown;
   onChange: (value: unknown) => void;
   autoOpen?: boolean;
+  onClose?: () => void;
 }
 
 function extractPlainText(value: unknown): string {
@@ -143,8 +144,14 @@ export function RichTextCellEditor({
   value,
   onChange,
   autoOpen = false,
+  onClose,
 }: RichTextCellEditorProps) {
   const [open, setOpen] = useState(autoOpen);
+
+  const handleClose = useCallback(() => {
+    setOpen(false);
+    onClose?.();
+  }, [onClose]);
 
   const editor = useEditor({
     extensions: [StarterKit, UnderlineExt],
@@ -157,14 +164,16 @@ export function RichTextCellEditor({
 
   return (
     <>
-      <div
-        className="cursor-pointer truncate text-sm text-muted-foreground hover:text-foreground"
-        onClick={() => setOpen(true)}
-        title={extractPlainText(value) || "点击编辑富文本"}
-      >
-        {extractPlainText(value) || "点击编辑"}
-      </div>
-      <Dialog open={open} onOpenChange={setOpen}>
+      {!autoOpen && (
+        <div
+          className="cursor-pointer truncate text-sm text-muted-foreground hover:text-foreground"
+          onClick={() => setOpen(true)}
+          title={extractPlainText(value) || "点击编辑富文本"}
+        >
+          {extractPlainText(value) || "点击编辑"}
+        </div>
+      )}
+      <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); else setOpen(true); }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>编辑富文本</DialogTitle>
@@ -179,7 +188,7 @@ export function RichTextCellEditor({
           </div>
           )}
           <div className="flex justify-end">
-            <Button onClick={() => setOpen(false)}>完成</Button>
+            <Button onClick={handleClose}>完成</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -673,14 +673,17 @@ export function GridView({
     value: unknown;
   } | null>(null);
 
-  const handleRichEditSave = useCallback(
+  const handleRichEditChange = useCallback(
     (value: unknown) => {
       if (!richEditCell) return;
       void handleCommitWithUndo(richEditCell.recordId, richEditCell.fieldKey, value);
-      setRichEditCell(null);
     },
     [richEditCell, handleCommitWithUndo]
   );
+
+  const handleRichEditClose = useCallback(() => {
+    setRichEditCell(null);
+  }, []);
 
   // ── Fill handle (drag-fill) ──────────────────────────────────────────────
   const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
@@ -1923,7 +1926,8 @@ export function GridView({
       {richEditCell && (
         <RichTextCellEditor
           value={richEditCell.value}
-          onChange={handleRichEditSave}
+          onChange={handleRichEditChange}
+          onClose={handleRichEditClose}
           autoOpen
         />
       )}

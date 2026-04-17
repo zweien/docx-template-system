@@ -20,6 +20,7 @@ import { parseFieldOptions } from "@/types/data-table";
 import type { RelationSubtableValueItem } from "@/types/data-table";
 import { parseSelectOptions } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
+import { RichTextCellEditor } from "./rich-text-cell-editor";
 import { RelationSubtableEditor } from "./relation-subtable-editor";
 import { RelationSelect } from "./relation-select";
 
@@ -438,6 +439,14 @@ export function DynamicRecordForm({
               {watch(field.key) ? "是" : "否"}
             </label>
           </div>
+        );
+
+      case FieldType.RICH_TEXT:
+        return (
+          <RichTextCellEditor
+            value={watch(field.key)}
+            onChange={(nextValue) => setValue(field.key, nextValue)}
+          />
         );
 
       case FieldType.COUNT:

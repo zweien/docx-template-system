@@ -23,6 +23,7 @@ import { parseSelectOptions } from "@/types/data-table";
 import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
+import { RichTextPreview, RichTextCellEditor, extractPlainText } from "@/components/data/rich-text-cell-editor";
 import { useKeyboardNav, type ActiveCell, type CellRange } from "@/hooks/use-keyboard-nav";
 import { useUndoManager } from "@/hooks/use-undo-manager";
 import { cn } from "@/lib/utils";
@@ -665,6 +666,25 @@ export function GridView({
   const { editingCell, startEditing, commitEdit, cancelEdit } =
     useInlineEdit({ tableId, onCommit: handleCommitWithUndo });
 
+  // Rich text popup editor state
+  const [richEditCell, setRichEditCell] = useState<{
+    recordId: string;
+    fieldKey: string;
+    value: unknown;
+  } | null>(null);
+
+  const handleRichEditChange = useCallback(
+    (value: unknown) => {
+      if (!richEditCell) return;
+      void handleCommitWithUndo(richEditCell.recordId, richEditCell.fieldKey, value);
+    },
+    [richEditCell, handleCommitWithUndo]
+  );
+
+  const handleRichEditClose = useCallback(() => {
+    setRichEditCell(null);
+  }, []);
+
   // ── Fill handle (drag-fill) ──────────────────────────────────────────────
   const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
   const [fillMode, setFillMode] = useState<"increment" | "copy">("increment");
@@ -680,7 +700,7 @@ export function GridView({
   const READONLY_FIELD_TYPES: readonly string[] = [
     FieldType.AUTO_NUMBER, FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER,
     FieldType.FORMULA, FieldType.RELATION_SUBTABLE, FieldType.COUNT, FieldType.LOOKUP,
-    FieldType.ROLLUP,
+    FieldType.ROLLUP, FieldType.RICH_TEXT,
   ];
 
   const computeFillValue = useCallback((fieldType: string, originalValue: unknown, step: number, mode: "increment" | "copy"): unknown => {
@@ -862,7 +882,7 @@ export function GridView({
       const entry = flatRecords[activeCell.rowIndex];
       if (entry?.type !== "record" || !entry.record) return;
       const field = orderedVisibleFields[activeCell.colIndex];
-      if (!field || field.type === FieldType.RELATION_SUBTABLE) return;
+      if (!field || field.type === FieldType.RELATION_SUBTABLE || field.type === FieldType.RICH_TEXT) return;
       if (field.type === FieldType.BOOLEAN) {
         const currentValue = entry.record.data[field.key];
         const newValue = !(!!currentValue && currentValue !== "false" && currentValue !== 0);
@@ -877,7 +897,7 @@ export function GridView({
       const entry = flatRecords[activeCell.rowIndex];
       if (entry?.type !== "record" || !entry.record) return;
       const field = orderedVisibleFields[activeCell.colIndex];
-      if (field && field.type !== FieldType.RELATION_SUBTABLE) {
+      if (field && field.type !== FieldType.RELATION_SUBTABLE && field.type !== FieldType.RICH_TEXT) {
         handleCommit(entry.record.id, field.key, null);
       }
     },
@@ -937,7 +957,7 @@ export function GridView({
           const targetCol = startCol + dc;
           const field = orderedVisibleFields[targetCol];
           if (!field) continue;
-          if (field.type === FieldType.RELATION_SUBTABLE || field.type === FieldType.AUTO_NUMBER || field.type === FieldType.SYSTEM_TIMESTAMP || field.type === FieldType.SYSTEM_USER || field.type === FieldType.FORMULA) continue;
+          if (field.type === FieldType.RELATION_SUBTABLE || field.type === FieldType.AUTO_NUMBER || field.type === FieldType.SYSTEM_TIMESTAMP || field.type === FieldType.SYSTEM_USER || field.type === FieldType.FORMULA || field.type === FieldType.RICH_TEXT) continue;
           const rawValue = parsed[dr][dc];
           const value = field.type === FieldType.NUMBER ? Number(rawValue) : rawValue;
           if (field.type === FieldType.NUMBER && isNaN(value as number)) continue;
@@ -1356,6 +1376,20 @@ export function GridView({
         return renderEditor(field, record);
       }
 
+      if (field.type === FieldType.RICH_TEXT) {
+        return (
+          <div
+            className="cursor-pointer w-full h-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              setRichEditCell({ recordId: record.id, fieldKey: field.key, value: record.data[field.key] });
+            }}
+          >
+            <RichTextPreview value={record.data[field.key]} />
+          </div>
+        );
+      }
+
       return (
         <span className="block px-1 truncate">
           {formatCellValue(field, record.data[field.key])}
@@ -1478,7 +1512,8 @@ export function GridView({
                     && field.type !== FieldType.SYSTEM_USER
                     && field.type !== FieldType.FORMULA
                     && field.type !== FieldType.BOOLEAN
-                    && field.type !== FieldType.COUNT;
+                    && field.type !== FieldType.COUNT
+                    && field.type !== FieldType.RICH_TEXT;
                   if (canEdit) {
                     startEditing(record.id, field.key);
                   }
@@ -1886,6 +1921,15 @@ export function GridView({
             递增
           </Button>
         </div>
+      )}
+
+      {richEditCell && (
+        <RichTextCellEditor
+          value={richEditCell.value}
+          onChange={handleRichEditChange}
+          onClose={handleRichEditClose}
+          autoOpen
+        />
       )}
     </div>
   );

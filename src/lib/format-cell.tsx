@@ -246,7 +246,7 @@ export function formatCellText(field: DataFieldItem, value: unknown): string {
     case FieldType.LOOKUP:
     case FieldType.ROLLUP:
     case FieldType.RICH_TEXT:
-      return String(value ?? "");
+      return extractRichTextPlainText(value);
     default:
       return String(value);
   }

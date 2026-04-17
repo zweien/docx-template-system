@@ -879,7 +879,7 @@ export function GridView({
       const entry = flatRecords[activeCell.rowIndex];
       if (entry?.type !== "record" || !entry.record) return;
       const field = orderedVisibleFields[activeCell.colIndex];
-      if (!field || field.type === FieldType.RELATION_SUBTABLE) return;
+      if (!field || field.type === FieldType.RELATION_SUBTABLE || field.type === FieldType.RICH_TEXT) return;
       if (field.type === FieldType.BOOLEAN) {
         const currentValue = entry.record.data[field.key];
         const newValue = !(!!currentValue && currentValue !== "false" && currentValue !== 0);
@@ -894,7 +894,7 @@ export function GridView({
       const entry = flatRecords[activeCell.rowIndex];
       if (entry?.type !== "record" || !entry.record) return;
       const field = orderedVisibleFields[activeCell.colIndex];
-      if (field && field.type !== FieldType.RELATION_SUBTABLE) {
+      if (field && field.type !== FieldType.RELATION_SUBTABLE && field.type !== FieldType.RICH_TEXT) {
         handleCommit(entry.record.id, field.key, null);
       }
     },
@@ -954,7 +954,7 @@ export function GridView({
           const targetCol = startCol + dc;
           const field = orderedVisibleFields[targetCol];
           if (!field) continue;
-          if (field.type === FieldType.RELATION_SUBTABLE || field.type === FieldType.AUTO_NUMBER || field.type === FieldType.SYSTEM_TIMESTAMP || field.type === FieldType.SYSTEM_USER || field.type === FieldType.FORMULA) continue;
+          if (field.type === FieldType.RELATION_SUBTABLE || field.type === FieldType.AUTO_NUMBER || field.type === FieldType.SYSTEM_TIMESTAMP || field.type === FieldType.SYSTEM_USER || field.type === FieldType.FORMULA || field.type === FieldType.RICH_TEXT) continue;
           const rawValue = parsed[dr][dc];
           const value = field.type === FieldType.NUMBER ? Number(rawValue) : rawValue;
           if (field.type === FieldType.NUMBER && isNaN(value as number)) continue;
@@ -1509,7 +1509,8 @@ export function GridView({
                     && field.type !== FieldType.SYSTEM_USER
                     && field.type !== FieldType.FORMULA
                     && field.type !== FieldType.BOOLEAN
-                    && field.type !== FieldType.COUNT;
+                    && field.type !== FieldType.COUNT
+                    && field.type !== FieldType.RICH_TEXT;
                   if (canEdit) {
                     startEditing(record.id, field.key);
                   }

@@ -34,6 +34,7 @@ import type { RollupAggregateType, FilterCondition, FilterGroup } from "@/types/
 import type { DataFieldInput } from "@/validators/data-table";
 import { FormulaEditor } from "@/components/data/formula-editor";
 import { parseFormula, evaluateFormula, detectCircularRefs } from "@/lib/formula";
+import { FieldTypeIcon } from "./field-type-icon";
 
 interface FieldConfigFormProps {
   open: boolean;
@@ -721,7 +722,10 @@ export function FieldConfigForm({
                 <SelectContent>
                   {FIELD_TYPES.map((item) => (
                     <SelectItem key={item.value} value={item.value}>
-                      {item.label}
+                      <span className="inline-flex items-center gap-1.5">
+                        <FieldTypeIcon type={item.value} />
+                        {item.label}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>

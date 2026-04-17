@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatCellValue } from "@/lib/format-cell";
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
 import type { ChangeHistoryEntry } from "@/lib/services/data-record-change-history.service";
+import { FieldTypeIcon } from "./field-type-icon";
 
 export interface RecordDetailDrawerProps {
   open: boolean;
@@ -215,7 +216,8 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                 <div className="space-y-4">
                   {fields.map((field) => (
                     <div key={field.id} className="space-y-1.5">
-                      <div className="text-xs font-medium text-muted-foreground">
+                      <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
+                        <FieldTypeIcon type={field.type} />
                         {field.label}
                       </div>
                       <div className="break-words text-sm">

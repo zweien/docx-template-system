@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, MessageSquare, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
 import { BatchActionBar } from "@/components/data/batch-action-bar";
 import { BatchEditDialog } from "@/components/data/batch-edit-dialog";
 import { FindReplaceBar } from "@/components/data/views/find-replace-bar";
@@ -99,6 +99,7 @@ interface GridViewProps {
   broadcastCursor?: (recordId: string, fieldKey: string) => void;
   myColor?: string;
   onLockLost?: (callback: (recordId: string, fieldKey: string) => void) => () => void;
+  cursorPositions?: Map<string, { userId: string; userName: string; recordId: string; fieldKey: string; color: string }>;
 }
 
 // ─── Grouping helpers ───────────────────────────────────────────────────────
@@ -284,6 +285,7 @@ export function GridView({
   broadcastCursor,
   myColor,
   onLockLost,
+  cursorPositions,
 }: GridViewProps) {
   const frozenFieldCountValue = frozenFieldCount ?? 0;
 
@@ -726,6 +728,17 @@ export function GridView({
     });
   }, [onLockLost, editingCell, richEditCell, cancelEdit]);
 
+  // ── Comment counts ──
+  const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!tableId || records.length === 0) return;
+    const ids = records.map((r) => r.id);
+    fetch(`/api/data-tables/${tableId}/records/${ids[0]}/comments?ids=${ids.join(",")}`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data: Record<string, number>) => setCommentCounts(data))
+      .catch(() => {});
+  }, [tableId, records]);
+
   // ── Fill handle (drag-fill) ──────────────────────────────────────────────
   const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
   const [fillMode, setFillMode] = useState<"increment" | "copy">("increment");
@@ -1103,12 +1116,21 @@ export function GridView({
   });
 
   // Wrapper that syncs both ref and state
+  const cursorTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const setActiveCell = useCallback(
     (cell: ActiveCell | null) => {
       setActiveCellRef(cell);
       setActiveCellState(cell);
+      if (broadcastCursor && cell) {
+        clearTimeout(cursorTimerRef.current);
+        cursorTimerRef.current = setTimeout(() => {
+          const field = orderedVisibleFields[cell.colIndex];
+          const rec = flatRecords[cell.rowIndex]?.record;
+          if (field && rec) broadcastCursor(rec.id, field.key);
+        }, 500);
+      }
     },
-    [setActiveCellRef]
+    [setActiveCellRef, broadcastCursor, orderedVisibleFields, flatRecords]
   );
 
   // ── Quick add row ────────────────────────────────────────────────────────
@@ -1599,6 +1621,24 @@ export function GridView({
                     onMouseDown={(e) => handleFillStart(e, record, field)}
                   />
                 )}
+                {(() => {
+                  const cursorsOnCell: { userName: string; color: string }[] = [];
+                  if (cursorPositions) {
+                    for (const [, pos] of cursorPositions) {
+                      if (pos.recordId === record.id && pos.fieldKey === field.key) {
+                        cursorsOnCell.push({ userName: pos.userName, color: pos.color });
+                      }
+                    }
+                  }
+                  return cursorsOnCell.map((c, i) => (
+                    <div
+                      key={i}
+                      className="absolute top-0 left-0 w-3 h-3 rounded-full z-20 border border-white"
+                      style={{ backgroundColor: c.color, marginLeft: i * 6 }}
+                      title={c.userName}
+                    />
+                  ));
+                })()}
               </td>
             );
           })}
@@ -1614,6 +1654,16 @@ export function GridView({
                 >
                   <Expand className="h-3 w-3" />
                 </Button>
+              )}
+              {commentCounts[record.id] > 0 && (
+                <span
+                  className="inline-flex items-center gap-0.5 text-xs text-muted-foreground cursor-pointer hover:text-primary"
+                  title={`${commentCounts[record.id]} 条未解决评论`}
+                  onClick={() => onOpenDetail?.(record.id)}
+                >
+                  <MessageSquare className="h-3 w-3" />
+                  {commentCounts[record.id]}
+                </span>
               )}
               {isAdmin && (
                 <Button

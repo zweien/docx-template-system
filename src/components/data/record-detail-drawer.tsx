@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { Pencil, Trash2, History, ChevronLeft, ChevronRight } from "lucide-react";
+import { Pencil, Trash2, History, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -18,6 +18,7 @@ import { formatCellValue } from "@/lib/format-cell";
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
 import type { ChangeHistoryEntry } from "@/lib/services/data-record-change-history.service";
 import { FieldTypeIcon } from "./field-type-icon";
+import { CommentPanel } from "./comment-panel";
 import { FieldType } from "@/generated/prisma/enums";
 import { RichTextPreview } from "./rich-text-cell-editor";
 
@@ -244,6 +245,10 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mx-4">
                 <TabsTrigger value="fields">字段</TabsTrigger>
+                <TabsTrigger value="comments">
+                  <MessageSquare className="h-3.5 w-3.5" />
+                  评论
+                </TabsTrigger>
                 <TabsTrigger value="history">
                   <History className="h-3.5 w-3.5" />
                   变更历史
@@ -312,6 +317,11 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                 </div>
               </TabsContent>
 
+              <TabsContent value="comments" className="flex-1 min-h-0">
+                {record && (
+                  <CommentPanel tableId={tableId} recordId={record.id} />
+                )}
+              </TabsContent>
               <TabsContent value="history" className="space-y-4 px-4 pb-4 pt-4">
                 {/* Date range filter */}
                 <div className="flex gap-2 items-center text-xs">

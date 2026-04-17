@@ -24,6 +24,7 @@ interface UseRealtimeTableReturn {
   broadcastCursor: (recordId: string, fieldKey: string) => void;
   myColor: string;
   onLockLost: (callback: (recordId: string, fieldKey: string) => void) => () => void;
+  cursorPositions: Map<string, { userId: string; userName: string; recordId: string; fieldKey: string; color: string }>;
 }
 
 const MAX_ACTIVITY = 50;
@@ -42,6 +43,7 @@ export function useRealtimeTable({
   const [activityFeed, setActivityFeed] = useState<ActivityEntry[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [cellLocks, setCellLocks] = useState<Map<string, CellLock>>(new Map());
+  const [cursorPositions, setCursorPositions] = useState<Map<string, { userId: string; userName: string; recordId: string; fieldKey: string; color: string }>>(new Map());
 
   const callbacksRef = useRef({ onUpdateRecordField, onRefresh });
   callbacksRef.current = { onUpdateRecordField, onRefresh };
@@ -97,7 +99,11 @@ export function useRealtimeTable({
         // ── User left ──
         if (event.type === "user_left") {
           setOnlineUsers((prev) => prev.filter((u) => u.userId !== event.userId));
-          // Release any locks from this user
+          setCursorPositions((prev) => {
+            const next = new Map(prev);
+            next.delete(event.userId);
+            return next;
+          });
           setCellLocks((prev) => {
             const next = new Map(prev);
             for (const [key, lock] of next) {
@@ -142,8 +148,21 @@ export function useRealtimeTable({
           return;
         }
 
-        // ── Cursor moved (no state needed, consumed by overlay) ──
-        if (event.type === "cursor_moved") return;
+        // ── Cursor moved ──
+        if (event.type === "cursor_moved") {
+          setCursorPositions((prev) => {
+            const next = new Map(prev);
+            next.set(event.userId, {
+              userId: event.userId,
+              userName: event.userName,
+              recordId: event.recordId,
+              fieldKey: event.fieldKey,
+              color: event.color,
+            });
+            return next;
+          });
+          return;
+        }
 
         // ── Data change events ──
         const rtEvent = event as RealtimeEvent;
@@ -194,6 +213,7 @@ export function useRealtimeTable({
       setIsConnected(false);
       setOnlineUsers([]);
       setCellLocks(new Map());
+      setCursorPositions(new Map());
     };
   }, [tableId, enabled, currentUserId, addActivity]);
 
@@ -252,5 +272,6 @@ export function useRealtimeTable({
     broadcastCursor,
     myColor,
     onLockLost,
+    cursorPositions,
   };
 }

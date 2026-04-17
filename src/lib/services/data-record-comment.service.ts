@@ -81,6 +81,19 @@ export async function createComment(
         return matches ? matches.map((m) => m.slice(1)) : null;
       })();
 
+  if (input.parentId) {
+    const parent = await db.dataRecordComment.findUnique({
+      where: { id: input.parentId },
+      select: { parentId: true },
+    });
+    if (!parent) {
+      return { success: false, error: { code: "NOT_FOUND", message: "父评论不存在" } };
+    }
+    if (parent.parentId !== null) {
+      return { success: false, error: { code: "INVALID_INPUT", message: "只能回复顶层评论" } };
+    }
+  }
+
   const comment = await db.dataRecordComment.create({
     data: {
       recordId: input.recordId,

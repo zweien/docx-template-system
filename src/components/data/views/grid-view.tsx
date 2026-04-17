@@ -730,14 +730,15 @@ export function GridView({
 
   // ── Comment counts ──
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const recordIdsKey = records.map((r) => r.id).join(",");
   useEffect(() => {
-    if (!tableId || records.length === 0) return;
-    const ids = records.map((r) => r.id);
+    if (!tableId || recordIdsKey.length === 0) return;
+    const ids = recordIdsKey.split(",");
     fetch(`/api/data-tables/${tableId}/records/${ids[0]}/comments?ids=${ids.join(",")}`)
       .then((res) => (res.ok ? res.json() : {}))
       .then((data: Record<string, number>) => setCommentCounts(data))
       .catch(() => {});
-  }, [tableId, records]);
+  }, [tableId, recordIdsKey]);
 
   // ── Fill handle (drag-fill) ──────────────────────────────────────────────
   const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
@@ -1722,6 +1723,8 @@ export function GridView({
       fillRange,
       editingCell,
       handleFillStart,
+      cursorPositions,
+      commentCounts,
     ]
   );
 

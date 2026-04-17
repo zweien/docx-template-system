@@ -79,7 +79,7 @@ function ToolbarButton({
   );
 }
 
-function RichTextToolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
+function RichTextToolbar({ editor }: { editor: NonNullable<ReturnType<typeof useEditor>> }) {
   if (!editor) return null;
 
   return (
@@ -147,6 +147,7 @@ export function RichTextCellEditor({
   const editor = useEditor({
     extensions: [StarterKit, UnderlineExt],
     content: parseContent(value),
+    immediatelyRender: false,
     onUpdate: ({ editor }) => {
       onChange(editor.getJSON());
     },
@@ -166,6 +167,7 @@ export function RichTextCellEditor({
           <DialogHeader>
             <DialogTitle>编辑富文本</DialogTitle>
           </DialogHeader>
+          {editor && (
           <div className="border rounded-md min-h-[200px]">
             <RichTextToolbar editor={editor} />
             <EditorContent
@@ -173,6 +175,7 @@ export function RichTextCellEditor({
               className="prose prose-sm max-w-none p-3 min-h-[160px] focus:outline-none"
             />
           </div>
+          )}
           <div className="flex justify-end">
             <Button onClick={() => setOpen(false)}>完成</Button>
           </div>

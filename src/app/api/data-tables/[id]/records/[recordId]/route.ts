@@ -139,7 +139,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     },
   });
 
-  const result = await deleteRecord(recordId);
+  const result = await deleteRecord(recordId, session.user.id);
 
   if (!result.success) {
     if (result.error.code === "NOT_FOUND") {

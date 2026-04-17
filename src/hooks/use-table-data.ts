@@ -14,6 +14,7 @@ import type {
   SortConfig,
 } from "@/types/data-table";
 import { useDebouncedCallback } from "@/hooks/use-debounce";
+import { useRealtimeTable } from "@/hooks/use-realtime-table";
 
 export interface UseTableDataOptions {
   tableId: string;
@@ -48,6 +49,8 @@ export interface UseTableDataReturn {
   updateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
   addRecord: (record: DataRecordItem) => void;
   refresh: () => void;
+  isConnected: boolean;
+  activityFeed: import("@/types/realtime").ActivityEntry[];
 }
 
 function buildTablePath(tableId: string, params: URLSearchParams): string {
@@ -228,6 +231,13 @@ export function useTableData({
     },
     []
   );
+
+  const { isConnected, activityFeed } = useRealtimeTable({
+    tableId,
+    onUpdateRecordField: updateRecordField,
+    onRefresh: refresh,
+    enabled: !!tableId,
+  });
 
   const setFilters = useCallback((nextFilters: FilterGroup[]) => {
     setFiltersState(nextFilters);
@@ -521,5 +531,7 @@ export function useTableData({
     updateRecordField,
     addRecord,
     refresh,
+    isConnected,
+    activityFeed,
   };
 }

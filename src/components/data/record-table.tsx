@@ -374,6 +374,7 @@ export function RecordTable({
             records={records}
             view={activeView}
             isAdmin={isAdmin}
+            tableId={tableId}
             onPatchRecord={handlePatchRecord}
             onOpenRecord={onOpenDetail ?? (() => {})}
           />

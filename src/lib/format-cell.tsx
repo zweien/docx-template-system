@@ -239,6 +239,67 @@ export function formatCellValue(
     case FieldType.RICH_TEXT:
       if (value === null || value === undefined) return <span className="text-zinc-400">-</span>;
       return <span className="text-muted-foreground">{extractRichTextPlainText(value)}</span>;
+    case FieldType.RATING: {
+      const max = (field.options as Record<string, unknown>)?.ratingMax as number ?? 5;
+      const allowHalf = (field.options as Record<string, unknown>)?.ratingAllowHalf as boolean ?? false;
+      const numVal = Number(value);
+      return (
+        <span className="inline-flex items-center gap-0.5">
+          {Array.from({ length: max }, (_, i) => {
+            const idx = i + 1;
+            const filled = numVal >= idx;
+            const halfFilled = allowHalf && !filled && numVal >= idx - 0.5;
+            return (
+              <svg key={i} width="14" height="14" viewBox="0 0 16 16" className="shrink-0">
+                {halfFilled ? (
+                  <>
+                    <defs>
+                      <linearGradient id={`half-${field.key}-${i}`}>
+                        <stop offset="50%" stopColor="#f59e0b" />
+                        <stop offset="50%" stopColor="#e5e7eb" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M8 1l2.245 4.548 5.021.73-3.633 3.54.858 5.002L8 12.346 3.51 14.82l.858-5.002L.735 6.278l5.021-.73L8 1z" fill={`url(#half-${field.key}-${i})`} stroke="#f59e0b" strokeWidth="0.5" />
+                  </>
+                ) : (
+                  <path d="M8 1l2.245 4.548 5.021.73-3.633 3.54.858 5.002L8 12.346 3.51 14.82l.858-5.002L.735 6.278l5.021-.73L8 1z" fill={filled ? "#f59e0b" : "#e5e7eb"} stroke={filled ? "#f59e0b" : "#d1d5db"} strokeWidth="0.5" />
+                )}
+              </svg>
+            );
+          })}
+        </span>
+      );
+    }
+    case FieldType.CURRENCY: {
+      const code = (field.options as Record<string, unknown>)?.currencyCode as string ?? "CNY";
+      const dec = (field.options as Record<string, unknown>)?.currencyDecimals as number ?? 2;
+      const symbol = { CNY: "\u00a5", USD: "$", EUR: "\u20ac" }[code] ?? code;
+      const num = Number(value);
+      return (
+        <span className="font-mono">
+          {symbol}{num.toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec })}
+        </span>
+      );
+    }
+    case FieldType.PERCENTAGE: {
+      const dec = (field.options as Record<string, unknown>)?.percentageDecimals as number ?? 0;
+      const num = Number(value);
+      return <span className="font-mono">{(num * 100).toFixed(dec)}%</span>;
+    }
+    case FieldType.DURATION: {
+      const fmt = (field.options as Record<string, unknown>)?.durationFormat as string ?? "hh:mm";
+      const totalSec = Math.round(Number(value));
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const formatted = fmt === "hh:mm:ss"
+        ? `${pad(h)}:${pad(m)}:${pad(s)}`
+        : fmt === "mm:ss"
+          ? `${pad(Math.floor(totalSec / 60))}:${pad(s)}`
+          : `${pad(h)}:${pad(m)}`;
+      return <span className="font-mono">{formatted}</span>;
+    }
     default:
       return String(value);
   }
@@ -267,6 +328,29 @@ export function formatCellText(field: DataFieldItem, value: unknown): string {
     case FieldType.ROLLUP:
     case FieldType.RICH_TEXT:
       return extractRichTextPlainText(value);
+    case FieldType.RATING:
+      return `${Number(value)}/${(field.options as Record<string, unknown>)?.ratingMax ?? 5}`;
+    case FieldType.CURRENCY: {
+      const code = (field.options as Record<string, unknown>)?.currencyCode as string ?? "CNY";
+      const dec = (field.options as Record<string, unknown>)?.currencyDecimals as number ?? 2;
+      const symbol = { CNY: "\u00a5", USD: "$", EUR: "\u20ac" }[code] ?? code;
+      return `${symbol}${Number(value).toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
+    }
+    case FieldType.PERCENTAGE: {
+      const dec = (field.options as Record<string, unknown>)?.percentageDecimals as number ?? 0;
+      return `${(Number(value) * 100).toFixed(dec)}%`;
+    }
+    case FieldType.DURATION: {
+      const fmt = (field.options as Record<string, unknown>)?.durationFormat as string ?? "hh:mm";
+      const totalSec = Math.round(Number(value));
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      const pad = (n: number) => String(n).padStart(2, "0");
+      if (fmt === "hh:mm:ss") return `${pad(h)}:${pad(m)}:${pad(s)}`;
+      if (fmt === "mm:ss") return `${pad(Math.floor(totalSec / 60))}:${pad(s)}`;
+      return `${pad(h)}:${pad(m)}`;
+    }
     default:
       return String(value);
   }

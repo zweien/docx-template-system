@@ -7,3 +7,7 @@ export { EmailCellEditor } from "./email-cell-editor";
 export { PhoneCellEditor } from "./phone-cell-editor";
 export { FileCellEditor } from "./file-cell-editor";
 export { RelationCellEditor } from "./relation-cell-editor";
+export { RatingCellEditor } from "./rating-cell-editor";
+export { CurrencyCellEditor } from "./currency-cell-editor";
+export { PercentageCellEditor } from "./percentage-cell-editor";
+export { DurationCellEditor } from "./duration-cell-editor";

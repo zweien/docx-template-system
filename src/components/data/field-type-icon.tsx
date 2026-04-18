@@ -19,6 +19,10 @@ import {
   Search,
   BarChart3,
   FileText,
+  Star,
+  DollarSign,
+  Percent,
+  Timer,
 } from "lucide-react";
 import { FieldType } from "@/generated/prisma/enums";
 
@@ -43,6 +47,10 @@ const ICON_MAP: Record<FieldType, React.ComponentType<{ className?: string }>> =
   [FieldType.LOOKUP]: Search,
   [FieldType.ROLLUP]: BarChart3,
   [FieldType.RICH_TEXT]: FileText,
+  [FieldType.RATING]: Star,
+  [FieldType.CURRENCY]: DollarSign,
+  [FieldType.PERCENTAGE]: Percent,
+  [FieldType.DURATION]: Timer,
 };
 
 const COMPUTED_TYPES = new Set<FieldType>([

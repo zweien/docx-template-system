@@ -1661,6 +1661,42 @@ export function validateRecordData(
           };
         }
         break;
+
+      case "RATING": {
+        const num = Number(value);
+        if (isNaN(num)) {
+          return { success: false, error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 必须是数字` } };
+        }
+        const max = (field.options as Record<string, unknown>)?.ratingMax as number ?? 5;
+        if (num < 0 || num > max) {
+          return { success: false, error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 必须在 0-${max} 之间` } };
+        }
+        const allowHalf = (field.options as Record<string, unknown>)?.ratingAllowHalf as boolean ?? false;
+        if (!allowHalf && num !== Math.round(num)) {
+          return { success: false, error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 不支持半星` } };
+        }
+        break;
+      }
+
+      case "CURRENCY":
+      case "PERCENTAGE": {
+        const num = Number(value);
+        if (isNaN(num)) {
+          return { success: false, error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 必须是数字` } };
+        }
+        break;
+      }
+
+      case "DURATION": {
+        const num = Number(value);
+        if (isNaN(num) || !Number.isFinite(num)) {
+          return { success: false, error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 必须是有效时长` } };
+        }
+        if (num < 0) {
+          return { success: false, error: { code: "VALIDATION_ERROR", message: `字段 "${field.label}" 不能为负数` } };
+        }
+        break;
+      }
     }
   }
 

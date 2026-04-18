@@ -1,0 +1,344 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "IDRL填表系统 IDRL填表系统" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "IDRL填表系统" [ref=e6]
+        - generic [ref=e7]: IDRL填表系统
+      - navigation [ref=e8]:
+        - generic [ref=e9]:
+          - link "仪表盘" [ref=e10] [cursor=pointer]:
+            - /url: /
+            - img [ref=e12]
+            - generic [ref=e17]: 仪表盘
+          - link "我要填表" [ref=e18] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e20]
+            - generic [ref=e25]: 我要填表
+          - link "模板管理" [ref=e26] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e31]: 模板管理
+          - link "文档收集" [ref=e32] [cursor=pointer]:
+            - /url: /collections
+            - img [ref=e34]
+            - generic [ref=e37]: 文档收集
+          - link "主数据" [ref=e38] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e40]
+            - generic [ref=e44]: 主数据
+          - link "生成记录" [ref=e45] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e47]
+            - generic [ref=e51]: 生成记录
+          - link "我的草稿" [ref=e52] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e54]
+            - generic [ref=e56]: 我的草稿
+          - link "智能助手" [ref=e57] [cursor=pointer]:
+            - /url: /ai-agent2
+            - img [ref=e59]
+            - generic [ref=e62]: 智能助手
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: 管理员
+          - generic [ref=e65]:
+            - link "系统设置" [ref=e66] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e68]
+              - generic [ref=e71]: 系统设置
+            - link "用户管理" [ref=e72] [cursor=pointer]:
+              - /url: /admin/users
+              - img [ref=e74]
+              - generic [ref=e79]: 用户管理
+            - link "审计日志" [ref=e80] [cursor=pointer]:
+              - /url: /admin/audit-logs
+              - img [ref=e82]
+              - generic [ref=e85]: 审计日志
+      - generic [ref=e86]: IDRL填表系统 v0.5.0
+      - generic [ref=e88]:
+        - button "A" [ref=e90]:
+          - generic [ref=e91]: A
+        - button [ref=e92]:
+          - img
+    - generic [ref=e93]:
+      - banner [ref=e94]:
+        - heading "IDRL填表系统" [level=1] [ref=e96]
+        - button [ref=e97]:
+          - img
+        - button [ref=e99]:
+          - img
+      - main [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - link "主数据" [ref=e105] [cursor=pointer]:
+                  - /url: /data
+                - generic [ref=e106]: /
+                - generic [ref=e107]: 测试关联
+              - heading "测试关联" [level=1] [ref=e108]
+              - paragraph [ref=e109]: 测试关联字段搜索选择器
+            - generic [ref=e110]:
+              - button "AI 助手" [ref=e111]:
+                - img
+                - text: AI 助手
+              - link "导入" [ref=e112] [cursor=pointer]:
+                - /url: /data/cmnyrr7d0000iahbmw5tl38s7/import
+                - button "导入" [ref=e113]:
+                  - img
+                  - text: 导入
+              - link "配置字段" [ref=e114] [cursor=pointer]:
+                - /url: /data/cmnyrr7d0000iahbmw5tl38s7/fields
+                - button "配置字段" [ref=e115]:
+                  - img
+                  - text: 配置字段
+          - generic [ref=e117]:
+            - generic [ref=e118]:
+              - img [ref=e119]
+              - text: 4 个字段
+            - generic [ref=e121]:
+              - img [ref=e122]
+              - text: 9 条记录
+          - separator [ref=e124]
+          - generic [ref=e125]:
+            - generic [ref=e126]:
+              - generic [ref=e127]:
+                - button "默认视图" [ref=e128]:
+                  - img
+                  - generic [ref=e129]: 默认视图
+                  - img
+                - generic [ref=e130]:
+                  - button "表格" [ref=e131]:
+                    - img
+                  - button "看板" [ref=e132]:
+                    - img
+                  - button "画廊" [ref=e133]:
+                    - img
+                  - button "时间线" [ref=e134]:
+                    - img
+                  - button "表单" [ref=e135]:
+                    - img
+                - button "筛选" [ref=e136]:
+                  - img
+                  - text: 筛选
+                - button "条件格式" [ref=e137]:
+                  - img
+                  - text: 条件格式
+                - textbox "搜索记录..." [ref=e139]
+              - generic [ref=e140]:
+                - button "快捷键说明" [ref=e141]:
+                  - img
+                - button "行高" [ref=e142]:
+                  - img
+                  - text: 行高
+                - button "字段" [ref=e143]:
+                  - img
+                  - text: 字段
+                - button "导出" [ref=e144]:
+                  - img
+                  - text: 导出
+                - link "新建记录" [ref=e145] [cursor=pointer]:
+                  - /url: /data/cmnyrr7d0000iahbmw5tl38s7/new
+                  - button "新建记录" [ref=e146]:
+                    - img
+                    - text: 新建记录
+            - generic [ref=e148]:
+              - generic [ref=e149]:
+                - button "撤销" [disabled]:
+                  - img
+                - button "重做" [disabled]:
+                  - img
+              - table [ref=e151]:
+                - rowgroup [ref=e159]:
+                  - row "名称 关联作者 关联作者数量 e 操作" [ref=e160]:
+                    - columnheader [ref=e161]:
+                      - checkbox [ref=e162]
+                      - checkbox [ref=e163]
+                    - button "名称" [ref=e219]:
+                      - button "名称" [ref=e165]:
+                        - generic [ref=e166]: 名称
+                    - button "关联作者" [ref=e220]:
+                      - button "关联作者" [ref=e169]:
+                        - generic [ref=e170]: 关联作者
+                    - button "关联作者数量" [ref=e221]:
+                      - button "关联作者数量" [ref=e173]:
+                        - generic [ref=e174]: 关联作者数量
+                    - button "e" [ref=e222]:
+                      - button "e" [ref=e177]:
+                        - generic [ref=e178]: e
+                    - columnheader "操作" [ref=e180]
+                - rowgroup [ref=e181]:
+                  - row "- - 0 -" [ref=e223]:
+                    - cell [ref=e224]:
+                      - checkbox [ref=e225]
+                      - checkbox [ref=e226]
+                    - cell "-" [ref=e227]:
+                      - generic [ref=e228]: "-"
+                    - cell "-" [ref=e229]:
+                      - generic [ref=e230]: "-"
+                    - cell "0" [ref=e231]:
+                      - generic [ref=e232]: "0"
+                    - cell "-" [ref=e233]:
+                      - generic [ref=e234]: "-"
+                    - cell [ref=e235]:
+                      - generic [ref=e236]:
+                        - button "查看详情" [ref=e237]:
+                          - img
+                        - button [ref=e238]:
+                          - img
+                  - row "- - 0 -" [ref=e239]:
+                    - cell [ref=e240]:
+                      - checkbox [ref=e241]
+                      - checkbox [ref=e242]
+                    - cell "-" [ref=e243]:
+                      - generic [ref=e244]: "-"
+                    - cell "-" [ref=e245]:
+                      - generic [ref=e246]: "-"
+                    - cell "0" [ref=e247]:
+                      - generic [ref=e248]: "0"
+                    - cell "-" [ref=e249]:
+                      - generic [ref=e250]: "-"
+                    - cell [ref=e251]:
+                      - generic [ref=e252]:
+                        - button "查看详情" [ref=e253]:
+                          - img
+                        - button [ref=e254]:
+                          - img
+                  - row "111 - 0 -" [ref=e255]:
+                    - cell [ref=e256]:
+                      - checkbox [ref=e257]
+                      - checkbox [ref=e258]
+                    - cell "111" [ref=e259]:
+                      - generic [ref=e260]: "111"
+                    - cell "-" [ref=e261]:
+                      - generic [ref=e262]: "-"
+                    - cell "0" [ref=e263]:
+                      - generic [ref=e264]: "0"
+                    - cell "-" [ref=e265]:
+                      - generic [ref=e266]: "-"
+                    - cell [ref=e267]:
+                      - generic [ref=e268]:
+                        - button "查看详情" [ref=e269]:
+                          - img
+                        - button [ref=e270]:
+                          - img
+                  - row "- - 0 -" [ref=e271]:
+                    - cell [ref=e272]:
+                      - checkbox [ref=e273]
+                      - checkbox [ref=e274]
+                    - cell "-" [ref=e275]:
+                      - generic [ref=e276]: "-"
+                    - cell "-" [ref=e277]:
+                      - generic [ref=e278]: "-"
+                    - cell "0" [ref=e279]:
+                      - generic [ref=e280]: "0"
+                    - cell "-" [ref=e281]:
+                      - generic [ref=e282]: "-"
+                    - cell [ref=e283]:
+                      - generic [ref=e284]:
+                        - button "查看详情" [ref=e285]:
+                          - img
+                        - button [ref=e286]:
+                          - img
+                  - row "阿巴 - 0 -" [ref=e287]:
+                    - cell [ref=e288]:
+                      - checkbox [ref=e289]
+                      - checkbox [ref=e290]
+                    - cell "阿巴" [ref=e291]:
+                      - generic [ref=e292]: 阿巴
+                    - cell "-" [ref=e293]:
+                      - generic [ref=e294]: "-"
+                    - cell "0" [ref=e295]:
+                      - generic [ref=e296]: "0"
+                    - cell "-" [ref=e297]:
+                      - generic [ref=e298]: "-"
+                    - cell [ref=e299]:
+                      - generic [ref=e300]:
+                        - button "查看详情" [ref=e301]:
+                          - img
+                        - button [ref=e302]:
+                          - img
+                  - row "yyyyy - 0 -" [ref=e303]:
+                    - cell [ref=e304]:
+                      - checkbox [ref=e305]
+                      - checkbox [ref=e306]
+                    - cell "yyyyy" [ref=e307]:
+                      - generic [ref=e308]: yyyyy
+                    - cell "-" [ref=e309]:
+                      - generic [ref=e310]: "-"
+                    - cell "0" [ref=e311]:
+                      - generic [ref=e312]: "0"
+                    - cell "-" [ref=e313]:
+                      - generic [ref=e314]: "-"
+                    - cell [ref=e315]:
+                      - generic [ref=e316]:
+                        - button "查看详情" [ref=e317]:
+                          - img
+                        - button [ref=e318]:
+                          - img
+                  - row "333斯蒂芬森地方 - 0 -" [ref=e319]:
+                    - cell [ref=e320]:
+                      - checkbox [ref=e321]
+                      - checkbox [ref=e322]
+                    - cell "333斯蒂芬森地方" [ref=e323]:
+                      - generic [ref=e324]: 333斯蒂芬森地方
+                    - cell "-" [ref=e325]:
+                      - generic [ref=e326]: "-"
+                    - cell "0" [ref=e327]:
+                      - generic [ref=e328]: "0"
+                    - cell "-" [ref=e329]:
+                      - generic [ref=e330]: "-"
+                    - cell [ref=e331]:
+                      - generic [ref=e332]:
+                        - button "查看详情" [ref=e333]:
+                          - img
+                        - button [ref=e334]:
+                          - img
+                  - row "- - 0 -" [ref=e335]:
+                    - cell [ref=e336]:
+                      - checkbox [ref=e337]
+                      - checkbox [ref=e338]
+                    - cell "-" [ref=e339]:
+                      - generic [ref=e340]: "-"
+                    - cell "-" [ref=e341]:
+                      - generic [ref=e342]: "-"
+                    - cell "0" [ref=e343]:
+                      - generic [ref=e344]: "0"
+                    - cell "-" [ref=e345]:
+                      - generic [ref=e346]: "-"
+                    - cell [ref=e347]:
+                      - generic [ref=e348]:
+                        - button "查看详情" [ref=e349]:
+                          - img
+                        - button [ref=e350]:
+                          - img
+                  - row "测试记录1 张忠磊 1 -" [ref=e351]:
+                    - cell [ref=e352]:
+                      - checkbox [ref=e353]
+                      - checkbox [ref=e354]
+                    - cell "测试记录1" [ref=e355]:
+                      - generic [ref=e356]: 测试记录1
+                    - cell "张忠磊" [ref=e357]:
+                      - generic [ref=e359]: 张忠磊
+                    - cell "1" [ref=e360]:
+                      - generic [ref=e361]: "1"
+                    - cell "-" [ref=e362]:
+                      - generic [ref=e363]: "-"
+                    - cell [ref=e364]:
+                      - generic [ref=e365]:
+                        - button "查看详情" [ref=e366]:
+                          - img
+                        - button [ref=e367]:
+                          - img
+                  - row "新建行" [ref=e368] [cursor=pointer]:
+                    - cell [ref=e369]
+                    - cell "新建行" [ref=e370]:
+                      - generic [ref=e371]:
+                        - img [ref=e372]
+                        - generic [ref=e373]: 新建行
+            - generic [ref=e374]: 共 9 条
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e215] [cursor=pointer]:
+    - img [ref=e216]
+  - status [ref=e375]
+  - alert [ref=e376]

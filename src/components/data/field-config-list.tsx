@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Table,
@@ -131,6 +131,33 @@ export function FieldConfigList({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  useEffect(() => {
+    setFields(
+      initialFields.map((f) => ({
+        id: f.id,
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        required: f.required,
+        options: f.options,
+        relationTo: f.relationTo,
+        displayField: f.displayField,
+        relationCardinality: f.relationCardinality,
+        inverseRelationCardinality: f.inverseRelationCardinality,
+        inverseFieldId: f.inverseFieldId,
+        inverseFieldKey: f.inverseFieldKey,
+        isSystemManagedInverse: f.isSystemManagedInverse,
+        relationSchema: f.relationSchema,
+        defaultValue: f.defaultValue,
+        sortOrder: f.sortOrder,
+      }))
+    );
+  }, [initialFields]);
+
+  useEffect(() => {
+    setBusinessKeys(initialBusinessKeys ?? []);
+  }, [initialBusinessKeys]);
+
   const handleAddField = (data: DataFieldInput) => {
     setFields([...fields, toFieldItem(data, fields.length)]);
     setIsFormOpen(false);
@@ -171,6 +198,8 @@ export function FieldConfigList({
       // Update local state from API response to ensure consistency with DB
       if (Array.isArray(result)) {
         setFields(result as DataFieldItem[]);
+      } else if (Array.isArray(result.fields)) {
+        setFields(result.fields as DataFieldItem[]);
       }
 
       router.refresh();
@@ -191,7 +220,7 @@ export function FieldConfigList({
   const tablesWithFields = availableTables.map((t) => ({
     id: t.id,
     name: t.name,
-    fields: t.id === tableId ? initialFields : [],
+    fields: t.id === tableId ? fields : [],
   }));
 
   // Handle opening the edit form - find field from current fields state

@@ -162,7 +162,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    return NextResponse.json({ ...result.data, backfillWarning });
+    return NextResponse.json({ fields: result.data, backfillWarning });
   } catch (error) {
     if (error instanceof ZodError) {
       const errorMessages = error.issues.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');

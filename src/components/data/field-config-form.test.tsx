@@ -148,6 +148,20 @@ vi.mock("@/generated/prisma/enums", () => ({
     EMAIL: "EMAIL",
     PHONE: "PHONE",
     FILE: "FILE",
+    URL: "URL",
+    BOOLEAN: "BOOLEAN",
+    AUTO_NUMBER: "AUTO_NUMBER",
+    SYSTEM_TIMESTAMP: "SYSTEM_TIMESTAMP",
+    SYSTEM_USER: "SYSTEM_USER",
+    FORMULA: "FORMULA",
+    COUNT: "COUNT",
+    LOOKUP: "LOOKUP",
+    ROLLUP: "ROLLUP",
+    RICH_TEXT: "RICH_TEXT",
+    RATING: "RATING",
+    CURRENCY: "CURRENCY",
+    PERCENTAGE: "PERCENTAGE",
+    DURATION: "DURATION",
     RELATION: "RELATION",
     RELATION_SUBTABLE: "RELATION_SUBTABLE",
   },
@@ -372,6 +386,51 @@ describe("FieldConfigForm", () => {
             }),
           ],
         },
+      })
+    );
+  });
+
+  it("切换到货币字段时会正确回填并提交小数位配置", () => {
+    const currencyField: DataFieldItem = {
+      id: "currency-field-id",
+      key: "budget",
+      label: "预算",
+      type: FieldType.CURRENCY,
+      required: false,
+      options: { currencyCode: "USD", currencyDecimals: 0 },
+      sortOrder: 0,
+    };
+
+    const { rerender } = render(
+      <FieldConfigForm
+        open
+        onOpenChange={onOpenChangeMock}
+        field={null}
+        availableTables={availableTables}
+        onSubmit={onSubmitMock}
+      />
+    );
+
+    rerender(
+      <FieldConfigForm
+        open
+        onOpenChange={onOpenChangeMock}
+        field={currencyField}
+        availableTables={availableTables}
+        onSubmit={onSubmitMock}
+      />
+    );
+
+    const decimalsInput = screen.getByLabelText("小数位数") as HTMLInputElement;
+    expect(decimalsInput.value).toBe("0");
+
+    fireEvent.change(decimalsInput, { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(onSubmitMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: FieldType.CURRENCY,
+        options: { currencyCode: "USD", currencyDecimals: 3 },
       })
     );
   });

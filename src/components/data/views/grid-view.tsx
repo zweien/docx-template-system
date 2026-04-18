@@ -39,6 +39,10 @@ import {
   PhoneCellEditor,
   FileCellEditor,
   RelationCellEditor,
+  RatingCellEditor,
+  CurrencyCellEditor,
+  PercentageCellEditor,
+  DurationCellEditor,
 } from "@/components/data/cell-editors";
 import { UrlCellEditor } from "@/components/data/cell-editors/url-cell-editor";
 import { BooleanCellEditor } from "@/components/data/cell-editors/boolean-cell-editor";
@@ -1561,6 +1565,46 @@ export function GridView({
         case FieldType.SYSTEM_USER:
         case FieldType.FORMULA:
           return null;
+        case FieldType.RATING:
+          return (
+            <RatingCellEditor
+              initialValue={originalValue != null ? Number(originalValue) : null}
+              maxStars={(parseFieldOptions(field.options) as Record<string, unknown>)?.ratingMax as number ?? 5}
+              allowHalf={(parseFieldOptions(field.options) as Record<string, unknown>)?.ratingAllowHalf as boolean ?? false}
+              onCommit={(v) => void commitEdit(v)}
+              onCancel={cancelEdit}
+            />
+          );
+        case FieldType.CURRENCY: {
+          const code = (parseFieldOptions(field.options) as Record<string, unknown>)?.currencyCode as string ?? "CNY";
+          return (
+            <CurrencyCellEditor
+              initialValue={String(originalValue ?? "")}
+              currencySymbol={code}
+              decimals={(parseFieldOptions(field.options) as Record<string, unknown>)?.currencyDecimals as number ?? 2}
+              onCommit={(v) => void commitEdit(v)}
+              onCancel={cancelEdit}
+            />
+          );
+        }
+        case FieldType.PERCENTAGE:
+          return (
+            <PercentageCellEditor
+              initialValue={String(originalValue ?? "")}
+              decimals={(parseFieldOptions(field.options) as Record<string, unknown>)?.percentageDecimals as number ?? 0}
+              onCommit={(v) => void commitEdit(v)}
+              onCancel={cancelEdit}
+            />
+          );
+        case FieldType.DURATION:
+          return (
+            <DurationCellEditor
+              initialValue={String(originalValue ?? "")}
+              format={(parseFieldOptions(field.options) as Record<string, unknown>)?.durationFormat as string ?? "hh:mm"}
+              onCommit={(v) => void commitEdit(v)}
+              onCancel={cancelEdit}
+            />
+          );
         default:
           return null;
       }
@@ -2235,7 +2279,10 @@ export function GridView({
 
 function getAvailableAggTypes(fieldType: string): AggregateType[] {
   switch (fieldType) {
-    case "NUMBER": case "FORMULA": return ["sum", "avg", "min", "max", "count"];
+    case "NUMBER": case "FORMULA": case "CURRENCY": case "PERCENTAGE": case "DURATION":
+      return ["sum", "avg", "min", "max", "count"];
+    case "RATING":
+      return ["avg", "min", "max", "count"];
     case "BOOLEAN": return ["checked", "unchecked", "count"];
     case "DATE": case "SYSTEM_TIMESTAMP": return ["earliest", "latest", "count"];
     default: return ["count"];

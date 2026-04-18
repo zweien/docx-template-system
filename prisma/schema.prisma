@@ -293,6 +293,10 @@ enum FieldType {
   LOOKUP        // 从关联记录拉取指定字段值
   ROLLUP        // 从关联记录聚合指定字段值
   RICH_TEXT     // 富文本
+  RATING        // 评分
+  CURRENCY      // 货币
+  PERCENTAGE    // 百分比
+  DURATION      // 时长
 }
 
 enum ViewType {

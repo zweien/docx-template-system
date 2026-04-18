@@ -1,0 +1,442 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "IDRL填表系统 IDRL填表系统" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "IDRL填表系统" [ref=e6]
+        - generic [ref=e7]: IDRL填表系统
+      - navigation [ref=e8]:
+        - generic [ref=e9]:
+          - link "仪表盘" [ref=e10] [cursor=pointer]:
+            - /url: /
+            - img [ref=e12]
+            - generic [ref=e17]: 仪表盘
+          - link "我要填表" [ref=e18] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e20]
+            - generic [ref=e25]: 我要填表
+          - link "模板管理" [ref=e26] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e31]: 模板管理
+          - link "文档收集" [ref=e32] [cursor=pointer]:
+            - /url: /collections
+            - img [ref=e34]
+            - generic [ref=e37]: 文档收集
+          - link "主数据" [ref=e38] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e40]
+            - generic [ref=e44]: 主数据
+          - link "生成记录" [ref=e45] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e47]
+            - generic [ref=e51]: 生成记录
+          - link "我的草稿" [ref=e52] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e54]
+            - generic [ref=e56]: 我的草稿
+          - link "智能助手" [ref=e57] [cursor=pointer]:
+            - /url: /ai-agent2
+            - img [ref=e59]
+            - generic [ref=e62]: 智能助手
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: 管理员
+          - generic [ref=e65]:
+            - link "系统设置" [ref=e66] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e68]
+              - generic [ref=e71]: 系统设置
+            - link "用户管理" [ref=e72] [cursor=pointer]:
+              - /url: /admin/users
+              - img [ref=e74]
+              - generic [ref=e79]: 用户管理
+            - link "审计日志" [ref=e80] [cursor=pointer]:
+              - /url: /admin/audit-logs
+              - img [ref=e82]
+              - generic [ref=e85]: 审计日志
+      - generic [ref=e86]: IDRL填表系统 v0.5.4
+      - generic [ref=e88]:
+        - button "A" [ref=e90]:
+          - generic [ref=e91]: A
+        - button [ref=e92]:
+          - img
+    - generic [ref=e93]:
+      - banner [ref=e94]:
+        - heading "IDRL填表系统" [level=1] [ref=e96]
+        - button [ref=e97]:
+          - img
+        - button [ref=e99]:
+          - img
+      - main [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - link "主数据" [ref=e105] [cursor=pointer]:
+                  - /url: /data
+                - generic [ref=e106]: /
+                - generic [ref=e107]: 测试关联
+              - heading "测试关联" [level=1] [ref=e108]
+              - paragraph [ref=e109]: 测试关联字段搜索选择器
+            - generic [ref=e110]:
+              - button "AI 助手" [ref=e111]:
+                - img
+                - text: AI 助手
+              - link "导入" [ref=e112] [cursor=pointer]:
+                - /url: /data/cmnyrr7d0000iahbmw5tl38s7/import
+                - button "导入" [ref=e113]:
+                  - img
+                  - text: 导入
+              - link "配置字段" [ref=e114] [cursor=pointer]:
+                - /url: /data/cmnyrr7d0000iahbmw5tl38s7/fields
+                - button "配置字段" [ref=e115]:
+                  - img
+                  - text: 配置字段
+          - generic [ref=e117]:
+            - generic [ref=e118]:
+              - img [ref=e119]
+              - text: 6 个字段
+            - generic [ref=e121]:
+              - img [ref=e122]
+              - text: 11 条记录
+          - separator [ref=e124]
+          - generic [ref=e125]:
+            - generic [ref=e126]:
+              - generic [ref=e127]:
+                - button "默认视图" [ref=e128]:
+                  - img
+                  - generic [ref=e129]: 默认视图
+                  - img
+                - generic [ref=e130]:
+                  - button "表格" [ref=e131]:
+                    - img
+                  - button "看板" [ref=e132]:
+                    - img
+                  - button "画廊" [ref=e133]:
+                    - img
+                  - button "时间线" [ref=e134]:
+                    - img
+                  - button "表单" [ref=e135]:
+                    - img
+                - button "筛选" [ref=e136]:
+                  - img
+                  - text: 筛选
+                - button "条件格式" [ref=e137]:
+                  - img
+                  - text: 条件格式
+                - textbox "搜索记录..." [ref=e139]
+              - generic [ref=e140]:
+                - button "快捷键说明" [ref=e141]:
+                  - img
+                - button "行高" [ref=e142]:
+                  - img
+                  - text: 行高
+                - button "字段" [ref=e143]:
+                  - img
+                  - text: 字段
+                - button "导出" [ref=e144]:
+                  - img
+                  - text: 导出
+                - link "新建记录" [ref=e145] [cursor=pointer]:
+                  - /url: /data/cmnyrr7d0000iahbmw5tl38s7/new
+                  - button "新建记录" [ref=e146]:
+                    - img
+                    - text: 新建记录
+                - button "动态" [ref=e147]:
+                  - img
+                  - text: 动态
+            - generic [ref=e151]:
+              - generic [ref=e152]:
+                - button "撤销" [disabled]:
+                  - img
+                - button "重做" [disabled]:
+                  - img
+              - table [ref=e154]:
+                - rowgroup [ref=e164]:
+                  - row "fdf 名称 作者汇总 关联作者 关联作者数量 英文名 操作" [ref=e165]:
+                    - columnheader [ref=e166]:
+                      - checkbox [ref=e167]
+                      - checkbox [ref=e168]
+                    - button "fdf" [ref=e257]:
+                      - button "fdf" [ref=e170]:
+                        - img [ref=e171]
+                        - generic [ref=e173]: fdf
+                    - button "名称" [ref=e258]:
+                      - button "名称" [ref=e176]:
+                        - img [ref=e177]
+                        - generic [ref=e179]: 名称
+                    - button "作者汇总" [ref=e259]:
+                      - button "作者汇总" [ref=e182]:
+                        - img [ref=e183]
+                        - generic [ref=e185]: 作者汇总
+                    - button "关联作者" [ref=e260]:
+                      - button "关联作者" [ref=e188]:
+                        - img [ref=e189]
+                        - generic [ref=e192]: 关联作者
+                    - button "关联作者数量" [ref=e261]:
+                      - button "关联作者数量" [ref=e195]:
+                        - img [ref=e196]
+                        - generic [ref=e198]: 关联作者数量
+                    - button "英文名" [ref=e262]:
+                      - button "英文名" [ref=e201]:
+                        - img [ref=e202]
+                        - generic [ref=e205]: 英文名
+                    - columnheader "操作" [ref=e207]
+                - rowgroup [ref=e208]:
+                  - row "- - - - - -" [ref=e263]:
+                    - cell [ref=e264]:
+                      - checkbox [ref=e265]
+                      - checkbox [ref=e266]
+                    - cell "-" [ref=e267]:
+                      - generic [ref=e268]: "-"
+                    - cell "-" [ref=e269]:
+                      - generic [ref=e270]: "-"
+                    - cell "-" [ref=e271]:
+                      - generic [ref=e272]: "-"
+                    - cell "-" [ref=e273]:
+                      - generic [ref=e274]: "-"
+                    - cell "-" [ref=e275]:
+                      - generic [ref=e276]: "-"
+                    - cell "-" [ref=e277]:
+                      - generic [ref=e278]: "-"
+                    - cell [ref=e279]:
+                      - generic [ref=e280]:
+                        - button "查看详情" [ref=e281]:
+                          - img
+                        - button [ref=e282]:
+                          - img
+                  - row "- 33 - - 0 -" [ref=e283]:
+                    - cell [ref=e284]:
+                      - checkbox [ref=e285]
+                      - checkbox [ref=e286]
+                    - cell "-" [ref=e287]:
+                      - generic [ref=e288]: "-"
+                    - cell "33" [ref=e289]:
+                      - generic [ref=e290]: "33"
+                    - cell "-" [ref=e291]:
+                      - generic [ref=e292]: "-"
+                    - cell "-" [ref=e293]:
+                      - generic [ref=e294]: "-"
+                    - cell "0" [ref=e295]:
+                      - generic [ref=e296]: "0"
+                    - cell "-" [ref=e297]:
+                      - generic [ref=e298]: "-"
+                    - cell [ref=e299]:
+                      - generic [ref=e300]:
+                        - button "查看详情" [ref=e301]:
+                          - img
+                        - button [ref=e302]:
+                          - img
+                  - row "Weien Zhou 4444 Weien Zhou 周炜恩 1 Weien Zhou 1" [ref=e303]:
+                    - cell [ref=e304]:
+                      - checkbox [ref=e305]
+                      - checkbox [ref=e306]
+                    - cell "Weien Zhou" [ref=e307]:
+                      - generic [ref=e308]: Weien Zhou
+                    - cell "4444" [ref=e309]:
+                      - generic [ref=e310]: "4444"
+                    - cell "Weien Zhou" [ref=e311]:
+                      - generic [ref=e312]: Weien Zhou
+                    - cell "周炜恩" [ref=e313]:
+                      - generic [ref=e315]: 周炜恩
+                    - cell "1" [ref=e316]:
+                      - generic [ref=e317]: "1"
+                    - cell "Weien Zhou" [ref=e318]:
+                      - generic [ref=e319]: Weien Zhou
+                    - cell "1" [ref=e320]:
+                      - generic [ref=e321]:
+                        - button "查看详情" [ref=e322]:
+                          - img
+                        - generic "1 条未解决评论" [ref=e323] [cursor=pointer]:
+                          - img [ref=e324]
+                          - text: "1"
+                        - button [ref=e326]:
+                          - img
+                  - row "Weien Zhou 111 Weien Zhou 周炜恩 1 Weien Zhou" [ref=e327]:
+                    - cell [ref=e328]:
+                      - checkbox [ref=e329]
+                      - checkbox [ref=e330]
+                    - cell "Weien Zhou" [ref=e331]:
+                      - generic [ref=e332]: Weien Zhou
+                    - cell "111" [ref=e333]:
+                      - generic [ref=e334]: "111"
+                    - cell "Weien Zhou" [ref=e335]:
+                      - generic [ref=e336]: Weien Zhou
+                    - cell "周炜恩" [ref=e337]:
+                      - generic [ref=e339]: 周炜恩
+                    - cell "1" [ref=e340]:
+                      - generic [ref=e341]: "1"
+                    - cell "Weien Zhou" [ref=e342]:
+                      - generic [ref=e343]: Weien Zhou
+                    - cell [ref=e344]:
+                      - generic [ref=e345]:
+                        - button "查看详情" [ref=e346]:
+                          - img
+                        - button [ref=e347]:
+                          - img
+                  - row "Jiexin Zhou 111 Jiexin Zhou 周颉鑫 1 Jiexin Zhou" [ref=e348]:
+                    - cell [ref=e349]:
+                      - checkbox [ref=e350]
+                      - checkbox [ref=e351]
+                    - cell "Jiexin Zhou" [ref=e352]:
+                      - generic [ref=e353]: Jiexin Zhou
+                    - cell "111" [ref=e354]:
+                      - generic [ref=e355]: "111"
+                    - cell "Jiexin Zhou" [ref=e356]:
+                      - generic [ref=e357]: Jiexin Zhou
+                    - cell "周颉鑫" [ref=e358]:
+                      - generic [ref=e360]: 周颉鑫
+                    - cell "1" [ref=e361]:
+                      - generic [ref=e362]: "1"
+                    - cell "Jiexin Zhou" [ref=e363]:
+                      - generic [ref=e364]: Jiexin Zhou
+                    - cell [ref=e365]:
+                      - generic [ref=e366]:
+                        - button "查看详情" [ref=e367]:
+                          - img
+                        - button [ref=e368]:
+                          - img
+                  - row "Tao Zhou zzz Tao Zhou 周涛 1 Tao Zhou" [ref=e369]:
+                    - cell [ref=e370]:
+                      - checkbox [ref=e371]
+                      - checkbox [ref=e372]
+                    - cell "Tao Zhou" [ref=e373]:
+                      - generic [ref=e374]: Tao Zhou
+                    - cell "zzz" [ref=e375]:
+                      - generic [ref=e376]: zzz
+                    - cell "Tao Zhou" [ref=e377]:
+                      - generic [ref=e378]: Tao Zhou
+                    - cell "周涛" [ref=e379]:
+                      - generic [ref=e381]: 周涛
+                    - cell "1" [ref=e382]:
+                      - generic [ref=e383]: "1"
+                    - cell "Tao Zhou" [ref=e384]:
+                      - generic [ref=e385]: Tao Zhou
+                    - cell [ref=e386]:
+                      - generic [ref=e387]:
+                        - button "查看详情" [ref=e388]:
+                          - img
+                        - button [ref=e389]:
+                          - img
+                  - row "Kangrui Zhou 阿巴 Kangrui Zhou 周康睿 1 Kangrui Zhou" [ref=e390]:
+                    - cell [ref=e391]:
+                      - checkbox [ref=e392]
+                      - checkbox [ref=e393]
+                    - cell "Kangrui Zhou" [ref=e394]:
+                      - generic [ref=e395]: Kangrui Zhou
+                    - cell "阿巴" [ref=e396]:
+                      - generic [ref=e397]: 阿巴
+                    - cell "Kangrui Zhou" [ref=e398]:
+                      - generic [ref=e399]: Kangrui Zhou
+                    - cell "周康睿" [ref=e400]:
+                      - generic [ref=e402]: 周康睿
+                    - cell "1" [ref=e403]:
+                      - generic [ref=e404]: "1"
+                    - cell "Kangrui Zhou" [ref=e405]:
+                      - generic [ref=e406]: Kangrui Zhou
+                    - cell [ref=e407]:
+                      - generic [ref=e408]:
+                        - button "查看详情" [ref=e409]:
+                          - img
+                        - button [ref=e410]:
+                          - img
+                  - row "Weien Zhou yyyyy Weien Zhou 周炜恩 1 Weien Zhou" [ref=e411]:
+                    - cell [ref=e412]:
+                      - checkbox [ref=e413]
+                      - checkbox [ref=e414]
+                    - cell "Weien Zhou" [ref=e415]:
+                      - generic [ref=e416]: Weien Zhou
+                    - cell "yyyyy" [ref=e417]:
+                      - generic [ref=e418]: yyyyy
+                    - cell "Weien Zhou" [ref=e419]:
+                      - generic [ref=e420]: Weien Zhou
+                    - cell "周炜恩" [ref=e421]:
+                      - generic [ref=e423]: 周炜恩
+                    - cell "1" [ref=e424]:
+                      - generic [ref=e425]: "1"
+                    - cell "Weien Zhou" [ref=e426]:
+                      - generic [ref=e427]: Weien Zhou
+                    - cell [ref=e428]:
+                      - generic [ref=e429]:
+                        - button "查看详情" [ref=e430]:
+                          - img
+                        - button [ref=e431]:
+                          - img
+                  - row "Xiaoya Zhang 333斯蒂芬森地方 Xiaoya Zhang 张小亚 1 Xiaoya Zhang" [ref=e432]:
+                    - cell [ref=e433]:
+                      - checkbox [ref=e434]
+                      - checkbox [ref=e435]
+                    - cell "Xiaoya Zhang" [ref=e436]:
+                      - generic [ref=e437]: Xiaoya Zhang
+                    - cell "333斯蒂芬森地方" [ref=e438]:
+                      - generic [ref=e439]: 333斯蒂芬森地方
+                    - cell "Xiaoya Zhang" [ref=e440]:
+                      - generic [ref=e441]: Xiaoya Zhang
+                    - cell "张小亚" [ref=e442]:
+                      - generic [ref=e444]: 张小亚
+                    - cell "1" [ref=e445]:
+                      - generic [ref=e446]: "1"
+                    - cell "Xiaoya Zhang" [ref=e447]:
+                      - generic [ref=e448]: Xiaoya Zhang
+                    - cell [ref=e449]:
+                      - generic [ref=e450]:
+                        - button "查看详情" [ref=e451]:
+                          - img
+                        - button [ref=e452]:
+                          - img
+                  - row "Noam Shazeer 22 Noam Shazeer Noam Shazeer 1 Noam Shazeer" [ref=e453]:
+                    - cell [ref=e454]:
+                      - checkbox [ref=e455]
+                      - checkbox [ref=e456]
+                    - cell "Noam Shazeer" [ref=e457]:
+                      - generic [ref=e458]: Noam Shazeer
+                    - cell "22" [ref=e459]:
+                      - generic [ref=e460]: "22"
+                    - cell "Noam Shazeer" [ref=e461]:
+                      - generic [ref=e462]: Noam Shazeer
+                    - cell "Noam Shazeer" [ref=e463]:
+                      - generic [ref=e465]: Noam Shazeer
+                    - cell "1" [ref=e466]:
+                      - generic [ref=e467]: "1"
+                    - cell "Noam Shazeer" [ref=e468]:
+                      - generic [ref=e469]: Noam Shazeer
+                    - cell [ref=e470]:
+                      - generic [ref=e471]:
+                        - button "查看详情" [ref=e472]:
+                          - img
+                        - button [ref=e473]:
+                          - img
+                  - row "Zhonglei Zhang 测试记录1 Zhonglei Zhang 张忠磊 1 Zhonglei Zhang" [ref=e474]:
+                    - cell [ref=e475]:
+                      - checkbox [ref=e476]
+                      - checkbox [ref=e477]
+                    - cell "Zhonglei Zhang" [ref=e478]:
+                      - generic [ref=e479]: Zhonglei Zhang
+                    - cell "测试记录1" [ref=e480]:
+                      - generic [ref=e481]: 测试记录1
+                    - cell "Zhonglei Zhang" [ref=e482]:
+                      - generic [ref=e483]: Zhonglei Zhang
+                    - cell "张忠磊" [ref=e484]:
+                      - generic [ref=e486]: 张忠磊
+                    - cell "1" [ref=e487]:
+                      - generic [ref=e488]: "1"
+                    - cell "Zhonglei Zhang" [ref=e489]:
+                      - generic [ref=e490]: Zhonglei Zhang
+                    - cell [ref=e491]:
+                      - generic [ref=e492]:
+                        - button "查看详情" [ref=e493]:
+                          - img
+                        - button [ref=e494]:
+                          - img
+                  - row "新建行" [ref=e495] [cursor=pointer]:
+                    - cell [ref=e496]
+                    - cell "新建行" [ref=e497]:
+                      - generic [ref=e498]:
+                        - img [ref=e499]
+                        - generic [ref=e500]: 新建行
+            - generic [ref=e501]: 共 11 条
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e252] [cursor=pointer]:
+    - img [ref=e253]
+  - alert [ref=e502]
+  - status [ref=e503]

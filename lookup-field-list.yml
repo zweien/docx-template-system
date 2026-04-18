@@ -1,0 +1,172 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "IDRL填表系统 IDRL填表系统" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "IDRL填表系统" [ref=e6]
+        - generic [ref=e7]: IDRL填表系统
+      - navigation [ref=e8]:
+        - generic [ref=e9]:
+          - link "仪表盘" [ref=e10] [cursor=pointer]:
+            - /url: /
+            - img [ref=e12]
+            - generic [ref=e17]: 仪表盘
+          - link "我要填表" [ref=e18] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e20]
+            - generic [ref=e25]: 我要填表
+          - link "模板管理" [ref=e26] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e28]
+            - generic [ref=e31]: 模板管理
+          - link "文档收集" [ref=e32] [cursor=pointer]:
+            - /url: /collections
+            - img [ref=e34]
+            - generic [ref=e37]: 文档收集
+          - link "主数据" [ref=e38] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e40]
+            - generic [ref=e44]: 主数据
+          - link "生成记录" [ref=e45] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e47]
+            - generic [ref=e51]: 生成记录
+          - link "我的草稿" [ref=e52] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e54]
+            - generic [ref=e56]: 我的草稿
+          - link "智能助手" [ref=e57] [cursor=pointer]:
+            - /url: /ai-agent2
+            - img [ref=e59]
+            - generic [ref=e62]: 智能助手
+        - generic [ref=e63]:
+          - paragraph [ref=e64]: 管理员
+          - generic [ref=e65]:
+            - link "系统设置" [ref=e66] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e68]
+              - generic [ref=e71]: 系统设置
+            - link "用户管理" [ref=e72] [cursor=pointer]:
+              - /url: /admin/users
+              - img [ref=e74]
+              - generic [ref=e79]: 用户管理
+            - link "审计日志" [ref=e80] [cursor=pointer]:
+              - /url: /admin/audit-logs
+              - img [ref=e82]
+              - generic [ref=e85]: 审计日志
+      - generic [ref=e86]: IDRL填表系统 v0.5.0
+      - generic [ref=e88]:
+        - button "A" [ref=e90]:
+          - generic [ref=e91]: A
+        - button [ref=e92]:
+          - img
+    - generic [ref=e93]:
+      - banner [ref=e94]:
+        - heading "IDRL填表系统" [level=1] [ref=e96]
+        - button [ref=e97]:
+          - img
+        - button [ref=e99]:
+          - img
+      - main [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]:
+              - generic [ref=e104]:
+                - link "主数据" [ref=e105] [cursor=pointer]:
+                  - /url: /data
+                - generic [ref=e106]: /
+                - link "测试关联" [ref=e107] [cursor=pointer]:
+                  - /url: /data/cmnyrr7d0000iahbmw5tl38s7
+                - generic [ref=e108]: /
+                - generic [ref=e109]: 字段配置
+              - heading "配置字段 - 测试关联" [level=1] [ref=e110]
+              - paragraph [ref=e111]: 定义数据表的字段结构，支持多种字段类型
+            - link "返回" [ref=e112] [cursor=pointer]:
+              - /url: /data/cmnyrr7d0000iahbmw5tl38s7
+              - button "返回" [ref=e113]:
+                - img
+                - text: 返回
+          - separator [ref=e114]
+          - generic [ref=e115]:
+            - generic [ref=e116]:
+              - heading "字段配置" [level=2] [ref=e117]
+              - generic [ref=e118]:
+                - button "添加字段" [ref=e119]:
+                  - img
+                  - text: 添加字段
+                - button "保存全部" [ref=e120]
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - heading "业务唯一键" [level=3] [ref=e123]
+                - generic [ref=e124]: 用于导入时匹配已有记录（最多 5 个字段）
+              - generic [ref=e125]:
+                - button "名称 (name)" [ref=e126]:
+                  - text: 名称
+                  - generic [ref=e127]: (name)
+                - button "关联作者数量 (author_count)" [ref=e128]:
+                  - text: 关联作者数量
+                  - generic [ref=e129]: (author_count)
+                - button "e (en_name)" [ref=e130]:
+                  - text: e
+                  - generic [ref=e131]: (en_name)
+                - generic [ref=e132]: 未选择 — 导入时需手动指定唯一字段
+            - table [ref=e135]:
+              - rowgroup [ref=e136]:
+                - row "字段标识 显示名称 类型 必填 选项/关联 操作" [ref=e137]:
+                  - columnheader "字段标识" [ref=e138]
+                  - columnheader "显示名称" [ref=e139]
+                  - columnheader "类型" [ref=e140]
+                  - columnheader "必填" [ref=e141]
+                  - columnheader "选项/关联" [ref=e142]
+                  - columnheader "操作" [ref=e143]
+              - rowgroup [ref=e144]:
+                - row "name 名称 文本 必填 - 编辑 删除" [ref=e145]:
+                  - cell "name" [ref=e146]
+                  - cell "名称" [ref=e147]
+                  - cell "文本" [ref=e148]:
+                    - generic [ref=e149]: 文本
+                  - cell "必填" [ref=e150]:
+                    - generic [ref=e151]: 必填
+                  - cell "-" [ref=e152]
+                  - cell "编辑 删除" [ref=e153]:
+                    - generic [ref=e154]:
+                      - button "编辑" [ref=e155]
+                      - button "删除" [ref=e156]
+                - 'row "author 关联作者 关联 可选 关联表 / 显示: name_cn 编辑 删除" [ref=e157]':
+                  - cell "author" [ref=e158]
+                  - cell "关联作者" [ref=e159]
+                  - cell "关联" [ref=e160]:
+                    - generic [ref=e161]: 关联
+                  - cell "可选" [ref=e162]
+                  - 'cell "关联表 / 显示: name_cn" [ref=e163]':
+                    - generic [ref=e164]: "关联表 / 显示: name_cn"
+                  - cell "编辑 删除" [ref=e165]:
+                    - generic [ref=e166]:
+                      - button "编辑" [ref=e167]
+                      - button "删除" [ref=e168]
+                - row "author_count 关联作者数量 计数 可选 - 编辑 删除" [ref=e169]:
+                  - cell "author_count" [ref=e170]
+                  - cell "关联作者数量" [ref=e171]
+                  - cell "计数" [ref=e172]:
+                    - generic [ref=e173]: 计数
+                  - cell "可选" [ref=e174]
+                  - cell "-" [ref=e175]
+                  - cell "编辑 删除" [ref=e176]:
+                    - generic [ref=e177]:
+                      - button "编辑" [ref=e178]
+                      - button "删除" [ref=e179]
+                - row "en_name e 查找 可选 - 编辑 删除" [ref=e180]:
+                  - cell "en_name" [ref=e181]
+                  - cell "e" [ref=e182]
+                  - cell "查找" [ref=e183]:
+                    - generic [ref=e184]: 查找
+                  - cell "可选" [ref=e185]
+                  - cell "-" [ref=e186]
+                  - cell "编辑 删除" [ref=e187]:
+                    - generic [ref=e188]:
+                      - button "编辑" [ref=e189]
+                      - button "删除" [ref=e190]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e196] [cursor=pointer]:
+    - img [ref=e197]
+  - alert [ref=e200]

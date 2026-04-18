@@ -66,6 +66,10 @@ const FIELD_TYPES = [
   { value: FieldType.LOOKUP, label: "查找" },
   { value: FieldType.ROLLUP, label: "汇总" },
   { value: FieldType.RICH_TEXT, label: "富文本" },
+  { value: FieldType.RATING, label: "评分" },
+  { value: FieldType.CURRENCY, label: "货币" },
+  { value: FieldType.PERCENTAGE, label: "百分比" },
+  { value: FieldType.DURATION, label: "时长" },
   { value: FieldType.RELATION, label: "关联字段" },
   { value: FieldType.RELATION_SUBTABLE, label: "关系子表格" },
 ];
@@ -164,6 +168,10 @@ function hasDuplicateRelationSchemaKeys(fields: RelationSchemaFieldDraft[]): boo
 function getAvailableRollupAggregates(targetFieldType: FieldType): { value: RollupAggregateType; label: string }[] {
   switch (targetFieldType) {
     case FieldType.NUMBER:
+    case FieldType.RATING:
+    case FieldType.CURRENCY:
+    case FieldType.PERCENTAGE:
+    case FieldType.DURATION:
       return [
         { value: "SUM", label: "求和 (SUM)" },
         { value: "AVG", label: "平均值 (AVG)" },
@@ -282,6 +290,32 @@ export function FieldConfigForm({
   const [rollupConditions, setRollupConditions] = useState<FilterGroup[]>(() => {
     const opts = parseFieldOptions(field?.options);
     return (opts.rollupConditions as FilterGroup[]) ?? [];
+  });
+
+  // RATING / CURRENCY / PERCENTAGE / DURATION state
+  const [ratingMax, setRatingMax] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return (opts.ratingMax as number) ?? 5;
+  });
+  const [ratingAllowHalf, setRatingAllowHalf] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return (opts.ratingAllowHalf as boolean) ?? false;
+  });
+  const [currencyCode, setCurrencyCode] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return (opts.currencyCode as string) ?? "CNY";
+  });
+  const [currencyDecimals, setCurrencyDecimals] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return (opts.currencyDecimals as number) ?? 2;
+  });
+  const [percentageDecimals, setPercentageDecimals] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return (opts.percentageDecimals as number) ?? 0;
+  });
+  const [durationFormat, setDurationFormat] = useState(() => {
+    const opts = parseFieldOptions(field?.options);
+    return (opts.durationFormat as string) ?? "hh:mm";
   });
 
   // Load target table fields when lookup source field changes
@@ -637,6 +671,14 @@ export function FieldConfigForm({
         : { rollupSourceFieldId, rollupTargetFieldKey, rollupAggregateType: rollupAggregateType as RollupAggregateType };
     } else if (fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) {
       fieldOptions = { kind: systemFieldKind };
+    } else if (fieldType === FieldType.RATING) {
+      fieldOptions = { ratingMax, ratingAllowHalf };
+    } else if (fieldType === FieldType.CURRENCY) {
+      fieldOptions = { currencyCode, currencyDecimals };
+    } else if (fieldType === FieldType.PERCENTAGE) {
+      fieldOptions = { percentageDecimals };
+    } else if (fieldType === FieldType.DURATION) {
+      fieldOptions = { durationFormat };
     }
 
     const data: DataFieldInput = {
@@ -1206,6 +1248,88 @@ export function FieldConfigForm({
                     <SelectItem value="updated">
                       {fieldType === FieldType.SYSTEM_TIMESTAMP ? "修改时间" : "修改人"}
                     </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {fieldType === FieldType.RATING && (
+              <div className="grid gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="rating-max">最大星数</Label>
+                  <Input
+                    id="rating-max"
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={ratingMax}
+                    onChange={(e) => setRatingMax(Number(e.target.value))}
+                    className="h-8"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="rating-half">允许半星</Label>
+                  <Switch id="rating-half" checked={ratingAllowHalf} onCheckedChange={setRatingAllowHalf} />
+                </div>
+              </div>
+            )}
+
+            {fieldType === FieldType.CURRENCY && (
+              <div className="grid gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="currency-code">币种</Label>
+                  <Select value={currencyCode} onValueChange={setCurrencyCode}>
+                    <SelectTrigger id="currency-code">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="CNY">CNY (¥)</SelectItem>
+                      <SelectItem value="USD">USD ($)</SelectItem>
+                      <SelectItem value="EUR">EUR (€)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="currency-decimals">小数位数</Label>
+                  <Input
+                    id="currency-decimals"
+                    type="number"
+                    min={0}
+                    max={6}
+                    value={currencyDecimals}
+                    onChange={(e) => setCurrencyDecimals(Number(e.target.value))}
+                    className="h-8"
+                  />
+                </div>
+              </div>
+            )}
+
+            {fieldType === FieldType.PERCENTAGE && (
+              <div className="grid gap-2">
+                <Label htmlFor="percentage-decimals">小数位数</Label>
+                <Input
+                  id="percentage-decimals"
+                  type="number"
+                  min={0}
+                  max={4}
+                  value={percentageDecimals}
+                  onChange={(e) => setPercentageDecimals(Number(e.target.value))}
+                  className="h-8"
+                />
+              </div>
+            )}
+
+            {fieldType === FieldType.DURATION && (
+              <div className="grid gap-2">
+                <Label htmlFor="duration-format">显示格式</Label>
+                <Select value={durationFormat} onValueChange={setDurationFormat}>
+                  <SelectTrigger id="duration-format">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hh:mm">hh:mm</SelectItem>
+                    <SelectItem value="mm:ss">mm:ss</SelectItem>
+                    <SelectItem value="hh:mm:ss">hh:mm:ss</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

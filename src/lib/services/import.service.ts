@@ -47,6 +47,23 @@ function normalizeImportValue(value: unknown, fieldType: FieldType): unknown {
     const num = Number(value);
     return isNaN(num) ? value : num;
   }
+  if (fieldType === "RATING" || fieldType === "CURRENCY" || fieldType === "PERCENTAGE") {
+    if (typeof value === "string") {
+      const num = Number(value);
+      return isNaN(num) ? value : num;
+    }
+  }
+  if (fieldType === "DURATION" && typeof value === "string") {
+    const num = Number(value);
+    if (!isNaN(num)) return Math.round(num);
+    const parts = value.split(":").map(Number);
+    if (parts.every((p) => !isNaN(p))) {
+      if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+      if (parts.length === 2) return parts[0] * 3600 + parts[1] * 60;
+    }
+    const num = Number(value);
+    return isNaN(num) ? value : Math.round(num);
+  }
   return value;
 }
 

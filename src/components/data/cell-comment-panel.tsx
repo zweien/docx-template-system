@@ -13,18 +13,21 @@ import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/data/user-avatar";
 import type { CommentItem } from "@/lib/services/data-record-comment.service";
 
+interface CellCommentPanelProps {
+  tableId: string;
+  recordId: string;
+  fieldKey?: string;
+  fieldName?: string;
+  onCommentChange?: () => void;
+}
+
 interface UserOption {
   id: string;
   name: string;
   email: string;
 }
 
-interface CommentPanelProps {
-  tableId: string;
-  recordId: string;
-}
-
-export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
+export function CellCommentPanel({ tableId, recordId, fieldKey, fieldName, onCommentChange }: CellCommentPanelProps) {
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [newContent, setNewContent] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
@@ -36,9 +39,9 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
   const [mentionResults, setMentionResults] = useState<UserOption[]>([]);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [showMentions, setShowMentions] = useState(false);
+  const [mentionStart, setMentionStart] = useState(-1);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
-  const [activeInput, setActiveInput] = useState<"main" | "reply">("main");
 
   const fetchComments = useCallback(async () => {
     try {
@@ -46,15 +49,18 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
         `/api/data-tables/${tableId}/records/${recordId}/comments`
       );
       if (res.ok) {
-        const data = await res.json();
-        setComments(data);
+        const data: CommentItem[] = await res.json();
+        const filtered = fieldKey
+          ? data.filter((c) => c.fieldKey === fieldKey || c.fieldKey === null)
+          : data;
+        setComments(filtered);
       }
     } catch {
       // ignore
     } finally {
       setIsLoading(false);
     }
-  }, [tableId, recordId]);
+  }, [tableId, recordId, fieldKey]);
 
   useEffect(() => {
     fetchComments();
@@ -62,7 +68,9 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
 
   // @mention search
   useEffect(() => {
-    if (mentionQuery === null) return;
+    if (mentionQuery === null) {
+      return;
+    }
     const timer = setTimeout(async () => {
       try {
         const q = mentionQuery || "a";
@@ -80,11 +88,15 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
     return () => clearTimeout(timer);
   }, [mentionQuery]);
 
-  const detectMention = (value: string, textarea: HTMLTextAreaElement) => {
+  const handleInputChange = (value: string, textarea: HTMLTextAreaElement) => {
     const cursorPos = textarea.selectionStart;
+    setNewContent(value);
+
+    // detect @mention
     const textBeforeCursor = value.slice(0, cursorPos);
     const atMatch = textBeforeCursor.match(/@([^@\s]*)$/);
     if (atMatch) {
+      setMentionStart(cursorPos - atMatch[0].length);
       setMentionQuery(atMatch[1]);
     } else {
       setShowMentions(false);
@@ -92,8 +104,7 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
     }
   };
 
-  const insertMention = (user: UserOption) => {
-    const isReply = activeInput === "reply";
+  const insertMention = (user: UserOption, isReply: boolean) => {
     const textarea = isReply ? replyInputRef.current : inputRef.current;
     if (!textarea) return;
 
@@ -128,11 +139,16 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: content.trim(), parentId }),
+        body: JSON.stringify({
+          content: content.trim(),
+          parentId,
+          fieldKey: fieldKey ?? undefined,
+        }),
       }
     );
     if (res.ok) {
       await fetchComments();
+      onCommentChange?.();
     }
   };
 
@@ -143,6 +159,7 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
     );
     if (res.ok) {
       await fetchComments();
+      onCommentChange?.();
     }
   };
 
@@ -157,6 +174,7 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
     );
     if (res.ok) {
       await fetchComments();
+      onCommentChange?.();
     }
   };
 
@@ -183,9 +201,9 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
     );
   };
 
-  const mentionDropdown = () => {
+  const mentionDropdown = (isReply: boolean) => {
     if (!showMentions || mentionResults.length === 0) return null;
-    const textarea = activeInput === "reply" ? replyInputRef.current : inputRef.current;
+    const textarea = isReply ? replyInputRef.current : inputRef.current;
     const rect = textarea?.getBoundingClientRect();
     if (!rect) return null;
     return (
@@ -205,7 +223,7 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
               "w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/50 text-left",
               i === mentionIndex && "bg-muted/50"
             )}
-            onClick={() => insertMention(user)}
+            onClick={() => insertMention(user, isReply)}
             onMouseEnter={() => setMentionIndex(i)}
           >
             <UserAvatar name={user.name} size="sm" />
@@ -219,49 +237,15 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
     );
   };
 
-  const handleInputKeyDown = (
-    e: React.KeyboardEvent<HTMLTextAreaElement>,
-    isReply: boolean,
-    submitFn: () => void
-  ) => {
-    if (showMentions) {
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        setMentionIndex((i) => Math.min(i + 1, mentionResults.length - 1));
-        return;
-      }
-      if (e.key === "ArrowUp") {
-        e.preventDefault();
-        setMentionIndex((i) => Math.max(i - 1, 0));
-        return;
-      }
-      if (e.key === "Enter" || e.key === "Tab") {
-        e.preventDefault();
-        if (mentionResults[mentionIndex]) {
-          insertMention(mentionResults[mentionIndex]);
-        }
-        return;
-      }
-      if (e.key === "Escape") {
-        setShowMentions(false);
-        return;
-      }
-    }
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      submitFn();
-    }
-  };
-
   if (isLoading) {
     return <div className="p-4 text-sm text-muted-foreground">加载评论...</div>;
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto space-y-4 p-4">
+      <div className="flex-1 overflow-y-auto space-y-3 p-3">
         {comments.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground text-sm">
+          <div className="text-center py-6 text-muted-foreground text-sm">
             暂无评论
           </div>
         )}
@@ -269,7 +253,7 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
           <div
             key={comment.id}
             className={cn(
-              "rounded-lg border p-3 space-y-2",
+              "rounded-lg border p-2.5 space-y-1.5",
               comment.isResolved && "opacity-60 bg-muted/30"
             )}
           >
@@ -323,7 +307,7 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
 
             {/* Replies */}
             {comment.replies.length > 0 && (
-              <div className="pl-8 space-y-2 mt-2 border-l-2 border-muted">
+              <div className="pl-8 space-y-1.5 mt-1.5 border-l-2 border-muted">
                 {comment.replies.map((reply) => (
                   <div key={reply.id} className="pl-3 py-1">
                     <div className="flex items-center gap-2">
@@ -352,27 +336,59 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
             {/* Reply input */}
             {replyTo === comment.id && (
               <div className="pl-8 relative">
-                <textarea
-                  ref={replyInputRef}
-                  className="flex-1 text-sm border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary resize-none min-h-[32px] w-full"
-                  placeholder="回复... 输入 @ 提及用户"
-                  value={replyContent}
-                  rows={1}
-                  onChange={(e) => {
-                    setReplyContent(e.target.value);
-                    detectMention(e.target.value, e.target);
-                  }}
-                  onFocus={() => setActiveInput("reply")}
-                  onKeyDown={(e) => handleInputKeyDown(e, true, () => {
-                    if (replyContent.trim()) {
-                      handleSubmit(replyContent, comment.id);
-                      setReplyContent("");
-                      setReplyTo(null);
-                    }
-                  })}
-                  autoFocus
-                />
-                <div className="flex gap-2 mt-1 justify-end">
+                {mentionDropdown(true)}
+                <div className="flex gap-2">
+                  <textarea
+                    ref={replyInputRef}
+                    className="flex-1 text-sm border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary resize-none min-h-[32px]"
+                    placeholder="回复... 输入 @ 提及用户"
+                    value={replyContent}
+                    rows={1}
+                    onChange={(e) => {
+                      setReplyContent(e.target.value);
+                      const cursorPos = e.target.selectionStart;
+                      const textBeforeCursor = e.target.value.slice(0, cursorPos);
+                      const atMatch = textBeforeCursor.match(/@([^@\s]*)$/);
+                      if (atMatch) {
+                        setMentionQuery(atMatch[1]);
+                      } else {
+                        setShowMentions(false);
+                        setMentionQuery(null);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (showMentions) {
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          setMentionIndex((i) => Math.min(i + 1, mentionResults.length - 1));
+                          return;
+                        }
+                        if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          setMentionIndex((i) => Math.max(i - 1, 0));
+                          return;
+                        }
+                        if (e.key === "Enter" || e.key === "Tab") {
+                          e.preventDefault();
+                          if (mentionResults[mentionIndex]) {
+                            insertMention(mentionResults[mentionIndex], true);
+                          }
+                          return;
+                        }
+                        if (e.key === "Escape") {
+                          setShowMentions(false);
+                          return;
+                        }
+                      }
+                      if (e.key === "Enter" && !e.shiftKey && replyContent.trim()) {
+                        e.preventDefault();
+                        handleSubmit(replyContent, comment.id);
+                        setReplyContent("");
+                        setReplyTo(null);
+                      }
+                    }}
+                    autoFocus
+                  />
                   <Button
                     size="sm"
                     variant="ghost"
@@ -400,26 +416,46 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
 
       {/* New comment input */}
       <div className="border-t p-3 relative">
-        {mentionDropdown()}
-        <textarea
-          ref={inputRef}
-          className="w-full text-sm border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary resize-none min-h-[36px]"
-          placeholder="添加评论... 输入 @ 提及用户"
-          value={newContent}
-          rows={1}
-          onChange={(e) => {
-            setNewContent(e.target.value);
-            detectMention(e.target.value, e.target);
-          }}
-          onFocus={() => setActiveInput("main")}
-          onKeyDown={(e) => handleInputKeyDown(e, false, () => {
-            if (newContent.trim()) {
-              handleSubmit(newContent);
-              setNewContent("");
-            }
-          })}
-        />
-        <div className="flex justify-end mt-1">
+        {mentionDropdown(false)}
+        <div className="flex gap-2">
+          <textarea
+            ref={inputRef}
+            className="flex-1 text-sm border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary resize-none min-h-[36px]"
+            placeholder={fieldName ? `关于「${fieldName}」的评论... 输入 @ 提及用户` : "添加评论... 输入 @ 提及用户"}
+            value={newContent}
+            rows={1}
+            onChange={(e) => handleInputChange(e.target.value, e.target)}
+            onKeyDown={(e) => {
+              if (showMentions) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMentionIndex((i) => Math.min(i + 1, mentionResults.length - 1));
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMentionIndex((i) => Math.max(i - 1, 0));
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  if (mentionResults[mentionIndex]) {
+                    insertMention(mentionResults[mentionIndex], false);
+                  }
+                  return;
+                }
+                if (e.key === "Escape") {
+                  setShowMentions(false);
+                  return;
+                }
+              }
+              if (e.key === "Enter" && !e.shiftKey && newContent.trim()) {
+                e.preventDefault();
+                handleSubmit(newContent);
+                setNewContent("");
+              }
+            }}
+          />
           <Button
             size="sm"
             disabled={!newContent.trim()}

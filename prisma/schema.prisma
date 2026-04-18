@@ -678,6 +678,8 @@ enum NotificationType {
   DUE_TODAY
   OVERDUE
   MANUAL_REMIND
+  COMMENT_MENTION
+  COMMENT_REPLY
 }
 
 model Notification {
@@ -826,6 +828,7 @@ model DataRecordComment {
   id         String   @id @default(cuid())
   recordId   String
   record     DataRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  fieldKey   String?
   content    String
   parentId   String?
   parent     DataRecordComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
@@ -838,6 +841,7 @@ model DataRecordComment {
   updatedAt  DateTime @updatedAt
 
   @@index([recordId, createdAt(sort: Asc)])
+  @@index([recordId, fieldKey])
   @@index([parentId])
   @@index([createdById])
   @@map("data_record_comments")

@@ -50,6 +50,7 @@ import { TableSkeleton } from "@/components/ui/skeleton";
 import { ColumnResizer } from "@/components/data/column-resizer";
 import { useCellContext } from "@/hooks/use-cell-context";
 import { CellContextMenu } from "@/components/data/cell-context-menu";
+import { CellCommentPanel } from "@/components/data/cell-comment-panel";
 import { toast } from "sonner";
 
 const DEFAULT_COL_WIDTH = 160;
@@ -820,6 +821,7 @@ export function GridView({
 
   // ── Comment counts ──
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
+  const [cellCommentCounts, setCellCommentCounts] = useState<Record<string, Record<string, number>>>({});
   const recordIdsKey = records.map((r) => r.id).join(",");
   useEffect(() => {
     if (!tableId || recordIdsKey.length === 0) return;
@@ -828,7 +830,26 @@ export function GridView({
       .then((res) => (res.ok ? res.json() : {}))
       .then((data: Record<string, number>) => setCommentCounts(data))
       .catch(() => {});
+    fetch(`/api/data-tables/${tableId}/records/${ids[0]}/comments?cellCounts=${ids.join(",")}`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data: Record<string, Record<string, number>>) => setCellCommentCounts(data))
+      .catch(() => {});
   }, [tableId, recordIdsKey]);
+
+  // ── Cell comment popover ──
+  const [cellCommentTarget, setCellCommentTarget] = useState<{ recordId: string; fieldKey: string } | null>(null);
+  const refreshCellCommentCounts = useCallback(() => {
+    if (!tableId || records.length === 0) return;
+    const ids = records.map((r) => r.id);
+    fetch(`/api/data-tables/${tableId}/records/${ids[0]}/comments?cellCounts=${ids.join(",")}`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data: Record<string, Record<string, number>>) => setCellCommentCounts(data))
+      .catch(() => {});
+    fetch(`/api/data-tables/${tableId}/records/${ids[0]}/comments?ids=${ids.join(",")}`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data: Record<string, number>) => setCommentCounts(data))
+      .catch(() => {});
+  }, [tableId, records]);
 
   // ── Fill handle (drag-fill) ──────────────────────────────────────────────
   const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
@@ -1806,6 +1827,20 @@ export function GridView({
                     onMouseDown={(e) => handleFillStart(e, record, field)}
                   />
                 )}
+                {cellCommentCounts[record.id]?.[field.key] > 0 && (
+                  <div
+                    className="absolute top-0 right-0 z-20 cursor-pointer"
+                    title={`${cellCommentCounts[record.id][field.key]} 条评论`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCellCommentTarget({ recordId: record.id, fieldKey: field.key });
+                    }}
+                  >
+                    <div className="bg-amber-400 text-white text-[8px] leading-none rounded-bl-md rounded-tr-md px-1 py-0.5 font-medium">
+                      {cellCommentCounts[record.id][field.key]}
+                    </div>
+                  </div>
+                )}
                 {(() => {
                   const cursorsOnCell: { userName: string; color: string }[] = [];
                   if (cursorPositions) {
@@ -1909,6 +1944,8 @@ export function GridView({
       handleFillStart,
       cursorPositions,
       commentCounts,
+      cellCommentCounts,
+      fields,
     ]
   );
 
@@ -2006,6 +2043,9 @@ export function GridView({
         onSelectColumn={() => {}}
         onSelectAll={() => {
           setSelectedIdsSet(new Set(records.map((r) => r.id)));
+        }}
+        onAddCellComment={(recordId, fieldKey) => {
+          setCellCommentTarget({ recordId, fieldKey });
         }}
       >
       <div className="flex items-center gap-1 px-2 py-1 border-b">
@@ -2237,6 +2277,40 @@ export function GridView({
         </table>
       </div>
       </CellContextMenu>
+
+      {/* Cell comment popover */}
+      {cellCommentTarget && (
+        <div
+          className="fixed inset-0 z-50"
+          onClick={() => setCellCommentTarget(null)}
+        >
+          <div
+            className="absolute right-4 top-16 w-96 max-h-[70vh] bg-background border rounded-lg shadow-xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-3 py-2 border-b">
+              <span className="text-sm font-medium">
+                单元格评论
+                {(() => {
+                  const f = fields.find((f) => f.key === cellCommentTarget.fieldKey);
+                  return f ? ` — ${f.label}` : "";
+                })()}
+              </span>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setCellCommentTarget(null)}>
+                <span className="text-lg leading-none">&times;</span>
+              </Button>
+            </div>
+            <CellCommentPanel
+              tableId={tableId}
+              recordId={cellCommentTarget.recordId}
+              fieldKey={cellCommentTarget.fieldKey}
+              fieldName={fields.find((f) => f.key === cellCommentTarget.fieldKey)?.label}
+              onCommentChange={refreshCellCommentCounts}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Fill mode toggle popup */}
       {fillComplete && (
         <div

@@ -1766,15 +1766,19 @@ export function GridView({
         }}
         onPasteCellValue={(recordId, fieldKey) => {
           const field = orderedVisibleFields.find((f) => f.key === fieldKey);
-          if (!field) return;
+          if (!field || READONLY_FIELD_TYPES.includes(field.type)) return;
           navigator.clipboard.readText().then((text) => {
             if (text) onUpdateRecordField(recordId, fieldKey, text);
           }).catch(() => toast.error("无法读取剪贴板"));
         }}
         onClearCell={(recordId, fieldKey) => {
+          const field = orderedVisibleFields.find((f) => f.key === fieldKey);
+          if (!field || READONLY_FIELD_TYPES.includes(field.type)) return;
           onUpdateRecordField(recordId, fieldKey, "");
         }}
         onFillDown={(recordId, fieldKey) => {
+          const field = orderedVisibleFields.find((f) => f.key === fieldKey);
+          if (!field || READONLY_FIELD_TYPES.includes(field.type)) return;
           const record = records.find((r) => r.id === recordId);
           if (!record) return;
           const value = record.data[fieldKey];

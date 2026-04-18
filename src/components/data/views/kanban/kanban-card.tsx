@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useDraggable } from "@dnd-kit/react";
 import { MessageSquare } from "lucide-react";
+import { toast } from "sonner";
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
 import { formatCellValue } from "@/lib/format-cell";
@@ -52,7 +53,7 @@ export function KanbanCard({
     try {
       await onPatchRecord(record.id, editingField, newValue);
     } catch {
-      console.error("保存失败");
+      toast.error("保存失败");
     } finally {
       setIsCommitting(false);
     }
@@ -138,7 +139,9 @@ export function KanbanCard({
                         const newValue = e.target.value;
                         setEditingField(null);
                         if (record.data[field.key] !== newValue) {
-                          onPatchRecord(record.id, field.key, newValue);
+                          onPatchRecord(record.id, field.key, newValue).catch(() => {
+                            toast.error("保存失败");
+                          });
                         }
                       }}
                       onBlur={() => setEditingField(null)}

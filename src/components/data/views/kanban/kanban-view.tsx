@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
+import { toast } from "sonner";
 import type { DataFieldItem, DataRecordItem, DataViewItem } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
 import { KanbanColumn } from "./kanban-column";
@@ -126,7 +127,9 @@ export function KanbanView({
       if (!record || !groupField) return;
       if (record.data[groupField.key] === newValue) return;
 
-      onPatchRecord(recordId, groupField.key, newValue);
+      onPatchRecord(recordId, groupField.key, newValue).catch(() => {
+        toast.error("移动失败");
+      });
     },
     [records, groupField, onPatchRecord]
   );

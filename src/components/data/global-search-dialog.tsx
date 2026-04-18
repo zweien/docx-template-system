@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Table2, X } from "lucide-react";
+import { toast } from "sonner";
 
 interface SearchResult {
   tableId: string;
@@ -13,7 +14,7 @@ interface SearchResult {
     data: Record<string, unknown>;
     matchedFields: string[];
   }>;
-  totalMatches: number;
+  hasMore: boolean;
 }
 
 interface FlattenedItem {
@@ -41,7 +42,6 @@ export function GlobalSearchDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Flatten results for keyboard navigation
   const flatItems: FlattenedItem[] = results.flatMap((table) =>
     table.records.map((record) => ({
       type: "record" as const,
@@ -63,11 +63,15 @@ export function GlobalSearchDialog({
     try {
       const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
       if (res.ok) {
-        const data = await res.json();
-        setResults(data.results ?? []);
+        const json = await res.json();
+        setResults(json.data ?? []);
+      } else {
+        toast.error("搜索失败");
+        setResults([]);
       }
     } catch {
-      // ignore
+      toast.error("搜索失败，请检查网络连接");
+      setResults([]);
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +84,6 @@ export function GlobalSearchDialog({
       setSelectedIndex(0);
       return;
     }
-    // Auto-focus input when dialog opens
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [open]);
 
@@ -126,15 +129,12 @@ export function GlobalSearchDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Dialog */}
       <div className="relative w-full max-w-lg bg-background border rounded-xl shadow-2xl overflow-hidden">
-        {/* Search input */}
         <div className="flex items-center gap-3 px-4 border-b">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
@@ -159,7 +159,6 @@ export function GlobalSearchDialog({
           </kbd>
         </div>
 
-        {/* Results */}
         <div className="max-h-[400px] overflow-y-auto">
           {isLoading && (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
@@ -173,12 +172,11 @@ export function GlobalSearchDialog({
             </div>
           )}
 
-          {!isLoading &&
-            !query && (
-              <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                输入关键词开始搜索
-              </div>
-            )}
+          {!isLoading && !query && (
+            <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+              输入关键词开始搜索
+            </div>
+          )}
 
           {results.map((table) => {
             if (table.records.length === 0) return null;
@@ -193,9 +191,9 @@ export function GlobalSearchDialog({
                   <span className="text-xs font-medium text-muted-foreground">
                     {table.tableName}
                   </span>
-                  {table.totalMatches > table.records.length && (
+                  {table.hasMore && (
                     <span className="text-[10px] text-muted-foreground">
-                      ({table.records.length}/{table.totalMatches})
+                      更多结果...
                     </span>
                   )}
                 </div>
@@ -241,7 +239,6 @@ export function GlobalSearchDialog({
           })}
         </div>
 
-        {/* Footer */}
         <div className="border-t px-4 py-2 flex items-center gap-4 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1">
             <kbd className="rounded border bg-muted px-1">↑</kbd>
@@ -266,12 +263,10 @@ function getRecordLabel(
   data: Record<string, unknown>,
   matchedFields: string[]
 ): string {
-  // Prefer the first matched field value as label
   for (const key of matchedFields) {
     const val = data[key];
     if (typeof val === "string" && val.trim()) return val;
   }
-  // Fallback: first string field
   for (const val of Object.values(data)) {
     if (typeof val === "string" && val.trim()) return val;
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, MessageSquare, MoreHorizontal, Reply, Trash2, X } from "lucide-react";
 import {
@@ -13,6 +13,12 @@ import { cn } from "@/lib/utils";
 import { UserAvatar } from "@/components/data/user-avatar";
 import type { CommentItem } from "@/lib/services/data-record-comment.service";
 
+interface UserOption {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface CommentPanelProps {
   tableId: string;
   recordId: string;
@@ -24,6 +30,15 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+
+  // @mention state
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionResults, setMentionResults] = useState<UserOption[]>([]);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [showMentions, setShowMentions] = useState(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const replyInputRef = useRef<HTMLTextAreaElement>(null);
+  const [activeInput, setActiveInput] = useState<"main" | "reply">("main");
 
   const fetchComments = useCallback(async () => {
     try {
@@ -44,6 +59,67 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
   useEffect(() => {
     fetchComments();
   }, [fetchComments]);
+
+  // @mention search
+  useEffect(() => {
+    if (mentionQuery === null) return;
+    const timer = setTimeout(async () => {
+      try {
+        const q = mentionQuery || "a";
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(q)}`);
+        if (res.ok) {
+          const data = await res.json();
+          setMentionResults(data.items ?? []);
+          setShowMentions((data.items ?? []).length > 0);
+          setMentionIndex(0);
+        }
+      } catch {
+        // ignore
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [mentionQuery]);
+
+  const detectMention = (value: string, textarea: HTMLTextAreaElement) => {
+    const cursorPos = textarea.selectionStart;
+    const textBeforeCursor = value.slice(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@([^@\s]*)$/);
+    if (atMatch) {
+      setMentionQuery(atMatch[1]);
+    } else {
+      setShowMentions(false);
+      setMentionQuery(null);
+    }
+  };
+
+  const insertMention = (user: UserOption) => {
+    const isReply = activeInput === "reply";
+    const textarea = isReply ? replyInputRef.current : inputRef.current;
+    if (!textarea) return;
+
+    const value = isReply ? replyContent : newContent;
+    const cursorPos = textarea.selectionStart;
+
+    const atMatch = value.slice(0, cursorPos).match(/@([^@\s]*)$/);
+    if (!atMatch) return;
+
+    const start = cursorPos - atMatch[0].length;
+    const newValue = value.slice(0, start) + `@${user.name} ` + value.slice(cursorPos);
+
+    if (isReply) {
+      setReplyContent(newValue);
+    } else {
+      setNewContent(newValue);
+    }
+    setShowMentions(false);
+    setMentionQuery(null);
+
+    setTimeout(() => {
+      const newPos = start + user.name.length + 2;
+      textarea.focus();
+      textarea.setSelectionRange(newPos, newPos);
+    }, 0);
+  };
 
   const handleSubmit = async (content: string, parentId?: string) => {
     if (!content.trim()) return;
@@ -105,6 +181,76 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
         part
       )
     );
+  };
+
+  const mentionDropdown = () => {
+    if (!showMentions || mentionResults.length === 0) return null;
+    const textarea = activeInput === "reply" ? replyInputRef.current : inputRef.current;
+    const rect = textarea?.getBoundingClientRect();
+    if (!rect) return null;
+    return (
+      <div
+        className="fixed bg-popover border rounded-md shadow-lg max-h-40 overflow-y-auto z-[60]"
+        style={{
+          left: rect.left,
+          top: rect.top - 170 > 0 ? rect.top - 170 : rect.bottom + 4,
+          width: Math.min(rect.width, 320),
+        }}
+      >
+        {mentionResults.map((user, i) => (
+          <button
+            key={user.id}
+            type="button"
+            className={cn(
+              "w-full flex items-center gap-2 px-3 py-1.5 text-sm hover:bg-muted/50 text-left",
+              i === mentionIndex && "bg-muted/50"
+            )}
+            onClick={() => insertMention(user)}
+            onMouseEnter={() => setMentionIndex(i)}
+          >
+            <UserAvatar name={user.name} size="sm" />
+            <div className="min-w-0">
+              <div className="font-medium truncate">{user.name}</div>
+              <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const handleInputKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>,
+    isReply: boolean,
+    submitFn: () => void
+  ) => {
+    if (showMentions) {
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setMentionIndex((i) => Math.min(i + 1, mentionResults.length - 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setMentionIndex((i) => Math.max(i - 1, 0));
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        if (mentionResults[mentionIndex]) {
+          insertMention(mentionResults[mentionIndex]);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        setShowMentions(false);
+        return;
+      }
+    }
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      submitFn();
+    }
   };
 
   if (isLoading) {
@@ -205,39 +351,47 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
 
             {/* Reply input */}
             {replyTo === comment.id && (
-              <div className="pl-8 flex gap-2">
-                <input
-                  className="flex-1 text-sm border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
-                  placeholder="回复..."
+              <div className="pl-8 relative">
+                <textarea
+                  ref={replyInputRef}
+                  className="flex-1 text-sm border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-primary resize-none min-h-[32px] w-full"
+                  placeholder="回复... 输入 @ 提及用户"
                   value={replyContent}
-                  onChange={(e) => setReplyContent(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey && replyContent.trim()) {
+                  rows={1}
+                  onChange={(e) => {
+                    setReplyContent(e.target.value);
+                    detectMention(e.target.value, e.target);
+                  }}
+                  onFocus={() => setActiveInput("reply")}
+                  onKeyDown={(e) => handleInputKeyDown(e, true, () => {
+                    if (replyContent.trim()) {
                       handleSubmit(replyContent, comment.id);
                       setReplyContent("");
                       setReplyTo(null);
                     }
-                  }}
+                  })}
                   autoFocus
                 />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => { setReplyTo(null); setReplyContent(""); }}
-                >
-                  取消
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={!replyContent.trim()}
-                  onClick={() => {
-                    handleSubmit(replyContent, comment.id);
-                    setReplyContent("");
-                    setReplyTo(null);
-                  }}
-                >
-                  发送
-                </Button>
+                <div className="flex gap-2 mt-1 justify-end">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => { setReplyTo(null); setReplyContent(""); }}
+                  >
+                    取消
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={!replyContent.trim()}
+                    onClick={() => {
+                      handleSubmit(replyContent, comment.id);
+                      setReplyContent("");
+                      setReplyTo(null);
+                    }}
+                  >
+                    发送
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -245,20 +399,27 @@ export function CommentPanel({ tableId, recordId }: CommentPanelProps) {
       </div>
 
       {/* New comment input */}
-      <div className="border-t p-3">
-        <div className="flex gap-2">
-          <input
-            className="flex-1 text-sm border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary"
-            placeholder="添加评论... 使用 @用户名 提及"
-            value={newContent}
-            onChange={(e) => setNewContent(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && newContent.trim()) {
-                handleSubmit(newContent);
-                setNewContent("");
-              }
-            }}
-          />
+      <div className="border-t p-3 relative">
+        {mentionDropdown()}
+        <textarea
+          ref={inputRef}
+          className="w-full text-sm border rounded px-3 py-2 focus:outline-none focus:ring-1 focus:ring-primary resize-none min-h-[36px]"
+          placeholder="添加评论... 输入 @ 提及用户"
+          value={newContent}
+          rows={1}
+          onChange={(e) => {
+            setNewContent(e.target.value);
+            detectMention(e.target.value, e.target);
+          }}
+          onFocus={() => setActiveInput("main")}
+          onKeyDown={(e) => handleInputKeyDown(e, false, () => {
+            if (newContent.trim()) {
+              handleSubmit(newContent);
+              setNewContent("");
+            }
+          })}
+        />
+        <div className="flex justify-end mt-1">
           <Button
             size="sm"
             disabled={!newContent.trim()}

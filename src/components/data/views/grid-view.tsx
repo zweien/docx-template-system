@@ -230,7 +230,7 @@ function DragHandleRow({
     <tr
       ref={ref}
       className={cn(
-        "border-b transition-colors hover:bg-muted/50",
+        "border-b transition-colors hover:bg-muted/50 sm:h-auto h-[44px]",
         isDragging && "opacity-50 bg-muted"
       )}
       style={style}

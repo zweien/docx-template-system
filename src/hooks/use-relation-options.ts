@@ -20,6 +20,7 @@ interface UseRelationOptionsParams {
   displayField?: string;
   pageSize?: number;
   multiSelect?: boolean;
+  initialSelectedItems?: RelationOption[];
 }
 
 export function useRelationOptions({
@@ -27,6 +28,7 @@ export function useRelationOptions({
   displayField,
   pageSize = 50,
   multiSelect = false,
+  initialSelectedItems,
 }: UseRelationOptionsParams) {
   // ── Pagination state ──
   const [options, setOptions] = useState<RelationOption[]>([]);
@@ -46,8 +48,12 @@ export function useRelationOptions({
   const [requiredFields, setRequiredFields] = useState<DataFieldItem[]>([]);
 
   // ── Multi-select state ──
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [selectedItems, setSelectedItems] = useState<RelationOption[]>([]);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(initialSelectedItems?.map((i) => i.id) ?? [])
+  );
+  const [selectedItems, setSelectedItems] = useState<RelationOption[]>(
+    () => initialSelectedItems ?? []
+  );
 
   // ── Build API URL ──
   const buildUrl = useCallback(

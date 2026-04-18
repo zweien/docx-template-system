@@ -39,6 +39,21 @@ export function RelationCellEditor({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Build initial selected items from value prop (for multi-select initialization)
+  const parsedInitialItems = useMemo(() => {
+    if (!multiSelect || !value) return undefined;
+    if (Array.isArray(value)) {
+      return value
+        .filter((v): v is { id: string; display?: string } => typeof v === "object" && "id" in v)
+        .map((v) => ({ id: v.id, label: v.display ?? v.id }));
+    }
+    if (typeof value === "object" && "id" in value) {
+      const v = value as { id: string; display?: string };
+      return [{ id: v.id, label: v.display ?? v.id }];
+    }
+    return undefined;
+  }, [multiSelect, value]);
+
   const {
     options,
     isLoading,
@@ -60,6 +75,7 @@ export function RelationCellEditor({
     relationTableId: relationTableId ?? "",
     displayField,
     multiSelect,
+    initialSelectedItems: parsedInitialItems,
   });
 
   const updatePosition = () => {

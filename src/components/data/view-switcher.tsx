@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/tooltip";
 import type { ViewType } from "@/types/data-table";
 import {
+  CalendarDays,
   ClipboardList,
   Columns3,
   GalleryHorizontal,
@@ -50,6 +51,11 @@ const VIEW_ITEMS: Array<{
     type: "FORM",
     label: "表单",
     Icon: ClipboardList,
+  },
+  {
+    type: "CALENDAR",
+    label: "日历",
+    Icon: CalendarDays,
   },
 ];
 

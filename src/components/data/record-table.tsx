@@ -32,6 +32,7 @@ import { GridView } from "@/components/data/views/grid-view";
 import { KanbanView } from "@/components/data/views/kanban/kanban-view";
 import { GalleryView } from "@/components/data/views/gallery/gallery-view";
 import { TimelineView } from "@/components/data/views/timeline/timeline-view";
+import { CalendarView } from "@/components/data/views/calendar/calendar-view";
 import { FormView } from "@/components/data/views/form/form-view";
 import { ActivityStream } from "@/components/data/activity-stream";
 import { OnlinePresenceBar } from "@/components/data/online-presence-bar";
@@ -405,6 +406,20 @@ export function RecordTable({
             view={activeView}
             onViewOptionsChange={setViewOptions}
             tableId={tableId}
+          />
+        );
+      case "CALENDAR":
+        return (
+          <CalendarView
+            fields={fields}
+            records={records}
+            view={activeView}
+            isAdmin={isAdmin}
+            tableId={tableId}
+            onPatchRecord={handlePatchRecord}
+            onOpenRecord={onOpenDetail ?? (() => {})}
+            onRecordCreated={refresh}
+            onViewOptionsChange={setViewOptions}
           />
         );
       default:

@@ -301,6 +301,7 @@ enum ViewType {
   GALLERY
   TIMELINE
   FORM
+  CALENDAR
 }
 
 enum RelationCardinality {

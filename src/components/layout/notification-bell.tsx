@@ -12,6 +12,8 @@ const TYPE_BADGE: Record<NotificationType, { color: string; label: string }> = {
   DUE_TODAY: { color: "bg-amber-500", label: "今天到期" },
   OVERDUE: { color: "bg-red-500", label: "已到期" },
   MANUAL_REMIND: { color: "bg-amber-500", label: "催办提醒" },
+  COMMENT_MENTION: { color: "bg-purple-500", label: "提及通知" },
+  COMMENT_REPLY: { color: "bg-green-500", label: "评论回复" },
 };
 
 function formatRelativeTime(date: Date): string {
@@ -99,7 +101,7 @@ export function NotificationBell() {
   };
 
   const handleMarkAsRead = async (notification: NotificationItem) => {
-    if (notification.isRead || !notification.taskId) return;
+    if (notification.isRead) return;
 
     try {
       const res = await fetch("/api/notifications/read", {
@@ -114,7 +116,9 @@ export function NotificationBell() {
         );
         setUnreadCount((c) => Math.max(0, c - 1));
         setOpen(false);
-        router.push(`/collections/${notification.taskId}`);
+        if (notification.taskId) {
+          router.push(`/collections/${notification.taskId}`);
+        }
       }
     } catch {
       toast.error("操作失败");

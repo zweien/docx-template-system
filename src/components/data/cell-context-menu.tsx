@@ -7,6 +7,7 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
+import { MessageSquare } from "lucide-react"
 import type { CellContext } from "@/hooks/use-cell-context"
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table"
 import { ReactNode, useCallback } from "react"
@@ -39,6 +40,7 @@ interface CellContextMenuProps {
   onSelectRow?: (recordId: string) => void
   onSelectColumn?: (fieldKey: string) => void
   onSelectAll?: () => void
+  onAddCellComment?: (recordId: string, fieldKey: string) => void
   children: ReactNode
 }
 
@@ -70,6 +72,7 @@ export function CellContextMenu({
   onSelectRow,
   onSelectColumn,
   onSelectAll,
+  onAddCellComment,
   children,
 }: CellContextMenuProps) {
   const { targetType, recordId, fieldKey, colIndex, rowIndex } = context
@@ -91,6 +94,10 @@ export function CellContextMenu({
             编辑单元格
           </ContextMenuItem>
         )}
+        <ContextMenuItem onClick={() => onAddCellComment?.(recordId, fieldKey)}>
+          <MessageSquare className="h-3.5 w-3.5 mr-2" />
+          添加评论
+        </ContextMenuItem>
         <ContextMenuItem onClick={() => onCopyCellValue?.(recordId, fieldKey)}>
           复制单元格值
         </ContextMenuItem>

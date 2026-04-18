@@ -1,10 +1,12 @@
 import { db } from "@/lib/db";
 import type { ServiceResult } from "@/types/data-table";
 import type { InputJsonValue } from "@/generated/prisma/internal/prismaNamespace";
+import { createNotifications } from "./notification.service";
 
 export interface CommentItem {
   id: string;
   recordId: string;
+  fieldKey: string | null;
   content: string;
   parentId: string | null;
   mentions: unknown;
@@ -18,6 +20,7 @@ export interface CommentItem {
 
 interface CreateCommentInput {
   recordId: string;
+  fieldKey?: string;
   content: string;
   parentId?: string;
   mentions?: string[];
@@ -26,6 +29,7 @@ interface CreateCommentInput {
 type DbComment = {
   id: string;
   recordId: string;
+  fieldKey: string | null;
   content: string;
   parentId: string | null;
   mentions: unknown;
@@ -41,6 +45,7 @@ function toCommentItem(c: DbComment): CommentItem {
   return {
     id: c.id,
     recordId: c.recordId,
+    fieldKey: c.fieldKey,
     content: c.content,
     parentId: c.parentId,
     mentions: c.mentions,
@@ -97,6 +102,7 @@ export async function createComment(
   const comment = await db.dataRecordComment.create({
     data: {
       recordId: input.recordId,
+      fieldKey: input.fieldKey ?? null,
       content: input.content,
       parentId: input.parentId ?? null,
       createdById: userId,
@@ -107,7 +113,13 @@ export async function createComment(
       replies: { include: { createdBy: { select: { name: true } } } },
     },
   });
-  return { success: true, data: toCommentItem(comment as unknown as DbComment) };
+
+  const result = toCommentItem(comment as unknown as DbComment);
+
+  // Fire-and-forget notifications
+  void sendCommentNotifications(userId, result, mentions);
+
+  return { success: true, data: result };
 }
 
 export async function updateComment(
@@ -190,4 +202,82 @@ export async function getUnresolvedCount(
     map.set(row.recordId, row._count);
   }
   return map;
+}
+
+export async function getCellCommentCounts(
+  recordIds: string[]
+): Promise<Map<string, Record<string, number>>> {
+  if (recordIds.length === 0) return new Map();
+
+  const rows = await db.dataRecordComment.findMany({
+    where: {
+      recordId: { in: recordIds },
+      fieldKey: { not: null },
+      isResolved: false,
+    },
+    select: { recordId: true, fieldKey: true },
+  });
+
+  const map = new Map<string, Record<string, number>>();
+  for (const row of rows) {
+    if (!row.fieldKey) continue;
+    const existing = map.get(row.recordId) ?? {};
+    existing[row.fieldKey] = (existing[row.fieldKey] ?? 0) + 1;
+    map.set(row.recordId, existing);
+  }
+  return map;
+}
+
+async function sendCommentNotifications(
+  authorId: string,
+  comment: CommentItem,
+  mentions: string[] | null
+) {
+  const notifications: Array<{
+    recipientId: string;
+    type: "COMMENT_MENTION" | "COMMENT_REPLY";
+    title: string;
+    content: string;
+  }> = [];
+
+  // @mention notifications
+  if (mentions && mentions.length > 0) {
+    const mentionedUsers = await db.user.findMany({
+      where: { name: { in: mentions } },
+      select: { id: true, name: true },
+    });
+    for (const user of mentionedUsers) {
+      if (user.id === authorId) continue;
+      notifications.push({
+        recipientId: user.id,
+        type: "COMMENT_MENTION",
+        title: "在评论中提及了你",
+        content: comment.content.length > 100
+          ? comment.content.slice(0, 100) + "..."
+          : comment.content,
+      });
+    }
+  }
+
+  // Reply notification
+  if (comment.parentId) {
+    const parent = await db.dataRecordComment.findUnique({
+      where: { id: comment.parentId },
+      select: { createdById: true },
+    });
+    if (parent && parent.createdById !== authorId) {
+      notifications.push({
+        recipientId: parent.createdById,
+        type: "COMMENT_REPLY",
+        title: "回复了你的评论",
+        content: comment.content.length > 100
+          ? comment.content.slice(0, 100) + "..."
+          : comment.content,
+      });
+    }
+  }
+
+  if (notifications.length > 0) {
+    await createNotifications(notifications);
+  }
 }

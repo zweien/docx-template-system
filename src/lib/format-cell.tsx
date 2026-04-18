@@ -136,6 +136,26 @@ export function formatCellValue(
     case FieldType.PHONE:
       return <span className="font-mono">{String(value)}</span>;
     case FieldType.RELATION: {
+      if (Array.isArray(value)) {
+        const items = value.filter(
+          (v): v is Record<string, unknown> => v != null && typeof v === "object"
+        );
+        if (items.length === 0) return <span className="text-zinc-400">-</span>;
+        const visibleItems = items.slice(0, 3);
+        const hiddenCount = items.length - visibleItems.length;
+        return (
+          <div className="flex flex-wrap gap-1">
+            {visibleItems.map((item, i) => (
+              <Badge key={i} variant="outline" className="text-xs">
+                {String(item.display ?? item.displayValue ?? item.id ?? "-")}
+              </Badge>
+            ))}
+            {hiddenCount > 0 && (
+              <Badge variant="secondary" className="text-xs">+{hiddenCount}</Badge>
+            )}
+          </div>
+        );
+      }
       const obj = value as Record<string, unknown> | null;
       const displayValue =
         obj?.display ?? obj?.displayValue ?? value;

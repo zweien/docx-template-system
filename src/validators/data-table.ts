@@ -69,11 +69,11 @@ export const dataFieldItemSchema = z.object({
   options: z.union([
     z.array(z.string()),
     z.array(z.object({ label: z.string(), color: z.string() })),
-    z.object({ formula: z.string() }),
-    z.object({ nextValue: z.number() }),
-    z.object({ kind: z.enum(["created", "updated"]) }),
-    z.object({ countSourceFieldId: z.string() }),
-    z.object({ lookupSourceFieldId: z.string(), lookupTargetFieldKey: z.string() }),
+    z.object({ formula: z.string() }).strict(),
+    z.object({ nextValue: z.number() }).strict(),
+    z.object({ kind: z.enum(["created", "updated"]) }).strict(),
+    z.object({ countSourceFieldId: z.string() }).strict(),
+    z.object({ lookupSourceFieldId: z.string(), lookupTargetFieldKey: z.string() }).strict(),
     z.object({
       rollupSourceFieldId: z.string(),
       rollupTargetFieldKey: z.string(),
@@ -82,21 +82,21 @@ export const dataFieldItemSchema = z.object({
         "ARRAYJOIN", "ARRAYUNIQUE", "TRUE_COUNT", "FALSE_COUNT",
       ]),
       rollupConditions: z.array(filterGroupSchema).optional(),
-    }),
+    }).strict(),
     z.object({
       ratingMax: z.number().int().min(1).max(10).default(5),
       ratingAllowHalf: z.boolean().default(false),
-    }),
+    }).strict(),
     z.object({
       currencyCode: z.enum(["CNY", "USD", "EUR"]),
       currencyDecimals: z.number().int().min(0).max(6).default(2),
-    }),
+    }).strict(),
     z.object({
       percentageDecimals: z.number().int().min(0).max(4).default(0),
-    }),
+    }).strict(),
     z.object({
       durationFormat: z.enum(["hh:mm", "mm:ss", "hh:mm:ss"]),
-    }),
+    }).strict(),
   ]).nullable().optional(),
   relationTo: z.string().nullable().optional(),
   displayField: z.string().nullable().optional(),

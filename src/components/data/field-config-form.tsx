@@ -317,6 +317,11 @@ export function FieldConfigForm({
     const opts = parseFieldOptions(field?.options);
     return (opts.durationFormat as string) ?? "hh:mm";
   });
+  const [systemFieldKind, setSystemFieldKind] = useState<"created" | "updated">(() => {
+    const opts = parseFieldOptions(field?.options);
+    return opts.kind ?? "created";
+  });
+  const [error, setError] = useState("");
 
   // Load target table fields when lookup source field changes
   useEffect(() => {
@@ -405,7 +410,7 @@ export function FieldConfigForm({
       if (cycle) return cycle;
     }
     return null;
-  }, [formulaExpression, allFields, field?.key]);
+  }, [formulaExpression, allFields, field]);
 
   // Live preview: fetch sample record once when form opens
   const [sampleData, setSampleData] = useState<Record<string, unknown> | null>(null);
@@ -448,10 +453,18 @@ export function FieldConfigForm({
     setRelationFields(relTable?.fields ?? []);
     setFormulaExpression(opts.formula ?? "");
     setCountSourceFieldId(opts.countSourceFieldId ?? "");
+    setLookupSourceFieldId(opts.lookupSourceFieldId ?? "");
+    setLookupTargetFieldKey(opts.lookupTargetFieldKey ?? "");
     setRollupSourceFieldId(opts.rollupSourceFieldId ?? "");
     setRollupTargetFieldKey(opts.rollupTargetFieldKey ?? "");
     setRollupAggregateType((opts.rollupAggregateType as RollupAggregateType) ?? "");
     setRollupConditions((opts.rollupConditions as FilterGroup[]) ?? []);
+    setRatingMax((opts.ratingMax as number) ?? 5);
+    setRatingAllowHalf((opts.ratingAllowHalf as boolean) ?? false);
+    setCurrencyCode((opts.currencyCode as string) ?? "CNY");
+    setCurrencyDecimals((opts.currencyDecimals as number) ?? 2);
+    setPercentageDecimals((opts.percentageDecimals as number) ?? 0);
+    setDurationFormat((opts.durationFormat as string) ?? "hh:mm");
     setSystemFieldKind(opts.kind ?? "created");
     setError("");
   }, [field, availableTables]);
@@ -465,11 +478,6 @@ export function FieldConfigForm({
       return undefined;
     }
   }, [formulaExpression, formulaError, sampleData]);
-  const [systemFieldKind, setSystemFieldKind] = useState<"created" | "updated">(() => {
-    const opts = parseFieldOptions(field?.options);
-    return opts.kind ?? "created";
-  });
-  const [error, setError] = useState("");
 
   const isRelationType =
     fieldType === FieldType.RELATION || fieldType === FieldType.RELATION_SUBTABLE;

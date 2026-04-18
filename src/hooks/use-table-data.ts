@@ -60,6 +60,7 @@ export interface UseTableDataReturn {
   broadcastCursor: (recordId: string, fieldKey: string) => void;
   myColor: string;
   onLockLost: (callback: (recordId: string, fieldKey: string) => void) => () => void;
+  cursorPositions: Map<string, { userId: string; userName: string; recordId: string; fieldKey: string; color: string }>;
 }
 
 function buildTablePath(tableId: string, params: URLSearchParams): string {
@@ -253,6 +254,7 @@ export function useTableData({
     broadcastCursor,
     myColor,
     onLockLost,
+    cursorPositions,
   } = useRealtimeTable({
     tableId,
     onUpdateRecordField: updateRecordField,
@@ -563,5 +565,6 @@ export function useTableData({
     broadcastCursor,
     myColor,
     onLockLost,
+    cursorPositions,
   };
 }

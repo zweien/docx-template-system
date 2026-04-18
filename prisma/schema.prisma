@@ -50,6 +50,7 @@ model User {
   notifications                 Notification[]                       @relation("UserNotifications")
   apiTokens                     ApiToken[]
   formShareTokens               FormShareToken[]
+  dataRecordComments            DataRecordComment[] @relation("DataRecordComments")
 }
 
 enum TemplateStatus {
@@ -374,6 +375,7 @@ model DataRecord {
   @@index([tableId, createdAt(sort: Desc)])  // 复合索引加速列表查询
   @@index([tableId, createdById])             // 复合索引加速用户记录查询
   changeHistories DataRecordChangeHistory[]
+  comments        DataRecordComment[]
 }
 
 model DataRecordChangeHistory {
@@ -811,5 +813,28 @@ model FormShareToken {
   @@index([token])
   @@index([viewId])
   @@map("form_share_tokens")
+}
+
+// ========== Record Comments (Phase 3) ==========
+
+model DataRecordComment {
+  id         String   @id @default(cuid())
+  recordId   String
+  record     DataRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  content    String
+  parentId   String?
+  parent     DataRecordComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    DataRecordComment[] @relation("CommentReplies")
+  mentions   Json?
+  isResolved Boolean  @default(false)
+  createdById String
+  createdBy  User     @relation("DataRecordComments", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([recordId, createdAt(sort: Asc)])
+  @@index([parentId])
+  @@index([createdById])
+  @@map("data_record_comments")
 }
 

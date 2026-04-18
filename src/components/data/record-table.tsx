@@ -118,6 +118,7 @@ export function RecordTable({
     broadcastCursor,
     myColor,
     onLockLost,
+    cursorPositions,
   } = useTableData({ tableId, fields });
 
   // Sync record IDs to parent for drawer navigation
@@ -363,6 +364,7 @@ export function RecordTable({
             broadcastCursor={broadcastCursor}
             myColor={myColor}
             onLockLost={onLockLost}
+            cursorPositions={cursorPositions}
           />
         );
       case "KANBAN":

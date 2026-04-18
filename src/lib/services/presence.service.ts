@@ -42,8 +42,6 @@ function lockKey(recordId: string, fieldKey: string): string {
   return `${recordId}:${fieldKey}`;
 }
 
-export { getUserColor };
-
 export function joinPresence(tableId: string, userId: string, userName: string): OnlineUser {
   const color = getUserColor(userId);
   getPresenceMap(tableId).set(userId, { userName, color, joinedAt: Date.now() });

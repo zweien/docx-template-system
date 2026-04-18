@@ -341,12 +341,21 @@ export function GridView({
             });
           }
         }
-        onRefresh();
+        const record = newRecord as DataRecordItem;
+        await undoManager.execute({
+          type: "ADD_RECORD",
+          description: "插入记录",
+          execute: async () => { onAddRecord(record); onRefresh(); },
+          undo: async () => {
+            await fetch(`/api/data-tables/${tableId}/records/${record.id}`, { method: "DELETE" });
+            onRemoveRecord(record.id);
+          },
+        });
       }
     } catch {
       toast.error("插入行失败");
     }
-  }, [tableId, records, onRefresh]);
+  }, [tableId, records, onRefresh, undoManager, onAddRecord, onRemoveRecord]);
 
   const handleDuplicateRecord = useCallback(async (recordId: string) => {
     const record = records.find((r) => r.id === recordId);
@@ -358,12 +367,21 @@ export function GridView({
         body: JSON.stringify({ data: { ...record.data } }),
       });
       if (res.ok) {
-        onRefresh();
+        const newRecord = (await res.json()) as DataRecordItem;
+        await undoManager.execute({
+          type: "ADD_RECORD",
+          description: "复制记录",
+          execute: async () => { onAddRecord(newRecord); onRefresh(); },
+          undo: async () => {
+            await fetch(`/api/data-tables/${tableId}/records/${newRecord.id}`, { method: "DELETE" });
+            onRemoveRecord(newRecord.id);
+          },
+        });
       }
     } catch {
       toast.error("复制行失败");
     }
-  }, [tableId, records, onRefresh]);
+  }, [tableId, records, undoManager, onAddRecord, onRemoveRecord, onRefresh]);
 
   // ── Can drag-sort rows? (only when no sorts, no grouping, has viewId, and admin) ──
   const canDragSort = useMemo(
@@ -728,7 +746,13 @@ export function GridView({
       await undoManager.execute({
         type: "DELETE_RECORD",
         description: "删除记录",
-        execute: async () => { await onDeleteRecord(recordId); },
+        execute: async () => {
+          const res = await fetch(`/api/data-tables/${tableId}/records/${recordId}`, {
+            method: "DELETE",
+          });
+          if (!res.ok) throw new Error("删除失败");
+          onRemoveRecord(recordId);
+        },
         undo: async () => {
           const res = await fetch(`/api/data-tables/${tableId}/records`, {
             method: "POST",
@@ -742,7 +766,7 @@ export function GridView({
         },
       });
     },
-    [flatRecords, undoManager, onDeleteRecord, tableId, onAddRecord]
+    [flatRecords, undoManager, tableId, onRemoveRecord, onAddRecord]
   );
 
   // ── Undoable view config helpers ─────────────────────────────────────────
@@ -1903,7 +1927,7 @@ export function GridView({
           }
         }}
         onInsertRow={handleInsertRow}
-        onDeleteRecord={(recordId) => void onDeleteRecord(recordId)}
+        onDeleteRecord={(recordId) => void handleDeleteWithUndo(recordId)}
         onDuplicateRecord={handleDuplicateRecord}
         onFilterByCell={(fieldKey, value) => {
           const newFilter: FilterCondition = { fieldKey, op: "eq", value };

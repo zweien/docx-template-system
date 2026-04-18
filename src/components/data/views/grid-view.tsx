@@ -257,6 +257,7 @@ export function GridView({
   onSortClear,
   onVisibleFieldsChange,
   onFieldOrderChange,
+  onGroupByChange,
   onDeleteRecord,
   deletingIds,
   onRefresh,
@@ -1753,6 +1754,7 @@ export function GridView({
         fields={orderedVisibleFields}
         records={records}
         isAdmin={isAdmin}
+        groupBy={groupBy}
         frozenCount={frozenFieldCountValue}
         onEditCell={(recordId, fieldKey) => startEditing(recordId, fieldKey)}
         onCopyCellValue={(recordId, fieldKey) => {
@@ -1760,6 +1762,29 @@ export function GridView({
           if (record) {
             navigator.clipboard.writeText(String(record.data[fieldKey] ?? ""));
             toast.success("已复制");
+          }
+        }}
+        onPasteCellValue={(recordId, fieldKey) => {
+          const field = orderedVisibleFields.find((f) => f.key === fieldKey);
+          if (!field || READONLY_FIELD_TYPES.includes(field.type)) return;
+          navigator.clipboard.readText().then((text) => {
+            if (text) onUpdateRecordField(recordId, fieldKey, text);
+          }).catch(() => toast.error("无法读取剪贴板"));
+        }}
+        onClearCell={(recordId, fieldKey) => {
+          const field = orderedVisibleFields.find((f) => f.key === fieldKey);
+          if (!field || READONLY_FIELD_TYPES.includes(field.type)) return;
+          onUpdateRecordField(recordId, fieldKey, "");
+        }}
+        onFillDown={(recordId, fieldKey) => {
+          const field = orderedVisibleFields.find((f) => f.key === fieldKey);
+          if (!field || READONLY_FIELD_TYPES.includes(field.type)) return;
+          const record = records.find((r) => r.id === recordId);
+          if (!record) return;
+          const value = record.data[fieldKey];
+          const startIdx = records.findIndex((r) => r.id === recordId);
+          for (let i = startIdx + 1; i < records.length; i++) {
+            onUpdateRecordField(records[i].id, fieldKey, value);
           }
         }}
         onInsertRow={handleInsertRow}
@@ -1770,6 +1795,7 @@ export function GridView({
           onFilterChange(newFilter, fieldKey);
         }}
         onSortColumn={(fieldKey, order) => onSortChange({ fieldKey, order })}
+        onGroupByField={(fieldKey) => onGroupByChange(fieldKey)}
         onToggleFreeze={(colIndex, frozenCount) => {
           const newCount = colIndex < frozenCount ? colIndex : colIndex + 1;
           onFrozenFieldCountChange?.(newCount);
@@ -1786,11 +1812,17 @@ export function GridView({
           }
         }}
         onDeleteField={(fieldKey) => {
-          // 删除字段会清除所有数据，引导管理员去字段配置页面操作
           onOpenFieldsConfig?.();
         }}
         onAddConditionalFormat={(fieldKey, value) => {
           onQuickFormat?.(fieldKey, value);
+        }}
+        onSelectRow={(recordId) => {
+          setSelectedIdsSet((prev) => new Set(prev).add(recordId));
+        }}
+        onSelectColumn={() => {}}
+        onSelectAll={() => {
+          setSelectedIdsSet(new Set(records.map((r) => r.id)));
         }}
       >
       <div className="flex items-center gap-1 px-2 py-1 border-b">

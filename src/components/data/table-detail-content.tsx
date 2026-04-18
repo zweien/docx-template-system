@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -22,9 +23,19 @@ interface TableDetailContentProps {
 }
 
 export function TableDetailContent({ tableId, table, isAdmin }: TableDetailContentProps) {
+  const searchParams = useSearchParams();
   const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const recordIdsRef = useRef<string[]>([]);
+
+  // Auto-open record detail from search params
+  useEffect(() => {
+    const rid = searchParams.get("recordId");
+    if (rid) {
+      setDetailRecordId(rid);
+      setDetailOpen(true);
+    }
+  }, [searchParams]);
 
   // AI Sheet state
   const [aiOpen, setAiOpen] = useState(false);

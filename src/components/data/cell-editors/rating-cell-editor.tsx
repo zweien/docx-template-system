@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useState, useCallback } from "react";
 
 interface RatingCellEditorProps {
   initialValue: number | null;
@@ -20,18 +20,6 @@ export function RatingCellEditor({
   const [hovered, setHovered] = useState<number | null>(null);
   const [selected, setSelected] = useState<number | null>(initialValue);
   const committed = useRef(false);
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        committed.current = true;
-        onCancel();
-      }
-    };
-    document.addEventListener("keydown", handler, true);
-    return () => document.removeEventListener("keydown", handler, true);
-  }, [onCancel]);
 
   const commit = useCallback(
     (value: number | null) => {
@@ -61,10 +49,22 @@ export function RatingCellEditor({
     }
   };
 
+  const handleBlur = useCallback(() => {
+    commit(selected);
+  }, [commit, selected]);
+
   const displayValue = hovered ?? selected ?? 0;
 
   return (
-    <div className="flex items-center gap-0.5 h-8 px-1">
+    <div
+      className="flex items-center gap-0.5 h-8 px-1"
+      tabIndex={0}
+      onBlur={handleBlur}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") { e.preventDefault(); committed.current = true; onCancel(); }
+        if (e.key === "Tab") { e.preventDefault(); commit(selected); }
+      }}
+    >
       {Array.from({ length: maxStars }, (_, i) => {
         const starIndex = i + 1;
         const filled = displayValue >= starIndex;

@@ -20,7 +20,7 @@ function secondsToDisplay(seconds: number, format: string): string {
   return `${pad(h)}:${pad(m)}`;
 }
 
-function parseDurationToSeconds(input: string): number | null {
+function parseDurationToSeconds(input: string, format: string): number | null {
   const cleaned = input.trim();
   if (!cleaned) return null;
 
@@ -33,7 +33,8 @@ function parseDurationToSeconds(input: string): number | null {
   }
   if (parts.length === 2) {
     const [a, b] = parts;
-    return a * 60 + b;
+    if (format === "mm:ss") return a * 60 + b;
+    return a * 3600 + b * 60;
   }
   const num = Number(cleaned);
   if (!isNaN(num)) return Math.round(num);
@@ -61,7 +62,7 @@ export function DurationCellEditor({
   const handleCommit = () => {
     if (committed.current) return;
     committed.current = true;
-    const seconds = parseDurationToSeconds(draft);
+    const seconds = parseDurationToSeconds(draft, format);
     onCommit(seconds !== null ? String(seconds) : "");
   };
 

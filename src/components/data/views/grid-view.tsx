@@ -1379,23 +1379,53 @@ export function GridView({
           );
         }
         case FieldType.RELATION: {
+          const isMulti = field.relationCardinality === "MULTIPLE";
+          if (isMulti) {
+            const multiValue = Array.isArray(originalValue)
+              ? originalValue as Array<{ id: string; display?: string }>
+              : originalValue && typeof originalValue === "object"
+                ? [originalValue as { id: string; display?: string }]
+                : [];
+            return (
+              <RelationCellEditor
+                value={multiValue}
+                onCommit={async (v) => {
+                  if (!v) {
+                    await commitEdit(null);
+                    onUpdateRecordField(record.id, field.key, null);
+                  } else if (Array.isArray(v)) {
+                    const apiValue = v.map((item) => item.id);
+                    await commitEdit(apiValue);
+                    onUpdateRecordField(record.id, field.key, v);
+                  } else {
+                    const apiValue = (v as { id: string }).id;
+                    await commitEdit(apiValue);
+                    onUpdateRecordField(record.id, field.key, v as { id: string; display: string });
+                  }
+                }}
+                onCancel={cancelEdit}
+                relationTableId={field.relationTo}
+                displayField={field.displayField}
+                multiSelect
+              />
+            );
+          }
           const relValue = originalValue as { id?: string; display?: string } | string | null;
           const relId = relValue && typeof relValue === "object" ? relValue.id ?? null : typeof relValue === "string" ? relValue : null;
           return (
             <RelationCellEditor
               value={relId}
               onCommit={async (v) => {
-                // Extract raw ID for API
-                const apiValue = v && typeof v === "object" ? v.id : v;
+                const apiValue = v && typeof v === "object" && !Array.isArray(v) ? v.id : v;
                 await commitEdit(apiValue);
-                // Override local state with resolved {id, display} object
-                if (v && typeof v === "object") {
+                if (v && typeof v === "object" && !Array.isArray(v)) {
                   onUpdateRecordField(record.id, field.key, v);
                 }
               }}
               onCancel={cancelEdit}
               relationTableId={field.relationTo}
               displayField={field.displayField}
+              onOpenRecord={onOpenDetail}
             />
           );
         }

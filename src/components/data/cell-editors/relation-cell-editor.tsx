@@ -5,16 +5,20 @@ import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { useRelationOptions } from "@/hooks/use-relation-options";
 import { RelationQuickCreateForm } from "@/components/data/relation-quick-create-form";
 
 interface RelationCellEditorProps {
-  value: string | { id: string; display?: string } | null;
-  onCommit: (value: string | { id: string; display: string } | null) => void;
+  value: string | { id: string; display?: string } | Array<{ id: string; display?: string }> | null;
+  onCommit: (value: string | { id: string; display: string } | Array<{ id: string; display: string }> | null) => void;
   onCancel: () => void;
   relationTableId?: string;
   displayField?: string;
+  multiSelect?: boolean;
+  onOpenRecord?: (recordId: string) => void;
 }
 
 export function RelationCellEditor({
@@ -23,6 +27,8 @@ export function RelationCellEditor({
   onCancel,
   relationTableId,
   displayField,
+  multiSelect = false,
+  onOpenRecord,
 }: RelationCellEditorProps) {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
@@ -41,6 +47,10 @@ export function RelationCellEditor({
     search,
     setSearch,
     sentinelRef,
+    selectedIds: hookSelectedIds,
+    toggleSelect,
+    removeSelect,
+    selectedItems,
     createRecord,
     isCreating,
     showCreateForm,
@@ -49,6 +59,7 @@ export function RelationCellEditor({
   } = useRelationOptions({
     relationTableId: relationTableId ?? "",
     displayField,
+    multiSelect,
   });
 
   const updatePosition = () => {
@@ -64,7 +75,6 @@ export function RelationCellEditor({
     setMounted(true);
   }, []);
 
-  // Close dropdown on outside click
   useEffect(() => {
     if (!isOpen) return;
     function handleClickOutside(e: MouseEvent) {
@@ -85,21 +95,29 @@ export function RelationCellEditor({
     [options]
   );
 
-  const currentLabel = useMemo(() => {
-    if (!value) return null;
-    if (typeof value === "object") return (value as { display?: string }).display;
-    return optionMap.get(value)?.label ?? value;
-  }, [value, optionMap]);
-
-  const rawId = useMemo(() => {
-    if (!value) return null;
-    if (typeof value === "object" && "id" in (value as object)) {
-      return (value as { id: string }).id;
-    }
-    return String(value);
+  // Parse initial value(s) into a consistent format
+  const initialIds = useMemo(() => {
+    if (!value) return [] as string[];
+    if (Array.isArray(value)) return value.map((v) => typeof v === "object" && "id" in v ? v.id : String(v));
+    if (typeof value === "object") return [(value as { id: string }).id];
+    return [String(value)];
   }, [value]);
 
-  function handleSelect(id: string, label: string) {
+  // For single-select: track the current raw ID
+  const rawId = useMemo(() => {
+    if (multiSelect) return null;
+    return initialIds[0] ?? null;
+  }, [multiSelect, initialIds]);
+
+  const currentLabel = useMemo(() => {
+    if (!rawId) return null;
+    if (typeof value === "object" && !Array.isArray(value) && value !== null) {
+      return (value as { display?: string }).display;
+    }
+    return optionMap.get(rawId)?.label ?? rawId;
+  }, [rawId, value, optionMap]);
+
+  function handleSingleSelect(id: string, label: string) {
     committedRef.current = true;
     onCommit({ id, display: label });
   }
@@ -109,12 +127,25 @@ export function RelationCellEditor({
     onCommit(null);
   }
 
+  function handleMultiCommit() {
+    committedRef.current = true;
+    if (selectedItems.length === 0) {
+      onCommit(null);
+    } else {
+      onCommit(selectedItems.map((item) => ({ id: item.id, display: item.label })));
+    }
+  }
+
   async function handleCreate(data: Record<string, unknown>) {
     try {
       const newOption = await createRecord(data);
       if (newOption) {
-        committedRef.current = true;
-        onCommit({ id: newOption.id, display: newOption.label });
+        if (multiSelect) {
+          // Auto-selected by hook, just update UI
+        } else {
+          committedRef.current = true;
+          onCommit({ id: newOption.id, display: newOption.label });
+        }
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "创建失败");
@@ -126,7 +157,7 @@ export function RelationCellEditor({
     return (
       <Input
         value={rawId ?? ""}
-        onChange={(e) => {}}
+        onChange={() => {}}
         onKeyDown={(e) => {
           if (e.key === "Escape") { e.preventDefault(); onCancel(); }
         }}
@@ -138,6 +169,132 @@ export function RelationCellEditor({
     );
   }
 
+  // ── Multi-select mode ──
+  if (multiSelect) {
+    const dropdown = isOpen && dropdownPos ? createPortal(
+      <div
+        id="relation-dropdown-portal"
+        style={{
+          position: "fixed",
+          top: dropdownPos.top,
+          left: dropdownPos.left,
+          zIndex: 9999,
+        }}
+        className="w-72 bg-background border rounded-md shadow-lg"
+      >
+        {showCreateForm ? (
+          <RelationQuickCreateForm
+            fields={requiredFields}
+            onSubmit={handleCreate}
+            onCancel={() => setShowCreateForm(false)}
+            isSubmitting={isCreating}
+          />
+        ) : (
+          <>
+            <div className="max-h-52 overflow-auto">
+              {isLoading ? (
+                <div className="p-3 text-center text-sm text-muted-foreground">加载中...</div>
+              ) : options.length === 0 ? (
+                <div className="p-3 text-center text-sm text-muted-foreground">
+                  {search ? "无匹配结果" : "暂无记录"}
+                </div>
+              ) : (
+                <>
+                  {options.map((option) => {
+                    const isSelected = hookSelectedIds.has(option.id);
+                    return (
+                      <button
+                        key={option.id}
+                        type="button"
+                        className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-2 ${
+                          isSelected ? "bg-muted/50" : ""
+                        }`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          toggleSelect(option.id, option.label);
+                        }}
+                      >
+                        <span className={`w-4 h-4 shrink-0 rounded border flex items-center justify-center ${
+                          isSelected ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/30"
+                        }`}>
+                          {isSelected && <Check className="h-3 w-3" />}
+                        </span>
+                        <span className="truncate">{option.label}</span>
+                      </button>
+                    );
+                  })}
+                  {hasMore && (
+                    <div ref={sentinelRef} className="p-2 text-center text-xs text-muted-foreground">
+                      {isLoadingMore ? "加载更多..." : ""}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+            <div className="border-t p-1 flex gap-1">
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="flex-1 h-7 text-xs"
+                  onMouseDown={(e) => { e.preventDefault(); setShowCreateForm(true); }}
+                >
+                  + 新建记录
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex-1 h-7 text-xs"
+                onMouseDown={(e) => { e.preventDefault(); handleMultiCommit(); }}
+              >
+                确认
+              </Button>
+            </div>
+          </>
+        )}
+      </div>,
+      document.body
+    ) : null;
+
+    return (
+      <div ref={containerRef} className="relative flex items-center gap-1 flex-wrap min-h-8 p-0.5">
+        {selectedItems.length > 0 ? selectedItems.map((item) => (
+          <Badge key={item.id} variant="secondary" className="gap-0.5 text-xs pr-0.5">
+            {item.label}
+            <button
+              className="ml-0.5 rounded-full hover:bg-muted-foreground/20 p-0.5"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                removeSelect(item.id);
+              }}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        )) : null}
+        <input
+          ref={inputRef}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              e.preventDefault();
+              committedRef.current = true;
+              onCancel();
+            }
+          }}
+          onFocus={updatePosition}
+          className="min-w-[80px] flex-1 text-sm outline-none bg-transparent border-none h-6 px-1"
+          placeholder={selectedItems.length > 0 ? "搜索..." : "搜索关联记录..."}
+        />
+        {mounted && dropdown}
+      </div>
+    );
+  }
+
+  // ── Single-select mode ──
   const dropdown = isOpen && dropdownPos ? createPortal(
     <div
       id="relation-dropdown-portal"
@@ -171,15 +328,32 @@ export function RelationCellEditor({
                   <button
                     key={option.id}
                     type="button"
-                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted truncate ${
+                    className={`w-full text-left px-3 py-1.5 text-sm hover:bg-muted flex items-center gap-2 ${
                       option.id === rawId ? "bg-muted font-medium" : ""
                     }`}
                     onMouseDown={(e) => {
                       e.preventDefault();
-                      handleSelect(option.id, option.label);
+                      handleSingleSelect(option.id, option.label);
                     }}
                   >
-                    {option.label}
+                    {onOpenRecord && option.id === rawId && (
+                      <span
+                        className="text-blue-600 hover:underline shrink-0"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onOpenRecord(option.id);
+                          committedRef.current = true;
+                          onCancel();
+                        }}
+                        title="查看详情"
+                      >
+                        {option.label}
+                      </span>
+                    )}
+                    {(!onOpenRecord || option.id !== rawId) && (
+                      <span className="truncate">{option.label}</span>
+                    )}
                   </button>
                 ))}
                 {hasMore && (

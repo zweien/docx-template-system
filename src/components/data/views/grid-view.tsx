@@ -1835,7 +1835,7 @@ export function GridView({
       }
 
       return (
-        <tr key={record.id} className="border-b transition-colors hover:bg-primary/8 data-[state=selected]:bg-muted" style={rowStyle}>
+        <tr key={record.id} className="border-b transition-colors hover:bg-primary/8 data-[state=selected]:bg-muted sm:h-auto h-[44px]" style={rowStyle}>
           {rowContent}
         </tr>
       );
@@ -1986,7 +1986,7 @@ export function GridView({
           <Redo2 className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto relative" ref={scrollRef}>
+      <div className="flex-1 min-h-0 overflow-auto relative" ref={scrollRef} style={{ WebkitOverflowScrolling: "touch" }}>
         <FindReplaceBar
           open={findBarOpen}
           onClose={() => setFindBarOpen(false)}

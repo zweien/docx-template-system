@@ -437,7 +437,7 @@ export function RecordTable({
     <div className="flex flex-col flex-1 min-h-0 gap-4">
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
           <ViewSelector
             tableId={tableId}
             currentViewId={viewId}
@@ -462,19 +462,21 @@ export function RecordTable({
               }}
             >
               <X className="h-3.5 w-3.5 mr-1" />
-              清除筛选
+              清除
             </Button>
           )}
-          <ConditionalFormatDialog
-            fields={fields}
-            rules={conditionalFormatRules}
-            onChange={setConditionalFormatRules}
-            quickCreateField={quickFormatField}
-            quickCreateValue={quickFormatValue}
-          />
+          <div className="hidden sm:block">
+            <ConditionalFormatDialog
+              fields={fields}
+              rules={conditionalFormatRules}
+              onChange={setConditionalFormatRules}
+              quickCreateField={quickFormatField}
+              quickCreateValue={quickFormatValue}
+            />
+          </div>
           <form
             onSubmit={(event) => event.preventDefault()}
-            className="flex-1 sm:flex-none"
+            className="flex-1 sm:flex-none min-w-0"
           >
             <Input
               placeholder="搜索记录..."
@@ -485,40 +487,47 @@ export function RecordTable({
           </form>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <KeyboardShortcutsDialog />
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="outline" size="sm">
-                  <ArrowUpDown className="h-4 w-4 mr-1" />
-                  行高
-                </Button>
-              }
+          <div className="hidden sm:block">
+            <KeyboardShortcutsDialog />
+          </div>
+          <div className="hidden sm:block">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="outline" size="sm">
+                    <ArrowUpDown className="h-4 w-4 mr-1" />
+                    行高
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                {([
+                  [24, "紧凑"],
+                  [32, "标准"],
+                  [40, "宽松"],
+                  [56, "超高"],
+                ] as const).map(([h, label]) => (
+                  <DropdownMenuItem
+                    key={h}
+                    onClick={() => handleRowHeightChange(h)}
+                    className={rowHeight === h ? "font-bold bg-muted" : ""}
+                  >
+                    {label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <div className="hidden sm:block">
+            <FieldConfigPopover
+              fields={fields}
+              visibleFields={currentConfig.visibleFields}
+              fieldOrder={currentConfig.fieldOrder}
+              onChange={handleFieldConfigChange}
             />
-            <DropdownMenuContent align="end">
-              {([
-                [24, "紧凑"],
-                [32, "标准"],
-                [40, "宽松"],
-                [56, "超高"],
-              ] as const).map(([h, label]) => (
-                <DropdownMenuItem
-                  key={h}
-                  onClick={() => handleRowHeightChange(h)}
-                  className={rowHeight === h ? "font-bold bg-muted" : ""}
-                >
-                  {label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <FieldConfigPopover
-            fields={fields}
-            visibleFields={currentConfig.visibleFields}
-            fieldOrder={currentConfig.fieldOrder}
-            onChange={handleFieldConfigChange}
-          />
-          <DropdownMenu>
+          </div>
+          <div className="hidden sm:block">
+            <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button variant="outline" size="sm">
@@ -550,6 +559,7 @@ export function RecordTable({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
           {isAdmin && (
             <Link href={`/data/${tableId}/new`}>
               <Button size="sm" className="w-full sm:w-auto">

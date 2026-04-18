@@ -18,6 +18,7 @@ interface CellCommentPanelProps {
   recordId: string;
   fieldKey?: string;
   fieldName?: string;
+  onCommentChange?: () => void;
 }
 
 interface UserOption {
@@ -26,7 +27,7 @@ interface UserOption {
   email: string;
 }
 
-export function CellCommentPanel({ tableId, recordId, fieldKey, fieldName }: CellCommentPanelProps) {
+export function CellCommentPanel({ tableId, recordId, fieldKey, fieldName, onCommentChange }: CellCommentPanelProps) {
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [newContent, setNewContent] = useState("");
   const [replyTo, setReplyTo] = useState<string | null>(null);
@@ -147,6 +148,7 @@ export function CellCommentPanel({ tableId, recordId, fieldKey, fieldName }: Cel
     );
     if (res.ok) {
       await fetchComments();
+      onCommentChange?.();
     }
   };
 
@@ -157,6 +159,7 @@ export function CellCommentPanel({ tableId, recordId, fieldKey, fieldName }: Cel
     );
     if (res.ok) {
       await fetchComments();
+      onCommentChange?.();
     }
   };
 
@@ -171,6 +174,7 @@ export function CellCommentPanel({ tableId, recordId, fieldKey, fieldName }: Cel
     );
     if (res.ok) {
       await fetchComments();
+      onCommentChange?.();
     }
   };
 

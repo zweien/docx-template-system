@@ -838,6 +838,18 @@ export function GridView({
 
   // ── Cell comment popover ──
   const [cellCommentTarget, setCellCommentTarget] = useState<{ recordId: string; fieldKey: string } | null>(null);
+  const refreshCellCommentCounts = useCallback(() => {
+    if (!tableId || records.length === 0) return;
+    const ids = records.map((r) => r.id);
+    fetch(`/api/data-tables/${tableId}/records/${ids[0]}/comments?cellCounts=${ids.join(",")}`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data: Record<string, Record<string, number>>) => setCellCommentCounts(data))
+      .catch(() => {});
+    fetch(`/api/data-tables/${tableId}/records/${ids[0]}/comments?ids=${ids.join(",")}`)
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data: Record<string, number>) => setCommentCounts(data))
+      .catch(() => {});
+  }, [tableId, records]);
 
   // ── Fill handle (drag-fill) ──────────────────────────────────────────────
   const [fillRange, setFillRange] = useState<{ startRow: number; startCol: number; endRow: number; endCol: number } | null>(null);
@@ -2293,6 +2305,7 @@ export function GridView({
               recordId={cellCommentTarget.recordId}
               fieldKey={cellCommentTarget.fieldKey}
               fieldName={fields.find((f) => f.key === cellCommentTarget.fieldKey)?.label}
+              onCommentChange={refreshCellCommentCounts}
             />
           </div>
         </div>

@@ -419,6 +419,7 @@ export function RecordTable({
             onPatchRecord={handlePatchRecord}
             onOpenRecord={onOpenDetail ?? (() => {})}
             onRecordCreated={refresh}
+            onViewOptionsChange={setViewOptions}
           />
         );
       default:

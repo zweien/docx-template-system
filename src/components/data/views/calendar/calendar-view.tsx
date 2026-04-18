@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
-import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
+import { useMemo, useState, useCallback, useRef } from "react";
+import { DragDropProvider, DragOverlay, useDraggable, useDroppable } from "@dnd-kit/react";
 import { ChevronLeft, ChevronRight, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import type { DataFieldItem, DataRecordItem, DataViewItem } from "@/types/data-table";
 import { FieldType } from "@/generated/prisma/enums";
 
@@ -16,6 +17,7 @@ interface CalendarViewProps {
   onPatchRecord: (recordId: string, fieldKey: string, value: unknown) => Promise<void>;
   onOpenRecord: (recordId: string) => void;
   onRecordCreated?: () => void;
+  onViewOptionsChange?: (options: Record<string, unknown>) => void;
 }
 
 function asFieldKey(val: unknown): string | null {
@@ -44,6 +46,14 @@ interface CalendarEvent {
   endDate: Date;
 }
 
+interface DragEvent {
+  operation: {
+    source: { id: string | number } | null;
+    target: { id: string | number } | null;
+  };
+  canceled: boolean;
+}
+
 export function CalendarView({
   fields,
   records,
@@ -53,10 +63,12 @@ export function CalendarView({
   onPatchRecord,
   onOpenRecord,
   onRecordCreated,
+  onViewOptionsChange,
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [showConfig, setShowConfig] = useState(false);
   const [activeEventId, setActiveEventId] = useState<string | null>(null);
+  const creatingRef = useRef(false);
 
   const dateField = asFieldKey(view.viewOptions.startDateField);
   const endDateField = asFieldKey(view.viewOptions.endDateField);
@@ -74,7 +86,14 @@ export function CalendarView({
 
   const isConfigured = !!dateField && !!labelField;
 
-  // Build calendar events
+  const handleOptionChange = useCallback(
+    (key: string, value: string | null) => {
+      if (!onViewOptionsChange) return;
+      onViewOptionsChange({ ...view.viewOptions, [key]: value });
+    },
+    [onViewOptionsChange, view.viewOptions]
+  );
+
   const events = useMemo<CalendarEvent[]>(() => {
     if (!isConfigured) return [];
     return records
@@ -92,20 +111,18 @@ export function CalendarView({
       .filter((e): e is CalendarEvent => e !== null);
   }, [records, dateField, endDateField, labelField, isConfigured]);
 
-  // Calendar grid calculation
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const startDow = (firstDay.getDay() + 6) % 7; // Monday = 0
+    const startDow = (firstDay.getDay() + 6) % 7;
     const totalDays = lastDay.getDate();
     const days: Date[] = [];
     for (let i = 1 - startDow; i <= totalDays; i++) {
       days.push(new Date(year, month, i));
     }
-    // Pad to full weeks
     while (days.length % 7 !== 0) {
       const d = days[days.length - 1];
       days.push(new Date(year, month, d.getDate() + 1));
@@ -118,11 +135,13 @@ export function CalendarView({
     for (const event of events) {
       const start = new Date(event.startDate.getFullYear(), event.startDate.getMonth(), event.startDate.getDate());
       const end = new Date(event.endDate.getFullYear(), event.endDate.getMonth(), event.endDate.getDate());
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const key = toLocalDateString(d);
+      let cur = new Date(start);
+      while (cur <= end) {
+        const key = toLocalDateString(cur);
         const list = map.get(key) ?? [];
         list.push(event);
         map.set(key, list);
+        cur = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate() + 1);
       }
     }
     return map;
@@ -152,33 +171,57 @@ export function CalendarView({
   );
 
   const handleDragEnd = useCallback(
-    (event: { operation: { source: { id: string | number } | null; target: { id: string | number } | null }; canceled: boolean }) => {
+    (event: DragEvent) => {
       setActiveEventId(null);
       if (event.canceled || !dateField) return;
       const sourceId = String(event.operation.source?.id ?? "");
       const targetDate = String(event.operation.target?.id ?? "");
       if (!sourceId || !targetDate) return;
-      onPatchRecord(sourceId, dateField, targetDate).catch(() => {});
+      onPatchRecord(sourceId, dateField, targetDate).catch(() => {
+        toast.error("移动失败");
+      });
     },
     [dateField, onPatchRecord]
   );
 
   const handleDayClick = useCallback(
     async (dateStr: string) => {
-      if (!isAdmin || !dateField) return;
+      if (!isAdmin || !dateField || creatingRef.current) return;
+      creatingRef.current = true;
       try {
         const res = await fetch(`/api/data-tables/${tableId}/records`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ data: { [dateField]: dateStr } }),
         });
-        if (res.ok) onRecordCreated?.();
-      } catch {}
+        if (res.ok) {
+          onRecordCreated?.();
+        } else {
+          const data = await res.json().catch(() => ({}));
+          toast.error(data.error ?? "创建失败");
+        }
+      } catch {
+        toast.error("创建失败");
+      } finally {
+        creatingRef.current = false;
+      }
     },
     [isAdmin, dateField, tableId, onRecordCreated]
   );
 
   const today = toLocalDateString(new Date());
+
+  const configPanel = showConfig ? (
+    <ConfigPanel
+      dateFields={dateFields}
+      textFields={textFields}
+      startDateField={dateField}
+      endDateField={endDateField}
+      labelField={labelField}
+      onChange={handleOptionChange}
+      onClose={() => setShowConfig(false)}
+    />
+  ) : null;
 
   if (!isConfigured) {
     return (
@@ -192,20 +235,7 @@ export function CalendarView({
             </Button>
           )}
         </div>
-        {showConfig && (
-          <ConfigPanel
-            fields={fields}
-            dateFields={dateFields}
-            textFields={textFields}
-            startDateField={dateField}
-            endDateField={endDateField}
-            labelField={labelField}
-            onChange={(key, value) => {
-              view.viewOptions[key] = value;
-            }}
-            onClose={() => setShowConfig(false)}
-          />
-        )}
+        {configPanel}
       </div>
     );
   }
@@ -238,24 +268,10 @@ export function CalendarView({
           </Button>
         </div>
 
-        {showConfig && (
-          <ConfigPanel
-            fields={fields}
-            dateFields={dateFields}
-            textFields={textFields}
-            startDateField={dateField}
-            endDateField={endDateField}
-            labelField={labelField}
-            onChange={(key, value) => {
-              view.viewOptions[key] = value;
-            }}
-            onClose={() => setShowConfig(false)}
-          />
-        )}
+        {configPanel}
 
         {/* Calendar grid */}
         <div className="flex-1 border rounded-md overflow-hidden">
-          {/* Weekday headers */}
           <div className="grid grid-cols-7 bg-muted/50">
             {WEEKDAYS.map((d) => (
               <div key={d} className="px-2 py-1.5 text-xs font-medium text-muted-foreground text-center border-b">
@@ -263,52 +279,19 @@ export function CalendarView({
               </div>
             ))}
           </div>
-          {/* Day cells */}
           <div className="grid grid-cols-7 flex-1">
-            {calendarDays.map((day, i) => {
-              const dateStr = toLocalDateString(day);
-              const isCurrentMonth = day.getMonth() === month;
-              const isToday = dateStr === today;
-              const dayEvents = eventsByDate.get(dateStr) ?? [];
-              const visibleEvents = dayEvents.slice(0, 3);
-              const hiddenCount = dayEvents.length - visibleEvents.length;
-
-              return (
-                <div
-                  key={i}
-                  data-drop-id={dateStr}
-                  className={`border-b border-r p-1 min-h-[80px] flex flex-col ${
-                    isCurrentMonth ? "bg-background" : "bg-muted/30"
-                  } ${isAdmin ? "cursor-pointer" : ""}`}
-                  onClick={() => handleDayClick(dateStr)}
-                >
-                  <div className={`text-xs mb-0.5 px-1 ${
-                    isToday ? "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center font-bold" :
-                    !isCurrentMonth ? "text-muted-foreground/50" : "text-muted-foreground"
-                  }`}>
-                    {day.getDate()}
-                  </div>
-                  <div className="flex-1 space-y-0.5 overflow-hidden">
-                    {visibleEvents.map((ev) => (
-                      <CalendarEventCard
-                        key={ev.record.id}
-                        event={ev}
-                        isMultiDay={ev.startDate.getTime() !== ev.endDate.getTime()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenRecord(ev.record.id);
-                        }}
-                      />
-                    ))}
-                    {hiddenCount > 0 && (
-                      <div className="text-[10px] text-muted-foreground px-1">
-                        +{hiddenCount} 更多
-                      </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+            {calendarDays.map((day, i) => (
+              <CalendarDayCell
+                key={i}
+                day={day}
+                month={month}
+                today={today}
+                events={eventsByDate.get(toLocalDateString(day)) ?? []}
+                isAdmin={isAdmin}
+                onDayClick={handleDayClick}
+                onOpenRecord={onOpenRecord}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -323,7 +306,69 @@ export function CalendarView({
   );
 }
 
-// ── Event Card ──
+// ── Day Cell with dnd-kit droppable ──
+
+function CalendarDayCell({
+  day,
+  month,
+  today,
+  events,
+  isAdmin,
+  onDayClick,
+  onOpenRecord,
+}: {
+  day: Date;
+  month: number;
+  today: string;
+  events: CalendarEvent[];
+  isAdmin: boolean;
+  onDayClick: (dateStr: string) => void;
+  onOpenRecord: (recordId: string) => void;
+}) {
+  const dateStr = toLocalDateString(day);
+  const isCurrentMonth = day.getMonth() === month;
+  const isToday = dateStr === today;
+  const { ref: dropRef, isDropTarget } = useDroppable({ id: dateStr });
+  const visibleEvents = events.slice(0, 3);
+  const hiddenCount = events.length - visibleEvents.length;
+
+  return (
+    <div
+      ref={dropRef}
+      className={`border-b border-r p-1 min-h-[80px] flex flex-col ${
+        isCurrentMonth ? "bg-background" : "bg-muted/30"
+      } ${isDropTarget ? "bg-primary/5 border-primary/30" : ""} ${isAdmin ? "cursor-pointer" : ""}`}
+      onClick={() => onDayClick(dateStr)}
+    >
+      <div className={`text-xs mb-0.5 px-1 ${
+        isToday ? "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center font-bold" :
+        !isCurrentMonth ? "text-muted-foreground/50" : "text-muted-foreground"
+      }`}>
+        {day.getDate()}
+      </div>
+      <div className="flex-1 space-y-0.5 overflow-hidden">
+        {visibleEvents.map((ev) => (
+          <CalendarEventCard
+            key={ev.record.id}
+            event={ev}
+            isMultiDay={ev.startDate.getTime() !== ev.endDate.getTime()}
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenRecord(ev.record.id);
+            }}
+          />
+        ))}
+        {hiddenCount > 0 && (
+          <div className="text-[10px] text-muted-foreground px-1">
+            +{hiddenCount} 更多
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Event Card with dnd-kit draggable ──
 
 function CalendarEventCard({
   event,
@@ -334,15 +379,14 @@ function CalendarEventCard({
   isMultiDay: boolean;
   onClick: (e: React.MouseEvent) => void;
 }) {
-  // Use native draggable since dnd-kit useDraggable needs hook rules
+  const { ref, isDragging } = useDraggable({ id: event.record.id });
+
   return (
     <div
-      draggable
-      onDragStart={(e) => {
-        e.dataTransfer.setData("text/plain", event.record.id);
-        e.dataTransfer.effectAllowed = "move";
-      }}
-      className="rounded px-1 py-0.5 text-[11px] truncate cursor-grab active:cursor-grabbing bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+      ref={ref}
+      className={`rounded px-1 py-0.5 text-[11px] truncate cursor-grab active:cursor-grabbing bg-primary/10 text-primary hover:bg-primary/20 transition-colors ${
+        isDragging ? "opacity-40" : ""
+      }`}
       onClick={onClick}
       title={isMultiDay ? `${event.label} (${toLocalDateString(event.startDate)} - ${toLocalDateString(event.endDate)})` : event.label}
     >
@@ -362,7 +406,6 @@ function ConfigPanel({
   onChange,
   onClose,
 }: {
-  fields: DataFieldItem[];
   dateFields: DataFieldItem[];
   textFields: DataFieldItem[];
   startDateField: string | null;

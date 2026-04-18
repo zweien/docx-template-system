@@ -200,7 +200,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
+      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
         {loading ? (
           <div className="flex min-h-full items-center justify-center py-12">
             <Spinner className="size-6" />
@@ -215,7 +215,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
               <div className="flex items-center justify-between">
                 <SheetTitle className="text-lg">记录详情</SheetTitle>
                 {recordIds && recordIds.length > 0 && currentIndex >= 0 && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 relative z-10">
                     <Button
                       variant="ghost"
                       size="sm"

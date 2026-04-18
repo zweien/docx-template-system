@@ -16,7 +16,7 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }
 
-  const { recordId } = await params;
+  const { id: tableId, recordId } = await params;
   const result = await getRecord(recordId);
 
   if (!result.success) {
@@ -29,7 +29,45 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  return NextResponse.json(result.data);
+  const record = result.data;
+
+  // Resolve RELATION fields to {id, display} format (same as listRecords)
+  const table = await db.dataTable.findUnique({
+    where: { id: tableId },
+    include: { fields: { where: { type: "RELATION" } } },
+  });
+
+  if (table) {
+    const relationFields = table.fields.filter(
+      (f) => f.relationTo && f.displayField
+    );
+    const relIds = relationFields
+      .map((f) => record.data[f.key])
+      .filter((v): v is string => typeof v === "string" && !!v);
+
+    if (relIds.length > 0) {
+      const related = await db.dataRecord.findMany({
+        where: { id: { in: relIds } },
+      });
+      const relatedMap = new Map(
+        related.map((r) => [r.id, r.data as Record<string, unknown>])
+      );
+      for (const field of relationFields) {
+        const relId = record.data[field.key];
+        if (typeof relId === "string" && relId) {
+          const data = relatedMap.get(relId);
+          if (data) {
+            record.data[field.key] = {
+              id: relId,
+              display: data[field.displayField!] ?? relId,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  return NextResponse.json(record);
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {

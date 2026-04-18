@@ -48,6 +48,7 @@ export interface UseTableDataReturn {
   deletingIds: Set<string>;
   updateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
   addRecord: (record: DataRecordItem) => void;
+  removeRecord: (recordId: string) => void;
   refresh: () => void;
   isConnected: boolean;
   activityFeed: import("@/types/realtime").ActivityEntry[];
@@ -236,6 +237,20 @@ export function useTableData({
           ...prev,
           records: [...prev.records, record],
           total: prev.total + 1,
+        };
+      });
+    },
+    []
+  );
+
+  const removeRecord = useCallback(
+    (recordId: string) => {
+      setRecordsData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          records: prev.records.filter((r) => r.id !== recordId),
+          total: prev.total - 1,
         };
       });
     },
@@ -553,6 +568,7 @@ export function useTableData({
     deletingIds,
     updateRecordField,
     addRecord,
+    removeRecord,
     refresh,
     isConnected,
     activityFeed,

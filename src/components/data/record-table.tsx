@@ -106,6 +106,7 @@ export function RecordTable({
     deletingIds,
     updateRecordField,
     addRecord,
+    removeRecord,
     switchView,
     refresh,
     isConnected,
@@ -340,6 +341,7 @@ export function RecordTable({
             onRefresh={refresh}
             onUpdateRecordField={updateRecordField}
             onAddRecord={addRecord}
+            onRemoveRecord={removeRecord}
             onOpenDetail={onOpenDetail}
             columnWidths={columnWidths}
             onColumnWidthsChange={handleColumnWidthsChange}

@@ -75,6 +75,7 @@ interface GridViewProps {
   onRefresh: () => void;
   onUpdateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
   onAddRecord: (record: DataRecordItem) => void;
+  onRemoveRecord: (recordId: string) => void;
   onOpenDetail?: (recordId: string) => void;
   onOpenFieldsConfig?: () => void;
   onDeleteField?: (fieldKey: string) => void;
@@ -263,6 +264,7 @@ export function GridView({
   onRefresh,
   onUpdateRecordField,
   onAddRecord,
+  onRemoveRecord,
   onOpenDetail,
   columnWidths,
   onColumnWidthsChange,
@@ -715,6 +717,65 @@ export function GridView({
     setRichEditCell(null);
   }, [richEditCell, releaseCellLock]);
 
+  // ── Undoable record operations ──────────────────────────────────────────
+  const handleDeleteWithUndo = useCallback(
+    async (recordId: string) => {
+      const row = flatRecords.find((r) => r.record?.id === recordId);
+      const record = row?.record;
+      if (!record) return;
+      if (!confirm("确定要删除这条记录吗？")) return;
+      const recordData = { ...record.data };
+      await undoManager.execute({
+        type: "DELETE_RECORD",
+        description: "删除记录",
+        execute: async () => { await onDeleteRecord(recordId); },
+        undo: async () => {
+          const res = await fetch(`/api/data-tables/${tableId}/records`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data: recordData }),
+          });
+          if (res.ok) {
+            const restored = (await res.json()) as DataRecordItem;
+            onAddRecord(restored);
+          }
+        },
+      });
+    },
+    [flatRecords, undoManager, onDeleteRecord, tableId, onAddRecord]
+  );
+
+  // ── Undoable view config helpers ─────────────────────────────────────────
+  const undoableSortChange = useCallback(
+    (sort: SortConfig | null) => {
+      const prev = [...sorts];
+      undoManager.execute({
+        type: "BATCH_UPDATE",
+        description: "修改排序",
+        execute: async () => { onSortChange(sort); },
+        undo: async () => {
+          for (const s of prev) onSortChange(s);
+          sorts.filter((s) => !prev.some((p) => p.fieldKey === s.fieldKey))
+            .forEach((s) => onSortClear(s.fieldKey));
+        },
+      });
+    },
+    [sorts, undoManager, onSortChange, onSortClear]
+  );
+
+  const undoableGroupByChange = useCallback(
+    (fieldKey: string | null) => {
+      const prev = groupBy;
+      undoManager.execute({
+        type: "BATCH_UPDATE",
+        description: "修改分组",
+        execute: async () => { onGroupByChange(fieldKey); },
+        undo: async () => { onGroupByChange(prev); },
+      });
+    },
+    [groupBy, undoManager, onGroupByChange]
+  );
+
   useEffect(() => {
     if (!onLockLost) return;
     return onLockLost((recordId, fieldKey) => {
@@ -1148,7 +1209,15 @@ export function GridView({
         return;
       }
       const record = (await res.json()) as DataRecordItem;
-      onAddRecord(record);
+      await undoManager.execute({
+        type: "ADD_RECORD",
+        description: "新建记录",
+        execute: async () => { onAddRecord(record); },
+        undo: async () => {
+          await fetch(`/api/data-tables/${tableId}/records/${record.id}`, { method: "DELETE" });
+          onRemoveRecord(record.id);
+        },
+      });
       // Move activeCell to new row, start editing first editable field
       const newRowIndex = flatRecords.length;
       const firstEditableField = orderedVisibleFields.find(
@@ -1169,7 +1238,7 @@ export function GridView({
     } catch {
       toast.error("新建行失败");
     }
-  }, [tableId, onAddRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing]);
+  }, [tableId, onAddRecord, onRemoveRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing, undoManager]);
 
   // Insert a new row below the given row index and start editing
   const handleInsertRowBelow = useCallback(async (currentRowIndex: number) => {
@@ -1184,7 +1253,15 @@ export function GridView({
         return;
       }
       const record = (await res.json()) as DataRecordItem;
-      onAddRecord(record);
+      await undoManager.execute({
+        type: "ADD_RECORD",
+        description: "插入记录",
+        execute: async () => { onAddRecord(record); },
+        undo: async () => {
+          await fetch(`/api/data-tables/${tableId}/records/${record.id}`, { method: "DELETE" });
+          onRemoveRecord(record.id);
+        },
+      });
       // New record is appended to the end; move active cell to it
       const newRowIndex = flatRecords.length;
       const firstEditableField = orderedVisibleFields.find(
@@ -1205,7 +1282,7 @@ export function GridView({
     } catch {
       toast.error("插入行失败");
     }
-  }, [tableId, onAddRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing]);
+  }, [tableId, onAddRecord, onRemoveRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing, undoManager]);
 
   // Duplicate a row: copy all editable fields into a new row below
   const handleDuplicateRow = useCallback(async (sourceRecord: DataRecordItem) => {
@@ -1230,7 +1307,15 @@ export function GridView({
         return;
       }
       const record = (await res.json()) as DataRecordItem;
-      onAddRecord(record);
+      await undoManager.execute({
+        type: "ADD_RECORD",
+        description: "复制记录",
+        execute: async () => { onAddRecord(record); },
+        undo: async () => {
+          await fetch(`/api/data-tables/${tableId}/records/${record.id}`, { method: "DELETE" });
+          onRemoveRecord(record.id);
+        },
+      });
       const newRowIndex = flatRecords.length;
       const firstEditableField = orderedVisibleFields.find(
         (f) => f.type !== FieldType.RELATION_SUBTABLE
@@ -1251,7 +1336,7 @@ export function GridView({
     } catch {
       toast.error("复制行失败");
     }
-  }, [tableId, onAddRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing]);
+  }, [tableId, onAddRecord, onRemoveRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing, undoManager]);
 
   // Auto-scroll on stableActiveCell change
   useEffect(() => {
@@ -1702,7 +1787,7 @@ export function GridView({
                   variant="ghost"
                   size="sm"
                   className="h-8 px-2 text-red-600"
-                  onClick={() => void onDeleteRecord(record.id)}
+                  onClick={() => void handleDeleteWithUndo(record.id)}
                   disabled={deletingIds.has(record.id)}
                 >
                   {deletingIds.has(record.id) ? (
@@ -1945,7 +2030,7 @@ export function GridView({
                     }
                     onSortChange={(sort) => {
                       if (sort) {
-                        onSortChange(sort);
+                        undoableSortChange(sort);
                       } else {
                         onSortClear(field.key);
                       }

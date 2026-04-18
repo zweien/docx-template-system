@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { broadcastToTable } from "@/lib/services/realtime-notify.service";
-import { getUserColor } from "@/lib/services/presence.service";
+import { getUserColor } from "@/types/realtime";
 
 interface RouteParams {
   params: Promise<{ id: string }>;

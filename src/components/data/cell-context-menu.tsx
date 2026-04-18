@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   ContextMenu,
@@ -16,21 +16,29 @@ interface CellContextMenuProps {
   fields: DataFieldItem[]
   records: DataRecordItem[]
   isAdmin?: boolean
+  groupBy?: string | null
   onEditCell?: (recordId: string, fieldKey: string) => void
   onEditField?: (fieldKey: string) => void
   onDeleteField?: (fieldKey: string) => void
   onCopyCellValue?: (recordId: string, fieldKey: string) => void
+  onPasteCellValue?: (recordId: string, fieldKey: string) => void
+  onClearCell?: (recordId: string, fieldKey: string) => void
+  onFillDown?: (recordId: string, fieldKey: string, rowIndex: number) => void
   onInsertRow?: (referenceRecordId: string, position: "above" | "below") => void
   onDeleteRecord?: (recordId: string) => void
   onDuplicateRecord?: (recordId: string) => void
   onFilterByCell?: (fieldKey: string, value: string) => void
   onSortColumn?: (fieldKey: string, order: "asc" | "desc") => void
+  onGroupByField?: (fieldKey: string | null) => void
   onToggleFreeze?: (colIndex: number, frozenCount: number) => void
   frozenCount?: number
   onHideColumn?: (fieldKey: string) => void
   onAutoFitColumn?: (fieldKey: string) => void
   onOpenDetail?: (recordId: string) => void
   onAddConditionalFormat?: (fieldKey: string, value: string) => void
+  onSelectRow?: (recordId: string) => void
+  onSelectColumn?: (fieldKey: string) => void
+  onSelectAll?: () => void
   children: ReactNode
 }
 
@@ -39,24 +47,32 @@ export function CellContextMenu({
   fields,
   records,
   isAdmin,
+  groupBy,
   onEditCell,
   onEditField,
   onDeleteField,
   onCopyCellValue,
+  onPasteCellValue,
+  onClearCell,
+  onFillDown,
   onInsertRow,
   onDeleteRecord,
   onDuplicateRecord,
   onFilterByCell,
   onSortColumn,
+  onGroupByField,
   onToggleFreeze,
   frozenCount = 0,
   onHideColumn,
   onAutoFitColumn,
   onOpenDetail,
   onAddConditionalFormat,
+  onSelectRow,
+  onSelectColumn,
+  onSelectAll,
   children,
 }: CellContextMenuProps) {
-  const { targetType, recordId, fieldKey, colIndex } = context
+  const { targetType, recordId, fieldKey, colIndex, rowIndex } = context
   const frozenCountValue = frozenCount ?? 0
 
   const getCellValue = useCallback(() => {
@@ -78,6 +94,15 @@ export function CellContextMenu({
         <ContextMenuItem onClick={() => onCopyCellValue?.(recordId, fieldKey)}>
           复制单元格值
         </ContextMenuItem>
+        <ContextMenuItem onClick={() => onPasteCellValue?.(recordId, fieldKey)}>
+          粘贴
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => onClearCell?.(recordId, fieldKey)}>
+          清空单元格
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => onFillDown?.(recordId, fieldKey, rowIndex ?? 0)}>
+          向下填充
+        </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={() => onInsertRow?.(recordId, "above")}>
           上方插入行
@@ -88,6 +113,16 @@ export function CellContextMenu({
         <ContextMenuSeparator />
         <ContextMenuItem onClick={() => onDeleteRecord?.(recordId)}>
           删除行
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => onSelectRow?.(recordId)}>
+          选中此行
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => onSelectColumn?.(fieldKey)}>
+          选中此列
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => onSelectAll?.()}>
+          全选
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={() => onFilterByCell?.(fieldKey, getCellValue())}>
@@ -129,6 +164,13 @@ export function CellContextMenu({
           删除行
         </ContextMenuItem>
         <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => onSelectRow?.(recordId)}>
+          选中此行
+        </ContextMenuItem>
+        <ContextMenuItem onClick={() => onSelectAll?.()}>
+          全选
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem onClick={() => onOpenDetail?.(recordId)}>
           展开记录详情
         </ContextMenuItem>
@@ -165,6 +207,9 @@ export function CellContextMenu({
           降序排序
         </ContextMenuItem>
         <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => onGroupByField?.(groupBy === fieldKey ? null : fieldKey)}>
+          {groupBy === fieldKey ? "取消分组" : "按此字段分组"}
+        </ContextMenuItem>
         <ContextMenuItem onClick={() => onToggleFreeze?.(colIndex, frozenCountValue)}>
           {colIndex < frozenCountValue ? "解冻列" : "冻结到此列"}
         </ContextMenuItem>
@@ -173,6 +218,10 @@ export function CellContextMenu({
         </ContextMenuItem>
         <ContextMenuItem onClick={() => onAutoFitColumn?.(fieldKey)}>
           自动适配宽度
+        </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem onClick={() => onSelectColumn?.(fieldKey)}>
+          选中此列
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={() => onFilterByCell?.(fieldKey, "")}>

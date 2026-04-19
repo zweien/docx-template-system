@@ -64,6 +64,19 @@ export interface UseTableDataReturn {
   cursorPositions: Map<string, { userId: string; userName: string; recordId: string; fieldKey: string; color: string }>;
 }
 
+function resolveViewIdFromSearchParams(
+  params: { get: (key: string) => string | null }
+): string | null {
+  const direct = params.get("viewId");
+  if (direct) return direct;
+
+  // Fallback for environments where searchParams may lag behind URL updates.
+  if (typeof window !== "undefined") {
+    return new URLSearchParams(window.location.search).get("viewId");
+  }
+  return null;
+}
+
 function buildTablePath(tableId: string, params: URLSearchParams): string {
   const query = params.toString();
   return query ? `/data/${tableId}?${query}` : `/data/${tableId}`;
@@ -93,7 +106,7 @@ export function useTableData({
     searchParams.get("search") ?? ""
   );
   const [viewId, setViewId] = useState<string | null>(
-    searchParams.get("viewId") ?? null
+    resolveViewIdFromSearchParams(searchParams)
   );
   const [views, setViews] = useState<DataViewItem[]>([]);
   const [isViewConfigReady, setIsViewConfigReady] = useState(
@@ -298,7 +311,7 @@ export function useTableData({
   }, []);
 
   useEffect(() => {
-    const nextViewId = searchParams.get("viewId") ?? null;
+    const nextViewId = resolveViewIdFromSearchParams(searchParams);
     const isViewChanged = nextViewId !== viewId;
 
     setSearch(searchParams.get("search") ?? "");

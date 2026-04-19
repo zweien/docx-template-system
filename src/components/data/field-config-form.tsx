@@ -680,13 +680,13 @@ export function FieldConfigForm({
     } else if (fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) {
       fieldOptions = { kind: systemFieldKind };
     } else if (fieldType === FieldType.RATING) {
-      fieldOptions = { ratingMax, ratingAllowHalf };
+      fieldOptions = { ratingMax, ratingAllowHalf } as DataFieldInput["options"];
     } else if (fieldType === FieldType.CURRENCY) {
-      fieldOptions = { currencyCode, currencyDecimals };
+      fieldOptions = { currencyCode, currencyDecimals } as DataFieldInput["options"];
     } else if (fieldType === FieldType.PERCENTAGE) {
-      fieldOptions = { percentageDecimals };
+      fieldOptions = { percentageDecimals } as DataFieldInput["options"];
     } else if (fieldType === FieldType.DURATION) {
-      fieldOptions = { durationFormat };
+      fieldOptions = { durationFormat } as DataFieldInput["options"];
     }
 
     const data: DataFieldInput = {

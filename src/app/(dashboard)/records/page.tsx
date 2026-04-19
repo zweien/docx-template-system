@@ -35,6 +35,12 @@ const STATUS_VARIANTS: Record<
   FAILED: "destructive",
 };
 
+const STATUS_BADGE_CLASS: Record<RecordStatus, string> = {
+  PENDING: "border-border bg-muted text-foreground",
+  COMPLETED: "bg-primary text-primary-foreground",
+  FAILED: "bg-destructive text-destructive-foreground",
+};
+
 const STATUS_TABS: { label: string; value: string }[] = [
   { label: "全部", value: "" },
   { label: "待生成", value: "PENDING" },
@@ -156,7 +162,10 @@ export default async function RecordsPage({
                     })}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_VARIANTS[record.status as RecordStatus]}>
+                    <Badge
+                      variant={STATUS_VARIANTS[record.status as RecordStatus]}
+                      className={STATUS_BADGE_CLASS[record.status as RecordStatus]}
+                    >
                       {STATUS_LABELS[record.status as RecordStatus]}
                     </Badge>
                   </TableCell>

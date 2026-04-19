@@ -84,7 +84,7 @@ export function MobileNav() {
               alt="IDRL填表系统"
               width={24}
               height={24}
-              style={{ width: "auto", height: "auto" }}
+              style={{ width: "24px", height: "auto" }}
             />
             <span className="text-lg font-[510] tracking-[-0.13px]">IDRL填表系统</span>
           </SheetTitle>

@@ -78,7 +78,7 @@ export function Sidebar() {
             alt="IDRL填表系统"
             width={28}
             height={28}
-            style={{ width: "auto", height: "auto" }}
+            style={{ width: "28px", height: "auto" }}
             className="shrink-0 transition-transform group-hover:scale-110"
           />
           <span

@@ -61,8 +61,7 @@ function normalizeImportValue(value: unknown, fieldType: FieldType): unknown {
       if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
       if (parts.length === 2) return parts[0] * 3600 + parts[1] * 60;
     }
-    const num = Number(value);
-    return isNaN(num) ? value : Math.round(num);
+    return value;
   }
   return value;
 }

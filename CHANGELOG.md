@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.1](https://github.com/zweien/docx-template-system/compare/v0.6.0...v0.6.1) (2026-04-19)
+
+
+### Features
+
+* **nav:** add shared navigation schema, matcher and tests ([e85c8d1](https://github.com/zweien/docx-template-system/commit/e85c8d1f73ca314ec8ddc371f58f8df15a817f17))
+* **nav:** add shared navigation state hook with safe persistence ([6a02dba](https://github.com/zweien/docx-template-system/commit/6a02dba3d9dddcfb0a9748436ca4abbe9f22c011))
+
+
+### Bug Fixes
+
+* **data:** prevent find-replace render loop on stable query ([8788a8d](https://github.com/zweien/docx-template-system/commit/8788a8d5bd373605b71f5a1ee731be4504ecf406))
+* **drafts:** remove nested interactive elements and stabilize trigger usage ([656809f](https://github.com/zweien/docx-template-system/commit/656809f15c61b7fb65e2becfca3c5f2774595561))
+* **ui:** stabilize nav interactions and improve dashboard light-theme contrast ([0908df6](https://github.com/zweien/docx-template-system/commit/0908df6377b75637d68a60ed9fb0b76018570ba0))
+
 ## [0.6.0](https://github.com/zweien/docx-template-system/compare/v0.5.4...v0.6.0) (2026-04-19)
 
 

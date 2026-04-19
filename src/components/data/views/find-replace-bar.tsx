@@ -29,6 +29,23 @@ interface FindResult {
   fieldKey: string;
 }
 
+function isSameResult(a: FindResult, b: FindResult) {
+  return (
+    a.flatRowIndex === b.flatRowIndex &&
+    a.colIndex === b.colIndex &&
+    a.recordId === b.recordId &&
+    a.fieldKey === b.fieldKey
+  );
+}
+
+function isSameResultsArray(a: FindResult[], b: FindResult[]) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (!isSameResult(a[i], b[i])) return false;
+  }
+  return true;
+}
+
 interface FindReplaceBarProps {
   open: boolean;
   onClose: () => void;
@@ -55,6 +72,11 @@ export function FindReplaceBar({
   const [results, setResults] = useState<FindResult[]>([]);
   const [currentIdx, setCurrentIdx] = useState(-1);
   const findInputRef = useRef<HTMLInputElement>(null);
+  const onNavigateToRef = useRef(onNavigateTo);
+
+  useEffect(() => {
+    onNavigateToRef.current = onNavigateTo;
+  }, [onNavigateTo]);
 
   // Build field map for lookup during search
   const fieldMap = useMemo(() => {
@@ -69,8 +91,8 @@ export function FindReplaceBar({
   const doSearch = useCallback(
     (query: string) => {
       if (!query) {
-        setResults([]);
-        setCurrentIdx(-1);
+        setResults((prev) => (prev.length === 0 ? prev : []));
+        setCurrentIdx((prev) => (prev === -1 ? prev : -1));
         return;
       }
       const lower = query.toLowerCase();
@@ -89,8 +111,11 @@ export function FindReplaceBar({
           }
         }
       }
-      setResults(found);
-      setCurrentIdx(found.length > 0 ? 0 : -1);
+      setResults((prev) => (isSameResultsArray(prev, found) ? prev : found));
+      setCurrentIdx((prev) => {
+        const next = found.length > 0 ? 0 : -1;
+        return prev === next ? prev : next;
+      });
     },
     [rows, fieldKeys, fieldMap]
   );
@@ -104,9 +129,9 @@ export function FindReplaceBar({
   useEffect(() => {
     if (currentIdx >= 0 && currentIdx < results.length) {
       const r = results[currentIdx];
-      onNavigateTo(r.flatRowIndex, r.colIndex);
+      onNavigateToRef.current(r.flatRowIndex, r.colIndex);
     }
-  }, [currentIdx, results, onNavigateTo]);
+  }, [currentIdx, results]);
 
   // Focus input on open / reset on close
   useEffect(() => {

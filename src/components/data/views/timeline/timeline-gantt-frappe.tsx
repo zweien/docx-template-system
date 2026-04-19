@@ -61,8 +61,14 @@ const PAN_STEP_BY_SCALE: Record<TimelineScale, number> = {
 
 function applyLinkStyles(container: HTMLElement, links: FrappeGanttLink[]) {
   const linkGroups = container.querySelectorAll<SVGGElement>(".gantt .arrow");
+  const linkByEdge = new Map(
+    links.map((link) => [`${link.predecessorTaskId}->${link.successorTaskId}`, link])
+  );
+
   linkGroups.forEach((group, index) => {
-    const link = links[index];
+    const from = group.getAttribute("data-from");
+    const to = group.getAttribute("data-to");
+    const link = (from && to ? linkByEdge.get(`${from}->${to}`) : undefined) ?? links[index];
     if (!link) return;
     const path = group.querySelector<SVGPathElement>("path");
     if (!path) return;

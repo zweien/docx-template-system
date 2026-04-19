@@ -5,6 +5,7 @@ import {
   upsertTaskDependency,
 } from "@/lib/services/task-dependency.service";
 import { taskDependencyInputSchema } from "@/validators/data-table";
+import { ZodError } from "zod";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -12,10 +13,11 @@ interface RouteParams {
 
 function mapErrorStatus(code: string): number {
   if (code === "NOT_FOUND") return 404;
+  if (code === "LIST_FAILED" || code === "UPSERT_FAILED") return 500;
   if (code === "SELF_LOOP" || code === "CROSS_TABLE_DEPENDENCY" || code === "INVALID_TYPE" || code === "RECORD_NOT_FOUND") {
     return 400;
   }
-  return 400;
+  return 500;
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
@@ -51,29 +53,35 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
   try {
     const body = await request.json();
-    const validated = taskDependencyInputSchema.parse(body);
+    const payload = Array.isArray(body)
+      ? taskDependencyInputSchema.array().parse(body)
+      : [taskDependencyInputSchema.parse(body)];
 
-    const result = await upsertTaskDependency({
-      tableId,
-      successorRecordId: validated.successorRecordId,
-      predecessorRecordId: validated.predecessorRecordId,
-      type: validated.type,
-      lagDays: validated.lagDays,
-      required: validated.required,
-    });
+    const results = [];
+    for (const item of payload) {
+      const result = await upsertTaskDependency({
+        tableId,
+        successorRecordId: item.successorRecordId,
+        predecessorRecordId: item.predecessorRecordId,
+        type: item.type,
+        lagDays: item.lagDays,
+        required: item.required,
+      });
 
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error.message },
-        { status: mapErrorStatus(result.error.code) }
-      );
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error.message },
+          { status: mapErrorStatus(result.error.code) }
+        );
+      }
+      results.push(result.data);
     }
 
-    return NextResponse.json(result.data);
+    return NextResponse.json(Array.isArray(body) ? results : results[0]);
   } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: "数据验证失败", details: error },
+        { error: "数据验证失败", details: error.issues.map((item) => item.message) },
         { status: 400 }
       );
     }

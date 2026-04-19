@@ -235,14 +235,28 @@ export function TimelineView({
 
       const nextStart = formatDateOnly(startDate);
       const nextEnd = formatDateOnly(task.isMilestone ? startDate : endDate);
+      const previousStart = formatDateOnly(task.startDate);
+      const previousEnd = formatDateOnly(task.isMilestone ? task.startDate : task.endDate);
+      let startPatched = false;
 
       try {
         await onPatchRecord(task.recordId, startDateField, nextStart);
+        startPatched = true;
         if (endDateField) {
           await onPatchRecord(task.recordId, endDateField, nextEnd);
         }
       } catch (error) {
         console.error("Failed to patch timeline task date:", error);
+        if (startPatched) {
+          try {
+            await onPatchRecord(task.recordId, startDateField, previousStart);
+            if (endDateField) {
+              await onPatchRecord(task.recordId, endDateField, previousEnd);
+            }
+          } catch (rollbackError) {
+            console.error("Failed to rollback timeline task date:", rollbackError);
+          }
+        }
         toast.error("保存任务日期失败，请重试");
       }
     },

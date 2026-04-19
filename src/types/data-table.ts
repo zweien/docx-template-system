@@ -153,8 +153,8 @@ export interface TaskDependencyItem {
   type: TaskDependencyType;
   lagDays: number;
   required: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt: Date | string;
+  updatedAt: Date | string;
 }
 
 // ========== Record Types ==========

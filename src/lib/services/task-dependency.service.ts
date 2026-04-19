@@ -76,9 +76,8 @@ export async function listTaskDependencies(
     });
 
     return { success: true, data: rows.map(mapTaskDependencyItem) };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "获取依赖失败";
-    return { success: false, error: { code: "LIST_FAILED", message } };
+  } catch {
+    return { success: false, error: { code: "LIST_FAILED", message: "获取依赖失败" } };
   }
 }
 
@@ -127,9 +126,8 @@ export async function upsertTaskDependency(input: {
     });
 
     return { success: true, data: mapTaskDependencyItem(row) };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "保存依赖失败";
-    return { success: false, error: { code: "UPSERT_FAILED", message } };
+  } catch {
+    return { success: false, error: { code: "UPSERT_FAILED", message: "保存依赖失败" } };
   }
 }
 
@@ -153,8 +151,7 @@ export async function deleteTaskDependency(
     }
 
     return { success: true, data: null };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "删除依赖失败";
-    return { success: false, error: { code: "DELETE_FAILED", message } };
+  } catch {
+    return { success: false, error: { code: "DELETE_FAILED", message: "删除依赖失败" } };
   }
 }

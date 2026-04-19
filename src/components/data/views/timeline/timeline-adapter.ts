@@ -59,6 +59,15 @@ function toValidDate(value: unknown): Date | null {
     return null;
   }
 
+  const plainDate = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (plainDate) {
+    const year = Number(plainDate[1]);
+    const month = Number(plainDate[2]) - 1;
+    const day = Number(plainDate[3]);
+    const parsed = new Date(year, month, day);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   const parsed = new Date(value);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }

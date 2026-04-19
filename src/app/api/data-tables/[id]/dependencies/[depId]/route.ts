@@ -8,7 +8,8 @@ interface RouteParams {
 
 function mapErrorStatus(code: string): number {
   if (code === "NOT_FOUND") return 404;
-  return 400;
+  if (code === "DELETE_FAILED") return 500;
+  return 500;
 }
 
 export async function DELETE(request: NextRequest, { params }: RouteParams) {

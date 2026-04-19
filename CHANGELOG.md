@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.0](https://github.com/zweien/docx-template-system/compare/v0.5.4...v0.6.0) (2026-04-19)
+
+
+### Features
+
+* **data-table:** 新增 ROLLUP 汇总字段类型 ([#88](https://github.com/zweien/docx-template-system/issues/88)) ([8f7b44b](https://github.com/zweien/docx-template-system/commit/8f7b44beceb9857f6c0a2b821833e8abf5d3c073))
+* **timeline:** 甘特图增强（依赖连线/拖拽改期/里程碑/缩放平移）([#119](https://github.com/zweien/docx-template-system/issues/119)) ([#132](https://github.com/zweien/docx-template-system/issues/132)) ([ecf09fd](https://github.com/zweien/docx-template-system/commit/ecf09fd5432aa5b1316d3bc579af1f82206368ba))
+
+
+### Bug Fixes
+
+* 评论增删改后实时刷新单元格评论标识 ([e99a38a](https://github.com/zweien/docx-template-system/commit/e99a38a1ae9a07cb673c657041f96171b4e13b1f))
+* 为 CommentPanel 添加 @提及自动补全功能 ([a860388](https://github.com/zweien/docx-template-system/commit/a8603888a125f238940f64c06244ba50b4efc4a9))
+* 修复时长编辑器 hh:mm 解析错误 + 评分编辑器缺少 onBlur ([a27a5b8](https://github.com/zweien/docx-template-system/commit/a27a5b800f9518c73c714efcafcabd6c1d6168d7))
+* 移动端详情抽屉导航箭头被关闭按钮遮挡 ([2ccd33f](https://github.com/zweien/docx-template-system/commit/2ccd33f9113598c4749a9147f1beab555dedc3a2))
+* **data-table:** 修复货币字段小数位保存不生效 ([#130](https://github.com/zweien/docx-template-system/issues/130)) ([d1cef23](https://github.com/zweien/docx-template-system/commit/d1cef236676ba405dee7909be09b8ef6a73871cc))
+
 ## [0.5.4](https://github.com/zweien/docx-template-system/compare/v0.5.3...v0.5.4) (2026-04-16)
 
 

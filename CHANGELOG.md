@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.2](https://github.com/zweien/docx-template-system/compare/v0.6.1...v0.6.2) (2026-04-19)
+
+
+### Bug Fixes
+
+* **import:** remove duplicate const num declaration in DURATION parsing ([6016e32](https://github.com/zweien/docx-template-system/commit/6016e326f6267bdee9040b545b8aa05a921bcb79))
+* **theme:** improve light-mode contrast for detail pages and destructive buttons ([aaad132](https://github.com/zweien/docx-template-system/commit/aaad132fc54f2de9ccf6ea9163a099c501f9917d))
+* **theme:** improve templates page readability in light mode ([2b91af4](https://github.com/zweien/docx-template-system/commit/2b91af45c597f335c46d83705649402717b1ed9e))
+* **theme:** restore light-mode readability for records and table text ([ea73cbf](https://github.com/zweien/docx-template-system/commit/ea73cbfee7a161c90d0634c291cedd34000f30cd))
+
 ## [0.6.1](https://github.com/zweien/docx-template-system/compare/v0.6.0...v0.6.1) (2026-04-19)
 
 

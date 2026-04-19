@@ -394,10 +394,12 @@ export function RecordTable({
       case "TIMELINE":
         return (
           <TimelineView
+            tableId={tableId}
             fields={fields}
             records={records}
             view={activeView}
             onOpenRecord={onOpenDetail ?? (() => {})}
+            onPatchRecord={handlePatchRecord}
             onViewOptionsChange={setViewOptions}
           />
         );

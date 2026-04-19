@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import { Pencil, Trash2, History, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -258,15 +257,14 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
               <TabsContent value="fields" className="space-y-6 px-4 pb-4 pt-4">
                 {isAdmin && (
                   <div className="flex flex-wrap gap-2">
-                    <Button
+                    <LinkButton
                       variant="outline"
                       size="sm"
-                      nativeButton={false}
-                      render={<Link href={`/data/${tableId}/${record.id}/edit`} />}
+                      href={`/data/${tableId}/${record.id}/edit`}
                     >
                       <Pencil className="h-4 w-4" />
                       编辑
-                    </Button>
+                    </LinkButton>
                     <Button
                       variant="destructive"
                       size="sm"

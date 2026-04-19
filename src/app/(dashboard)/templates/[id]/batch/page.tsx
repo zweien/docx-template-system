@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { BatchGenerationWizard } from "./wizard";
 
@@ -23,10 +22,10 @@ export default async function BatchGenerationPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" nativeButton={false} render={<Link href={`/templates/${id}`} />}>
+      <LinkButton variant="ghost" size="sm" href={`/templates/${id}`}>
         <ArrowLeft className="h-4 w-4" />
         返回模板详情
-      </Button>
+      </LinkButton>
 
       <div>
         <h1 className="text-2xl font-bold tracking-tight">

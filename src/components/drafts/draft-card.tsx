@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { CalendarDays, FileText, PenLine } from "lucide-react";
 import { DeleteDraftButton } from "@/app/(dashboard)/drafts/delete-draft-button";
 
@@ -85,10 +84,10 @@ export function DraftCard({ id, templateId, templateName, formData, updatedAt }:
         </div>
 
         <div className="flex items-center gap-2 pt-1" onClick={(event) => event.stopPropagation()}>
-          <Button size="sm" nativeButton={false} render={<Link href={editHref} />}>
+          <LinkButton size="sm" href={editHref}>
             <PenLine className="h-4 w-4" />
             继续编辑
-          </Button>
+          </LinkButton>
           <DeleteDraftButton draftId={id} draftName={templateName} />
         </div>
       </CardContent>

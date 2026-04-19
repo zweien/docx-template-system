@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -100,16 +99,15 @@ export default async function TemplateDetailPage({
 
   return (
     <div className="space-y-6">
-      <Button
+      <LinkButton
         variant="ghost"
         size="sm"
         className="text-[#8a8f98] hover:text-[#f7f8f8]"
-        nativeButton={false}
-        render={<Link href="/templates" />}
+        href="/templates"
       >
         <ArrowLeft className="h-4 w-4" />
         返回模板列表
-      </Button>
+      </LinkButton>
 
       <div className="flex flex-col gap-4 rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)] sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1 min-w-0">
@@ -140,35 +138,32 @@ export default async function TemplateDetailPage({
             <VersionHistoryDialogWrapper templateId={template.id} />
           )}
           {isAdmin && (
-            <Button
+            <LinkButton
               variant="outline"
               size="sm"
-              nativeButton={false}
-              render={<Link href={`/templates/${template.id}/edit`} />}
+              href={`/templates/${template.id}/edit`}
             >
               <Pencil className="h-4 w-4" />
               <span className="hidden sm:inline">编辑</span>
-            </Button>
+            </LinkButton>
           )}
           {template.status === "PUBLISHED" && (
             <>
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={`/templates/${template.id}/batch`} />}
+                href={`/templates/${template.id}/batch`}
               >
                 <Files className="h-4 w-4" />
                 <span className="hidden sm:inline">批量生成</span>
-              </Button>
-              <Button
+              </LinkButton>
+              <LinkButton
                 size="sm"
-                nativeButton={false}
-                render={<Link href={`/templates/${template.id}/fill`} />}
+                href={`/templates/${template.id}/fill`}
               >
                 <PenLine className="h-4 w-4" />
                 <span className="hidden sm:inline">填写表单</span>
-              </Button>
+              </LinkButton>
             </>
           )}
         </div>
@@ -282,16 +277,13 @@ export default async function TemplateDetailPage({
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <p className="text-sm">暂无占位符</p>
               {isAdmin && (
-                <Button
+                <LinkButton
                   variant="link"
                   size="sm"
-                  nativeButton={false}
-                  render={
-                    <Link href={`/templates/${template.id}/edit`} />
-                  }
+                  href={`/templates/${template.id}/edit`}
                 >
                   前往配置
-                </Button>
+                </LinkButton>
               )}
             </div>
           ) : (

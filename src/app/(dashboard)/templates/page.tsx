@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -120,10 +120,10 @@ export default async function TemplatesPage({
         {isAdmin && (
           <div className="flex items-center gap-2">
             <CategoryTagManagerButton />
-            <Button nativeButton={false} render={<Link href="/templates/new" />}>
+            <LinkButton href="/templates/new">
               <Upload className="h-4 w-4" />
               上传模板
-            </Button>
+            </LinkButton>
           </div>
         )}
       </div>
@@ -200,14 +200,13 @@ export default async function TemplatesPage({
                     <FileText className="h-8 w-8 mb-2" />
                     <p className="text-sm">暂无模板数据</p>
                     {isAdmin && (
-                      <Button
+                      <LinkButton
                         variant="link"
                         size="sm"
-                        nativeButton={false}
-                        render={<Link href="/templates/new" />}
+                        href="/templates/new"
                       >
                         上传第一个模板
-                      </Button>
+                      </LinkButton>
                     )}
                   </div>
                 </TableCell>
@@ -261,31 +260,26 @@ export default async function TemplatesPage({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button
+                      <LinkButton
                         variant="ghost"
                         size="icon-xs"
                         className="text-[#8a8f98] hover:text-[#f7f8f8]"
-                        nativeButton={false}
-                        render={<Link href={`/templates/${template.id}`} />}
+                        href={`/templates/${template.id}`}
                       >
                         <Eye className="h-3.5 w-3.5" />
                         <span className="sr-only">查看</span>
-                      </Button>
+                      </LinkButton>
                       {isAdmin && (
                         <>
-                          <Button
+                          <LinkButton
                             variant="ghost"
                             size="icon-xs"
                             className="text-[#8a8f98] hover:text-[#f7f8f8]"
-                            render={
-                              <Link
-                                href={`/templates/${template.id}/edit`}
-                              />
-                            }
+                            href={`/templates/${template.id}/edit`}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                             <span className="sr-only">编辑</span>
-                          </Button>
+                          </LinkButton>
                           <TemplateListDeleteButton
                             templateId={template.id}
                             templateName={template.name}
@@ -308,15 +302,14 @@ export default async function TemplatesPage({
           </p>
           <div className="flex gap-2">
             {page > 1 ? (
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={buildUrl(page - 1, status || "", categoryId)} />}
+                href={buildUrl(page - 1, status || "", categoryId)}
               >
                 <ChevronLeft className="h-4 w-4" />
                 上一页
-              </Button>
+              </LinkButton>
             ) : (
               <Button variant="outline" size="sm" disabled>
                 <ChevronLeft className="h-4 w-4" />
@@ -324,15 +317,14 @@ export default async function TemplatesPage({
               </Button>
             )}
             {page < totalPages ? (
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={buildUrl(page + 1, status || "", categoryId)} />}
+                href={buildUrl(page + 1, status || "", categoryId)}
               >
                 下一页
                 <ChevronRight className="h-4 w-4" />
-              </Button>
+              </LinkButton>
             ) : (
               <Button variant="outline" size="sm" disabled>
                 下一页

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import {
   FileText,
   CheckCircle,
@@ -98,20 +98,20 @@ export default async function DashboardPage() {
       </div>
 
       <div className="flex flex-wrap gap-3">
-        <Button nativeButton={false} render={<Link href="/generate" />}>
+        <LinkButton href="/generate">
           <FileOutput className="h-4 w-4" />
           我要填表
-        </Button>
+        </LinkButton>
         {isAdmin && (
-          <Button nativeButton={false} render={<Link href="/templates/new" />}>
+          <LinkButton href="/templates/new">
             <Upload className="h-4 w-4" />
             上传模板
-          </Button>
+          </LinkButton>
         )}
-        <Button variant="outline" nativeButton={false} render={<Link href="/templates" />}>
+        <LinkButton variant="outline" href="/templates">
           <FileText className="h-4 w-4" />
           查看模板
-        </Button>
+        </LinkButton>
       </div>
     </div>
   );

@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { DynamicForm } from "@/components/forms/dynamic-form";
 import { ScreenshotViewer } from "@/components/templates/screenshot-viewer";
@@ -40,15 +39,14 @@ export default async function FillPage({
   return (
     <div className="space-y-6">
       {/* Back button */}
-      <Button
+      <LinkButton
         variant="ghost"
         size="sm"
-        nativeButton={false}
-        render={<Link href={`/templates/${id}`} />}
+        href={`/templates/${id}`}
       >
         <ArrowLeft className="h-4 w-4" />
         返回模板详情
-      </Button>
+      </LinkButton>
 
       {/* Header */}
       <div>

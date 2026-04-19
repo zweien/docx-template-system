@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -132,14 +132,13 @@ export default async function RecordsPage({
                   <div className="flex flex-col items-center justify-center text-[#8a8f98]">
                     <History className="h-8 w-8 mb-2" />
                     <p className="text-sm">暂无生成记录</p>
-                    <Button
+                    <LinkButton
                       variant="link"
                       size="sm"
-                      nativeButton={false}
-                      render={<Link href="/templates" />}
+                      href="/templates"
                     >
                       前往模板列表填写表单
-                    </Button>
+                    </LinkButton>
                   </div>
                 </TableCell>
               </TableRow>
@@ -174,15 +173,14 @@ export default async function RecordsPage({
                           <Download className="h-3.5 w-3.5" />
                         </a>
                       )}
-                      <Button
+                      <LinkButton
                         variant="ghost"
                         size="sm"
-                        nativeButton={false}
-                        render={<Link href={`/records/${record.id}`} />}
+                        href={`/records/${record.id}`}
                       >
                         <Eye className="h-3.5 w-3.5" />
                         查看
-                      </Button>
+                      </LinkButton>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -199,15 +197,14 @@ export default async function RecordsPage({
           </p>
           <div className="flex gap-2">
             {page > 1 ? (
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={buildUrl(page - 1, status || "")} />}
+                href={buildUrl(page - 1, status || "")}
               >
                 <ChevronLeft className="h-4 w-4" />
                 上一页
-              </Button>
+              </LinkButton>
             ) : (
               <Button variant="outline" size="sm" disabled>
                 <ChevronLeft className="h-4 w-4" />
@@ -215,15 +212,14 @@ export default async function RecordsPage({
               </Button>
             )}
             {page < totalPages ? (
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={buildUrl(page + 1, status || "")} />}
+                href={buildUrl(page + 1, status || "")}
               >
                 下一页
                 <ChevronRight className="h-4 w-4" />
-              </Button>
+              </LinkButton>
             ) : (
               <Button variant="outline" size="sm" disabled>
                 下一页

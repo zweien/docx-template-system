@@ -1,5 +1,7 @@
 "use client"
 
+import Link from "next/link"
+import type { ComponentProps } from "react"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -42,12 +44,14 @@ const buttonVariants = cva(
   }
 )
 
+type ButtonProps = ButtonPrimitive.Props & VariantProps<typeof buttonVariants>
+
 function Button({
   className,
   variant = "default",
   size = "default",
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonProps) {
   return (
     <ButtonPrimitive
       data-slot="button"
@@ -57,4 +61,13 @@ function Button({
   )
 }
 
-export { Button, buttonVariants }
+type LinkButtonProps = Omit<ButtonProps, "nativeButton" | "render"> & {
+  href: ComponentProps<typeof Link>["href"]
+}
+
+function LinkButton({ href, ...props }: LinkButtonProps) {
+  return <Button nativeButton={false} render={<Link href={href} />} {...props} />
+}
+
+export { Button, LinkButton, buttonVariants }
+export type { ButtonProps, LinkButtonProps }

@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -81,16 +80,15 @@ export default async function RecordDetailPage({
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <Button
+      <LinkButton
         variant="ghost"
         size="sm"
         className="text-[#8a8f98] hover:text-[#f7f8f8]"
-        nativeButton={false}
-        render={<Link href="/records" />}
+        href="/records"
       >
         <ArrowLeft className="h-4 w-4" />
         返回列表
-      </Button>
+      </LinkButton>
 
       <div className="flex items-center justify-between rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
         <div>

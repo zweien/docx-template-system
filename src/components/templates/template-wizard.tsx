@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
 import {
   Upload,
@@ -13,7 +12,7 @@ import {
   Loader2,
   Image,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -759,13 +758,12 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
 
       {/* Navigation Bar */}
       <div className="flex items-center justify-between">
-        <Button
+        <LinkButton
           variant="outline"
-          nativeButton={false}
-          render={<Link href={cancelHref} />}
+          href={cancelHref}
         >
           取消
-        </Button>
+        </LinkButton>
 
         <div className="flex items-center gap-2">
           {currentStep > 1 && (

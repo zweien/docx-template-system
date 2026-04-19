@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { listDocumentCollectionTasks } from "@/lib/services/document-collection-task.service";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CollectionTaskCard } from "@/components/collections/collection-task-card";
 
@@ -31,9 +30,9 @@ export default async function CollectionsPage({
           <h1 className="text-2xl font-bold tracking-tight">文档收集</h1>
           <p className="text-muted-foreground">跟踪任务进度、查看我的提交状态并进入详情页。</p>
         </div>
-        <Button nativeButton={false} render={<Link href="/collections/new" />}>
+        <LinkButton href="/collections/new">
           新建任务
-        </Button>
+        </LinkButton>
       </div>
 
       {tasks.length === 0 ? (

@@ -19,7 +19,7 @@ import type {
   FilterGroup,
   SortConfig,
 } from "@/types/data-table";
-import { parseSelectOptions } from "@/types/data-table";
+import { parseFieldOptions, parseSelectOptions } from "@/types/data-table";
 import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";

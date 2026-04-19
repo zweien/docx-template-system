@@ -1286,7 +1286,7 @@ export function FieldConfigForm({
               <div className="grid gap-3">
                 <div className="grid gap-2">
                   <Label htmlFor="currency-code">币种</Label>
-                  <Select value={currencyCode} onValueChange={setCurrencyCode}>
+                  <Select value={currencyCode} onValueChange={(value) => setCurrencyCode(value ?? "CNY")}>
                     <SelectTrigger id="currency-code">
                       <SelectValue />
                     </SelectTrigger>
@@ -1330,7 +1330,7 @@ export function FieldConfigForm({
             {fieldType === FieldType.DURATION && (
               <div className="grid gap-2">
                 <Label htmlFor="duration-format">显示格式</Label>
-                <Select value={durationFormat} onValueChange={setDurationFormat}>
+                <Select value={durationFormat} onValueChange={(value) => setDurationFormat(value ?? "hh:mm")}>
                   <SelectTrigger id="duration-format">
                     <SelectValue />
                   </SelectTrigger>

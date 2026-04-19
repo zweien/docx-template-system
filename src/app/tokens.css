@@ -70,7 +70,7 @@
   --radius-full: 9999px;
 
   /* 字体 */
-  --font-sans: var(--font-inter), "Inter Variable", "Inter", "SF Pro Display", -apple-system, system-ui, "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
+  --font-sans: "SF Pro Display", -apple-system, system-ui, "Segoe UI", "Roboto", "Helvetica Neue", sans-serif;
   --font-mono: "Berkeley Mono", "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 

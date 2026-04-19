@@ -1,6 +1,4 @@
 import cron from "node-cron";
-import { getGlobalSettings } from "@/lib/services/agent2-global-settings.service";
-import { runBackup } from "@/lib/services/backup.service";
 import type { BackupConfig } from "@/types/agent2";
 
 function isBackupDue(schedule: BackupConfig["schedule"], lastBackupAt: string | null): boolean {
@@ -32,6 +30,11 @@ function isBackupDue(schedule: BackupConfig["schedule"], lastBackupAt: string | 
 export async function register() {
   // Only run on server side, not during build
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    const [{ getGlobalSettings }, { runBackup }] = await Promise.all([
+      import("@/lib/services/agent2-global-settings.service"),
+      import("@/lib/services/backup.service"),
+    ]);
+
     console.log("[backup] Registering backup scheduler...");
 
     // Check every hour if backup is due

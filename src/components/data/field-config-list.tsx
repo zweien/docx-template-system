@@ -47,6 +47,10 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   [FieldType.LOOKUP]: "查找",
   [FieldType.ROLLUP]: "汇总",
   [FieldType.RICH_TEXT]: "富文本",
+  [FieldType.RATING]: "评分",
+  [FieldType.CURRENCY]: "货币",
+  [FieldType.PERCENTAGE]: "百分比",
+  [FieldType.DURATION]: "时长",
 };
 
 function buildInverseFieldPreview(key: string): string {

@@ -168,7 +168,7 @@ export default async function RecordsPage({
                       {record.status === "COMPLETED" && record.fileName && (
                         <a
                           href={`/api/records/${record.id}/download`}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-[510] text-foreground/90 transition-colors hover:text-foreground"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </a>
@@ -176,6 +176,7 @@ export default async function RecordsPage({
                       <LinkButton
                         variant="ghost"
                         size="sm"
+                        className="text-foreground hover:text-foreground"
                         href={`/records/${record.id}`}
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -200,6 +201,7 @@ export default async function RecordsPage({
               <LinkButton
                 variant="outline"
                 size="sm"
+                className="text-foreground"
                 href={buildUrl(page - 1, status || "")}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -215,6 +217,7 @@ export default async function RecordsPage({
               <LinkButton
                 variant="outline"
                 size="sm"
+                className="text-foreground"
                 href={buildUrl(page + 1, status || "")}
               >
                 下一页

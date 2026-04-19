@@ -87,12 +87,12 @@ export default async function RecordsPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
-        <h1 className="text-3xl font-[510] tracking-[-0.7px] text-[#f7f8f8]">生成记录</h1>
-        <p className="text-sm text-[#8a8f98]">共 {total} 条记录</p>
+      <div className="rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
+        <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">生成记录</h1>
+        <p className="text-sm text-muted-foreground">共 {total} 条记录</p>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto rounded-md border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1">
         {STATUS_TABS.map((tab) => {
           const isActive = (status || "") === tab.value;
           return (
@@ -101,8 +101,8 @@ export default async function RecordsPage({
               href={buildUrl(1, tab.value)}
               className={`shrink-0 rounded-md px-4 py-2 text-sm font-[510] transition-colors ${
                 isActive
-                  ? "bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8]"
-                  : "text-[#8a8f98] hover:bg-[rgb(255_255_255_/_0.04)] hover:text-[#f7f8f8]"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -129,7 +129,7 @@ export default async function RecordsPage({
                   colSpan={5}
                   className="h-32"
                 >
-                  <div className="flex flex-col items-center justify-center text-[#8a8f98]">
+                  <div className="flex flex-col items-center justify-center text-muted-foreground">
                     <History className="h-8 w-8 mb-2" />
                     <p className="text-sm">暂无生成记录</p>
                     <LinkButton
@@ -145,10 +145,10 @@ export default async function RecordsPage({
             ) : (
               records.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell className="font-[510] text-[#f7f8f8]">
+                  <TableCell className="font-[510] text-foreground">
                     {record.template.name}
                   </TableCell>
-                  <TableCell className="text-[#8a8f98]">
+                  <TableCell className="text-muted-foreground">
                     {record.createdAt.toLocaleDateString("zh-CN", {
                       year: "numeric",
                       month: "2-digit",
@@ -160,7 +160,7 @@ export default async function RecordsPage({
                       {STATUS_LABELS[record.status as RecordStatus]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-[#8a8f98]">
+                  <TableCell className="text-muted-foreground">
                     {record.fileName || "-"}
                   </TableCell>
                   <TableCell className="text-right">
@@ -168,7 +168,7 @@ export default async function RecordsPage({
                       {record.status === "COMPLETED" && record.fileName && (
                         <a
                           href={`/api/records/${record.id}/download`}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[#8a8f98] transition-colors hover:text-[#f7f8f8]"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </a>
@@ -192,7 +192,7 @@ export default async function RecordsPage({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-[#8a8f98]">
+          <p className="text-sm text-muted-foreground">
             第 {page} 页，共 {totalPages} 页
           </p>
           <div className="flex gap-2">

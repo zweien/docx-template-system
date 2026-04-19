@@ -16,7 +16,6 @@ import {
 import { getEnabledMcpTools } from "@/lib/agent2/mcp-client";
 import type { MCPClient } from "@ai-sdk/mcp";
 import { db } from "@/lib/db";
-import { decrypt } from "@/lib/services/agent2-model.service";
 
 interface RouteContext {
   params: Promise<{ id: string }>;

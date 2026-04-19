@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, Fragment } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
-  Search,
   Loader2,
   ChevronLeft,
   ChevronRight,

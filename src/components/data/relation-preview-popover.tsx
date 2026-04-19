@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
-import { FieldType } from "@/generated/prisma/enums";
 
 const PREVIEW_SKIPPED_TYPES = new Set([
   "RELATION", "RELATION_SUBTABLE", "COUNT", "LOOKUP", "ROLLUP",

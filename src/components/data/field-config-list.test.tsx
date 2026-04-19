@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { FieldType } from "@/generated/prisma/enums";
-import type { DataFieldItem, DataTableListItem } from "@/types/data-table";
+import type { DataTableListItem } from "@/types/data-table";
 import { FieldConfigList } from "./field-config-list";
 
 vi.mock("next/navigation", () => ({

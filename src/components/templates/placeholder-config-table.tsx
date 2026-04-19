@@ -317,7 +317,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     // Validate
     if (placeholders.length === 0) {
       toast.error("至少需要一个占位符");
@@ -353,9 +353,9 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
     } finally {
       setSaving(false);
     }
-  };
+  }, [placeholders, templateId, hideActions, router]);
 
-  useImperativeHandle(ref, () => ({ save: handleSave }), [placeholders]);
+  useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
   if (loading) {
     return (

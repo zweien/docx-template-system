@@ -184,7 +184,7 @@ export function CategoryTagManager({ open, onOpenChange }: CategoryTagManagerPro
         setTagName("");
         toast.success("标签添加成功");
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error("添加标签失败");
     }
   }, [tagName]);

@@ -32,7 +32,7 @@ export function RelationCellEditor({
 }: RelationCellEditorProps) {
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen] = useState(true);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
   const [mounted, setMounted] = useState(false);
   const committedRef = useRef(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 /**
  * Lightweight IntersectionObserver hook for infinite scroll.
@@ -13,10 +13,13 @@ export function useInfiniteScroll(
     threshold?: number;
     rootMargin?: string;
   }
-): { sentinelRef: React.RefCallback<HTMLElement> } {
+  ): { sentinelRef: React.RefCallback<HTMLElement> } {
   const observerRef = useRef<IntersectionObserver | null>(null);
   const callbackRef = useRef(callback);
-  callbackRef.current = callback;
+
+  useEffect(() => {
+    callbackRef.current = callback;
+  }, [callback]);
 
   const sentinelRef = useCallback(
     (node: HTMLElement | null) => {

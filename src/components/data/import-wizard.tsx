@@ -339,7 +339,7 @@ export function ImportWizard({ tableId, fields, table }: ImportWizardProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [file, preview, mapping, uniqueField, strategy, tableId, importMode, selectedRelationField, sourceMapping, targetMapping, attributeMapping, targetTableId, localFields, table]);
+  }, [file, preview, mapping, uniqueField, strategy, tableId, importMode, selectedRelationField, sourceMapping, targetMapping, attributeMapping, targetTableId, localFields, table, isJsonFile]);
 
   // 关系明细导入：加载目标表字段
   const handleRelationFieldChange = useCallback(async (fieldId: string | null) => {

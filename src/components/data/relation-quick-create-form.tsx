@@ -32,6 +32,9 @@ export function RelationQuickCreateForm({
   const { register, handleSubmit, setValue, watch, reset } = useForm({
     defaultValues: Object.fromEntries(fields.map((f) => [f.key, ""])),
   });
+  // react-hook-form watch 在此处用于动态读取 Select 当前值
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const watchedValues = watch();
 
   // Re-sync form when fields load asynchronously
   useEffect(() => {
@@ -71,7 +74,7 @@ export function RelationQuickCreateForm({
           <Label className="text-xs">{field.label} *</Label>
           {field.type === FieldType.SELECT ? (
             <Select
-              value={watch(field.key) ?? ""}
+              value={(watchedValues[field.key] as string | undefined) ?? ""}
               onValueChange={(v) => { if (v) setValue(field.key, v); }}
             >
               <SelectTrigger size="sm" className="h-7 text-xs">

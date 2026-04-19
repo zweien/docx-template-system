@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import { evaluateFormula, extractFieldRefs, detectCircularRefs, parseFormula } from "@/lib/formula";
+import { evaluateFormula, detectCircularRefs, parseFormula } from "@/lib/formula";
 import type { DataFieldItem } from "@/types/data-table";
 import { parseFieldOptions } from "@/types/data-table";
 

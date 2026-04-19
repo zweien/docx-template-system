@@ -23,7 +23,7 @@ import { parseFieldOptions, parseSelectOptions } from "@/types/data-table";
 import { ColumnHeader } from "@/components/data/column-header";
 import { formatCellValue } from "@/lib/format-cell";
 import { useInlineEdit } from "@/hooks/use-inline-edit";
-import { RichTextPreview, RichTextCellEditor, extractPlainText } from "@/components/data/rich-text-cell-editor";
+import { RichTextPreview, RichTextCellEditor } from "@/components/data/rich-text-cell-editor";
 import { useKeyboardNav, type ActiveCell, type CellRange } from "@/hooks/use-keyboard-nav";
 import { useUndoManager } from "@/hooks/use-undo-manager";
 import { cn } from "@/lib/utils";
@@ -55,6 +55,17 @@ import { toast } from "sonner";
 
 const DEFAULT_COL_WIDTH = 160;
 const CHECKBOX_COL_WIDTH = 40;
+const READONLY_FIELD_TYPES: readonly string[] = [
+  FieldType.AUTO_NUMBER,
+  FieldType.SYSTEM_TIMESTAMP,
+  FieldType.SYSTEM_USER,
+  FieldType.FORMULA,
+  FieldType.RELATION_SUBTABLE,
+  FieldType.COUNT,
+  FieldType.LOOKUP,
+  FieldType.ROLLUP,
+  FieldType.RICH_TEXT,
+];
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 
@@ -264,7 +275,7 @@ export function GridView({
   onVisibleFieldsChange,
   onFieldOrderChange,
   onGroupByChange,
-  onDeleteRecord,
+  onDeleteRecord: _onDeleteRecord,
   deletingIds,
   onRefresh,
   onUpdateRecordField,
@@ -280,7 +291,7 @@ export function GridView({
   conditionalFormatRules,
   onQuickFormat,
   onOpenFieldsConfig,
-  onDeleteField,
+  onDeleteField: _onDeleteField,
   columnAggregations,
   onColumnAggregationsChange,
   rowHeight,
@@ -291,7 +302,7 @@ export function GridView({
   acquireCellLock,
   releaseCellLock,
   broadcastCursor,
-  myColor,
+  myColor: _myColor,
   onLockLost,
   cursorPositions,
 }: GridViewProps) {
@@ -792,19 +803,6 @@ export function GridView({
     [sorts, undoManager, onSortChange, onSortClear]
   );
 
-  const undoableGroupByChange = useCallback(
-    (fieldKey: string | null) => {
-      const prev = groupBy;
-      undoManager.execute({
-        type: "BATCH_UPDATE",
-        description: "修改分组",
-        execute: async () => { onGroupByChange(fieldKey); },
-        undo: async () => { onGroupByChange(prev); },
-      });
-    },
-    [groupBy, undoManager, onGroupByChange]
-  );
-
   useEffect(() => {
     if (!onLockLost) return;
     return onLockLost((recordId, fieldKey) => {
@@ -862,12 +860,6 @@ export function GridView({
     updates: Array<{ recordId: string; fieldKey: string; oldValue: unknown }>;
     anchorRect: { x: number; y: number };
   } | null>(null);
-
-  const READONLY_FIELD_TYPES: readonly string[] = [
-    FieldType.AUTO_NUMBER, FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER,
-    FieldType.FORMULA, FieldType.RELATION_SUBTABLE, FieldType.COUNT, FieldType.LOOKUP,
-    FieldType.ROLLUP, FieldType.RICH_TEXT,
-  ];
 
   const computeFillValue = useCallback((fieldType: string, originalValue: unknown, step: number, mode: "increment" | "copy"): unknown => {
     if (mode === "copy") return originalValue;
@@ -955,7 +947,7 @@ export function GridView({
         }
       };
 
-      const handleMouseUp = async (upEvent: MouseEvent) => {
+      const handleMouseUp = async (_upEvent: MouseEvent) => {
         document.body.style.cursor = "";
         document.body.style.userSelect = "";
         document.removeEventListener("mousemove", handleMouseMove);
@@ -1010,7 +1002,7 @@ export function GridView({
       document.addEventListener("mousemove", handleMouseMove);
       document.addEventListener("mouseup", handleMouseUp);
     },
-    [stableActiveCell, flatRecords, orderedVisibleFields, computeFillValue, handleCommit, undoManager, applyFill]
+    [stableActiveCell, flatRecords, orderedVisibleFields, applyFill]
   );
 
   // Toggle fill mode after completion
@@ -1246,7 +1238,7 @@ export function GridView({
   );
 
   // ── Quick add row ────────────────────────────────────────────────────────
-  const handleQuickAddRow = useCallback(async () => {
+  const handleQuickAddRow = async () => {
     try {
       const res = await fetch(`/api/data-tables/${tableId}/records`, {
         method: "POST",
@@ -1287,10 +1279,10 @@ export function GridView({
     } catch {
       toast.error("新建行失败");
     }
-  }, [tableId, onAddRecord, onRemoveRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing, undoManager]);
+  };
 
   // Insert a new row below the given row index and start editing
-  const handleInsertRowBelow = useCallback(async (currentRowIndex: number) => {
+  const handleInsertRowBelow = async (_currentRowIndex: number) => {
     try {
       const res = await fetch(`/api/data-tables/${tableId}/records`, {
         method: "POST",
@@ -1331,10 +1323,10 @@ export function GridView({
     } catch {
       toast.error("插入行失败");
     }
-  }, [tableId, onAddRecord, onRemoveRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing, undoManager]);
+  };
 
   // Duplicate a row: copy all editable fields into a new row below
-  const handleDuplicateRow = useCallback(async (sourceRecord: DataRecordItem) => {
+  const handleDuplicateRow = async (sourceRecord: DataRecordItem) => {
     const readOnlyTypes: Set<FieldType> = new Set([
       FieldType.RELATION_SUBTABLE, FieldType.AUTO_NUMBER,
       FieldType.SYSTEM_TIMESTAMP, FieldType.SYSTEM_USER, FieldType.FORMULA,
@@ -1385,7 +1377,7 @@ export function GridView({
     } catch {
       toast.error("复制行失败");
     }
-  }, [tableId, onAddRecord, onRemoveRecord, flatRecords.length, orderedVisibleFields, setActiveCell, startEditing, undoManager]);
+  };
 
   // Auto-scroll on stableActiveCell change
   useEffect(() => {
@@ -1437,8 +1429,7 @@ export function GridView({
   );
 
   // ── Editor rendering ────────────────────────────────────────────────────
-  const renderEditor = useCallback(
-    (field: DataFieldItem, record: DataRecordItem) => {
+  const renderEditor = (field: DataFieldItem, record: DataRecordItem) => {
       const originalValue = record.data[field.key];
 
       switch (field.type) {
@@ -1629,13 +1620,10 @@ export function GridView({
         default:
           return null;
       }
-    },
-    [commitEdit, cancelEdit]
-  );
+  };
 
   // ── Cell rendering ──────────────────────────────────────────────────────
-  const renderCell = useCallback(
-    (field: DataFieldItem, record: DataRecordItem) => {
+  const renderCell = (field: DataFieldItem, record: DataRecordItem) => {
       const isEditing =
         editingCell?.recordId === record.id &&
         editingCell?.fieldKey === field.key;
@@ -1679,9 +1667,7 @@ export function GridView({
           {formatCellValue(field, record.data[field.key])}
         </span>
       );
-    },
-    [editingCell, renderEditor]
-  );
+  };
 
   // ── Per-record cell-level conditional format map ────────────────────────
   const cellRuleMapByRecord = useMemo(() => {
@@ -1722,8 +1708,7 @@ export function GridView({
   }, [records, conditionalFormatRules]);
 
   // ── Record row rendering ────────────────────────────────────────────────
-  const renderRecordRow = useCallback(
-    (record: DataRecordItem, index: number, flatRowIndex: number) => {
+  const renderRecordRow = (record: DataRecordItem, index: number, flatRowIndex: number) => {
       const rowStyle = recordStyles[record.id];
       const cellRuleMap = cellRuleMapByRecord[record.id] ?? {};
 
@@ -1918,36 +1903,7 @@ export function GridView({
           {rowContent}
         </tr>
       );
-    },
-    [
-      orderedVisibleFields,
-      renderCell,
-      isAdmin,
-      onDeleteRecord,
-      deletingIds,
-      onOpenDetail,
-      frozenFieldCountValue,
-      columnWidths,
-      canDragSort,
-      selectedIdsSet,
-      toggleRow,
-      stableActiveCell,
-      handleCellClick,
-      startEditing,
-      recordStyles,
-      cellRuleMapByRecord,
-      captureRowHeader,
-      captureCell,
-      rowHeight,
-      fillRange,
-      editingCell,
-      handleFillStart,
-      cursorPositions,
-      commentCounts,
-      cellCommentCounts,
-      fields,
-    ]
-  );
+  };
 
   // ── Column count ────────────────────────────────────────────────────────
   const colCount = orderedVisibleFields.length + 1 + (canDragSort ? 1 : 0) + 1; // +1 for checkbox col
@@ -2031,7 +1987,7 @@ export function GridView({
             onOpenFieldsConfig?.();
           }
         }}
-        onDeleteField={(fieldKey) => {
+        onDeleteField={(_fieldKey) => {
           onOpenFieldsConfig?.();
         }}
         onAddConditionalFormat={(fieldKey, value) => {

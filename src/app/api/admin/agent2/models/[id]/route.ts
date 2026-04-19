@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { ZodError } from "zod";
-import { updateGlobalModel, deleteGlobalModel, testModelConnection } from "@/lib/services/agent2-model.service";
+import { updateGlobalModel, deleteGlobalModel } from "@/lib/services/agent2-model.service";
 import { z } from "zod";
 
 const updateModelSchema = z.object({

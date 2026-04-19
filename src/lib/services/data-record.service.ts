@@ -430,7 +430,7 @@ export async function listRecords(
 
     if (needsFullFetch) {
       // 有排序或内存过滤运算符：取全部匹配记录 → 内存排序/过滤 → 手动分页
-      const [allRecords, totalCount] = await Promise.all([
+      const [allRecords] = await Promise.all([
         db.dataRecord.findMany({
           where,
           include: {

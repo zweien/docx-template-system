@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DataFieldItem, ServiceResult } from "@/types/data-table";
+import type { DataFieldItem } from "@/types/data-table";
 
 // ── Mocks ──
 

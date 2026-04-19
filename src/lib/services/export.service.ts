@@ -328,8 +328,8 @@ export async function exportBundle(
     // Phase 4: Map each table to BundleTable
     const tables: Record<string, BundleTable> = {};
 
-    for (const [tableId, data] of tableDataMap) {
-      const relFieldKeys = new Set(
+    for (const [_tableId, data] of tableDataMap) {
+      const _relFieldKeys = new Set(
         data.fields
           .filter((f) => f.type === "RELATION" || f.type === "RELATION_SUBTABLE")
           .map((f) => f.key)

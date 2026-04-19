@@ -8,7 +8,6 @@ import {
 } from "@/validators/data-table";
 import type { FieldFilters } from "@/lib/services/data-record.service";
 import type { SortConfig, FilterCondition, FilterGroup } from "@/types/data-table";
-import { normalizeFilters } from "@/types/data-table";
 import { logAudit } from "@/lib/services/audit-log.service";
 import { getClientIp, getUserAgent } from "@/lib/request-utils";
 
@@ -25,7 +24,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const searchParams = request.nextUrl.searchParams;
 
-  const hasPage = searchParams.has("page") || searchParams.has("pageSize");
+  const _hasPage = searchParams.has("page") || searchParams.has("pageSize");
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "10000", 10);
   const search = searchParams.get("search") || undefined;

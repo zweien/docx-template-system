@@ -218,7 +218,7 @@ export function AiFillAssistant({
       setLoading(false);
       abortRef.current = null;
     }
-  }, [input, loading, messages, templateName, fields, currentValues, selectedModel]);
+  }, [input, loading, messages, templateId, templateName, fields, currentValues, selectedModel]);
 
   const handleApply = () => {
     if (!suggestions) return;

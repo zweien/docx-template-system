@@ -45,7 +45,7 @@ export function RelationTargetPicker({
   placeholder = "选择目标记录",
   disabled = false,
   multiSelect = false,
-  valueMulti = [],
+  valueMulti: _valueMulti = [],
   onChangeMulti,
 }: RelationTargetPickerProps) {
   const { data: session } = useSession();

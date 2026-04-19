@@ -128,7 +128,7 @@ export function ColumnHeader({
 
   const [targetFieldKey, setTargetFieldKey] = useState<string>(initialTargetFieldKey);
   const [relatedFields, setRelatedFields] = useState<DataFieldItem[]>([]);
-  const [loadingRelated, setLoadingRelated] = useState(false);
+  const [, setLoadingRelated] = useState(false);
 
   // Resolve target field for operator selection
   const effectiveFieldType = (() => {

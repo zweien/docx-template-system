@@ -103,8 +103,7 @@ EOF
 - 标题以 `[Feature]` 或 `[Fix]` 等前缀开头
 - Body 中使用 `Closes #<issue-id>` 关联 issue，合并 PR 时自动关闭
 
-当前处理的 issue:
-- #12: 模型管理标签页配置（管理员设置页面）
+
 
 ## Key Patterns
 

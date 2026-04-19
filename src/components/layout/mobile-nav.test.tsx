@@ -122,6 +122,16 @@ describe("MobileNav", () => {
     expect(screen.getByRole("link", { current: "page" })).toHaveAttribute("href", "/data");
   });
 
+  it("未激活导航项应保留透明边框以避免 hover 抖动", () => {
+    mockUsePathname.mockReturnValue("/data");
+
+    render(<MobileNav />);
+
+    openMenu();
+
+    expect(getLinkByHref("/records")).toHaveClass("border-transparent");
+  });
+
   it("USER 不显示系统设置", () => {
     render(<MobileNav />);
 

@@ -23,7 +23,7 @@ const ACTIVE_ITEM_CLASS_NAME =
   "border border-[rgb(255_255_255_/_0.1)] bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8] shadow-[inset_0_0_0_1px_rgb(113_112_255_/_0.34)]";
 
 const INACTIVE_ITEM_CLASS_NAME =
-  "text-[#8a8f98] hover:border hover:border-[rgb(255_255_255_/_0.08)] hover:bg-[rgb(255_255_255_/_0.03)] hover:text-[#f7f8f8]";
+  "border border-transparent text-[#8a8f98] hover:border-[rgb(255_255_255_/_0.08)] hover:bg-[rgb(255_255_255_/_0.03)] hover:text-[#f7f8f8]";
 
 type MobileNavLinkProps = {
   readonly item: NavItem;
@@ -41,11 +41,11 @@ function MobileNavLink({ item, pathname, onNavigate }: MobileNavLinkProps) {
       aria-current={isActive ? "page" : undefined}
       onNavigate={onNavigate}
       className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-3 text-sm font-[510] transition-all duration-200",
+        "flex items-center gap-3 rounded-md px-3 py-3 text-sm font-[510] transition-[color,background-color,border-color,transform] duration-100",
         isActive ? ACTIVE_ITEM_CLASS_NAME : INACTIVE_ITEM_CLASS_NAME
       )}
     >
-      <span className={cn("transition-transform duration-200", isActive && "scale-110")}>
+      <span className={cn("transition-transform duration-100", isActive && "scale-110")}>
         <Icon className="h-5 w-5" />
       </span>
       {item.label}
@@ -84,6 +84,7 @@ export function MobileNav() {
               alt="IDRL填表系统"
               width={24}
               height={24}
+              style={{ width: "auto", height: "auto" }}
             />
             <span className="text-lg font-[510] tracking-[-0.13px]">IDRL填表系统</span>
           </SheetTitle>

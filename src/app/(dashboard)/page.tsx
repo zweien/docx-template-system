@@ -68,10 +68,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03),0_12px_30px_rgb(0_0_0_/_0.18)] sm:p-6">
+      <div className="rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03),0_12px_30px_rgb(0_0_0_/_0.18)] sm:p-6">
         <p className="text-xs font-[510] uppercase tracking-[0.14em] text-[#7170ff]">Overview</p>
-        <h1 className="mt-2 text-3xl font-[510] tracking-[-0.7px] text-[#f7f8f8]">仪表盘</h1>
-        <p className="mt-1 text-sm text-[#8a8f98]">
+        <h1 className="mt-2 text-3xl font-[510] tracking-[-0.7px] text-foreground">仪表盘</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           欢迎回来，{session?.user?.name ?? "用户"}
         </p>
       </div>
@@ -81,15 +81,15 @@ export default async function DashboardPage() {
           const Icon = stat.icon;
           return (
             <Link key={stat.label} href={stat.href}>
-              <Card className="cursor-pointer border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] transition-[transform,border-color,background-color] hover:-translate-y-0.5 hover:border-[rgb(255_255_255_/_0.15)] hover:bg-[rgb(255_255_255_/_0.04)]">
+              <Card className="cursor-pointer border-border bg-card transition-[transform,border-color,background-color] duration-100 hover:-translate-y-0.5 hover:border-border-hover hover:bg-accent/70">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-[510] text-[#8a8f98]">
+                  <CardTitle className="text-sm font-[510] text-muted-foreground">
                     {stat.label}
                   </CardTitle>
-                  <Icon className="h-4 w-4 text-[#d0d6e0]" />
+                  <Icon className="h-4 w-4 text-secondary-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-3xl font-[510] tracking-[-0.2px] text-[#f7f8f8]">{stat.value}</div>
+                  <div className="text-3xl font-[510] tracking-[-0.2px] text-foreground">{stat.value}</div>
                 </CardContent>
               </Card>
             </Link>

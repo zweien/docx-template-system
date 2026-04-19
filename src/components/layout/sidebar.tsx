@@ -17,7 +17,7 @@ const ACTIVE_ITEM_CLASS_NAME =
   "border border-[rgb(255_255_255_/_0.1)] bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8] shadow-[inset_0_0_0_1px_rgb(113_112_255_/_0.34)]";
 
 const INACTIVE_ITEM_CLASS_NAME =
-  "text-[#8a8f98] hover:border hover:border-[rgb(255_255_255_/_0.08)] hover:bg-[rgb(255_255_255_/_0.03)] hover:text-[#f7f8f8]";
+  "border border-transparent text-[#8a8f98] hover:border-[rgb(255_255_255_/_0.08)] hover:bg-[rgb(255_255_255_/_0.03)] hover:text-[#f7f8f8]";
 
 type SidebarNavLinkProps = {
   readonly collapsed: boolean;
@@ -35,12 +35,12 @@ function SidebarNavLink({ collapsed, item, pathname }: SidebarNavLinkProps) {
       title={collapsed ? item.label : undefined}
       aria-current={isActive ? "page" : undefined}
       className={cn(
-        "flex items-center rounded-md text-sm font-[510] transition-all duration-200",
+        "flex items-center rounded-md text-sm font-[510] transition-[color,background-color,border-color,transform,opacity] duration-100",
         collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
         isActive ? ACTIVE_ITEM_CLASS_NAME : INACTIVE_ITEM_CLASS_NAME
       )}
     >
-      <span className={cn("shrink-0 transition-transform duration-200", isActive && "scale-110")}>
+      <span className={cn("shrink-0 transition-transform duration-100", isActive && "scale-110")}>
         <Icon className="h-4 w-4" />
       </span>
       <span
@@ -67,7 +67,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden h-screen shrink-0 flex-col border-r border-[rgb(255_255_255_/_0.05)] bg-[rgb(15_16_17_/_0.92)] backdrop-blur-xl transition-[width] duration-200 md:flex",
+        "hidden h-screen shrink-0 flex-col border-r border-[rgb(255_255_255_/_0.05)] bg-[rgb(15_16_17_/_0.92)] backdrop-blur-xl transition-[width] duration-100 md:flex",
         collapsed ? "w-16" : "w-60"
       )}
     >
@@ -78,11 +78,12 @@ export function Sidebar() {
             alt="IDRL填表系统"
             width={28}
             height={28}
+            style={{ width: "auto", height: "auto" }}
             className="shrink-0 transition-transform group-hover:scale-110"
           />
           <span
             className={cn(
-              "whitespace-nowrap text-base font-[510] tracking-[-0.13px] text-[#f7f8f8] transition-opacity duration-200",
+              "whitespace-nowrap text-base font-[510] tracking-[-0.13px] text-[#f7f8f8] transition-opacity duration-100",
               collapsed && "w-0 overflow-hidden opacity-0"
             )}
           >

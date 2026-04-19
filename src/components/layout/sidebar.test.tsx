@@ -84,4 +84,12 @@ describe("Sidebar", () => {
 
     expect(toggleCollapsed).toHaveBeenCalledTimes(1);
   });
+
+  it("未激活导航项应保留透明边框以避免 hover 抖动", () => {
+    mockUsePathname.mockReturnValue("/data");
+
+    render(<Sidebar />);
+
+    expect(screen.getByRole("link", { name: "生成记录" })).toHaveClass("border-transparent");
+  });
 });

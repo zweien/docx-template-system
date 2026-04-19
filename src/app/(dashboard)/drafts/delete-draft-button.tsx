@@ -54,12 +54,12 @@ export function DeleteDraftButton({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
         render={
-          <Button variant="destructive" size="sm" />
+          <Button variant="destructive" size="sm">
+            <Trash2 className="h-4 w-4" />
+            删除
+          </Button>
         }
-      >
-        <Trash2 className="h-4 w-4" />
-        删除
-      </DialogTrigger>
+      />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>确认删除</DialogTitle>

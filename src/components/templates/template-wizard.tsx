@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -10,12 +11,12 @@ import {
   ArrowRight,
   Check,
   Loader2,
-  Image,
+  Image as LucideImage,
 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { PlaceholderConfigTable, type PlaceholderConfigTableHandle } from "./placeholder-config-table";
 import { CategorySelect } from "./category-select";
 import { TagMultiSelect } from "./tag-multi-select";
@@ -641,7 +642,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
                     </div>
                   ) : (
                     <>
-                      <Image className="mb-2 h-8 w-8 text-muted-foreground" />
+                      <LucideImage className="mb-2 h-8 w-8 text-muted-foreground" />
                       <p className="text-sm text-muted-foreground">点击选择图片或 Ctrl+V 粘贴</p>
                     </>
                   )}

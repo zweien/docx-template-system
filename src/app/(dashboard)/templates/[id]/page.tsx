@@ -102,17 +102,17 @@ export default async function TemplateDetailPage({
       <LinkButton
         variant="ghost"
         size="sm"
-        className="text-[#8a8f98] hover:text-[#f7f8f8]"
+        className="text-muted-foreground hover:text-foreground"
         href="/templates"
       >
         <ArrowLeft className="h-4 w-4" />
         返回模板列表
       </LinkButton>
 
-      <div className="flex flex-col gap-4 rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)] sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)] sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1 min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-[510] tracking-[-0.7px] text-[#f7f8f8]">
+            <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">
               {template.name}
             </h1>
             <Badge variant={STATUS_VARIANTS[template.status]}>
@@ -123,7 +123,7 @@ export default async function TemplateDetailPage({
             )}
           </div>
           {template.description && (
-            <p className="text-[#8a8f98]">{template.description}</p>
+            <p className="text-muted-foreground">{template.description}</p>
           )}
           {template.screenshot && (
             <div className="mt-2 max-w-xs">
@@ -169,17 +169,17 @@ export default async function TemplateDetailPage({
         </div>
       </div>
 
-      <Separator className="bg-[rgb(255_255_255_/_0.08)]" />
+      <Separator className="bg-border" />
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <FileText className="h-4 w-4 text-[#8a8f98]" />
+            <FileText className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-sm font-[510]">文件信息</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-[510] text-[#f7f8f8]">{template.originalFileName || template.fileName}</p>
-            <p className="text-xs text-[#8a8f98]">
+            <p className="text-sm font-[510] text-foreground">{template.originalFileName || template.fileName}</p>
+            <p className="text-xs text-muted-foreground">
               {formatFileSize(template.fileSize)}
             </p>
           </CardContent>
@@ -187,21 +187,21 @@ export default async function TemplateDetailPage({
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <User className="h-4 w-4 text-[#8a8f98]" />
+            <User className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-sm font-[510]">创建者</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-[510] text-[#f7f8f8]">{template.createdBy.name}</p>
+            <p className="text-sm font-[510] text-foreground">{template.createdBy.name}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <CalendarDays className="h-4 w-4 text-[#8a8f98]" />
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-sm font-[510]">创建时间</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-[510] text-[#f7f8f8]">
+            <p className="text-sm font-[510] text-foreground">
               {template.createdAt.toLocaleDateString("zh-CN", {
                 year: "numeric",
                 month: "2-digit",
@@ -213,11 +213,11 @@ export default async function TemplateDetailPage({
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <HardDrive className="h-4 w-4 text-[#8a8f98]" />
+            <HardDrive className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-sm font-[510]">占位符数量</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-[510] text-[#f7f8f8]">
+            <p className="text-sm font-[510] text-foreground">
               {template.placeholders.length} 个
             </p>
           </CardContent>
@@ -303,11 +303,11 @@ export default async function TemplateDetailPage({
                 <TableBody>
                   {template.placeholders.map((ph) => (
                     <TableRow key={ph.id}>
-                      <TableCell className="font-mono text-sm text-[#d0d6e0]">
+                      <TableCell className="font-mono text-sm text-secondary-foreground">
                         {ph.key}
                       </TableCell>
                       <TableCell>{ph.label}</TableCell>
-                      <TableCell className="max-w-[200px] truncate text-xs text-[#8a8f98]">
+                      <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                         {ph.description || "—"}
                       </TableCell>
                       <TableCell>
@@ -334,9 +334,9 @@ export default async function TemplateDetailPage({
       </Card>
 
       {isAdmin && (
-        <Card className="border-[rgb(239_68_68_/_0.4)]">
+        <Card className="border-destructive/45">
           <CardHeader>
-            <CardTitle className="text-[#ff8f8f]">危险操作</CardTitle>
+            <CardTitle className="text-destructive">危险操作</CardTitle>
             <CardDescription>
               以下操作不可撤销，请谨慎执行
             </CardDescription>
@@ -345,7 +345,7 @@ export default async function TemplateDetailPage({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">删除模板</p>
-                <p className="text-xs text-[#8a8f98]">
+                <p className="text-xs text-muted-foreground">
                   删除后将同时移除所有关联的占位符、草稿和生成记录
                 </p>
               </div>

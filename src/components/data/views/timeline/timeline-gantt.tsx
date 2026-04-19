@@ -18,9 +18,9 @@ interface TimelineGanttProps {
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const COLUMN_WIDTH_BY_SCALE: Record<TimelineScale, number> = {
-  day: 32,
   week: 18,
   month: 8,
+  quarter: 4,
 };
 
 function getTimelineRange(items: TimelineBarItem[]): { min: Date; max: Date } {

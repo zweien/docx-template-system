@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 
-export type TimelineScale = "day" | "week" | "month";
+export type TimelineScale = "week" | "month" | "quarter";
 
 interface TimelineOptionsProps {
   scale: TimelineScale;
@@ -10,9 +10,9 @@ interface TimelineOptionsProps {
 }
 
 const OPTIONS: Array<{ value: TimelineScale; label: string }> = [
-  { value: "day", label: "日" },
   { value: "week", label: "周" },
   { value: "month", label: "月" },
+  { value: "quarter", label: "季度" },
 ];
 
 export function TimelineOptions({ scale, onScaleChange }: TimelineOptionsProps) {

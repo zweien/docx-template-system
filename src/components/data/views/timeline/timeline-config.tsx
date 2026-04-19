@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { FieldType } from "@/generated/prisma/enums";
 import type { DataFieldItem } from "@/types/data-table";
 
@@ -16,7 +17,10 @@ interface TimelineConfigProps {
   startDateField: string | null;
   endDateField: string | null;
   labelField: string | null;
+  milestoneFieldKey: string | null;
+  dependencyEnabled: boolean;
   onChange: (key: string, value: string | null) => void;
+  onToggleChange: (key: string, value: boolean) => void;
 }
 
 export function TimelineConfig({
@@ -24,9 +28,13 @@ export function TimelineConfig({
   startDateField,
   endDateField,
   labelField,
+  milestoneFieldKey,
+  dependencyEnabled,
   onChange,
+  onToggleChange,
 }: TimelineConfigProps) {
   const dateFields = fields.filter((f) => f.type === FieldType.DATE);
+  const booleanFields = fields.filter((f) => f.type === FieldType.BOOLEAN);
 
   return (
     <div className="grid gap-3 sm:grid-cols-3">
@@ -86,6 +94,35 @@ export function TimelineConfig({
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="grid gap-1.5">
+        <Label className="text-xs text-muted-foreground">里程碑字段</Label>
+        <Select
+          value={milestoneFieldKey ?? "_none"}
+          onValueChange={(v) => onChange("milestoneFieldKey", v === "_none" ? null : v)}
+        >
+          <SelectTrigger className="h-8 text-sm">
+            <SelectValue placeholder="可选" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_none">不选择</SelectItem>
+            {booleanFields.map((f) => (
+              <SelectItem key={f.key} value={f.key}>
+                {f.label} ({f.key})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center justify-between rounded-md border px-3 py-2 sm:col-span-3">
+        <Label className="text-xs text-muted-foreground">启用依赖连线</Label>
+        <Switch
+          checked={dependencyEnabled}
+          onCheckedChange={(checked) => onToggleChange("dependencyEnabled", checked)}
+          size="sm"
+        />
       </div>
     </div>
   );

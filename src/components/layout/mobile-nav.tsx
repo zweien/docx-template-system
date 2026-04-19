@@ -82,9 +82,9 @@ export function MobileNav() {
             <Image
               src="/logo.png"
               alt="IDRL填表系统"
-              width={24}
-              height={24}
-              style={{ width: "24px", height: "auto" }}
+              width={260}
+              height={145}
+              className="h-6 w-auto"
             />
             <span className="text-lg font-[510] tracking-[-0.13px]">IDRL填表系统</span>
           </SheetTitle>

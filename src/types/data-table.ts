@@ -143,6 +143,20 @@ export interface DataTableDetail extends DataTableListItem {
   businessKeys?: string[];
 }
 
+export type TaskDependencyType = "FS";
+
+export interface TaskDependencyItem {
+  id: string;
+  tableId: string;
+  successorRecordId: string;
+  predecessorRecordId: string;
+  type: TaskDependencyType;
+  lagDays: number;
+  required: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // ========== Record Types ==========
 
 export interface DataRecordItem{

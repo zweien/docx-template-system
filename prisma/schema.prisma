@@ -313,6 +313,10 @@ enum RelationCardinality {
   MULTIPLE
 }
 
+enum TaskDependencyType {
+  FS
+}
+
 model DataTable {
   id               String            @id @default(cuid())
   name             String            @unique
@@ -326,6 +330,7 @@ model DataTable {
   batchGenerations BatchGeneration[]
   templateVersions TemplateVersion[]
   views            DataView[]
+  taskDependencies TaskDependency[]
   createdBy        User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdById      String
   createdAt        DateTime          @default(now())
@@ -367,6 +372,8 @@ model DataRecord {
   data             Json
   relationRowsFrom DataRelationRow[] @relation("RelationRowsAsSource")
   relationRowsTo   DataRelationRow[] @relation("RelationRowsAsTarget")
+  successorDependencies   TaskDependency[] @relation("TaskDependencyAsSuccessor")
+  predecessorDependencies TaskDependency[] @relation("TaskDependencyAsPredecessor")
   records          Record[]
   createdBy        User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdById      String
@@ -381,6 +388,25 @@ model DataRecord {
   @@index([tableId, createdById])             // 复合索引加速用户记录查询
   changeHistories DataRecordChangeHistory[]
   comments        DataRecordComment[]
+}
+
+model TaskDependency {
+  id                  String             @id @default(cuid())
+  tableId             String
+  table               DataTable          @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  successorRecordId   String
+  successorRecord     DataRecord         @relation("TaskDependencyAsSuccessor", fields: [successorRecordId], references: [id], onDelete: Cascade)
+  predecessorRecordId String
+  predecessorRecord   DataRecord         @relation("TaskDependencyAsPredecessor", fields: [predecessorRecordId], references: [id], onDelete: Cascade)
+  type                TaskDependencyType @default(FS)
+  lagDays             Int                @default(0)
+  required            Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@unique([successorRecordId, predecessorRecordId, type])
+  @@index([tableId, successorRecordId])
+  @@index([tableId, predecessorRecordId])
 }
 
 model DataRecordChangeHistory {
@@ -846,4 +872,3 @@ model DataRecordComment {
   @@index([createdById])
   @@map("data_record_comments")
 }
-

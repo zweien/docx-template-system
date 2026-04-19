@@ -124,6 +124,18 @@ export const updateFieldsSchema = z.object({
   businessKeys: z.array(z.string()).max(5).optional(),
 });
 
+// ========== Task Dependency Schemas ==========
+
+export const dependencyTypeSchema = z.enum(["FS"]);
+
+export const taskDependencyInputSchema = z.object({
+  successorRecordId: z.string().min(1, "successorRecordId 不能为空"),
+  predecessorRecordId: z.string().min(1, "predecessorRecordId 不能为空"),
+  type: dependencyTypeSchema.default("FS"),
+  lagDays: z.number().int().default(0),
+  required: z.boolean().default(true),
+});
+
 // ========== Record Schemas ==========
 
 export const recordQuerySchema = z.object({
@@ -192,6 +204,7 @@ export const reorderSchema = z.object({
 export type CreateTableInput = z.infer<typeof createTableSchema>;
 export type UpdateTableInput = z.infer<typeof updateTableSchema>;
 export type UpdateFieldsInput = z.infer<typeof updateFieldsSchema>;
+export type TaskDependencyInput = z.infer<typeof taskDependencyInputSchema>;
 export type DataFieldInput = z.input<typeof dataFieldItemSchema>;
 export type RecordQueryInput = z.infer<typeof recordQuerySchema>;
 export type CreateRecordInput = z.infer<typeof createRecordSchema>;

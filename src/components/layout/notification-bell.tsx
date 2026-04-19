@@ -143,7 +143,7 @@ export function NotificationBell() {
 
   return (
     <div className="relative" ref={panelRef}>
-      <Button variant="ghost" size="icon" onClick={handleToggle} className="relative">
+      <Button variant="ghost" size="icon" onClick={handleToggle} className="relative text-[#8a8f98] hover:text-[#f7f8f8]">
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
@@ -153,11 +153,11 @@ export function NotificationBell() {
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-80 overflow-y-auto rounded-lg border bg-popover shadow-md">
-          <div className="flex items-center justify-between border-b px-3 py-2">
-            <span className="text-sm font-semibold">通知</span>
+        <div className="absolute right-0 top-full z-50 mt-2 max-h-80 w-80 overflow-y-auto rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] shadow-[0_16px_40px_rgb(0_0_0_/_0.35)]">
+          <div className="flex items-center justify-between border-b border-[rgb(255_255_255_/_0.05)] px-3 py-2">
+            <span className="text-sm font-[510] text-[#f7f8f8]">通知</span>
             {unreadCount > 0 ? (
-              <Button variant="ghost" size="xs" onClick={handleMarkAllAsRead} className="gap-1 text-xs text-muted-foreground">
+              <Button variant="ghost" size="xs" onClick={handleMarkAllAsRead} className="gap-1 text-xs text-[#8a8f98] hover:text-[#f7f8f8]">
                 <CheckCheck className="h-3 w-3" />
                 全部已读
               </Button>
@@ -166,9 +166,9 @@ export function NotificationBell() {
 
           <div className="divide-y">
             {loadingList ? (
-              <div className="px-3 py-6 text-center text-sm text-muted-foreground">加载中...</div>
+              <div className="px-3 py-6 text-center text-sm text-[#8a8f98]">加载中...</div>
             ) : notifications.length === 0 ? (
-              <div className="px-3 py-6 text-center text-sm text-muted-foreground">暂无通知</div>
+              <div className="px-3 py-6 text-center text-sm text-[#8a8f98]">暂无通知</div>
             ) : (
               notifications.map((notification) => {
                 const badge = TYPE_BADGE[notification.type];
@@ -178,22 +178,22 @@ export function NotificationBell() {
                     type="button"
                     onClick={() => handleMarkAsRead(notification)}
                     className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors ${
-                      !notification.isRead ? "bg-blue-50 dark:bg-blue-950/20" : ""
+                      !notification.isRead ? "bg-[rgb(113_112_255_/_0.14)]" : ""
                     }`}
                   >
                     <div className="flex items-start gap-2">
                       <span className={`mt-1 inline-block size-2 shrink-0 rounded-full ${badge.color}`} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-muted-foreground">{badge.label}</span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs font-[510] text-[#8a8f98]">{badge.label}</span>
+                          <span className="text-xs text-[#62666d]">
                             {formatRelativeTime(notification.createdAt)}
                           </span>
                         </div>
-                        <p className={`text-sm truncate ${notification.isRead ? "text-muted-foreground" : ""}`}>
+                        <p className={`truncate text-sm ${notification.isRead ? "text-[#8a8f98]" : "text-[#f7f8f8]"}`}>
                           {notification.title}
                         </p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{notification.content}</p>
+                        <p className="line-clamp-1 text-xs text-[#8a8f98]">{notification.content}</p>
                       </div>
                     </div>
                   </button>
@@ -202,7 +202,7 @@ export function NotificationBell() {
             )}
           </div>
 
-          <div className="border-t px-3 py-2 text-center">
+          <div className="border-t border-[rgb(255_255_255_/_0.05)] px-3 py-2 text-center">
             <a
               href="/notifications"
               onClick={(e) => {
@@ -211,7 +211,7 @@ export function NotificationBell() {
                 // Navigate via router if a notifications page exists
                 router.push("/notifications");
               }}
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="text-xs text-[#8a8f98] hover:text-[#f7f8f8]"
             >
               查看全部通知
             </a>

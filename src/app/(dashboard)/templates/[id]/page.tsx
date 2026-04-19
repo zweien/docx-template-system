@@ -100,10 +100,10 @@ export default async function TemplateDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Back button */}
       <Button
         variant="ghost"
         size="sm"
+        className="text-[#8a8f98] hover:text-[#f7f8f8]"
         nativeButton={false}
         render={<Link href="/templates" />}
       >
@@ -111,11 +111,10 @@ export default async function TemplateDetailPage({
         返回模板列表
       </Button>
 
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)] sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1 min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-3xl font-[510] tracking-[-0.7px] text-[#f7f8f8]">
               {template.name}
             </h1>
             <Badge variant={STATUS_VARIANTS[template.status]}>
@@ -126,7 +125,7 @@ export default async function TemplateDetailPage({
             )}
           </div>
           {template.description && (
-            <p className="text-muted-foreground">{template.description}</p>
+            <p className="text-[#8a8f98]">{template.description}</p>
           )}
           {template.screenshot && (
             <div className="mt-2 max-w-xs">
@@ -175,18 +174,17 @@ export default async function TemplateDetailPage({
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-[rgb(255_255_255_/_0.08)]" />
 
-      {/* Info cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">文件信息</CardTitle>
+            <FileText className="h-4 w-4 text-[#8a8f98]" />
+            <CardTitle className="text-sm font-[510]">文件信息</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium">{template.originalFileName || template.fileName}</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm font-[510] text-[#f7f8f8]">{template.originalFileName || template.fileName}</p>
+            <p className="text-xs text-[#8a8f98]">
               {formatFileSize(template.fileSize)}
             </p>
           </CardContent>
@@ -194,21 +192,21 @@ export default async function TemplateDetailPage({
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <User className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">创建者</CardTitle>
+            <User className="h-4 w-4 text-[#8a8f98]" />
+            <CardTitle className="text-sm font-[510]">创建者</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium">{template.createdBy.name}</p>
+            <p className="text-sm font-[510] text-[#f7f8f8]">{template.createdBy.name}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">创建时间</CardTitle>
+            <CalendarDays className="h-4 w-4 text-[#8a8f98]" />
+            <CardTitle className="text-sm font-[510]">创建时间</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium">
+            <p className="text-sm font-[510] text-[#f7f8f8]">
               {template.createdAt.toLocaleDateString("zh-CN", {
                 year: "numeric",
                 month: "2-digit",
@@ -220,18 +218,17 @@ export default async function TemplateDetailPage({
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">占位符数量</CardTitle>
+            <HardDrive className="h-4 w-4 text-[#8a8f98]" />
+            <CardTitle className="text-sm font-[510]">占位符数量</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium">
+            <p className="text-sm font-[510] text-[#f7f8f8]">
               {template.placeholders.length} 个
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* P2: 主数据关联 */}
       {isAdmin && (
         <Card>
           <CardHeader>
@@ -256,7 +253,6 @@ export default async function TemplateDetailPage({
         </Card>
       )}
 
-      {/* AI Fill Assist Prompt — admin only */}
       {isAdmin && (
         <Card>
           <CardHeader>
@@ -274,7 +270,6 @@ export default async function TemplateDetailPage({
         </Card>
       )}
 
-      {/* Placeholders table */}
       <Card>
         <CardHeader>
           <CardTitle>占位符列表</CardTitle>
@@ -300,7 +295,7 @@ export default async function TemplateDetailPage({
               )}
             </div>
           ) : (
-            <div className="rounded-lg border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -316,11 +311,11 @@ export default async function TemplateDetailPage({
                 <TableBody>
                   {template.placeholders.map((ph) => (
                     <TableRow key={ph.id}>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="font-mono text-sm text-[#d0d6e0]">
                         {ph.key}
                       </TableCell>
                       <TableCell>{ph.label}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                      <TableCell className="max-w-[200px] truncate text-xs text-[#8a8f98]">
                         {ph.description || "—"}
                       </TableCell>
                       <TableCell>
@@ -346,11 +341,10 @@ export default async function TemplateDetailPage({
         </CardContent>
       </Card>
 
-      {/* Danger zone */}
       {isAdmin && (
-        <Card className="border-destructive/50">
+        <Card className="border-[rgb(239_68_68_/_0.4)]">
           <CardHeader>
-            <CardTitle className="text-destructive">危险操作</CardTitle>
+            <CardTitle className="text-[#ff8f8f]">危险操作</CardTitle>
             <CardDescription>
               以下操作不可撤销，请谨慎执行
             </CardDescription>
@@ -359,7 +353,7 @@ export default async function TemplateDetailPage({
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">删除模板</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-[#8a8f98]">
                   删除后将同时移除所有关联的占位符、草稿和生成记录
                 </p>
               </div>

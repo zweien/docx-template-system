@@ -94,16 +94,16 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
   return (
     <>
       <Link href={`/data/${table.id}`}>
-        <Card className="hover:border-zinc-400 transition-colors cursor-pointer h-full">
+        <Card className="h-full cursor-pointer border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] transition-[transform,border-color,background-color] hover:-translate-y-0.5 hover:border-[rgb(255_255_255_/_0.15)] hover:bg-[rgb(255_255_255_/_0.04)]">
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <CardTitle className="text-lg flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-lg">
                   {table.icon && <span>{table.icon}</span>}
                   {table.name}
                 </CardTitle>
                 {table.description && (
-                  <CardDescription className="line-clamp-2">
+                  <CardDescription className="line-clamp-2 text-[#8a8f98]">
                     {table.description}
                   </CardDescription>
                 )}
@@ -113,7 +113,7 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-[#8a8f98] hover:text-[#f7f8f8]">
                           <svg
                             xmlns="http://www.w3.org/2000/svg"
                             width="16"
@@ -132,7 +132,7 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
                         </Button>
                       }
                     />
-                    <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] text-[#f7f8f8]">
                       <DropdownMenuItem render={<Link href={`/data/${table.id}`}>查看数据</Link>} />
                       <DropdownMenuItem render={<Link href={`/data/${table.id}/fields`}>配置字段</Link>} />
                       <DropdownMenuItem render={<Link href={`/data/${table.id}/import`}>导入数据</Link>} />
@@ -165,7 +165,7 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
                         编辑描述
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        className="text-red-600"
+                        className="text-red-300"
                         onClick={handleDelete}
                         disabled={isDeleting}
                       >
@@ -178,7 +178,7 @@ export function TableCard({ table, onDelete, isAdmin }: TableCardProps) {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="flex items-center gap-4 text-sm text-zinc-500">
+            <div className="flex items-center gap-4 text-sm text-[#8a8f98]">
               <div className="flex items-center gap-1">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

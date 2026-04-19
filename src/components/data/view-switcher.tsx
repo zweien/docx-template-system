@@ -65,7 +65,7 @@ export function ViewSwitcher({
 }: ViewSwitcherProps) {
   return (
     <TooltipProvider>
-      <div className="flex items-center gap-0.5 border rounded-md p-0.5">
+      <div className="flex items-center gap-0.5 rounded-md border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-0.5">
         {VIEW_ITEMS.map(({ type, label, Icon }) => {
           const active = currentType === type;
 
@@ -77,6 +77,7 @@ export function ViewSwitcher({
                     type="button"
                     size="icon-sm"
                     variant={active ? "secondary" : "ghost"}
+                    className={active ? "bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8]" : "text-[#8a8f98] hover:text-[#f7f8f8]"}
                     onClick={() => onTypeChange(type)}
                     aria-label={label}
                   />

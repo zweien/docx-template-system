@@ -463,8 +463,7 @@ export function RecordTable({
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-4">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-3 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)] sm:flex-row sm:items-center">
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
           <ViewSelector
             tableId={tableId}
@@ -482,7 +481,7 @@ export function RecordTable({
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 text-muted-foreground"
+              className="h-9 text-[#8a8f98] hover:text-[#f7f8f8]"
               onClick={() => {
                 setFilters([]);
                 setSorts([]);
@@ -522,9 +521,9 @@ export function RecordTable({
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button variant="outline" size="sm">
-                    <ArrowUpDown className="h-4 w-4 mr-1" />
-                    行高
+              <Button variant="outline" size="sm">
+                <ArrowUpDown className="h-4 w-4 mr-1" />
+                行高
                   </Button>
                 }
               />
@@ -538,7 +537,7 @@ export function RecordTable({
                   <DropdownMenuItem
                     key={h}
                     onClick={() => handleRowHeightChange(h)}
-                    className={rowHeight === h ? "font-bold bg-muted" : ""}
+                    className={rowHeight === h ? "bg-[rgb(113_112_255_/_0.14)] font-[510]" : ""}
                   >
                     {label}
                   </DropdownMenuItem>
@@ -605,7 +604,7 @@ export function RecordTable({
             <Activity className="h-4 w-4 mr-1" />
             动态
             {isConnected && (
-              <span className="ml-1 w-2 h-2 rounded-full bg-green-500 inline-block" />
+              <span className="ml-1 inline-block h-2 w-2 rounded-full bg-emerald-400" />
             )}
           </Button>
         </div>
@@ -623,7 +622,7 @@ export function RecordTable({
 
       {/* Record count */}
       {!isLoading && (
-        <div className="text-sm text-zinc-500 flex-shrink-0">
+        <div className="flex-shrink-0 text-sm text-[#8a8f98]">
           共 {totalCount} 条
         </div>
       )}

@@ -87,24 +87,22 @@ export default async function RecordsPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">生成记录</h1>
-        <p className="text-muted-foreground">共 {total} 条记录</p>
+      <div className="rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
+        <h1 className="text-3xl font-[510] tracking-[-0.7px] text-[#f7f8f8]">生成记录</h1>
+        <p className="text-sm text-[#8a8f98]">共 {total} 条记录</p>
       </div>
 
-      {/* Status Filter Tabs */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1 overflow-x-auto rounded-md border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-1">
         {STATUS_TABS.map((tab) => {
           const isActive = (status || "") === tab.value;
           return (
             <Link
               key={tab.value}
               href={buildUrl(1, tab.value)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`shrink-0 rounded-md px-4 py-2 text-sm font-[510] transition-colors ${
                 isActive
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                  ? "bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8]"
+                  : "text-[#8a8f98] hover:bg-[rgb(255_255_255_/_0.04)] hover:text-[#f7f8f8]"
               }`}
             >
               {tab.label}
@@ -113,8 +111,7 @@ export default async function RecordsPage({
         })}
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -132,7 +129,7 @@ export default async function RecordsPage({
                   colSpan={5}
                   className="h-32"
                 >
-                  <div className="flex flex-col items-center justify-center text-muted-foreground">
+                  <div className="flex flex-col items-center justify-center text-[#8a8f98]">
                     <History className="h-8 w-8 mb-2" />
                     <p className="text-sm">暂无生成记录</p>
                     <Button
@@ -149,10 +146,10 @@ export default async function RecordsPage({
             ) : (
               records.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-[510] text-[#f7f8f8]">
                     {record.template.name}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-[#8a8f98]">
                     {record.createdAt.toLocaleDateString("zh-CN", {
                       year: "numeric",
                       month: "2-digit",
@@ -164,7 +161,7 @@ export default async function RecordsPage({
                       {STATUS_LABELS[record.status as RecordStatus]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="text-[#8a8f98]">
                     {record.fileName || "-"}
                   </TableCell>
                   <TableCell className="text-right">
@@ -172,7 +169,7 @@ export default async function RecordsPage({
                       {record.status === "COMPLETED" && record.fileName && (
                         <a
                           href={`/api/records/${record.id}/download`}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[#8a8f98] transition-colors hover:text-[#f7f8f8]"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </a>
@@ -195,10 +192,9 @@ export default async function RecordsPage({
         </Table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[#8a8f98]">
             第 {page} 页，共 {totalPages} 页
           </p>
           <div className="flex gap-2">

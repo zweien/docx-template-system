@@ -64,10 +64,10 @@ function DevLoginForm({ callbackUrl }: { callbackUrl: string }) {
   }
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)]">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">开发模式登录</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-2xl font-[510] tracking-[-0.35px]">开发模式登录</CardTitle>
+        <CardDescription className="text-[#8a8f98]">
           选择身份直接登录，无需 Authentik
         </CardDescription>
       </CardHeader>
@@ -89,7 +89,7 @@ function DevLoginForm({ callbackUrl }: { callbackUrl: string }) {
             </Button>
           ))}
         </div>
-        <p className="mt-4 text-center text-xs text-muted-foreground">
+        <p className="mt-4 text-center text-xs text-[#62666d]">
           ⚠️ 开发绕过模式（DEV_BYPASS_AUTH=true）· v
           {process.env.NEXT_PUBLIC_APP_VERSION}
         </p>
@@ -118,23 +118,23 @@ function AuthentikLoginForm({ callbackUrl }: { callbackUrl: string }) {
   }
 
   return (
-    <Card className="w-full max-w-md">
+    <Card className="w-full max-w-md border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)]">
       <CardHeader className="text-center">
-        <CardTitle className="text-2xl">登录</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-2xl font-[510] tracking-[-0.35px]">登录</CardTitle>
+        <CardDescription className="text-[#8a8f98]">
           使用统一认证中心登录 IDRL填表系统
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[#8a8f98]">
             登录认证由统一认证中心负责，系统内部权限继续按本地角色控制。
           </p>
           <Button onClick={handleSubmit} className="w-full" disabled={isLoading}>
             {isLoading ? "跳转中..." : "前往统一登录"}
           </Button>
         </div>
-        <p className="mt-4 text-center text-xs text-muted-foreground">
+        <p className="mt-4 text-center text-xs text-[#62666d]">
           v{process.env.NEXT_PUBLIC_APP_VERSION}
         </p>
       </CardContent>
@@ -155,8 +155,16 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
+    <div className="w-full max-w-md">
+      <div className="mb-6 text-center">
+        <p className="text-xs font-[510] uppercase tracking-[0.14em] text-[#7170ff]">IDRL</p>
+        <h1 className="mt-2 text-[32px] font-[510] leading-[1.13] tracking-[-0.704px] text-[#f7f8f8]">
+          文档填表系统
+        </h1>
+      </div>
+      <Suspense>
+        <LoginForm />
+      </Suspense>
+    </div>
   );
 }

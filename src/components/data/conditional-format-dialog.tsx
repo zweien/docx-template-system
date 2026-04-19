@@ -91,15 +91,15 @@ export function ConditionalFormatDialog({
         <Paintbrush className="h-4 w-4 mr-1" />
         条件格式 {rules.length > 0 && `(${rules.length})`}
       </DialogTrigger>
-      <DialogContent className="max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-h-[80vh] max-w-[600px] overflow-y-auto border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] text-[#f7f8f8]">
         <DialogHeader>
-          <DialogTitle>条件格式规则</DialogTitle>
+          <DialogTitle className="font-[510] tracking-[-0.13px]">条件格式规则</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
           {rules.map((rule) => (
             <div
               key={rule.id}
-              className="border rounded-md p-3 space-y-2"
+              className="space-y-2 rounded-md border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-3"
               style={{ borderLeftColor: rule.backgroundColor, borderLeftWidth: 4 }}
             >
               <div className="flex items-center justify-between">
@@ -172,10 +172,10 @@ export function ConditionalFormatDialog({
                 {PRESET_COLORS.map((c) => (
                   <button
                     key={c.bg}
-                    className="w-7 h-7 rounded border-2 transition-transform hover:scale-110"
+                    className="h-7 w-7 rounded border-2 transition-transform hover:scale-110"
                     style={{
                       backgroundColor: c.bg,
-                      borderColor: rule.backgroundColor === c.bg ? "#333" : "transparent",
+                      borderColor: rule.backgroundColor === c.bg ? "#7170ff" : "transparent",
                     }}
                     title={c.label}
                     onClick={() => updateRule(rule.id, { backgroundColor: c.bg, textColor: c.text })}
@@ -185,7 +185,7 @@ export function ConditionalFormatDialog({
             </div>
           ))}
           {rules.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">
+            <p className="py-4 text-center text-sm text-[#8a8f98]">
               暂无条件格式规则
             </p>
           )}

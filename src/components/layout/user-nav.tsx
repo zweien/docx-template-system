@@ -55,22 +55,22 @@ export function UserNav() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" className="relative h-9 w-9 rounded-full" />
+          <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-0 hover:bg-[rgb(255_255_255_/_0.05)]" />
         }
       >
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-900 text-sm font-medium text-white">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgb(255_255_255_/_0.06)] text-sm font-[510] text-[#f7f8f8]">
           {initials}
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] text-[#f7f8f8]">
         <div className="flex flex-col gap-1 p-2">
-          <p className="text-sm font-medium leading-none">
+          <p className="text-sm font-[510] leading-none">
             {session.user.name}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-[#8a8f98]">
             {session.user.email}
           </p>
-          <Badge variant="secondary" className="w-fit mt-1">
+          <Badge variant="secondary" className="mt-1 w-fit">
             {roleLabel}
           </Badge>
         </div>

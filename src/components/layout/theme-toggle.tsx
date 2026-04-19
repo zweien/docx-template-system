@@ -34,7 +34,7 @@ export function ThemeToggle() {
 
   if (!mounted) {
     return (
-      <Button variant="ghost" size="icon" className="shrink-0">
+      <Button variant="ghost" size="icon" className="shrink-0 text-[#8a8f98] hover:text-[#f7f8f8]">
         <Monitor className="h-4 w-4" />
       </Button>
     );
@@ -45,7 +45,7 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       onClick={toggle}
-      className="shrink-0"
+      className="shrink-0 text-[#8a8f98] hover:text-[#f7f8f8]"
     >
       <Icon className="h-4 w-4" />
     </Button>

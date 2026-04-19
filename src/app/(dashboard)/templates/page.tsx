@@ -110,10 +110,10 @@ export default async function TemplatesPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
         <div>
-          <h1 className="text-3xl font-[510] tracking-[-0.7px] text-[#f7f8f8]">模板管理</h1>
-          <p className="text-sm text-[#8a8f98]">
+          <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">模板管理</h1>
+          <p className="text-sm text-muted-foreground">
             共 {total} 个模板
           </p>
         </div>
@@ -128,7 +128,7 @@ export default async function TemplatesPage({
         )}
       </div>
 
-      <div className="flex gap-1 overflow-x-auto rounded-md border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1">
         {STATUS_TABS.map((tab) => {
           const isActive = (status || "") === tab.value;
           return (
@@ -137,8 +137,8 @@ export default async function TemplatesPage({
               href={buildUrl(1, tab.value, categoryId)}
               className={`shrink-0 rounded-md px-4 py-2 text-sm font-[510] transition-colors ${
                 isActive
-                  ? "bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8]"
-                  : "text-[#8a8f98] hover:bg-[rgb(255_255_255_/_0.04)] hover:text-[#f7f8f8]"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -148,13 +148,13 @@ export default async function TemplatesPage({
       </div>
 
       {categories.length > 0 && (
-        <div className="flex gap-1 overflow-x-auto rounded-md border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-1">
+        <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1">
           <Link
             href={buildUrl(1, status || "")}
             className={`shrink-0 rounded-md border px-3 py-1.5 text-sm font-[510] transition-colors ${
               !categoryId
-                ? "border-[rgb(255_255_255_/_0.1)] bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8]"
-                : "border-[rgb(255_255_255_/_0.08)] text-[#8a8f98] hover:text-[#f7f8f8]"
+                ? "border-border-hover bg-accent text-accent-foreground"
+                : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
             全部
@@ -165,8 +165,8 @@ export default async function TemplatesPage({
               href={buildUrl(1, status || "", cat.id)}
               className={`shrink-0 rounded-md border px-3 py-1.5 text-sm font-[510] transition-colors ${
                 categoryId === cat.id
-                  ? "border-[rgb(255_255_255_/_0.1)] bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8]"
-                  : "border-[rgb(255_255_255_/_0.08)] text-[#8a8f98] hover:text-[#f7f8f8]"
+                  ? "border-border-hover bg-accent text-accent-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               {cat.name}
@@ -221,14 +221,14 @@ export default async function TemplatesPage({
                       <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="font-[510] text-[#f7f8f8]">{template.name}</TableCell>
-                  <TableCell className="text-[#8a8f98]">
+                  <TableCell className="font-[510] text-foreground">{template.name}</TableCell>
+                  <TableCell className="text-muted-foreground">
                     {template.currentVersion ? `v${template.currentVersion.version}` : "—"}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {template.tags.length === 0 ? (
-                        <span className="text-xs text-[#62666d]">—</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       ) : (
                         <>
                           {template.tags.slice(0, 3).map((t) => (
@@ -237,7 +237,7 @@ export default async function TemplatesPage({
                             </Badge>
                           ))}
                           {template.tags.length > 3 && (
-                            <span className="text-xs text-[#62666d]">+{template.tags.length - 3}</span>
+                            <span className="text-xs text-muted-foreground">+{template.tags.length - 3}</span>
                           )}
                         </>
                       )}
@@ -248,10 +248,10 @@ export default async function TemplatesPage({
                       {STATUS_LABELS[template.status]}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-[#8a8f98]">
+                  <TableCell className="text-muted-foreground">
                     {template.createdBy.name}
                   </TableCell>
-                  <TableCell className="text-[#8a8f98]">
+                  <TableCell className="text-muted-foreground">
                     {template.createdAt.toLocaleDateString("zh-CN", {
                       year: "numeric",
                       month: "2-digit",
@@ -263,7 +263,7 @@ export default async function TemplatesPage({
                       <LinkButton
                         variant="ghost"
                         size="icon-xs"
-                        className="text-[#8a8f98] hover:text-[#f7f8f8]"
+                        className="text-muted-foreground hover:text-foreground"
                         href={`/templates/${template.id}`}
                       >
                         <Eye className="h-3.5 w-3.5" />
@@ -274,7 +274,7 @@ export default async function TemplatesPage({
                           <LinkButton
                             variant="ghost"
                             size="icon-xs"
-                            className="text-[#8a8f98] hover:text-[#f7f8f8]"
+                            className="text-muted-foreground hover:text-foreground"
                             href={`/templates/${template.id}/edit`}
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -297,7 +297,7 @@ export default async function TemplatesPage({
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-[#8a8f98]">
+          <p className="text-sm text-muted-foreground">
             第 {page} 页，共 {totalPages} 页
           </p>
           <div className="flex gap-2">

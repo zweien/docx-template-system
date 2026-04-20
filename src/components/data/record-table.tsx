@@ -454,7 +454,7 @@ export function RecordTable({
         );
       default:
         return (
-          <div className="rounded-md border flex items-center justify-center py-20 text-zinc-400 text-sm">
+          <div className="rounded-md border flex items-center justify-center py-20 text-sm text-muted-foreground">
             未知视图类型
           </div>
         );
@@ -463,7 +463,7 @@ export function RecordTable({
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-4">
-      <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-3 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)] sm:flex-row sm:items-center">
+      <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-border bg-card/70 p-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
           <ViewSelector
             tableId={tableId}
@@ -481,7 +481,7 @@ export function RecordTable({
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 text-[#8a8f98] hover:text-[#f7f8f8]"
+              className="h-9 text-muted-foreground hover:text-foreground"
               onClick={() => {
                 setFilters([]);
                 setSorts([]);
@@ -622,7 +622,7 @@ export function RecordTable({
 
       {/* Record count */}
       {!isLoading && (
-        <div className="flex-shrink-0 text-sm text-[#8a8f98]">
+        <div className="flex-shrink-0 text-sm text-muted-foreground">
           共 {totalCount} 条
         </div>
       )}

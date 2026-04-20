@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { ThemeProvider } from "next-themes";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -30,11 +30,7 @@ export default function RootLayout({
     <html lang="zh-CN" className={`${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
       <body className="min-h-full flex flex-col">
         <ThemeProvider
-          attribute="class"
           defaultTheme="dark"
-          enableSystem
-          disableTransitionOnChange
-          scriptProps={{ suppressHydrationWarning: true }}
         >
           {children}
           <Toaster />

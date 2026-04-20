@@ -203,7 +203,7 @@ export function FindReplaceBar({
 
   return (
     <div
-      className="absolute top-0 right-0 z-50 bg-background border rounded-bl-lg shadow-lg p-2 flex flex-col gap-2 min-w-[360px]"
+      className="fixed bottom-3 left-2 right-2 z-50 rounded-lg border bg-background p-2 shadow-lg md:bottom-auto md:left-auto md:right-4 md:top-20 md:w-[420px]"
       onKeyDown={handleKeyDown}
     >
       <div className="flex items-center gap-1">

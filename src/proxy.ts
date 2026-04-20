@@ -5,6 +5,11 @@ import { getToken } from "next-auth/jwt";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Allow static assets in /public (e.g. /logo.png, /uploads/*)
+  if (/\.[^/]+$/.test(pathname)) {
+    return NextResponse.next();
+  }
+
   // Allow auth-related routes
   if (
     pathname.startsWith("/login") ||
@@ -40,6 +45,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/|api/auth/|api/v1/|api/public/|f/|login$|favicon.ico|sitemap.xml|robots.txt).*)",
+    "/((?!_next/|api/auth/|api/v1/|api/public/|f/|login$|favicon.ico|logo.png|sitemap.xml|robots.txt|.*\\..*).*)",
   ],
 };

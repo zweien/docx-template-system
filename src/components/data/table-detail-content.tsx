@@ -74,19 +74,19 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
+      <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-card/70 p-5">
         <div>
-          <div className="mb-1 flex items-center gap-2 text-sm text-[#8a8f98]">
-            <Link href="/data" className="hover:text-[#f7f8f8]">主数据</Link>
+          <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
+            <Link href="/data" className="hover:text-foreground">主数据</Link>
             <span>/</span>
             <span>{table.name}</span>
           </div>
-          <h1 className="flex items-center gap-2 text-3xl font-[510] tracking-[-0.7px] text-[#f7f8f8]">
+          <h1 className="flex items-center gap-2 text-3xl font-[510] tracking-[-0.7px] text-foreground">
             {table.icon && <span>{table.icon}</span>}
             {table.name}
           </h1>
           {table.description && (
-            <p className="mt-1 text-[#8a8f98]">{table.description}</p>
+            <p className="mt-1 text-muted-foreground">{table.description}</p>
           )}
         </div>
         <div className="flex gap-2">
@@ -146,7 +146,7 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
 
       <div className="flex items-center justify-between">
         <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-1 text-[#8a8f98]">
+          <div className="flex items-center gap-1 text-muted-foreground">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="14"
@@ -164,7 +164,7 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
             </svg>
             {table.fieldCount} 个字段
           </div>
-          <div className="flex items-center gap-1 text-[#8a8f98]">
+          <div className="flex items-center gap-1 text-muted-foreground">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="14"
@@ -186,7 +186,7 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
         </div>
       </div>
 
-      <Separator className="bg-[rgb(255_255_255_/_0.08)]" />
+      <Separator />
 
       <RecordTable
         tableId={tableId}

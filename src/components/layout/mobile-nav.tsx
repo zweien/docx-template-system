@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Menu } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
+import { AppLogo } from "@/components/layout/app-logo";
 import { isRouteActive } from "@/components/layout/navigation/matcher";
 import { NAV_ITEMS, filterNavItemsByRole, type NavItem } from "@/components/layout/navigation/schema";
 import { Button } from "@/components/ui/button";
@@ -79,13 +79,7 @@ export function MobileNav() {
       <SheetContent side="left" className="flex w-[280px] flex-col border-[rgb(255_255_255_/_0.08)] bg-[rgb(15_16_17_/_0.98)] p-0 text-[#f7f8f8]">
         <SheetHeader className="shrink-0 border-b border-[rgb(255_255_255_/_0.05)] px-4 py-4">
           <SheetTitle className="flex items-center gap-2">
-            <Image
-              src="/logo.png"
-              alt="IDRL填表系统"
-              width={260}
-              height={145}
-              className="h-6 w-auto"
-            />
+            <AppLogo className="h-6" priority />
             <span className="text-lg font-[510] tracking-[-0.13px]">IDRL填表系统</span>
           </SheetTitle>
         </SheetHeader>

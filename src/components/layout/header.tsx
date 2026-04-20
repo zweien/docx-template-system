@@ -62,20 +62,20 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-[rgb(255_255_255_/_0.05)] bg-[rgb(15_16_17_/_0.92)] px-3 backdrop-blur-xl sm:gap-4 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/80 bg-background/95 px-3 text-foreground backdrop-blur-xl sm:gap-4 sm:px-6">
         <MobileNav />
 
         <div className="flex flex-1 items-center min-w-0">
-          <h1 className="truncate text-base font-[510] tracking-[-0.13px] sm:text-lg">{title}</h1>
+          <h1 className="truncate text-base font-[510] tracking-[-0.13px] text-foreground sm:text-lg">{title}</h1>
         </div>
 
         <button
           onClick={() => setSearchOpen(true)}
-          className="hidden h-8 items-center gap-2 rounded-md border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] px-3 text-sm font-[510] text-muted-foreground transition-all hover:border-[rgb(255_255_255_/_0.15)] hover:bg-[rgb(255_255_255_/_0.05)] hover:text-foreground sm:flex"
+          className="hidden h-8 items-center gap-2 rounded-md border border-border bg-muted/20 px-3 text-sm font-[510] text-muted-foreground transition-all hover:border-border hover:bg-accent/60 hover:text-foreground sm:flex"
         >
           <Search className="h-3.5 w-3.5" />
           <span>搜索...</span>
-          <kbd className="rounded border border-[rgb(255_255_255_/_0.08)] bg-[rgb(0_0_0_/_0.3)] px-1 py-0.5 font-mono text-[10px] text-[#d0d6e0]">
+          <kbd className="rounded border border-border bg-muted/50 px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
             ⌘K
           </kbd>
         </button>

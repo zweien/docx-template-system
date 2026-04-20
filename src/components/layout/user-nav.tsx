@@ -55,19 +55,19 @@ export function UserNav() {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-0 hover:bg-[rgb(255_255_255_/_0.05)]" />
+          <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-border bg-muted/20 p-0 hover:bg-accent/70" />
         }
       >
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[rgb(255_255_255_/_0.06)] text-sm font-[510] text-[#f7f8f8]">
+        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-sm font-[510] text-foreground">
           {initials}
         </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] text-[#f7f8f8]">
+      <DropdownMenuContent align="end" className="w-56 border-border bg-popover text-popover-foreground">
         <div className="flex flex-col gap-1 p-2">
-          <p className="text-sm font-[510] leading-none">
+          <p className="text-sm font-[510] leading-none text-foreground">
             {session.user.name}
           </p>
-          <p className="text-xs text-[#8a8f98]">
+          <p className="text-xs text-muted-foreground">
             {session.user.email}
           </p>
           <Badge variant="secondary" className="mt-1 w-fit">

@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, MessageSquare, Plus, Redo2, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, MessageSquare, Plus, Redo2, Search, Trash2, Undo2 } from "lucide-react";
 import { BatchActionBar } from "@/components/data/batch-action-bar";
 import { BatchEditDialog } from "@/components/data/batch-edit-dialog";
 import { FindReplaceBar } from "@/components/data/views/find-replace-bar";
@@ -658,9 +658,29 @@ export function GridView({
     return records.map((r) => ({ type: "record" as const, record: r }));
   }, [groupedRecords, collapsedGroups, records]);
 
+  // 虚拟滚动在中小数据量场景收益有限，且在 table 结构下会出现占位高度失效导致只显示首屏的问题。
+  // 这里采用阈值策略：仅在大数据量时启用虚拟滚动，优先保证数据完整可见。
+  const shouldUseVirtualRows = flatRecords.length > 400;
   const { startIndex, endIndex, topPadding, bottomPadding, scrollRef } =
     useVirtualRows(flatRecords.length, undefined, rowHeight);
-  const visibleFlatRecords = flatRecords.slice(startIndex, endIndex);
+  const visibleFlatRecords = shouldUseVirtualRows
+    ? flatRecords.slice(startIndex, endIndex)
+    : flatRecords;
+  const effectiveTopPadding = shouldUseVirtualRows ? topPadding : 0;
+  const effectiveBottomPadding = shouldUseVirtualRows ? bottomPadding : 0;
+  const findReplaceRows = useMemo(
+    () =>
+      flatRecords.map((entry) =>
+        entry.type === "record" && entry.record
+          ? { id: entry.record.id, data: entry.record.data }
+          : null
+      ),
+    [flatRecords]
+  );
+  const findReplaceFieldKeys = useMemo(
+    () => orderedVisibleFields.map((field) => field.key),
+    [orderedVisibleFields]
+  );
 
   // ── Group row indices (for skipping in keyboard nav) ─────────────────────
   const groupRowIndices = useMemo(() => {
@@ -2006,6 +2026,15 @@ export function GridView({
       >
       <div className="flex items-center gap-1 px-2 py-1 border-b">
         <Button
+          variant={findBarOpen ? "secondary" : "ghost"}
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => setFindBarOpen(true)}
+          title="查找"
+        >
+          <Search className="h-3.5 w-3.5" />
+        </Button>
+        <Button
           variant="ghost"
           size="icon"
           className="h-7 w-7"
@@ -2030,9 +2059,9 @@ export function GridView({
         <FindReplaceBar
           open={findBarOpen}
           onClose={() => setFindBarOpen(false)}
-          rows={flatRecords.map(e => e.type === "record" && e.record ? { id: e.record.id, data: e.record.data } : null)}
+          rows={findReplaceRows}
           fields={orderedVisibleFields}
-          fieldKeys={orderedVisibleFields.map(f => f.key)}
+          fieldKeys={findReplaceFieldKeys}
           onNavigateTo={(flatRowIndex, colIndex) => setActiveCell({ rowIndex: flatRowIndex, colIndex })}
           onReplace={(recordId, fieldKey, newValue) => handleCommit(recordId, fieldKey, newValue)}
         />
@@ -2131,9 +2160,9 @@ export function GridView({
           ) : (
             <>
               {/* Top padding for virtual scroll */}
-              {topPadding > 0 && (
+              {effectiveTopPadding > 0 && (
                 <tr aria-hidden="true">
-                  <td colSpan={colCount} style={{ height: topPadding, padding: 0 }} />
+                  <td colSpan={colCount} style={{ height: effectiveTopPadding, padding: 0 }} />
                 </tr>
               )}
               {/* Visible rows only */}
@@ -2172,9 +2201,9 @@ export function GridView({
                 return null;
               })}
               {/* Bottom padding for virtual scroll */}
-              {bottomPadding > 0 && (
+              {effectiveBottomPadding > 0 && (
                 <tr aria-hidden="true">
-                  <td colSpan={colCount} style={{ height: bottomPadding, padding: 0 }} />
+                  <td colSpan={colCount} style={{ height: effectiveBottomPadding, padding: 0 }} />
                 </tr>
               )}
               {/* Quick add row */}

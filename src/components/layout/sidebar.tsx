@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
+import { AppLogo } from "@/components/layout/app-logo";
 import { UserNav } from "@/components/layout/user-nav";
 import { isRouteActive } from "@/components/layout/navigation/matcher";
 import { NAV_ITEMS, filterNavItemsByRole, type NavItem } from "@/components/layout/navigation/schema";
@@ -73,13 +73,7 @@ export function Sidebar() {
     >
       <div className="flex h-14 shrink-0 items-center border-b border-[rgb(255_255_255_/_0.05)] px-4">
         <Link href="/" className="group flex items-center gap-2.5">
-          <Image
-            src="/logo.png"
-            alt="IDRL填表系统"
-            width={260}
-            height={145}
-            className="h-7 w-auto shrink-0 transition-transform group-hover:scale-110"
-          />
+          <AppLogo className="transition-transform group-hover:scale-110" priority />
           <span
             className={cn(
               "whitespace-nowrap text-base font-[510] tracking-[-0.13px] text-[#f7f8f8] transition-opacity duration-100",

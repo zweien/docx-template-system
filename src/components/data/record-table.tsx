@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,7 @@ export function RecordTable({
   const [quickFormatField, setQuickFormatField] = useState<string | undefined>();
   const [quickFormatValue, setQuickFormatValue] = useState<string | undefined>();
   const [showActivity, setShowActivity] = useState(false);
+  const lastSyncedRecordIdsRef = useRef<string[]>([]);
   const {
     records,
     totalCount,
@@ -125,9 +126,18 @@ export function RecordTable({
 
   // Sync record IDs to parent for drawer navigation
   useEffect(() => {
-    if (onRecordIdsChange) {
-      onRecordIdsChange(records.map((r: { id: string }) => r.id));
-    }
+    if (!onRecordIdsChange) return;
+
+    const nextIds = records.map((record: { id: string }) => record.id);
+    const prevIds = lastSyncedRecordIdsRef.current;
+    const isSame =
+      prevIds.length === nextIds.length &&
+      prevIds.every((id, index) => id === nextIds[index]);
+
+    if (isSame) return;
+
+    lastSyncedRecordIdsRef.current = nextIds;
+    onRecordIdsChange(nextIds);
   }, [records, onRecordIdsChange]);
 
   const activeView = useMemo(() => {
@@ -137,10 +147,10 @@ export function RecordTable({
 
   // Sync viewType from loaded view
   useEffect(() => {
-    if (currentView?.type) {
+    if (currentView?.type && currentView.type !== viewType) {
       setViewType(currentView.type as ViewType);
     }
-  }, [viewId, currentView?.type]);
+  }, [viewId, currentView?.type, viewType]);
 
   // Fallback sync: when URL carries a viewId but view list lags,
   // fetch view detail directly to ensure correct renderer.
@@ -155,7 +165,7 @@ export function RecordTable({
         return data.success ? data.data : null;
       })
       .then((view) => {
-        if (!cancelled && view?.type) {
+        if (!cancelled && view?.type && view.type !== viewType) {
           setViewType(view.type as ViewType);
         }
       })
@@ -166,7 +176,7 @@ export function RecordTable({
     return () => {
       cancelled = true;
     };
-  }, [tableId, viewId]);
+  }, [tableId, viewId, viewType]);
 
   // ── Patch single field (for Kanban drag-and-drop) ────────────────────────
   const handlePatchRecord = useCallback(

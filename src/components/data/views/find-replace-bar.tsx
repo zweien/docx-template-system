@@ -73,6 +73,9 @@ export function FindReplaceBar({
   const [currentIdx, setCurrentIdx] = useState(-1);
   const findInputRef = useRef<HTMLInputElement>(null);
   const onNavigateToRef = useRef(onNavigateTo);
+  const rowsRef = useRef(rows);
+  const fieldKeysRef = useRef(fieldKeys);
+  const fieldMapRef = useRef<Map<string, DataFieldItem>>(new Map());
 
   useEffect(() => {
     onNavigateToRef.current = onNavigateTo;
@@ -87,9 +90,25 @@ export function FindReplaceBar({
     return map;
   }, [fields]);
 
+  useEffect(() => {
+    rowsRef.current = rows;
+  }, [rows]);
+
+  useEffect(() => {
+    fieldKeysRef.current = fieldKeys;
+  }, [fieldKeys]);
+
+  useEffect(() => {
+    fieldMapRef.current = fieldMap;
+  }, [fieldMap]);
+
   // Perform search — rows[] is indexed identically to flatRecords
   const doSearch = useCallback(
     (query: string) => {
+      const currentRows = rowsRef.current;
+      const currentFieldKeys = fieldKeysRef.current;
+      const currentFieldMap = fieldMapRef.current;
+
       if (!query) {
         setResults((prev) => (prev.length === 0 ? prev : []));
         setCurrentIdx((prev) => (prev === -1 ? prev : -1));
@@ -97,12 +116,12 @@ export function FindReplaceBar({
       }
       const lower = query.toLowerCase();
       const found: FindResult[] = [];
-      for (let r = 0; r < rows.length; r++) {
-        const row = rows[r];
+      for (let r = 0; r < currentRows.length; r++) {
+        const row = currentRows[r];
         if (!row?.data) continue; // skip group rows / nulls
-        for (let c = 0; c < fieldKeys.length; c++) {
-          const fieldKey = fieldKeys[c];
-          const field = fieldMap.get(fieldKey);
+        for (let c = 0; c < currentFieldKeys.length; c++) {
+          const fieldKey = currentFieldKeys[c];
+          const field = currentFieldMap.get(fieldKey);
           const rawValue = row.data[fieldKey];
           // Use formatCellText to get searchable text that matches display
           const val = field ? formatCellText(field, rawValue) : String(rawValue ?? "");
@@ -117,7 +136,7 @@ export function FindReplaceBar({
         return prev === next ? prev : next;
       });
     },
-    [rows, fieldKeys, fieldMap]
+    []
   );
 
   // Search on text change

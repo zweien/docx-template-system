@@ -197,11 +197,22 @@ export function TimelineView({
     () => new Set(conflict.recordIds),
     [conflict.recordIds]
   );
+  const dependencyTaskIdSet = useMemo(() => {
+    const ids = new Set<string>();
+    for (const link of graph.links) {
+      ids.add(link.predecessorTaskId);
+      ids.add(link.successorTaskId);
+    }
+    return ids;
+  }, [graph.links]);
 
   const frappeTasks = useMemo(
     () =>
       graph.tasks.map((task) => {
         const baseClass = task.isMilestone ? "timeline-task-milestone" : "timeline-task";
+        const dependencyClass = dependencyTaskIdSet.has(task.recordId)
+          ? " timeline-task-dependent"
+          : "";
         const conflictClass = conflictTaskIdSet.has(task.recordId) ? " timeline-task-conflict" : "";
         return {
           id: task.id,
@@ -209,10 +220,10 @@ export function TimelineView({
           start: formatDateOnly(task.startDate),
           end: formatDateOnly(task.isMilestone ? task.startDate : task.endDate),
           progress: 0,
-          custom_class: `${baseClass}${conflictClass}`,
+          custom_class: `${baseClass}${dependencyClass}${conflictClass}`,
         };
       }),
-    [conflictTaskIdSet, graph.tasks]
+    [conflictTaskIdSet, dependencyTaskIdSet, graph.tasks]
   );
 
   const frappeLinks = useMemo(
@@ -298,6 +309,7 @@ export function TimelineView({
             tasks={frappeTasks}
             links={frappeLinks}
             scale={scale}
+            onScaleChange={handleScaleChange}
             onOpenRecord={onOpenRecord}
             onTaskDateChange={handleTaskDateChange}
           />

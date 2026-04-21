@@ -33,6 +33,7 @@ interface TimelineGanttFrappeProps {
   tasks: FrappeGanttTask[];
   links: FrappeGanttLink[];
   scale: TimelineScale;
+  onScaleChange?: (scale: TimelineScale) => void;
   onOpenRecord: (recordId: string) => void;
   onTaskDateChange?: (taskId: string, startDate: Date, endDate: Date) => Promise<void> | void;
 }
@@ -42,6 +43,8 @@ type GanttCtor = new (
   tasks: FrappeGanttTask[],
   options: {
     view_mode?: "Week" | "Month";
+    scroll_to?: "today" | "start" | "end" | string;
+    today_button?: boolean;
     on_click?: (task: FrappeGanttApiTask) => void;
     on_date_change?: (task: FrappeGanttApiTask, start: Date, end: Date) => void;
   }
@@ -82,6 +85,7 @@ export function TimelineGanttFrappe({
   tasks,
   links,
   scale,
+  onScaleChange,
   onOpenRecord,
   onTaskDateChange,
 }: TimelineGanttFrappeProps) {
@@ -89,6 +93,7 @@ export function TimelineGanttFrappe({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const panStateRef = useRef<{ startX: number; startScrollLeft: number } | null>(null);
+  const lastScaleWheelRef = useRef(0);
 
   const preparedTasks = useMemo<FrappeGanttTask[]>(() => {
     const depByTask = new Map<string, string[]>();
@@ -116,6 +121,8 @@ export function TimelineGanttFrappe({
       const Gantt = (mod.default ?? mod) as GanttCtor;
       new Gantt(containerRef.current, preparedTasks, {
         view_mode: VIEW_MODE_BY_SCALE[scale],
+        scroll_to: "today",
+        today_button: false,
         on_click: (task) => onOpenRecord(task.id),
         on_date_change: (task, start, end) => {
           void onTaskDateChange?.(task.id, start, end);
@@ -193,10 +200,33 @@ export function TimelineGanttFrappe({
           setIsPanning(false);
           panStateRef.current = null;
         }}
+        onWheel={(event) => {
+          const now = Date.now();
+          if (now - lastScaleWheelRef.current < 150) return;
+          if (Math.abs(event.deltaY) < 4) return;
+          event.preventDefault();
+          lastScaleWheelRef.current = now;
+
+          const nextScale =
+            event.deltaY > 0
+              ? scale === "week"
+                ? "month"
+                : "quarter"
+              : scale === "quarter"
+                ? "month"
+                : "week";
+          if (nextScale !== scale) {
+            onScaleChange?.(nextScale);
+          }
+        }}
       >
         <div ref={containerRef} className="min-w-[960px] p-2" />
       </div>
       <style jsx global>{`
+        .timeline-task-dependent .bar {
+          stroke: #2563eb !important;
+          stroke-width: 1.25px !important;
+        }
         .timeline-task-conflict .bar {
           fill: #fecaca !important;
           stroke: #dc2626 !important;
@@ -205,6 +235,10 @@ export function TimelineGanttFrappe({
         .timeline-task-milestone .bar {
           rx: 2px !important;
           ry: 2px !important;
+        }
+        .gantt-container .current-highlight {
+          background: #16a34a !important;
+          width: 2px !important;
         }
       `}</style>
     </div>

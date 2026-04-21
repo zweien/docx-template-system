@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.7](https://github.com/zweien/docx-template-system/compare/v0.6.6...v0.6.7) (2026-04-21)
+
 ## [0.6.2](https://github.com/zweien/docx-template-system/compare/v0.6.1...v0.6.2) (2026-04-19)
 
 

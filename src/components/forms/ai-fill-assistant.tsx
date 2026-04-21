@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { Sparkles, X, Send, Loader2, Check, Undo2, ChevronDown } from "lucide-react";
+import { Sparkles, X, Send, Loader2, Check, Undo2, ChevronDown, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -226,6 +226,11 @@ export function AiFillAssistant({
       abortRef.current = null;
     }
   }, [input, loading, messages, templateId, templateName, fields, currentValues, selectedModel]);
+
+  const handleStop = useCallback(() => {
+    if (!loading) return;
+    abortRef.current?.abort();
+  }, [loading]);
 
   const handleApply = () => {
     if (!suggestions) return;
@@ -461,6 +466,17 @@ export function AiFillAssistant({
                   <Send className="size-4" />
                 )}
               </Button>
+              {loading && (
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="shrink-0 size-9"
+                  onClick={handleStop}
+                  aria-label="停止回答"
+                >
+                  <Square className="size-4" />
+                </Button>
+              )}
             </div>
           </div>
         </div>

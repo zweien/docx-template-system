@@ -55,6 +55,16 @@ require_cmd "docker"
 require_cmd "grep"
 require_cmd "curl"
 
+env_value() {
+  local key="$1"
+  local line
+  line="$(grep -E "^${key}=" "${ENV_FILE}" | tail -n1 || true)"
+  line="${line#*=}"
+  line="${line%\"}"
+  line="${line#\"}"
+  printf "%s" "${line}"
+}
+
 if ! docker compose version >/dev/null 2>&1; then
   echo "ERROR: docker compose plugin is required" >&2
   exit 1
@@ -89,6 +99,17 @@ for key in DATABASE_URL NEXTAUTH_SECRET; do
     exit 1
   fi
 done
+
+DEV_BYPASS_AUTH_VALUE="$(env_value DEV_BYPASS_AUTH)"
+NEXT_PUBLIC_DEV_BYPASS_AUTH_VALUE="$(env_value NEXT_PUBLIC_DEV_BYPASS_AUTH)"
+if [[ "${DEV_BYPASS_AUTH_VALUE}" != "true" || "${NEXT_PUBLIC_DEV_BYPASS_AUTH_VALUE}" != "true" ]]; then
+  for key in AUTHENTIK_ISSUER AUTHENTIK_CLIENT_ID AUTHENTIK_CLIENT_SECRET; do
+    if [[ -z "$(env_value "${key}")" ]]; then
+      echo "ERROR: ${key} is required when DEV_BYPASS_AUTH is not true" >&2
+      exit 1
+    fi
+  done
+fi
 
 echo "[3/5] Starting services"
 docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d --remove-orphans

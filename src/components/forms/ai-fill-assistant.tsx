@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Sparkles, X, Send, Loader2, Check, Undo2, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +35,10 @@ interface ChatMessage {
 }
 
 type FillValue = string | string[];
+
+function toComparableValue(value: FillValue): string {
+  return Array.isArray(value) ? JSON.stringify(value) : value;
+}
 
 /** Extract JSON block from AI response */
 function extractFillValues(text: string): Record<string, FillValue> | null {
@@ -74,7 +78,7 @@ export function AiFillAssistant({
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<Record<string, FillValue> | null>(null);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
-  const [applied, setApplied] = useState(false);
+  const [lastAppliedCount, setLastAppliedCount] = useState(0);
   const [models, setModels] = useState<ModelItem[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>("");
   const [modelName, setModelName] = useState("默认模型");
@@ -134,13 +138,6 @@ export function AiFillAssistant({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
-
-  // Reset suggestions when new messages arrive
-  useEffect(() => {
-    setSuggestions(null);
-    setSelectedKeys(new Set());
-    setApplied(false);
-  }, [messages.length]);
 
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
@@ -205,8 +202,18 @@ export function AiFillAssistant({
       // Try to extract fill values from the response
       const values = extractFillValues(fullContent);
       if (values) {
-        setSuggestions(values);
-        setSelectedKeys(new Set(Object.keys(values)));
+        setSuggestions((prev) => ({
+          ...(prev ?? {}),
+          ...values,
+        }));
+        setSelectedKeys((prev) => {
+          const next = new Set(prev);
+          for (const key of Object.keys(values)) {
+            next.add(key);
+          }
+          return next;
+        });
+        setLastAppliedCount(0);
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
@@ -224,14 +231,18 @@ export function AiFillAssistant({
     if (!suggestions) return;
     const toApply: Record<string, FillValue> = {};
     for (const key of selectedKeys) {
-      if (suggestions[key] !== undefined) {
-        toApply[key] = suggestions[key];
+      const suggested = suggestions[key];
+      if (suggested === undefined) continue;
+      const current = currentValues[key] ?? "";
+      if (toComparableValue(suggested) !== current) {
+        toApply[key] = suggested;
       }
     }
-    if (Object.keys(toApply).length > 0) {
+    const changedCount = Object.keys(toApply).length;
+    if (changedCount > 0) {
       onFill(toApply);
-      setApplied(true);
     }
+    setLastAppliedCount(changedCount);
   };
 
   const toggleKey = (key: string) => {
@@ -251,6 +262,20 @@ export function AiFillAssistant({
     const val = currentValues[key];
     return val !== undefined && val !== "";
   };
+
+  const effectiveSelectedCount = useMemo(() => {
+    if (!suggestions) return 0;
+    let count = 0;
+    for (const key of selectedKeys) {
+      const suggested = suggestions[key];
+      if (suggested === undefined) continue;
+      const current = currentValues[key] ?? "";
+      if (toComparableValue(suggested) !== current) {
+        count += 1;
+      }
+    }
+    return count;
+  }, [suggestions, selectedKeys, currentValues]);
 
   return (
     <>
@@ -350,7 +375,7 @@ export function AiFillAssistant({
           </div>
 
           {/* Suggestions */}
-          {suggestions && !applied && (
+          {suggestions && (
             <div className="border-t px-4 py-3 space-y-2">
               <div className="text-xs font-medium text-muted-foreground">
                 填充建议（点击选择要应用的字段）
@@ -377,6 +402,9 @@ export function AiFillAssistant({
                     <div className="min-w-0">
                       <div className="flex items-center gap-1">
                         <span className="font-medium">{labelForKey(key)}</span>
+                        {toComparableValue(value) === (currentValues[key] ?? "") && (
+                          <span className="text-emerald-600 text-[10px]">已是最新</span>
+                        )}
                         {hasExistingValue(key) && (
                           <span className="text-amber-500 text-[10px]">覆盖</span>
                         )}
@@ -390,17 +418,17 @@ export function AiFillAssistant({
                 size="sm"
                 className="w-full"
                 onClick={handleApply}
-                disabled={selectedKeys.size === 0}
+                disabled={effectiveSelectedCount === 0}
               >
                 <Undo2 className="size-3.5" />
-                应用选中字段（{selectedKeys.size}）
+                应用增量字段（{effectiveSelectedCount}）
               </Button>
             </div>
           )}
 
-          {applied && (
+          {lastAppliedCount > 0 && (
             <div className="border-t px-4 py-2 text-xs text-green-600 text-center">
-              已填充 {selectedKeys.size} 个字段
+              本次已填充 {lastAppliedCount} 个字段
             </div>
           )}
 

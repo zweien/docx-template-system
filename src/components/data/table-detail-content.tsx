@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
   const searchParams = useSearchParams();
   const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const recordIdsRef = useRef<string[]>([]);
+  const [recordIds, setRecordIds] = useState<string[]>([]);
 
   // Auto-open record detail from search params
   useEffect(() => {
@@ -74,20 +74,19 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-6">
-      {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border bg-card/70 p-5">
         <div>
-          <div className="flex items-center gap-2 text-sm text-zinc-500 mb-1">
-            <Link href="/data" className="hover:underline">主数据</Link>
+          <div className="mb-1 flex items-center gap-2 text-sm text-muted-foreground">
+            <Link href="/data" className="hover:text-foreground">主数据</Link>
             <span>/</span>
             <span>{table.name}</span>
           </div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-3xl font-[510] tracking-[-0.7px] text-foreground">
             {table.icon && <span>{table.icon}</span>}
             {table.name}
           </h1>
           {table.description && (
-            <p className="text-zinc-500 mt-1">{table.description}</p>
+            <p className="mt-1 text-muted-foreground">{table.description}</p>
           )}
         </div>
         <div className="flex gap-2">
@@ -145,10 +144,9 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
         </div>
       </div>
 
-      {/* Stats & View Switcher */}
       <div className="flex items-center justify-between">
         <div className="flex gap-4 text-sm">
-          <div className="flex items-center gap-1 text-zinc-500">
+          <div className="flex items-center gap-1 text-muted-foreground">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="14"
@@ -166,7 +164,7 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
             </svg>
             {table.fieldCount} 个字段
           </div>
-          <div className="flex items-center gap-1 text-zinc-500">
+          <div className="flex items-center gap-1 text-muted-foreground">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="14"
@@ -190,7 +188,6 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
 
       <Separator />
 
-      {/* Record Table */}
       <RecordTable
         tableId={tableId}
         fields={table.fields}
@@ -199,10 +196,9 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
           setDetailRecordId(recordId);
           setDetailOpen(true);
         }}
-        onRecordIdsChange={(ids) => { recordIdsRef.current = ids; }}
+        onRecordIdsChange={setRecordIds}
       />
 
-      {/* Record Detail Drawer */}
       <RecordDetailDrawer
         open={detailOpen}
         onOpenChange={(open) => {
@@ -215,11 +211,10 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
         tableId={tableId}
         fields={table.fields}
         isAdmin={isAdmin}
-        recordIds={recordIdsRef.current}
+        recordIds={recordIds}
         onNavigate={(id) => setDetailRecordId(id)}
       />
 
-      {/* AI Assistant Sheet */}
       <Sheet open={aiOpen} onOpenChange={handleAiClose}>
         <SheetContent side="right" className="sm:max-w-lg w-full p-0" showCloseButton={false}>
           {conversationId && (

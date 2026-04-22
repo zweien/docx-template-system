@@ -88,16 +88,16 @@ export function FilterPanel({ fields, filters, onChange }: FilterPanelProps) {
 
   return (
     <Popover>
-      <PopoverTrigger render={<Button variant="outline" size="sm" className={cn(hasFilters && "border-primary")} />}>
+      <PopoverTrigger render={<Button variant="outline" size="sm" className={cn(hasFilters && "border-[rgb(113_112_255_/_0.5)] bg-[rgb(113_112_255_/_0.14)]")} />}>
         <ListFilter className="h-4 w-4 mr-1" />
         筛选 {hasFilters && `(${filters.reduce((acc, g) => acc + g.conditions.length, 0)})`}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[520px] max-h-[400px] overflow-y-auto p-3 space-y-3">
+      <PopoverContent align="start" className="w-[520px] max-h-[400px] overflow-y-auto space-y-3 border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] p-3 text-[#d0d6e0]">
         {filters.map((group, gi) => (
-          <div key={gi} className="border rounded-md p-2 space-y-2">
+          <div key={gi} className="space-y-2 rounded-md border border-[rgb(255_255_255_/_0.06)] bg-[rgb(255_255_255_/_0.02)] p-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
-                <span className="text-xs text-muted-foreground">条件组 {gi + 1}</span>
+                <span className="text-xs text-[#8a8f98]">条件组 {gi + 1}</span>
                 <Select
                   value={group.operator}
                   onValueChange={(v) => updateGroup(gi, (g) => ({ ...g, operator: (v ?? "AND") as "AND" | "OR" }))}
@@ -112,9 +112,9 @@ export function FilterPanel({ fields, filters, onChange }: FilterPanelProps) {
                 </Select>
               </div>
               {filters.length > 1 && (
-                <Button variant="ghost" size="sm" className="h-7 px-1" onClick={() => removeGroup(gi)}>
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                  <Button variant="ghost" size="sm" className="h-7 px-1" onClick={() => removeGroup(gi)}>
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
               )}
             </div>
             {group.conditions.map((cond, ci) => (

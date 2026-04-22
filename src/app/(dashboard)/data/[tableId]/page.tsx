@@ -19,7 +19,7 @@ export default async function TableDetailPage({ params }: PageProps) {
       notFound();
     }
     return (
-      <div className="p-4 text-red-500">
+      <div className="rounded-xl border border-[rgb(239_68_68_/_0.35)] bg-[rgb(239_68_68_/_0.1)] p-4 text-red-200">
         加载失败: {result.error.message}
       </div>
     );

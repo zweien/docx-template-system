@@ -43,9 +43,9 @@ export function FillAssistPromptEditor({
   };
 
   return (
-    <div className="space-y-2">
-      <Label className="text-sm font-medium">AI 填充提示词</Label>
-      <p className="text-xs text-muted-foreground">
+    <div className="space-y-3 rounded-md border border-[rgb(255_255_255_/_0.06)] bg-[rgb(255_255_255_/_0.02)] p-3">
+      <Label className="text-sm font-[510] text-[#d0d6e0]">AI 填充提示词</Label>
+      <p className="text-xs text-[#8a8f98]">
         配置后，用户填表时 AI 助手将遵循此指令来生成填充建议。留空则使用默认行为。
       </p>
       <Textarea

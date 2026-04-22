@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,7 @@ export function RecordTable({
   const [quickFormatField, setQuickFormatField] = useState<string | undefined>();
   const [quickFormatValue, setQuickFormatValue] = useState<string | undefined>();
   const [showActivity, setShowActivity] = useState(false);
+  const lastSyncedRecordIdsRef = useRef<string[]>([]);
   const {
     records,
     totalCount,
@@ -125,9 +126,18 @@ export function RecordTable({
 
   // Sync record IDs to parent for drawer navigation
   useEffect(() => {
-    if (onRecordIdsChange) {
-      onRecordIdsChange(records.map((r: { id: string }) => r.id));
-    }
+    if (!onRecordIdsChange) return;
+
+    const nextIds = records.map((record: { id: string }) => record.id);
+    const prevIds = lastSyncedRecordIdsRef.current;
+    const isSame =
+      prevIds.length === nextIds.length &&
+      prevIds.every((id, index) => id === nextIds[index]);
+
+    if (isSame) return;
+
+    lastSyncedRecordIdsRef.current = nextIds;
+    onRecordIdsChange(nextIds);
   }, [records, onRecordIdsChange]);
 
   const activeView = useMemo(() => {
@@ -137,10 +147,36 @@ export function RecordTable({
 
   // Sync viewType from loaded view
   useEffect(() => {
-    if (currentView?.type) {
+    if (currentView?.type && currentView.type !== viewType) {
       setViewType(currentView.type as ViewType);
     }
-  }, [viewId, currentView?.type]);
+  }, [viewId, currentView?.type, viewType]);
+
+  // Fallback sync: when URL carries a viewId but view list lags,
+  // fetch view detail directly to ensure correct renderer.
+  useEffect(() => {
+    if (!viewId) return;
+    let cancelled = false;
+
+    void fetch(`/api/data-tables/${tableId}/views/${viewId}`)
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const data = (await res.json()) as { success?: boolean; data?: DataViewItem };
+        return data.success ? data.data : null;
+      })
+      .then((view) => {
+        if (!cancelled && view?.type && view.type !== viewType) {
+          setViewType(view.type as ViewType);
+        }
+      })
+      .catch(() => {
+        // Ignore fallback sync failures and keep current UI state.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tableId, viewId, viewType]);
 
   // Fallback sync: when URL carries a viewId but view list lags,
   // fetch view detail directly to ensure correct renderer.
@@ -454,7 +490,7 @@ export function RecordTable({
         );
       default:
         return (
-          <div className="rounded-md border flex items-center justify-center py-20 text-zinc-400 text-sm">
+          <div className="rounded-md border flex items-center justify-center py-20 text-sm text-muted-foreground">
             未知视图类型
           </div>
         );
@@ -463,8 +499,7 @@ export function RecordTable({
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-4">
-      {/* Toolbar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-border bg-card/70 p-3 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
           <ViewSelector
             tableId={tableId}
@@ -482,7 +517,7 @@ export function RecordTable({
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 text-muted-foreground"
+              className="h-9 text-muted-foreground hover:text-foreground"
               onClick={() => {
                 setFilters([]);
                 setSorts([]);
@@ -522,9 +557,9 @@ export function RecordTable({
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button variant="outline" size="sm">
-                    <ArrowUpDown className="h-4 w-4 mr-1" />
-                    行高
+              <Button variant="outline" size="sm">
+                <ArrowUpDown className="h-4 w-4 mr-1" />
+                行高
                   </Button>
                 }
               />
@@ -538,7 +573,7 @@ export function RecordTable({
                   <DropdownMenuItem
                     key={h}
                     onClick={() => handleRowHeightChange(h)}
-                    className={rowHeight === h ? "font-bold bg-muted" : ""}
+                    className={rowHeight === h ? "bg-[rgb(113_112_255_/_0.14)] font-[510]" : ""}
                   >
                     {label}
                   </DropdownMenuItem>
@@ -605,7 +640,7 @@ export function RecordTable({
             <Activity className="h-4 w-4 mr-1" />
             动态
             {isConnected && (
-              <span className="ml-1 w-2 h-2 rounded-full bg-green-500 inline-block" />
+              <span className="ml-1 inline-block h-2 w-2 rounded-full bg-emerald-400" />
             )}
           </Button>
         </div>
@@ -623,7 +658,7 @@ export function RecordTable({
 
       {/* Record count */}
       {!isLoading && (
-        <div className="text-sm text-zinc-500 flex-shrink-0">
+        <div className="flex-shrink-0 text-sm text-muted-foreground">
           共 {totalCount} 条
         </div>
       )}

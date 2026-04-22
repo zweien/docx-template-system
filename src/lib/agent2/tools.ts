@@ -134,7 +134,7 @@ export function createTools(
     toolName: string,
     schema: z.ZodType<T>,
     description: string,
-    executeFn: (args: T) => Promise<unknown>
+    _executeFn: (args: T) => Promise<unknown>
   ) {
     return tool({
       description,

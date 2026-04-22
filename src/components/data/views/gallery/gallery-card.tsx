@@ -1,4 +1,5 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
 

@@ -4,9 +4,6 @@ import { ZodError } from "zod";
 import {
   listGlobalModels,
   createGlobalModel,
-  updateGlobalModel,
-  deleteGlobalModel,
-  testModelConnection,
   getEnvDefaultModels,
 } from "@/lib/services/agent2-model.service";
 import { createModelSchema } from "@/validators/agent2";

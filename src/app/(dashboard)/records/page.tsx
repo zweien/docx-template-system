@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -33,6 +33,12 @@ const STATUS_VARIANTS: Record<
   PENDING: "secondary",
   COMPLETED: "default",
   FAILED: "destructive",
+};
+
+const STATUS_BADGE_CLASS: Record<RecordStatus, string> = {
+  PENDING: "border-border bg-muted text-foreground",
+  COMPLETED: "bg-primary text-primary-foreground",
+  FAILED: "bg-destructive text-destructive-foreground",
 };
 
 const STATUS_TABS: { label: string; value: string }[] = [
@@ -87,24 +93,22 @@ export default async function RecordsPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">生成记录</h1>
-        <p className="text-muted-foreground">共 {total} 条记录</p>
+      <div className="rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
+        <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">生成记录</h1>
+        <p className="text-sm text-muted-foreground">共 {total} 条记录</p>
       </div>
 
-      {/* Status Filter Tabs */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1">
         {STATUS_TABS.map((tab) => {
           const isActive = (status || "") === tab.value;
           return (
             <Link
               key={tab.value}
               href={buildUrl(1, tab.value)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`shrink-0 rounded-md px-4 py-2 text-sm font-[510] transition-colors ${
                 isActive
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -113,8 +117,7 @@ export default async function RecordsPage({
         })}
       </div>
 
-      {/* Table */}
-      <div className="rounded-lg border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -135,21 +138,20 @@ export default async function RecordsPage({
                   <div className="flex flex-col items-center justify-center text-muted-foreground">
                     <History className="h-8 w-8 mb-2" />
                     <p className="text-sm">暂无生成记录</p>
-                    <Button
+                    <LinkButton
                       variant="link"
                       size="sm"
-                      nativeButton={false}
-                      render={<Link href="/templates" />}
+                      href="/templates"
                     >
                       前往模板列表填写表单
-                    </Button>
+                    </LinkButton>
                   </div>
                 </TableCell>
               </TableRow>
             ) : (
               records.map((record) => (
                 <TableRow key={record.id}>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-[510] text-foreground">
                     {record.template.name}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
@@ -160,7 +162,10 @@ export default async function RecordsPage({
                     })}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={STATUS_VARIANTS[record.status as RecordStatus]}>
+                    <Badge
+                      variant={STATUS_VARIANTS[record.status as RecordStatus]}
+                      className={STATUS_BADGE_CLASS[record.status as RecordStatus]}
+                    >
                       {STATUS_LABELS[record.status as RecordStatus]}
                     </Badge>
                   </TableCell>
@@ -172,20 +177,20 @@ export default async function RecordsPage({
                       {record.status === "COMPLETED" && record.fileName && (
                         <a
                           href={`/api/records/${record.id}/download`}
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs font-[510] text-foreground/90 transition-colors hover:text-foreground"
                         >
                           <Download className="h-3.5 w-3.5" />
                         </a>
                       )}
-                      <Button
+                      <LinkButton
                         variant="ghost"
                         size="sm"
-                        nativeButton={false}
-                        render={<Link href={`/records/${record.id}`} />}
+                        className="text-foreground hover:text-foreground"
+                        href={`/records/${record.id}`}
                       >
                         <Eye className="h-3.5 w-3.5" />
                         查看
-                      </Button>
+                      </LinkButton>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -195,7 +200,6 @@ export default async function RecordsPage({
         </Table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -203,15 +207,15 @@ export default async function RecordsPage({
           </p>
           <div className="flex gap-2">
             {page > 1 ? (
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={buildUrl(page - 1, status || "")} />}
+                className="text-foreground"
+                href={buildUrl(page - 1, status || "")}
               >
                 <ChevronLeft className="h-4 w-4" />
                 上一页
-              </Button>
+              </LinkButton>
             ) : (
               <Button variant="outline" size="sm" disabled>
                 <ChevronLeft className="h-4 w-4" />
@@ -219,15 +223,15 @@ export default async function RecordsPage({
               </Button>
             )}
             {page < totalPages ? (
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={buildUrl(page + 1, status || "")} />}
+                className="text-foreground"
+                href={buildUrl(page + 1, status || "")}
               >
                 下一页
                 <ChevronRight className="h-4 w-4" />
-              </Button>
+              </LinkButton>
             ) : (
               <Button variant="outline" size="sm" disabled>
                 下一页

@@ -680,13 +680,13 @@ export function FieldConfigForm({
     } else if (fieldType === FieldType.SYSTEM_TIMESTAMP || fieldType === FieldType.SYSTEM_USER) {
       fieldOptions = { kind: systemFieldKind };
     } else if (fieldType === FieldType.RATING) {
-      fieldOptions = { ratingMax, ratingAllowHalf };
+      fieldOptions = { ratingMax, ratingAllowHalf } as DataFieldInput["options"];
     } else if (fieldType === FieldType.CURRENCY) {
-      fieldOptions = { currencyCode, currencyDecimals };
+      fieldOptions = { currencyCode, currencyDecimals } as DataFieldInput["options"];
     } else if (fieldType === FieldType.PERCENTAGE) {
-      fieldOptions = { percentageDecimals };
+      fieldOptions = { percentageDecimals } as DataFieldInput["options"];
     } else if (fieldType === FieldType.DURATION) {
-      fieldOptions = { durationFormat };
+      fieldOptions = { durationFormat } as DataFieldInput["options"];
     }
 
     const data: DataFieldInput = {
@@ -1286,7 +1286,7 @@ export function FieldConfigForm({
               <div className="grid gap-3">
                 <div className="grid gap-2">
                   <Label htmlFor="currency-code">币种</Label>
-                  <Select value={currencyCode} onValueChange={setCurrencyCode}>
+                  <Select value={currencyCode} onValueChange={(value) => setCurrencyCode(value ?? "CNY")}>
                     <SelectTrigger id="currency-code">
                       <SelectValue />
                     </SelectTrigger>
@@ -1330,7 +1330,7 @@ export function FieldConfigForm({
             {fieldType === FieldType.DURATION && (
               <div className="grid gap-2">
                 <Label htmlFor="duration-format">显示格式</Label>
-                <Select value={durationFormat} onValueChange={setDurationFormat}>
+                <Select value={durationFormat} onValueChange={(value) => setDurationFormat(value ?? "hh:mm")}>
                   <SelectTrigger id="duration-format">
                     <SelectValue />
                   </SelectTrigger>

@@ -3,13 +3,11 @@
 import { useState, useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import {
-  ClipboardList,
   Eye,
   Pencil,
   Share2,
   Plus,
   Trash2,
-  GripVertical,
   ChevronDown,
   ChevronRight,
   ExternalLink,
@@ -23,12 +21,10 @@ import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
 import type {
   DataFieldItem,
   DataViewItem,
@@ -99,7 +95,16 @@ export function FormView({
         options.allowMultipleSubmissions ?? defaults.allowMultipleSubmissions,
       layout: options.layout ?? defaults.layout,
     };
-  }, [view.viewOptions, view.name, fields]);
+  }, [
+    view.name,
+    fields,
+    options.formTitle,
+    options.formDescription,
+    options.submitButtonText,
+    options.successMessage,
+    options.allowMultipleSubmissions,
+    options.layout,
+  ]);
 
   const [mode, setMode] = useState<"edit" | "preview">("edit");
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -481,7 +486,7 @@ export function FormView({
                 </Button>
               </div>
 
-              {fullOptions.layout.groups.map((group, gi) => (
+              {fullOptions.layout.groups.map((group) => (
                 <GroupEditor
                   key={group.id}
                   group={group}

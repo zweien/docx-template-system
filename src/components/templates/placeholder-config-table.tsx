@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { toast } from "sonner";
 import { ArrowLeft, Loader2, ScanSearch, Upload, Settings2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -318,7 +317,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
     }
   };
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     // Validate
     if (placeholders.length === 0) {
       toast.error("至少需要一个占位符");
@@ -354,9 +353,9 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
     } finally {
       setSaving(false);
     }
-  };
+  }, [placeholders, templateId, hideActions, router]);
 
-  useImperativeHandle(ref, () => ({ save: handleSave }), [placeholders]);
+  useImperativeHandle(ref, () => ({ save: handleSave }), [handleSave]);
 
   if (loading) {
     return (
@@ -371,14 +370,14 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
     <div className="space-y-4">
       {/* Back button */}
       {!hideActions && (
-        <Button
+        <LinkButton
           variant="ghost"
           size="sm"
-          render={<Link href={`/templates/${templateId}`} />}
+          href={`/templates/${templateId}`}
         >
           <ArrowLeft className="h-4 w-4" />
           返回模板详情
-        </Button>
+        </LinkButton>
       )}
 
       {/* Parse & Import buttons */}
@@ -611,12 +610,12 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
       {/* Action buttons */}
       {!hideActions && (
         <div className="flex items-center justify-end gap-2 pt-2">
-          <Button
+          <LinkButton
             variant="outline"
-            render={<Link href={`/templates/${templateId}`} />}
+            href={`/templates/${templateId}`}
           >
             取消
-          </Button>
+          </LinkButton>
           <Button onClick={handleSave} disabled={saving || placeholders.length === 0}>
             {saving ? (
               <Loader2 className="h-4 w-4 animate-spin" />

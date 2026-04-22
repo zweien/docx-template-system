@@ -391,7 +391,6 @@ export const CodeBlockContent = ({
 
   // Async highlighting result (populated after shiki loads)
   const [asyncTokens, setAsyncTokens] = useState<TokenizedCode | null>(null);
-  const asyncKeyRef = useRef({ code, language });
 
   // Track if we need to reset (for comparison in effect)
   const prevKeyRef = useRef({ code, language });

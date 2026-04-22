@@ -39,7 +39,7 @@ export function CellCommentPanel({ tableId, recordId, fieldKey, fieldName, onCom
   const [mentionResults, setMentionResults] = useState<UserOption[]>([]);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [showMentions, setShowMentions] = useState(false);
-  const [mentionStart, setMentionStart] = useState(-1);
+  const [, setMentionStart] = useState(-1);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
 

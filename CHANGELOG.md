@@ -2,6 +2,50 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.7](https://github.com/zweien/docx-template-system/compare/v0.6.6...v0.6.7) (2026-04-21)
+
+## [0.6.2](https://github.com/zweien/docx-template-system/compare/v0.6.1...v0.6.2) (2026-04-19)
+
+
+### Bug Fixes
+
+* **import:** remove duplicate const num declaration in DURATION parsing ([6016e32](https://github.com/zweien/docx-template-system/commit/6016e326f6267bdee9040b545b8aa05a921bcb79))
+* **theme:** improve light-mode contrast for detail pages and destructive buttons ([aaad132](https://github.com/zweien/docx-template-system/commit/aaad132fc54f2de9ccf6ea9163a099c501f9917d))
+* **theme:** improve templates page readability in light mode ([2b91af4](https://github.com/zweien/docx-template-system/commit/2b91af45c597f335c46d83705649402717b1ed9e))
+* **theme:** restore light-mode readability for records and table text ([ea73cbf](https://github.com/zweien/docx-template-system/commit/ea73cbfee7a161c90d0634c291cedd34000f30cd))
+
+## [0.6.1](https://github.com/zweien/docx-template-system/compare/v0.6.0...v0.6.1) (2026-04-19)
+
+
+### Features
+
+* **nav:** add shared navigation schema, matcher and tests ([e85c8d1](https://github.com/zweien/docx-template-system/commit/e85c8d1f73ca314ec8ddc371f58f8df15a817f17))
+* **nav:** add shared navigation state hook with safe persistence ([6a02dba](https://github.com/zweien/docx-template-system/commit/6a02dba3d9dddcfb0a9748436ca4abbe9f22c011))
+
+
+### Bug Fixes
+
+* **data:** prevent find-replace render loop on stable query ([8788a8d](https://github.com/zweien/docx-template-system/commit/8788a8d5bd373605b71f5a1ee731be4504ecf406))
+* **drafts:** remove nested interactive elements and stabilize trigger usage ([656809f](https://github.com/zweien/docx-template-system/commit/656809f15c61b7fb65e2becfca3c5f2774595561))
+* **ui:** stabilize nav interactions and improve dashboard light-theme contrast ([0908df6](https://github.com/zweien/docx-template-system/commit/0908df6377b75637d68a60ed9fb0b76018570ba0))
+
+## [0.6.0](https://github.com/zweien/docx-template-system/compare/v0.5.4...v0.6.0) (2026-04-19)
+
+
+### Features
+
+* **data-table:** 新增 ROLLUP 汇总字段类型 ([#88](https://github.com/zweien/docx-template-system/issues/88)) ([8f7b44b](https://github.com/zweien/docx-template-system/commit/8f7b44beceb9857f6c0a2b821833e8abf5d3c073))
+* **timeline:** 甘特图增强（依赖连线/拖拽改期/里程碑/缩放平移）([#119](https://github.com/zweien/docx-template-system/issues/119)) ([#132](https://github.com/zweien/docx-template-system/issues/132)) ([ecf09fd](https://github.com/zweien/docx-template-system/commit/ecf09fd5432aa5b1316d3bc579af1f82206368ba))
+
+
+### Bug Fixes
+
+* 评论增删改后实时刷新单元格评论标识 ([e99a38a](https://github.com/zweien/docx-template-system/commit/e99a38a1ae9a07cb673c657041f96171b4e13b1f))
+* 为 CommentPanel 添加 @提及自动补全功能 ([a860388](https://github.com/zweien/docx-template-system/commit/a8603888a125f238940f64c06244ba50b4efc4a9))
+* 修复时长编辑器 hh:mm 解析错误 + 评分编辑器缺少 onBlur ([a27a5b8](https://github.com/zweien/docx-template-system/commit/a27a5b800f9518c73c714efcafcabd6c1d6168d7))
+* 移动端详情抽屉导航箭头被关闭按钮遮挡 ([2ccd33f](https://github.com/zweien/docx-template-system/commit/2ccd33f9113598c4749a9147f1beab555dedc3a2))
+* **data-table:** 修复货币字段小数位保存不生效 ([#130](https://github.com/zweien/docx-template-system/issues/130)) ([d1cef23](https://github.com/zweien/docx-template-system/commit/d1cef236676ba405dee7909be09b8ef6a73871cc))
+
 ## [0.5.4](https://github.com/zweien/docx-template-system/compare/v0.5.3...v0.5.4) (2026-04-16)
 
 

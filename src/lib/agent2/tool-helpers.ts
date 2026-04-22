@@ -291,7 +291,6 @@ function buildFilterConditions(
   for (const filter of filters) {
     const resolvedKey = resolveFieldKey(filter.field, fields);
     if (!resolvedKey) continue;
-    const field = fields.find((f) => f.key === resolvedKey)!;
 
     switch (filter.operator) {
       case "eq":

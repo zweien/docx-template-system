@@ -45,7 +45,7 @@ export function RelationTargetPicker({
   placeholder = "选择目标记录",
   disabled = false,
   multiSelect = false,
-  valueMulti = [],
+  valueMulti: _valueMulti = [],
   onChangeMulti,
 }: RelationTargetPickerProps) {
   const { data: session } = useSession();
@@ -76,6 +76,7 @@ export function RelationTargetPicker({
   });
 
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const lastSyncedMultiIdsRef = useRef<string>("");
 
   useEffect(() => {
     if (!open) {
@@ -86,9 +87,13 @@ export function RelationTargetPicker({
 
   // Sync multi-select external state
   useEffect(() => {
-    if (multiSelect && onChangeMulti && open) {
-      onChangeMulti(selectedItems);
-    }
+    if (!multiSelect || !onChangeMulti || !open) return;
+
+    const nextKey = selectedItems.map((item) => item.id).join(",");
+    if (nextKey === lastSyncedMultiIdsRef.current) return;
+
+    lastSyncedMultiIdsRef.current = nextKey;
+    onChangeMulti(selectedItems);
   }, [selectedItems, multiSelect, onChangeMulti, open]);
 
   const handleSingleSelect = (option: RelationOption) => {

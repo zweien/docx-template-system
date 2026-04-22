@@ -98,16 +98,16 @@ export function FieldMappingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] text-[#f7f8f8] sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>字段映射配置</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="font-[510] tracking-[-0.13px]">字段映射配置</DialogTitle>
+          <DialogDescription className="text-[#8a8f98]">
             配置模板占位符到数据表字段的映射关系
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-4">
-          <div className="grid grid-cols-[1fr_auto_1fr] gap-2 text-sm font-medium text-muted-foreground">
+          <div className="grid grid-cols-[1fr_auto_1fr] gap-2 text-sm font-[510] text-[#8a8f98]">
             <span>模板占位符</span>
             <span></span>
             <span>数据表字段</span>
@@ -120,17 +120,17 @@ export function FieldMappingDialog({
             return (
               <div
                 key={ph.key}
-                className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center"
+                className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 rounded-md border border-[rgb(255_255_255_/_0.06)] bg-[rgb(255_255_255_/_0.02)] p-2.5"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-mono">{ph.key}</span>
+                  <span className="text-sm font-mono text-[#d0d6e0]">{ph.key}</span>
                   {ph.required && (
                     <Badge variant="destructive" className="text-xs">
                       必填
                     </Badge>
                   )}
                 </div>
-                <span className="text-muted-foreground">&rarr;</span>
+                <span className="text-[#8a8f98]">&rarr;</span>
                 <div className="flex items-center gap-2">
                   <Select
                     value={currentValue || ""}
@@ -148,7 +148,7 @@ export function FieldMappingDialog({
                     </SelectContent>
                   </Select>
                   {isAutoMatched && (
-                    <Badge variant="outline" className="text-xs text-green-600">
+                    <Badge variant="outline" className="text-xs text-emerald-400">
                       <Check className="h-3 w-3 mr-1" />
                       自动匹配
                     </Badge>

@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
 
     // 5. 批量获取关联记录的显示值
     const relatedRecordsMap: Map<string, Record<string, unknown>> = new Map();
-    for (const [tableId, ids] of relationIdsByTable) {
+    for (const [_tableId, ids] of relationIdsByTable) {
       if (ids.size > 0) {
         const relatedRecords = await db.dataRecord.findMany({
           where: { id: { in: Array.from(ids) } },

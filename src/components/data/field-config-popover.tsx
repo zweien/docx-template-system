@@ -112,7 +112,7 @@ export function FieldConfigPopover({
         <Settings2 className="h-4 w-4" />
         字段
       </PopoverTrigger>
-      <PopoverContent align="start" side="bottom" className="w-64 p-3">
+      <PopoverContent align="start" side="bottom" className="w-64 border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] p-3 text-[#d0d6e0]">
         {/* Select all / Deselect all */}
         <div className="flex gap-2 mb-2">
           <Button
@@ -133,7 +133,7 @@ export function FieldConfigPopover({
           </Button>
         </div>
 
-        <Separator />
+        <Separator className="bg-[rgb(255_255_255_/_0.08)]" />
 
         {/* Field list */}
         <div className="flex flex-col gap-0.5 mt-2 max-h-64 overflow-y-auto">
@@ -147,7 +147,7 @@ export function FieldConfigPopover({
             return (
               <div
                 key={field.key}
-                className="flex items-center gap-2 py-1 px-1 rounded hover:bg-muted/50"
+                className="flex items-center gap-2 rounded px-1 py-1 hover:bg-[rgb(255_255_255_/_0.04)]"
               >
                 <Checkbox
                   checked={isChecked}
@@ -156,17 +156,17 @@ export function FieldConfigPopover({
                   }
                   disabled={isLastVisible}
                 />
-                <span className="flex-1 text-sm truncate">{field.label}</span>
+                <span className="flex-1 truncate text-sm">{field.label}</span>
                 <div className="flex gap-0.5 shrink-0">
                   <button
-                    className="p-0.5 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="rounded p-0.5 text-[#8a8f98] hover:bg-[rgb(255_255_255_/_0.06)] hover:text-[#f7f8f8] disabled:cursor-not-allowed disabled:opacity-30"
                     onClick={() => handleMoveUp(field.key)}
                     disabled={isFirst}
                   >
                     <ArrowUp className="h-3 w-3" />
                   </button>
                   <button
-                    className="p-0.5 rounded hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed"
+                    className="rounded p-0.5 text-[#8a8f98] hover:bg-[rgb(255_255_255_/_0.06)] hover:text-[#f7f8f8] disabled:cursor-not-allowed disabled:opacity-30"
                     onClick={() => handleMoveDown(field.key)}
                     disabled={isLast}
                   >

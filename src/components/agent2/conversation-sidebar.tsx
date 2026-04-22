@@ -41,8 +41,8 @@ interface ConversationSidebarProps {
 export function ConversationSidebar({
   selectedId,
   onSelect,
-  onToggleCollapse,
-  settingsOpen,
+  onToggleCollapse: _onToggleCollapse,
+  settingsOpen: _settingsOpen,
   onSettingsOpenChange,
   refreshKey,
 }: ConversationSidebarProps) {

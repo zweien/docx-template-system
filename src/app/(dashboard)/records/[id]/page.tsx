@@ -1,9 +1,8 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -81,22 +80,20 @@ export default async function RecordDetailPage({
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* Back button */}
-      <Button
+      <LinkButton
         variant="ghost"
         size="sm"
-        nativeButton={false}
-        render={<Link href="/records" />}
+        className="text-muted-foreground hover:text-foreground"
+        href="/records"
       >
         <ArrowLeft className="h-4 w-4" />
         返回列表
-      </Button>
+      </LinkButton>
 
-      {/* Header with status */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">记录详情</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">记录详情</h1>
+          <p className="text-sm text-muted-foreground">
             {record.template.name}
           </p>
         </div>
@@ -108,9 +105,8 @@ export default async function RecordDetailPage({
         </Badge>
       </div>
 
-      <Separator />
+      <Separator className="bg-border" />
 
-      {/* Info section */}
       <Card>
         <CardHeader>
           <CardTitle>基本信息</CardTitle>
@@ -118,11 +114,11 @@ export default async function RecordDetailPage({
         <CardContent className="space-y-2">
           <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
             <span className="text-muted-foreground">模板名称</span>
-            <span>{record.template.name}</span>
+            <span className="text-foreground">{record.template.name}</span>
           </div>
           <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
             <span className="text-muted-foreground">生成时间</span>
-            <span>
+            <span className="text-foreground">
               {record.createdAt.toLocaleDateString("zh-CN", {
                 year: "numeric",
                 month: "2-digit",
@@ -135,13 +131,12 @@ export default async function RecordDetailPage({
           {record.fileName && (
             <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
               <span className="text-muted-foreground">文件名</span>
-              <span>{record.fileName}</span>
+              <span className="text-foreground">{record.fileName}</span>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Form data snapshot */}
       <Card>
         <CardHeader>
           <CardTitle>表单数据</CardTitle>
@@ -163,14 +158,14 @@ export default async function RecordDetailPage({
 
                 return (
                   <div key={key} className={isTable ? "md:col-span-2" : ""}>
-                    <p className="text-xs font-medium text-muted-foreground mb-1">
+                    <p className="mb-1 text-xs font-[510] text-muted-foreground">
                       {labelMap.get(key) || key}
                     </p>
                     {isTable ? (
                       (value as Record<string, string>[]).length === 0 ? (
                         <p className="text-sm text-muted-foreground">（空表格）</p>
                       ) : (
-                        <div className="rounded-md border overflow-hidden">
+                        <div className="overflow-hidden rounded-md">
                           <Table>
                             <TableHeader>
                               <TableRow>
@@ -200,7 +195,7 @@ export default async function RecordDetailPage({
                         </div>
                       )
                     ) : (
-                      <p className="text-sm bg-muted rounded-md px-3 py-2 break-all">
+                      <p className="break-all rounded-md border border-border bg-card px-3 py-2 text-sm text-secondary-foreground">
                         {isChoiceArray ? value.join("、") : String(value || "")}
                       </p>
                     )}
@@ -212,7 +207,6 @@ export default async function RecordDetailPage({
         </CardContent>
       </Card>
 
-      {/* Actions */}
       <Card>
         <CardHeader>
           <CardTitle>操作</CardTitle>
@@ -221,7 +215,7 @@ export default async function RecordDetailPage({
           {record.status === "COMPLETED" && record.fileName && (
             <a
               href={`/api/records/${record.id}/download`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/80 transition-colors"
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-[510] text-primary-foreground transition-colors hover:bg-[#828fff]"
             >
               <Download className="h-4 w-4" />
               下载文档
@@ -243,7 +237,7 @@ export default async function RecordDetailPage({
 
           <a
             href={`/api/records/${record.id}/export`}
-            className="inline-flex items-center gap-2 px-4 py-2 border rounded-lg text-sm font-medium hover:bg-accent transition-colors"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-[510] text-secondary-foreground transition-colors hover:bg-accent/70 hover:text-foreground"
           >
             <FileSpreadsheet className="h-4 w-4" />
             导出 Excel

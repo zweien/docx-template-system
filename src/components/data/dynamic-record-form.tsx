@@ -126,7 +126,7 @@ function serializeRelationSubtableValue(
 }
 
 export function DynamicRecordForm({
-  tableId,
+  tableId: _tableId,
   fields,
   initialData,
   onSubmit,
@@ -223,7 +223,6 @@ export function DynamicRecordForm({
     handleSubmit,
     setValue,
     watch,
-    getValues,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(schema),

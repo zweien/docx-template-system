@@ -4,28 +4,52 @@ import { useCallback, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Search } from "lucide-react";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { isRouteActive } from "@/components/layout/navigation/matcher";
+import { NAV_ITEMS } from "@/components/layout/navigation/schema";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { GlobalSearchDialog } from "@/components/data/global-search-dialog";
 
-const routeTitles: Record<string, string> = {
-  "/": "仪表盘",
-  "/templates": "模板管理",
+const routeTitleOverrides: Record<string, string> = {
+  "/ai-agent2": "智能助手",
   "/templates/new": "上传模板",
-  "/records": "生成记录",
-  "/drafts": "我的草稿",
-  "/admin/users": "用户管理",
-  "/admin/settings": "系统设置",
 };
+
+function getHeaderTitle(pathname: string): string {
+  const overrideTitle = routeTitleOverrides[pathname];
+  if (overrideTitle) {
+    return overrideTitle;
+  }
+
+  const matched = NAV_ITEMS.find((item) => isRouteActive(item.href, pathname));
+  return matched?.label ?? "IDRL填表系统";
+}
+
+function isTypingElement(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  if (target.isContentEditable) {
+    return true;
+  }
+
+  const tagName = target.tagName.toLowerCase();
+  return tagName === "input" || tagName === "textarea" || tagName === "select";
+}
 
 export function Header() {
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const title = routeTitles[pathname] ?? "IDRL填表系统";
+  const title = getHeaderTitle(pathname);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+    if (isTypingElement(e.target)) {
+      return;
+    }
+
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
       e.preventDefault();
       setSearchOpen((v) => !v);
     }
@@ -38,21 +62,22 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 sm:gap-4 border-b bg-background px-3 sm:px-6">
-        {/* Mobile navigation */}
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-border/80 bg-background/95 px-3 text-foreground backdrop-blur-xl sm:gap-4 sm:px-6">
         <MobileNav />
 
         <div className="flex flex-1 items-center min-w-0">
-          <h1 className="text-base sm:text-lg font-semibold truncate">{title}</h1>
+          <h1 className="truncate text-base font-[510] tracking-[-0.13px] text-foreground sm:text-lg">{title}</h1>
         </div>
 
         <button
           onClick={() => setSearchOpen(true)}
-          className="hidden sm:flex items-center gap-2 h-8 px-3 rounded-md border bg-muted/50 text-sm text-muted-foreground hover:bg-muted transition-colors"
+          className="hidden h-8 items-center gap-2 rounded-md border border-border bg-muted/20 px-3 text-sm font-[510] text-muted-foreground transition-all hover:border-border hover:bg-accent/60 hover:text-foreground sm:flex"
         >
           <Search className="h-3.5 w-3.5" />
           <span>搜索...</span>
-          <kbd className="rounded border bg-background px-1 py-0.5 text-[10px] font-mono">⌘K</kbd>
+          <kbd className="rounded border border-border bg-muted/50 px-1 py-0.5 font-mono text-[10px] text-muted-foreground">
+            ⌘K
+          </kbd>
         </button>
 
         <ThemeToggle />

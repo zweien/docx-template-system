@@ -1,0 +1,32 @@
+services:
+  app:
+    image: ${APP_IMAGE:-docx-template-system-app:v0.6.6}
+    pull_policy: never
+    ports:
+      - "127.0.0.1:${APP_PORT:-8060}:8060"
+    env_file:
+      - .env.offline
+    environment:
+      - PYTHON_SERVICE_URL=http://python-service:8065
+      - NODE_ENV=production
+    restart: unless-stopped
+    volumes:
+      - uploads:/app/public/uploads
+      - collection-uploads:/app/.data/uploads
+      - backups:/app/.data/backups
+    depends_on:
+      - python-service
+
+  python-service:
+    image: ${PYTHON_IMAGE:-docx-template-system-python-service:v0.6.6}
+    pull_policy: never
+    environment:
+      - PORT=8065
+    restart: unless-stopped
+    volumes:
+      - uploads:/app/public/uploads:ro
+
+volumes:
+  uploads:
+  collection-uploads:
+  backups:

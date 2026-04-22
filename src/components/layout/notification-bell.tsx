@@ -143,7 +143,7 @@ export function NotificationBell() {
 
   return (
     <div className="relative" ref={panelRef}>
-      <Button variant="ghost" size="icon" onClick={handleToggle} className="relative">
+      <Button variant="ghost" size="icon" onClick={handleToggle} className="relative text-muted-foreground hover:text-foreground">
         <Bell className="h-4 w-4" />
         {unreadCount > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-medium text-white">
@@ -153,11 +153,11 @@ export function NotificationBell() {
       </Button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-80 max-h-80 overflow-y-auto rounded-lg border bg-popover shadow-md">
-          <div className="flex items-center justify-between border-b px-3 py-2">
-            <span className="text-sm font-semibold">通知</span>
+        <div className="absolute right-0 top-full z-50 mt-2 max-h-80 w-80 overflow-y-auto rounded-xl border border-border bg-popover text-popover-foreground shadow-xl">
+          <div className="flex items-center justify-between border-b border-border px-3 py-2">
+            <span className="text-sm font-[510] text-foreground">通知</span>
             {unreadCount > 0 ? (
-              <Button variant="ghost" size="xs" onClick={handleMarkAllAsRead} className="gap-1 text-xs text-muted-foreground">
+              <Button variant="ghost" size="xs" onClick={handleMarkAllAsRead} className="gap-1 text-xs text-muted-foreground hover:text-foreground">
                 <CheckCheck className="h-3 w-3" />
                 全部已读
               </Button>
@@ -178,22 +178,22 @@ export function NotificationBell() {
                     type="button"
                     onClick={() => handleMarkAsRead(notification)}
                     className={`w-full text-left px-3 py-2.5 hover:bg-muted/50 transition-colors ${
-                      !notification.isRead ? "bg-blue-50 dark:bg-blue-950/20" : ""
+                      !notification.isRead ? "bg-primary/10" : ""
                     }`}
                   >
                     <div className="flex items-start gap-2">
                       <span className={`mt-1 inline-block size-2 shrink-0 rounded-full ${badge.color}`} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-medium text-muted-foreground">{badge.label}</span>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs font-[510] text-muted-foreground">{badge.label}</span>
+                          <span className="text-xs text-muted-foreground/80">
                             {formatRelativeTime(notification.createdAt)}
                           </span>
                         </div>
-                        <p className={`text-sm truncate ${notification.isRead ? "text-muted-foreground" : ""}`}>
+                        <p className={`truncate text-sm ${notification.isRead ? "text-muted-foreground" : "text-foreground"}`}>
                           {notification.title}
                         </p>
-                        <p className="text-xs text-muted-foreground line-clamp-1">{notification.content}</p>
+                        <p className="line-clamp-1 text-xs text-muted-foreground">{notification.content}</p>
                       </div>
                     </div>
                   </button>
@@ -202,7 +202,7 @@ export function NotificationBell() {
             )}
           </div>
 
-          <div className="border-t px-3 py-2 text-center">
+          <div className="border-t border-border px-3 py-2 text-center">
             <a
               href="/notifications"
               onClick={(e) => {

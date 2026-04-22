@@ -162,6 +162,76 @@ npx prisma studio    # 数据库可视化工具
 npm run release      # 发布新版本 (自动 bump + CHANGELOG + git tag)
 ```
 
+## 内网离线部署
+
+适用于办公内网无法访问公网、但可使用 Docker 的场景。
+
+### 交付文件
+
+- `docker-compose.offline.yml`：离线部署专用 Compose（只使用本地镜像，不拉取公网）
+- `.env.offline.example`：离线环境变量模板（可复用内网 PostgreSQL）
+- `scripts/deploy-offline.sh`：一键部署脚本（可选加载镜像包 + 启动 + Prisma 同步 + 健康检查）
+
+### 1. 准备环境变量
+
+```bash
+cp .env.offline.example .env.offline
+```
+
+至少需要正确配置：
+
+- `DATABASE_URL`（指向内网 PostgreSQL）
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL`
+
+如果是纯内网本地登录，建议：
+
+```bash
+DEV_BYPASS_AUTH=true
+NEXT_PUBLIC_DEV_BYPASS_AUTH=true
+```
+
+### 2. 准备离线镜像包（在有网环境）
+
+```bash
+docker compose build
+docker save \
+  docx-template-system-app:v0.6.6 \
+  docx-template-system-python-service:v0.6.6 \
+  -o docx-template-system-offline.tar
+```
+
+将 `docx-template-system-offline.tar`、项目代码和 `.env.offline` 拷贝到内网服务器。
+
+### 3. 一键部署（在内网服务器）
+
+```bash
+chmod +x scripts/deploy-offline.sh
+./scripts/deploy-offline.sh --image-tar /path/to/docx-template-system-offline.tar
+```
+
+如果镜像已提前 `docker load` 过，可直接执行：
+
+```bash
+./scripts/deploy-offline.sh
+```
+
+### 4. 直接使用 Compose（可选）
+
+```bash
+docker compose -f docker-compose.offline.yml --env-file .env.offline up -d --remove-orphans
+docker compose -f docker-compose.offline.yml --env-file .env.offline run --rm --user root app npx prisma db push
+```
+
+### 增量升级建议
+
+- 推荐在内网搭私有 Registry（Harbor/registry:2），镜像按层增量传输
+- 版本升级时仅更新镜像 tag（如 `v0.6.7`），再执行：
+
+```bash
+docker compose -f docker-compose.offline.yml --env-file .env.offline up -d --remove-orphans
+```
+
 ### 数据迁移
 
 #### 关系子表格字段迁移

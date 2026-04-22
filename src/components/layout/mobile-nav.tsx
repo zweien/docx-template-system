@@ -4,18 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import {
-  LayoutDashboard,
-  FileOutput,
-  FileText,
-  History,
-  PenLine,
-  Database,
-  Menu,
-  Users,
-  Sparkles,
-  FolderInput,
-} from "lucide-react";
+import { Menu } from "lucide-react";
+import type { Role } from "@/generated/prisma/enums";
+import { AppLogo } from "@/components/layout/app-logo";
+import { isRouteActive } from "@/components/layout/navigation/matcher";
+import { NAV_ITEMS, filterNavItemsByRole, type NavItem } from "@/components/layout/navigation/schema";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -26,67 +19,48 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 
-interface NavItem {
-  title: string;
-  href: string;
-  icon: React.ReactNode;
+const ACTIVE_ITEM_CLASS_NAME =
+  "border border-[rgb(255_255_255_/_0.1)] bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8] shadow-[inset_0_0_0_1px_rgb(113_112_255_/_0.34)]";
+
+const INACTIVE_ITEM_CLASS_NAME =
+  "border border-transparent text-[#8a8f98] hover:border-[rgb(255_255_255_/_0.08)] hover:bg-[rgb(255_255_255_/_0.03)] hover:text-[#f7f8f8]";
+
+type MobileNavLinkProps = {
+  readonly item: NavItem;
+  readonly pathname: string;
+  readonly onNavigate: () => void;
+};
+
+function MobileNavLink({ item, pathname, onNavigate }: MobileNavLinkProps) {
+  const isActive = isRouteActive(item.href, pathname);
+  const Icon = item.icon;
+
+  return (
+    <Link
+      href={item.href}
+      aria-current={isActive ? "page" : undefined}
+      onNavigate={onNavigate}
+      className={cn(
+        "flex items-center gap-3 rounded-md px-3 py-3 text-sm font-[510] transition-[color,background-color,border-color,transform] duration-100",
+        isActive ? ACTIVE_ITEM_CLASS_NAME : INACTIVE_ITEM_CLASS_NAME
+      )}
+    >
+      <span className={cn("transition-transform duration-100", isActive && "scale-110")}>
+        <Icon className="h-5 w-5" />
+      </span>
+      {item.label}
+    </Link>
+  );
 }
-
-const navItems: NavItem[] = [
-  {
-    title: "仪表盘",
-    href: "/",
-    icon: <LayoutDashboard className="h-5 w-5" />,
-  },
-  {
-    title: "我要填表",
-    href: "/generate",
-    icon: <FileOutput className="h-5 w-5" />,
-  },
-  {
-    title: "模板管理",
-    href: "/templates",
-    icon: <FileText className="h-5 w-5" />,
-  },
-  {
-    title: "文档收集",
-    href: "/collections",
-    icon: <FolderInput className="h-5 w-5" />,
-  },
-  {
-    title: "主数据",
-    href: "/data",
-    icon: <Database className="h-5 w-5" />,
-  },
-  {
-    title: "生成记录",
-    href: "/records",
-    icon: <History className="h-5 w-5" />,
-  },
-  {
-    title: "我的草稿",
-    href: "/drafts",
-    icon: <PenLine className="h-5 w-5" />,
-  },
-  {
-    title: "智能助手",
-    href: "/ai-agent2",
-    icon: <Sparkles className="h-5 w-5" />,
-  },
-];
-
-const adminNavItems: NavItem[] = [
-  {
-    title: "用户管理",
-    href: "/admin/users",
-    icon: <Users className="h-5 w-5" />,
-  },
-];
 
 export function MobileNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
+  const role = session?.user?.role as Role | undefined;
+  const navItems = filterNavItemsByRole(NAV_ITEMS, role);
+  const mainItems = navItems.filter((item) => item.section === "main");
+  const adminItems = navItems.filter((item) => item.section === "admin");
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -95,99 +69,45 @@ export function MobileNav() {
           <Button
             variant="ghost"
             size="icon"
-            className="md:hidden h-9 w-9 hover:bg-muted"
+            className="h-9 w-9 border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] text-[#d0d6e0] hover:bg-[rgb(255_255_255_/_0.05)] md:hidden"
           >
             <Menu className="h-5 w-5" />
             <span className="sr-only">打开菜单</span>
           </Button>
         }
       />
-      <SheetContent side="left" className="w-[280px] p-0 flex flex-col">
-        <SheetHeader className="px-4 py-4 border-b shrink-0">
+      <SheetContent side="left" className="flex w-[280px] flex-col border-[rgb(255_255_255_/_0.08)] bg-[rgb(15_16_17_/_0.98)] p-0 text-[#f7f8f8]">
+        <SheetHeader className="shrink-0 border-b border-[rgb(255_255_255_/_0.05)] px-4 py-4">
           <SheetTitle className="flex items-center gap-2">
-            <img
-              src="/logo.png"
-              alt="IDRL填表系统"
-              width={24}
-              height={24}
-            />
-            <span className="text-lg font-semibold">IDRL填表系统</span>
+            <AppLogo className="h-6" priority />
+            <span className="text-lg font-[510] tracking-[-0.13px]">IDRL填表系统</span>
           </SheetTitle>
         </SheetHeader>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <div className="space-y-1">
-            {navItems.map((item) => {
-              const isActive =
-                item.href === "/"
-                  ? pathname === "/"
-                  : pathname === item.href || pathname.startsWith(item.href + "/");
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={() => setOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200",
-                    isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <span className={cn(
-                    "transition-transform duration-200",
-                    isActive && "scale-110"
-                  )}>
-                    {item.icon}
-                  </span>
-                  {item.title}
-                </Link>
-              );
-            })}
+          <div className="space-y-1.5">
+            {mainItems.map((item) => (
+              <MobileNavLink key={item.id} item={item} pathname={pathname} onNavigate={() => setOpen(false)} />
+            ))}
           </div>
 
-          {/* Admin Section */}
-          {session?.user?.role === "ADMIN" && (
-            <div className="mt-6 pt-4 border-t">
-              <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {adminItems.length > 0 && (
+            <div className="mt-6 border-t border-[rgb(255_255_255_/_0.05)] pt-4">
+              <p className="mb-2 px-3 text-xs font-[510] uppercase tracking-wider text-[#62666d]">
                 管理员
               </p>
-              <div className="space-y-1">
-                {adminNavItems.map((item) => {
-                  const isActive = pathname.startsWith(item.href);
-
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-all duration-200",
-                        isActive
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )}
-                    >
-                      <span className={cn(
-                        "transition-transform duration-200",
-                        isActive && "scale-110"
-                      )}>
-                        {item.icon}
-                      </span>
-                      {item.title}
-                    </Link>
-                  );
-                })}
+              <div className="space-y-1.5">
+                {adminItems.map((item) => (
+                  <MobileNavLink key={item.id} item={item} pathname={pathname} onNavigate={() => setOpen(false)} />
+                ))}
               </div>
             </div>
           )}
         </nav>
 
         {/* Footer */}
-        <div className="border-t px-4 py-4 shrink-0">
-          <p className="text-sm text-muted-foreground">
+        <div className="shrink-0 border-t border-[rgb(255_255_255_/_0.05)] px-4 py-4">
+          <p className="text-sm text-[#8a8f98]">
             {session?.user?.name
               ? `已登录: ${session.user.name}`
               : "未登录"}

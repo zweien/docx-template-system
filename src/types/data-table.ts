@@ -93,6 +93,18 @@ export interface FieldOptions {
   rollupAggregateType?: RollupAggregateType;
   /** ROLLUP: filter conditions applied to target records before aggregation */
   rollupConditions?: FilterGroup[];
+  /** RATING: max rating value */
+  ratingMax?: number;
+  /** RATING: allow half stars */
+  ratingAllowHalf?: boolean;
+  /** CURRENCY: currency code (e.g. CNY, USD) */
+  currencyCode?: string;
+  /** CURRENCY: number of decimal places */
+  currencyDecimals?: number;
+  /** PERCENTAGE: number of decimal places */
+  percentageDecimals?: number;
+  /** DURATION: display format */
+  durationFormat?: string;
 }
 
 export function parseFieldOptions(raw: unknown): FieldOptions {

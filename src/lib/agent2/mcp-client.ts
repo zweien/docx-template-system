@@ -111,12 +111,11 @@ function wrapMcpToolWithConfirm(
   messageId: string
 ): Tool {
   if (!rawTool.execute) return rawTool;
-  const originalExecute = rawTool.execute;
 
   return tool({
     description: rawTool.description,
     inputSchema: rawTool.inputSchema ?? z.object({}),
-    execute: async (args: unknown, context: ToolExecutionOptions) => {
+    execute: async (args: unknown, _context: ToolExecutionOptions) => {
       const tokenResult = await createConfirmToken(
         conversationId,
         messageId,

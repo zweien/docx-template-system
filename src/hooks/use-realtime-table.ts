@@ -46,7 +46,9 @@ export function useRealtimeTable({
   const [cursorPositions, setCursorPositions] = useState<Map<string, { userId: string; userName: string; recordId: string; fieldKey: string; color: string }>>(new Map());
 
   const callbacksRef = useRef({ onUpdateRecordField, onRefresh });
-  callbacksRef.current = { onUpdateRecordField, onRefresh };
+  useEffect(() => {
+    callbacksRef.current = { onUpdateRecordField, onRefresh };
+  }, [onUpdateRecordField, onRefresh]);
 
   const lockLostCallbacksRef = useRef(new Set<(recordId: string, fieldKey: string) => void>());
 

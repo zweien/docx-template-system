@@ -66,7 +66,7 @@ export const authOptions: NextAuthOptions = {
     signIn: "/login",
   },
   callbacks: {
-    async signIn({ account, profile, user }) {
+    async signIn({ account, profile, user: _user }) {
       if (account?.provider === "dev-credentials") {
         return true;
       }

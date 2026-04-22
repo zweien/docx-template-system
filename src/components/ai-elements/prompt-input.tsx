@@ -1208,6 +1208,9 @@ export type PromptInputSubmitProps = ComponentProps<typeof InputGroupButton> & {
   status?: ChatStatus;
   onStop?: () => void;
 };
+type PromptInputSubmitClickEvent = Parameters<
+  NonNullable<PromptInputSubmitProps["onClick"]>
+>[0];
 
 export const PromptInputSubmit = ({
   className,
@@ -1232,13 +1235,13 @@ export const PromptInputSubmit = ({
   }
 
   const handleClick = useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+    (e: PromptInputSubmitClickEvent) => {
       if (isGenerating && onStop) {
         e.preventDefault();
         onStop();
         return;
       }
-      onClick?.(e as any);
+      onClick?.(e);
     },
     [isGenerating, onStop, onClick]
   );

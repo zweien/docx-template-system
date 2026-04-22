@@ -87,8 +87,7 @@ export function useKeyboardNav({
     [rowCount, isGroupRow]
   );
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
         e.preventDefault();
         onUndo?.();
@@ -134,19 +133,6 @@ export function useKeyboardNav({
       const maxCol = colCount - 1;
       const shift = e.shiftKey;
       const ctrl = e.ctrlKey || e.metaKey;
-
-      // Helper: find edge row in a direction (skipping group rows)
-      const findEdgeRow = (fromRow: number, dir: 1 | -1): number => {
-        let row = fromRow;
-        while (true) {
-          const next = row + dir;
-          if (next < 0 || next > maxRow) break;
-          if (!isGroupRow?.(next)) row = next;
-          else break; // stop at group boundary
-          // For non-Ctrl: would stop here; for Ctrl: keep going
-        }
-        return row;
-      };
 
       switch (e.key) {
         case "ArrowUp": {
@@ -344,14 +330,7 @@ export function useKeyboardNav({
             e.preventDefault();
           }
       }
-    },
-    [
-      editingCell, rowCount, colCount, onMoveTo, onStartEdit, onCancelEdit,
-      onClearCell, onCopyCell, onPasteCell, onCopyRange, onPasteRange,
-      onSelectionChange, skipGroupRow, onUndo, onRedo, onEditNavigate,
-      onExpandRecord, onInsertRowBelow, onCutCell, onDuplicateRow, onInsertNowDate, onFindBar, setSelectionRange,
-    ]
-  );
+  };
 
   return { handleKeyDown, setActiveCell, setSelectionRange };
 }

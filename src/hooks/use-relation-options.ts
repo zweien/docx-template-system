@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useDebouncedValue } from "@/hooks/use-debounce";
 import { useInfiniteScroll } from "@/hooks/use-infinite-scroll";
 import type { DataFieldItem } from "@/types/data-table";
-import { FieldType } from "@/generated/prisma/enums";
 
 export interface RelationOption {
   id: string;
@@ -72,7 +71,7 @@ export function useRelationOptions({
   // ── Initial load & search reset ──
   useEffect(() => {
     if (!relationTableId) return;
-    const fetchId = ++fetchIdRef.current;
+    ++fetchIdRef.current;
     let cancelled = false;
     async function fetchFirst() {
       setIsLoading(true);

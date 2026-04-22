@@ -1,10 +1,9 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -100,22 +99,20 @@ export default async function TemplateDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Back button */}
-      <Button
+      <LinkButton
         variant="ghost"
         size="sm"
-        nativeButton={false}
-        render={<Link href="/templates" />}
+        className="text-muted-foreground hover:text-foreground"
+        href="/templates"
       >
         <ArrowLeft className="h-4 w-4" />
         返回模板列表
-      </Button>
+      </LinkButton>
 
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)] sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1 min-w-0">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">
               {template.name}
             </h1>
             <Badge variant={STATUS_VARIANTS[template.status]}>
@@ -141,51 +138,47 @@ export default async function TemplateDetailPage({
             <VersionHistoryDialogWrapper templateId={template.id} />
           )}
           {isAdmin && (
-            <Button
+            <LinkButton
               variant="outline"
               size="sm"
-              nativeButton={false}
-              render={<Link href={`/templates/${template.id}/edit`} />}
+              href={`/templates/${template.id}/edit`}
             >
               <Pencil className="h-4 w-4" />
               <span className="hidden sm:inline">编辑</span>
-            </Button>
+            </LinkButton>
           )}
           {template.status === "PUBLISHED" && (
             <>
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={`/templates/${template.id}/batch`} />}
+                href={`/templates/${template.id}/batch`}
               >
                 <Files className="h-4 w-4" />
                 <span className="hidden sm:inline">批量生成</span>
-              </Button>
-              <Button
+              </LinkButton>
+              <LinkButton
                 size="sm"
-                nativeButton={false}
-                render={<Link href={`/templates/${template.id}/fill`} />}
+                href={`/templates/${template.id}/fill`}
               >
                 <PenLine className="h-4 w-4" />
                 <span className="hidden sm:inline">填写表单</span>
-              </Button>
+              </LinkButton>
             </>
           )}
         </div>
       </div>
 
-      <Separator />
+      <Separator className="bg-border" />
 
-      {/* Info cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">文件信息</CardTitle>
+            <CardTitle className="text-sm font-[510]">文件信息</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium">{template.originalFileName || template.fileName}</p>
+            <p className="text-sm font-[510] text-foreground">{template.originalFileName || template.fileName}</p>
             <p className="text-xs text-muted-foreground">
               {formatFileSize(template.fileSize)}
             </p>
@@ -195,20 +188,20 @@ export default async function TemplateDetailPage({
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <User className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">创建者</CardTitle>
+            <CardTitle className="text-sm font-[510]">创建者</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium">{template.createdBy.name}</p>
+            <p className="text-sm font-[510] text-foreground">{template.createdBy.name}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">创建时间</CardTitle>
+            <CardTitle className="text-sm font-[510]">创建时间</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium">
+            <p className="text-sm font-[510] text-foreground">
               {template.createdAt.toLocaleDateString("zh-CN", {
                 year: "numeric",
                 month: "2-digit",
@@ -221,17 +214,16 @@ export default async function TemplateDetailPage({
         <Card>
           <CardHeader className="flex flex-row items-center gap-2 pb-2">
             <HardDrive className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-medium">占位符数量</CardTitle>
+            <CardTitle className="text-sm font-[510]">占位符数量</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm font-medium">
+            <p className="text-sm font-[510] text-foreground">
               {template.placeholders.length} 个
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* P2: 主数据关联 */}
       {isAdmin && (
         <Card>
           <CardHeader>
@@ -256,7 +248,6 @@ export default async function TemplateDetailPage({
         </Card>
       )}
 
-      {/* AI Fill Assist Prompt — admin only */}
       {isAdmin && (
         <Card>
           <CardHeader>
@@ -274,7 +265,6 @@ export default async function TemplateDetailPage({
         </Card>
       )}
 
-      {/* Placeholders table */}
       <Card>
         <CardHeader>
           <CardTitle>占位符列表</CardTitle>
@@ -287,20 +277,17 @@ export default async function TemplateDetailPage({
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <p className="text-sm">暂无占位符</p>
               {isAdmin && (
-                <Button
+                <LinkButton
                   variant="link"
                   size="sm"
-                  nativeButton={false}
-                  render={
-                    <Link href={`/templates/${template.id}/edit`} />
-                  }
+                  href={`/templates/${template.id}/edit`}
                 >
                   前往配置
-                </Button>
+                </LinkButton>
               )}
             </div>
           ) : (
-            <div className="rounded-lg border">
+            <div>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -316,11 +303,11 @@ export default async function TemplateDetailPage({
                 <TableBody>
                   {template.placeholders.map((ph) => (
                     <TableRow key={ph.id}>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="font-mono text-sm text-secondary-foreground">
                         {ph.key}
                       </TableCell>
                       <TableCell>{ph.label}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground max-w-[200px] truncate">
+                      <TableCell className="max-w-[200px] truncate text-xs text-muted-foreground">
                         {ph.description || "—"}
                       </TableCell>
                       <TableCell>
@@ -346,9 +333,8 @@ export default async function TemplateDetailPage({
         </CardContent>
       </Card>
 
-      {/* Danger zone */}
       {isAdmin && (
-        <Card className="border-destructive/50">
+        <Card className="border-destructive/45">
           <CardHeader>
             <CardTitle className="text-destructive">危险操作</CardTitle>
             <CardDescription>

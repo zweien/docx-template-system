@@ -914,7 +914,7 @@ export async function syncRelationSubtableValues(input: {
     // For forward fields: { sourceRecordId, fieldId }
     // For inverse fields: { targetRecordId, fieldId=inverseFieldId }
     const existingRows: RelationRow[] = [];
-    for (const [fieldId, persp] of perspectiveByFieldId.entries()) {
+    for (const [_fieldId, persp] of perspectiveByFieldId.entries()) {
       const rows = await tx.dataRelationRow.findMany({
         where: persp.isInverse
           ? { targetRecordId: input.sourceRecordId, fieldId: persp.storageFieldId }

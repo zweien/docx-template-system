@@ -6,7 +6,36 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-background text-foreground font-sans antialiased;
+    background-image: radial-gradient(circle at 12% -8%, rgb(113 112 255 / 0.12), transparent 40%),
+      radial-gradient(circle at 92% 4%, rgb(130 143 255 / 0.1), transparent 36%);
+    font-feature-settings: "cv01" 1, "ss03" 1, "rlig" 1, "calt" 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgb(113 112 255 / 0.35);
+    color: #f7f8f8;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 9999px;
+    background: rgb(255 255 255 / 0.12);
+    background-clip: padding-box;
+  }
+
+  .light body {
+    background-image: radial-gradient(circle at 0% -10%, rgb(94 106 210 / 0.12), transparent 36%),
+      radial-gradient(circle at 100% 0%, rgb(113 112 255 / 0.08), transparent 30%);
   }
 }

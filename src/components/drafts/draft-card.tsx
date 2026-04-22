@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { CalendarDays, FileText, PenLine } from "lucide-react";
 import { DeleteDraftButton } from "@/app/(dashboard)/drafts/delete-draft-button";
 
@@ -41,51 +41,56 @@ interface DraftCardProps {
 }
 
 export function DraftCard({ id, templateId, templateName, formData, updatedAt }: DraftCardProps) {
+  const router = useRouter();
   const previewValues = getFormDataPreview(formData);
+  const editHref = `/templates/${templateId}/fill?draftId=${id}`;
 
   return (
-    <Link href={`/templates/${templateId}/fill?draftId=${id}`}>
-      <Card className="hover:border-zinc-400 transition-colors cursor-pointer h-full">
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <CardTitle className="text-sm">{templateName}</CardTitle>
-            </div>
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={() => router.push(editHref)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          router.push(editHref);
+        }
+      }}
+      className="h-full cursor-pointer transition-colors hover:border-zinc-400"
+    >
+      <CardHeader>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm">{templateName}</CardTitle>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-1">
-            {previewValues.map((value, idx) => (
-              <p key={idx} className="text-sm text-muted-foreground truncate">
-                {value}
-              </p>
-            ))}
-            {previewValues.length === 0 && (
-              <p className="text-sm text-muted-foreground italic">（空表单）</p>
-            )}
-          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1">
+          {previewValues.map((value, idx) => (
+            <p key={idx} className="truncate text-sm text-muted-foreground">
+              {value}
+            </p>
+          ))}
+          {previewValues.length === 0 && (
+            <p className="text-sm italic text-muted-foreground">（空表单）</p>
+          )}
+        </div>
 
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CalendarDays className="h-3 w-3" />
-            {formatRelativeTime(updatedAt)}
-          </div>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <CalendarDays className="h-3 w-3" />
+          {formatRelativeTime(updatedAt)}
+        </div>
 
-          <div
-            className="flex items-center gap-2 pt-1"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          >
-            <Button
-              size="sm"
-              render={<Link href={`/templates/${templateId}/fill?draftId=${id}`} />}
-            >
-              <PenLine className="h-4 w-4" />
-              继续编辑
-            </Button>
-            <DeleteDraftButton draftId={id} draftName={templateName} />
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
+        <div className="flex items-center gap-2 pt-1" onClick={(event) => event.stopPropagation()}>
+          <LinkButton size="sm" href={editHref}>
+            <PenLine className="h-4 w-4" />
+            继续编辑
+          </LinkButton>
+          <DeleteDraftButton draftId={id} draftName={templateName} />
+        </div>
+      </CardContent>
+    </Card>
   );
 }

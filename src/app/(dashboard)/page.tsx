@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import {
   FileText,
   CheckCircle,
@@ -51,45 +51,45 @@ export default async function DashboardPage() {
 
   const stats = isAdmin
     ? [
-        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, iconColor: "text-green-500", href: "/generate" },
-        { label: "模板总数", value: totalTemplates, icon: FileText, iconColor: "text-blue-500", href: "/templates" },
-        { label: "总用户数", value: totalUsers, icon: Users, iconColor: "text-indigo-500", href: "/admin/users" },
-        { label: "今日生成", value: todayRecords, icon: History, iconColor: "text-orange-500", href: "/records" },
-        { label: "收集任务", value: activeCollections, icon: FolderInput, iconColor: "text-teal-500", href: "/collections" },
-        { label: "数据表", value: dataTables, icon: Database, iconColor: "text-cyan-500", href: "/data" },
+        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, href: "/generate" },
+        { label: "模板总数", value: totalTemplates, icon: FileText, href: "/templates" },
+        { label: "总用户数", value: totalUsers, icon: Users, href: "/admin/users" },
+        { label: "今日生成", value: todayRecords, icon: History, href: "/records" },
+        { label: "收集任务", value: activeCollections, icon: FolderInput, href: "/collections" },
+        { label: "数据表", value: dataTables, icon: Database, href: "/data" },
       ]
     : [
-        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, iconColor: "text-green-500", href: "/generate" },
-        { label: "本月生成", value: monthlyRecords, icon: History, iconColor: "text-orange-500", href: "/records" },
-        { label: "我的草稿", value: drafts, icon: PenLine, iconColor: "text-purple-500", href: "/drafts" },
-        { label: "收集任务", value: activeCollections, icon: FolderInput, iconColor: "text-teal-500", href: "/collections" },
-        { label: "数据表", value: dataTables, icon: Database, iconColor: "text-cyan-500", href: "/data" },
+        { label: "可用模板", value: publishedTemplates, icon: CheckCircle, href: "/generate" },
+        { label: "本月生成", value: monthlyRecords, icon: History, href: "/records" },
+        { label: "我的草稿", value: drafts, icon: PenLine, href: "/drafts" },
+        { label: "收集任务", value: activeCollections, icon: FolderInput, href: "/collections" },
+        { label: "数据表", value: dataTables, icon: Database, href: "/data" },
       ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">仪表盘</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-8">
+      <div className="rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03),0_12px_30px_rgb(0_0_0_/_0.18)] sm:p-6">
+        <p className="text-xs font-[510] uppercase tracking-[0.14em] text-[#7170ff]">Overview</p>
+        <h1 className="mt-2 text-3xl font-[510] tracking-[-0.7px] text-foreground">仪表盘</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           欢迎回来，{session?.user?.name ?? "用户"}
         </p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon;
           return (
             <Link key={stat.label} href={stat.href}>
-              <Card className="hover:border-zinc-400 transition-colors cursor-pointer">
+              <Card className="cursor-pointer border-border bg-card transition-[transform,border-color,background-color] duration-100 hover:-translate-y-0.5 hover:border-border-hover hover:bg-accent/70">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                  <CardTitle className="text-sm font-[510] text-muted-foreground">
                     {stat.label}
                   </CardTitle>
-                  <Icon className={`h-4 w-4 ${stat.iconColor}`} />
+                  <Icon className="h-4 w-4 text-secondary-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stat.value}</div>
+                  <div className="text-3xl font-[510] tracking-[-0.2px] text-foreground">{stat.value}</div>
                 </CardContent>
               </Card>
             </Link>
@@ -97,22 +97,21 @@ export default async function DashboardPage() {
         })}
       </div>
 
-      {/* Quick Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button nativeButton={false} render={<Link href="/generate" />}>
+        <LinkButton href="/generate">
           <FileOutput className="h-4 w-4" />
           我要填表
-        </Button>
+        </LinkButton>
         {isAdmin && (
-          <Button nativeButton={false} render={<Link href="/templates/new" />}>
+          <LinkButton href="/templates/new">
             <Upload className="h-4 w-4" />
             上传模板
-          </Button>
+          </LinkButton>
         )}
-        <Button variant="outline" nativeButton={false} render={<Link href="/templates" />}>
+        <LinkButton variant="outline" href="/templates">
           <FileText className="h-4 w-4" />
           查看模板
-        </Button>
+        </LinkButton>
       </div>
     </div>
   );

@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { PenLine } from "lucide-react";
-import { DeleteDraftButton } from "./delete-draft-button";
 import { DraftCard } from "@/components/drafts/draft-card";
 
 export default async function DraftsPage() {
@@ -40,14 +38,13 @@ export default async function DraftsPage() {
           <CardContent className="flex flex-col items-center justify-center py-12">
             <PenLine className="h-10 w-10 text-muted-foreground mb-3" />
             <p className="text-muted-foreground">暂无草稿</p>
-            <Button
+            <LinkButton
               variant="link"
               size="sm"
-              nativeButton={false}
-              render={<Link href="/templates" />}
+              href="/templates"
             >
               浏览可用模板
-            </Button>
+            </LinkButton>
           </CardContent>
         </Card>
       ) : (

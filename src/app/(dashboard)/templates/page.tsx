@@ -2,7 +2,7 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -110,37 +110,35 @@ export default async function TemplatesPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">模板管理</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">模板管理</h1>
+          <p className="text-sm text-muted-foreground">
             共 {total} 个模板
           </p>
         </div>
         {isAdmin && (
           <div className="flex items-center gap-2">
             <CategoryTagManagerButton />
-            <Button nativeButton={false} render={<Link href="/templates/new" />}>
+            <LinkButton href="/templates/new">
               <Upload className="h-4 w-4" />
               上传模板
-            </Button>
+            </LinkButton>
           </div>
         )}
       </div>
 
-      {/* Status Filter Tabs */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1">
         {STATUS_TABS.map((tab) => {
           const isActive = (status || "") === tab.value;
           return (
             <Link
               key={tab.value}
               href={buildUrl(1, tab.value, categoryId)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`shrink-0 rounded-md px-4 py-2 text-sm font-[510] transition-colors ${
                 isActive
-                  ? "border-primary text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                  ? "bg-accent text-accent-foreground"
+                  : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -149,15 +147,14 @@ export default async function TemplatesPage({
         })}
       </div>
 
-      {/* Category Filter Tabs */}
       {categories.length > 0 && (
-        <div className="flex gap-1 overflow-x-auto">
+        <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1">
           <Link
             href={buildUrl(1, status || "")}
-            className={`shrink-0 px-3 py-1.5 text-sm rounded-md border transition-colors ${
+            className={`shrink-0 rounded-md border px-3 py-1.5 text-sm font-[510] transition-colors ${
               !categoryId
-                ? "bg-primary text-primary-foreground border-primary"
-                : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                ? "border-border-hover bg-accent text-accent-foreground"
+                : "border-border text-muted-foreground hover:text-foreground"
             }`}
           >
             全部
@@ -166,10 +163,10 @@ export default async function TemplatesPage({
             <Link
               key={cat.id}
               href={buildUrl(1, status || "", cat.id)}
-              className={`shrink-0 px-3 py-1.5 text-sm rounded-md border transition-colors ${
+              className={`shrink-0 rounded-md border px-3 py-1.5 text-sm font-[510] transition-colors ${
                 categoryId === cat.id
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
+                  ? "border-border-hover bg-accent text-accent-foreground"
+                  : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               {cat.name}
@@ -178,8 +175,7 @@ export default async function TemplatesPage({
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-lg border">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -204,14 +200,13 @@ export default async function TemplatesPage({
                     <FileText className="h-8 w-8 mb-2" />
                     <p className="text-sm">暂无模板数据</p>
                     {isAdmin && (
-                      <Button
+                      <LinkButton
                         variant="link"
                         size="sm"
-                        nativeButton={false}
-                        render={<Link href="/templates/new" />}
+                        href="/templates/new"
                       >
                         上传第一个模板
-                      </Button>
+                      </LinkButton>
                     )}
                   </div>
                 </TableCell>
@@ -226,14 +221,14 @@ export default async function TemplatesPage({
                       <span className="text-muted-foreground text-xs">—</span>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{template.name}</TableCell>
+                  <TableCell className="font-[510] text-foreground">{template.name}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {template.currentVersion ? `v${template.currentVersion.version}` : "—"}
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
                       {template.tags.length === 0 ? (
-                        <span className="text-muted-foreground text-xs">—</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       ) : (
                         <>
                           {template.tags.slice(0, 3).map((t) => (
@@ -265,31 +260,26 @@ export default async function TemplatesPage({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <Button
+                      <LinkButton
                         variant="ghost"
                         size="icon-xs"
-                        className="text-foreground/80 hover:text-foreground hover:bg-muted"
-                        nativeButton={false}
-                        render={<Link href={`/templates/${template.id}`} />}
+                        className="text-muted-foreground hover:text-foreground"
+                        href={`/templates/${template.id}`}
                       >
                         <Eye className="h-3.5 w-3.5" />
                         <span className="sr-only">查看</span>
-                      </Button>
+                      </LinkButton>
                       {isAdmin && (
                         <>
-                          <Button
+                          <LinkButton
                             variant="ghost"
                             size="icon-xs"
-                            className="text-foreground/80 hover:text-foreground hover:bg-muted"
-                            render={
-                              <Link
-                                href={`/templates/${template.id}/edit`}
-                              />
-                            }
+                            className="text-muted-foreground hover:text-foreground"
+                            href={`/templates/${template.id}/edit`}
                           >
                             <Pencil className="h-3.5 w-3.5" />
                             <span className="sr-only">编辑</span>
-                          </Button>
+                          </LinkButton>
                           <TemplateListDeleteButton
                             templateId={template.id}
                             templateName={template.name}
@@ -305,7 +295,6 @@ export default async function TemplatesPage({
         </Table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
@@ -313,15 +302,14 @@ export default async function TemplatesPage({
           </p>
           <div className="flex gap-2">
             {page > 1 ? (
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={buildUrl(page - 1, status || "", categoryId)} />}
+                href={buildUrl(page - 1, status || "", categoryId)}
               >
                 <ChevronLeft className="h-4 w-4" />
                 上一页
-              </Button>
+              </LinkButton>
             ) : (
               <Button variant="outline" size="sm" disabled>
                 <ChevronLeft className="h-4 w-4" />
@@ -329,15 +317,14 @@ export default async function TemplatesPage({
               </Button>
             )}
             {page < totalPages ? (
-              <Button
+              <LinkButton
                 variant="outline"
                 size="sm"
-                nativeButton={false}
-                render={<Link href={buildUrl(page + 1, status || "", categoryId)} />}
+                href={buildUrl(page + 1, status || "", categoryId)}
               >
                 下一页
                 <ChevronRight className="h-4 w-4" />
-              </Button>
+              </LinkButton>
             ) : (
               <Button variant="outline" size="sm" disabled>
                 下一页

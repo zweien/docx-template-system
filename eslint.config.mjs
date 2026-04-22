@@ -31,6 +31,22 @@ const eslintConfig = defineConfig([
       ],
       // Disable problematic react-hooks rules that conflict with valid patterns
       "react-hooks/set-state-in-effect": "off",
+      // Enforce LinkButton for navigation-style buttons.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "JSXOpeningElement[name.name='Button'] > JSXAttribute[name.name='render'] JSXOpeningElement[name.name='Link']",
+          message:
+            "不要使用 `Button render={<Link .../>}`。请改用 `LinkButton`，以统一处理 `nativeButton={false}` 并避免控制台语义错误。",
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/components/ui/button.tsx"],
+    rules: {
+      "no-restricted-syntax": "off",
     },
   },
 ]);

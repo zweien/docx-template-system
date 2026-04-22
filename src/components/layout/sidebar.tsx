@@ -3,135 +3,81 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useState, useCallback, useEffect } from "react";
-import {
-  LayoutDashboard,
-  FileOutput,
-  FileText,
-  History,
-  PenLine,
-  Database,
-  Users,
-  PanelLeftClose,
-  PanelLeftOpen,
-  Sparkles,
-  FolderInput,
-  Settings,
-  ScrollText,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import type { Role } from "@/generated/prisma/enums";
+import { AppLogo } from "@/components/layout/app-logo";
 import { UserNav } from "@/components/layout/user-nav";
+import { isRouteActive } from "@/components/layout/navigation/matcher";
+import { NAV_ITEMS, filterNavItemsByRole, type NavItem } from "@/components/layout/navigation/schema";
+import { useNavigationState } from "@/components/layout/navigation/state";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
-interface NavItem {
-  title: string;
-  href: string;
-  icon: React.ReactNode;
+const ACTIVE_ITEM_CLASS_NAME =
+  "border border-[rgb(255_255_255_/_0.1)] bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8] shadow-[inset_0_0_0_1px_rgb(113_112_255_/_0.34)]";
+
+const INACTIVE_ITEM_CLASS_NAME =
+  "border border-transparent text-[#8a8f98] hover:border-[rgb(255_255_255_/_0.08)] hover:bg-[rgb(255_255_255_/_0.03)] hover:text-[#f7f8f8]";
+
+type SidebarNavLinkProps = {
+  readonly collapsed: boolean;
+  readonly item: NavItem;
+  readonly pathname: string;
+};
+
+function SidebarNavLink({ collapsed, item, pathname }: SidebarNavLinkProps) {
+  const isActive = isRouteActive(item.href, pathname);
+  const Icon = item.icon;
+
+  return (
+    <Link
+      href={item.href}
+      title={collapsed ? item.label : undefined}
+      aria-current={isActive ? "page" : undefined}
+      className={cn(
+        "flex items-center rounded-md text-sm font-[510] transition-[color,background-color,border-color,transform,opacity] duration-100",
+        collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
+        isActive ? ACTIVE_ITEM_CLASS_NAME : INACTIVE_ITEM_CLASS_NAME
+      )}
+    >
+      <span className={cn("shrink-0 transition-transform duration-100", isActive && "scale-110")}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <span
+        className={cn(
+          "whitespace-nowrap transition-opacity duration-200",
+          collapsed && "w-0 overflow-hidden opacity-0"
+        )}
+      >
+        {item.label}
+      </span>
+    </Link>
+  );
 }
-
-const navItems: NavItem[] = [
-  {
-    title: "仪表盘",
-    href: "/",
-    icon: <LayoutDashboard className="h-4 w-4" />,
-  },
-  {
-    title: "我要填表",
-    href: "/generate",
-    icon: <FileOutput className="h-4 w-4" />,
-  },
-  {
-    title: "模板管理",
-    href: "/templates",
-    icon: <FileText className="h-4 w-4" />,
-  },
-  {
-    title: "文档收集",
-    href: "/collections",
-    icon: <FolderInput className="h-4 w-4" />,
-  },
-  {
-    title: "主数据",
-    href: "/data",
-    icon: <Database className="h-4 w-4" />,
-  },
-  {
-    title: "生成记录",
-    href: "/records",
-    icon: <History className="h-4 w-4" />,
-  },
-  {
-    title: "我的草稿",
-    href: "/drafts",
-    icon: <PenLine className="h-4 w-4" />,
-  },
-  {
-    title: "智能助手",
-    href: "/ai-agent2",
-    icon: <Sparkles className="h-4 w-4" />,
-  },
-];
-
-const adminNavItems: NavItem[] = [
-  {
-    title: "系统设置",
-    href: "/admin/settings",
-    icon: <Settings className="h-4 w-4" />,
-  },
-  {
-    title: "用户管理",
-    href: "/admin/users",
-    icon: <Users className="h-4 w-4" />,
-  },
-  {
-    title: "审计日志",
-    href: "/admin/audit-logs",
-    icon: <ScrollText className="h-4 w-4" />,
-  },
-];
-
-const STORAGE_KEY = "sidebar-collapsed";
 
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [collapsed, setCollapsed] = useState(false);
-  const toggle = useCallback(() => {
-    setCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem(STORAGE_KEY, String(next));
-      return next;
-    });
-  }, []);
-
-  // Initialize from localStorage on mount
-  useEffect(() => {
-     
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored !== null) setCollapsed(stored === "true");
-  }, []);
+  const { collapsed, toggleCollapsed } = useNavigationState();
+  const role = session?.user?.role as Role | undefined;
+  const navItems = filterNavItemsByRole(NAV_ITEMS, role);
+  const mainItems = navItems.filter((item) => item.section === "main");
+  const adminItems = navItems.filter((item) => item.section === "admin");
 
   return (
     <aside
       className={cn(
-        "hidden md:flex h-screen flex-col border-r bg-zinc-950 shrink-0 transition-[width] duration-200",
+        "hidden h-screen shrink-0 flex-col border-r border-[rgb(255_255_255_/_0.05)] bg-[rgb(15_16_17_/_0.92)] backdrop-blur-xl transition-[width] duration-100 md:flex",
         collapsed ? "w-16" : "w-60"
       )}
     >
-      {/* Logo / Brand */}
-      <div className="flex h-14 items-center border-b border-zinc-800 px-4 shrink-0">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <img
-            src="/logo.png"
-            alt="IDRL填表系统"
-            width={28}
-            height={28}
-            className="shrink-0 transition-transform group-hover:scale-110"
-          />
+      <div className="flex h-14 shrink-0 items-center border-b border-[rgb(255_255_255_/_0.05)] px-4">
+        <Link href="/" className="group flex items-center gap-2.5">
+          <AppLogo className="transition-transform group-hover:scale-110" priority />
           <span
             className={cn(
-              "text-base font-semibold text-white tracking-tight whitespace-nowrap transition-opacity duration-200",
-              collapsed && "opacity-0 w-0 overflow-hidden"
+              "whitespace-nowrap text-base font-[510] tracking-[-0.13px] text-[#f7f8f8] transition-opacity duration-100",
+              collapsed && "w-0 overflow-hidden opacity-0"
             )}
           >
             IDRL填表系统
@@ -139,113 +85,47 @@ export function Sidebar() {
         </Link>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <div className="space-y-1">
-          {navItems.map((item) => {
-            const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname === item.href || pathname.startsWith(item.href + "/");
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={collapsed ? item.title : undefined}
-                className={cn(
-                  "flex items-center rounded-lg text-sm font-medium transition-all duration-200",
-                  collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
-                  isActive
-                    ? "bg-white text-zinc-950 shadow-sm"
-                    : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
-                )}
-              >
-                <span className={cn(
-                  "shrink-0 transition-transform duration-200",
-                  isActive && "scale-110"
-                )}>
-                  {item.icon}
-                </span>
-                <span
-                  className={cn(
-                    "whitespace-nowrap transition-opacity duration-200",
-                    collapsed && "opacity-0 w-0 overflow-hidden"
-                  )}
-                >
-                  {item.title}
-                </span>
-              </Link>
-            );
-          })}
+        <div className="space-y-1.5">
+          {mainItems.map((item) => (
+            <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
+          ))}
         </div>
 
-        {/* Admin Section */}
-        {session?.user?.role === "ADMIN" && (
-          <div className="mt-6 pt-4 border-t border-zinc-800">
-            {!collapsed && (
-              <p className="px-3 mb-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider">
+        {adminItems.length > 0 ? (
+          <div className="mt-6 border-t border-[rgb(255_255_255_/_0.05)] pt-4">
+            {!collapsed ? (
+              <p className="mb-2 px-3 text-xs font-[510] uppercase tracking-wider text-[#62666d]">
                 管理员
               </p>
-            )}
-            <div className="space-y-1">
-              {adminNavItems.map((item) => {
-                const isActive = pathname.startsWith(item.href);
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    title={collapsed ? item.title : undefined}
-                    className={cn(
-                      "flex items-center rounded-lg text-sm font-medium transition-all duration-200",
-                      collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
-                      isActive
-                        ? "bg-white text-zinc-950 shadow-sm"
-                        : "text-zinc-400 hover:bg-zinc-800/50 hover:text-white"
-                    )}
-                  >
-                    <span className={cn(
-                      "shrink-0 transition-transform duration-200",
-                      isActive && "scale-110"
-                    )}>
-                      {item.icon}
-                    </span>
-                    <span
-                      className={cn(
-                        "whitespace-nowrap transition-opacity duration-200",
-                        collapsed && "opacity-0 w-0 overflow-hidden"
-                      )}
-                    >
-                      {item.title}
-                    </span>
-                  </Link>
-                );
-              })}
+            ) : null}
+            <div className="space-y-1.5">
+              {adminItems.map((item) => (
+                <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
+              ))}
             </div>
           </div>
-        )}
+        ) : null}
       </nav>
 
-      {/* Version */}
-      <div className="px-3 py-2 text-xs text-zinc-500 shrink-0">
-        {!collapsed ? `IDRL填表系统 ` : ``}v{process.env.NEXT_PUBLIC_APP_VERSION}
+      <div className="shrink-0 px-3 py-2 text-xs text-[#62666d]">
+        {!collapsed ? "IDRL填表系统 " : ""}v{process.env.NEXT_PUBLIC_APP_VERSION}
       </div>
 
-      {/* Footer: collapse button + user nav */}
-      <div className="border-t border-zinc-800 shrink-0">
+      <div className="shrink-0 border-t border-[rgb(255_255_255_/_0.05)]">
         <div className="flex items-center gap-2 p-2">
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
+          {!collapsed ? (
+            <div className="min-w-0 flex-1">
               <UserNav />
             </div>
-          )}
+          ) : null}
           <Button
             variant="ghost"
             size="icon-xs"
-            onClick={toggle}
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? "展开侧边栏" : "折叠侧边栏"}
             className={cn(
-              "shrink-0 text-zinc-400 hover:text-white hover:bg-zinc-800",
+              "shrink-0 text-[#8a8f98] hover:bg-white/5 hover:text-[#f7f8f8]",
               collapsed && "mx-auto"
             )}
           >

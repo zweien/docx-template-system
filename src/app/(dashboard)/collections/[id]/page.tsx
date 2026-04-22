@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { getDocumentCollectionTaskDetail } from "@/lib/services/document-collection-task.service";
 import { listDocumentCollectionSubmissionVersions } from "@/lib/services/document-collection-submission.service";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { LinkButton } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CollectionAssigneeTable } from "@/components/collections/collection-assignee-table";
 import { CollectionCloseTaskButton } from "@/components/collections/collection-close-task-button";
@@ -86,13 +86,10 @@ export default async function CollectionDetailPage({
           <div className="flex flex-wrap gap-2">
             {task.status === "ACTIVE" ? <CollectionCloseTaskButton taskId={task.id} /> : null}
             {task.status === "ACTIVE" ? <CollectionRemindButton taskId={task.id} /> : null}
-            <Button
-              nativeButton={false}
-              render={<Link href={`/api/collections/${task.id}/download`} />}
-            >
+            <LinkButton href={`/api/collections/${task.id}/download`}>
               <Download className="h-4 w-4" />
               下载汇总压缩包
-            </Button>
+            </LinkButton>
           </div>
         ) : null}
       </div>

@@ -19,11 +19,11 @@ export default async function DashboardLayout({
 
   return (
     <SessionProvider session={session}>
-      <div className="flex h-screen">
+      <div className="flex h-screen bg-background text-foreground">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header />
-          <main className="flex-1 flex flex-col overflow-y-auto bg-background p-6">
+          <main className="flex-1 flex flex-col overflow-y-auto bg-transparent p-4 sm:p-6">
             {children}
           </main>
         </div>

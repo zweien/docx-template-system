@@ -139,7 +139,7 @@ export function DataTableLink({
   // 边界情况：模板没有占位符
   if (placeholders.length === 0) {
     return (
-      <div className="text-sm text-muted-foreground py-2">
+      <div className="py-2 text-sm text-[#8a8f98]">
         模板没有占位符，无需配置字段映射
       </div>
     );
@@ -147,9 +147,8 @@ export function DataTableLink({
 
   return (
     <div className="space-y-3">
-      {/* 数据表选择 */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium shrink-0">关联数据表：</span>
+      <div className="flex items-center gap-3 rounded-md border border-[rgb(255_255_255_/_0.06)] bg-[rgb(255_255_255_/_0.02)] p-3">
+        <span className="shrink-0 text-sm font-[510] text-[#d0d6e0]">关联数据表：</span>
         {selectedTableId && dataTable ? (
           <div className="flex items-center gap-2">
             <Badge variant="secondary">{dataTable.name}</Badge>
@@ -164,13 +163,13 @@ export function DataTableLink({
             </Button>
           </div>
         ) : (
-          <Select
-            value={selectedTableId || ""}
-            onValueChange={(v) => v && handleTableChange(v)}
-            disabled={tablesLoading || saving}
-          >
-            <SelectTrigger className="w-[200px]">
-              <SelectValue placeholder="请选择数据表">
+            <Select
+              value={selectedTableId || ""}
+              onValueChange={(v) => v && handleTableChange(v)}
+              disabled={tablesLoading || saving}
+            >
+              <SelectTrigger className="w-[240px]">
+                <SelectValue placeholder="请选择数据表">
                 {selectedTableId
                   ? (() => {
                       const selectedTable = tables.find((t) => t.id === selectedTableId);
@@ -202,15 +201,14 @@ export function DataTableLink({
         )}
       </div>
 
-      {/* 字段映射状态和配置 */}
       {selectedTableId && (
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-3 rounded-md border border-[rgb(255_255_255_/_0.06)] bg-[rgb(255_255_255_/_0.02)] p-3">
+          <span className="text-sm text-[#8a8f98]">
             字段映射：
             {fieldsLoading ? (
               <Loader2 className="h-3 w-3 animate-spin inline ml-1" />
             ) : fields.length === 0 ? (
-              <span className="text-amber-600 ml-1">数据表没有字段，请先添加字段</span>
+              <span className="ml-1 text-amber-400">数据表没有字段，请先添加字段</span>
             ) : (
               <Badge variant="outline" className="ml-2">
                 {configuredCount}/{totalPlaceholders} 已配置
@@ -230,7 +228,6 @@ export function DataTableLink({
         </div>
       )}
 
-      {/* 字段映射弹窗 */}
       {selectedTableId && fields.length > 0 && (
         <FieldMappingDialog
           open={mappingDialogOpen}

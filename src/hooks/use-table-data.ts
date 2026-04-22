@@ -423,13 +423,53 @@ export function useTableData({
         params.set("sortBy", JSON.stringify(sorts));
       }
 
+      const queryString = params.toString();
       const response = await fetch(
-        `/api/data-tables/${tableId}/records?${params.toString()}`
+        `/api/data-tables/${tableId}/records?${queryString}`
       );
       const result = (await response.json()) as PaginatedRecords;
 
       if (response.ok && fetchId === latestFetchIdRef.current) {
-        setRecordsData(result);
+        // 后端默认 pageSize=10000。若 total 更大，补充分页拉取剩余记录，避免前端数据截断。
+        if ((result.total ?? 0) > (result.records?.length ?? 0)) {
+          const batchSize = 2000;
+          const totalPages = Math.max(1, Math.ceil((result.total ?? 0) / batchSize));
+          const allRecords: DataRecordItem[] = [];
+          const seenIds = new Set<string>();
+
+          for (let page = 1; page <= totalPages; page++) {
+            if (fetchId !== latestFetchIdRef.current) {
+              return;
+            }
+            const pageParams = new URLSearchParams(queryString);
+            pageParams.set("page", String(page));
+            pageParams.set("pageSize", String(batchSize));
+
+            const pageResponse = await fetch(
+              `/api/data-tables/${tableId}/records?${pageParams.toString()}`
+            );
+            if (!pageResponse.ok) {
+              break;
+            }
+            const pageResult = (await pageResponse.json()) as PaginatedRecords;
+            for (const record of pageResult.records ?? []) {
+              if (seenIds.has(record.id)) continue;
+              seenIds.add(record.id);
+              allRecords.push(record);
+            }
+          }
+
+          setRecordsData({
+            ...result,
+            records: allRecords,
+            total: result.total ?? allRecords.length,
+            page: 1,
+            pageSize: allRecords.length,
+            totalPages: 1,
+          });
+        } else {
+          setRecordsData(result);
+        }
       }
     } catch (error) {
       console.error("获取记录失败:", error);

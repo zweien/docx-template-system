@@ -76,7 +76,7 @@ export async function POST(
     }
 
     return NextResponse.json({ success: true, data: { path: relativePath } });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { error: { code: "INTERNAL_ERROR", message: "上传截图失败" } },
       { status: 500 }

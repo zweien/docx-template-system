@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { tokenize, TokenType } from "./tokenizer";
+import { tokenize } from "./tokenizer";
 
 describe("tokenize", () => {
   it("should tokenize a simple field reference", () => {

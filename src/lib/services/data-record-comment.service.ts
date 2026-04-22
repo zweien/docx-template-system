@@ -148,7 +148,7 @@ export async function updateComment(
 
 export async function resolveComment(
   commentId: string,
-  userId: string
+  _userId: string
 ): Promise<ServiceResult<CommentItem>> {
   const existing = await db.dataRecordComment.findUnique({ where: { id: commentId } });
   if (!existing) {

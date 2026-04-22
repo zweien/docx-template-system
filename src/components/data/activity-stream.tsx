@@ -60,27 +60,27 @@ export function ActivityStream({ tableId, liveActivities }: ActivityStreamProps)
   }, [liveActivities]);
 
   return (
-    <div className="w-72 border-l flex flex-col">
-      <div className="p-3 border-b">
-        <h3 className="text-sm font-medium">活动动态</h3>
+    <div className="flex w-72 flex-col border-l border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)]">
+      <div className="border-b border-[rgb(255_255_255_/_0.08)] p-3">
+        <h3 className="text-sm font-[510] text-[#f7f8f8]">活动动态</h3>
       </div>
       <ScrollArea className="flex-1">
-        <div className="p-3 space-y-3">
+        <div className="space-y-3 p-3">
           {/* Live activities (newest first) */}
           {liveActivities.map((activity) => (
             <div key={activity.id} className="flex gap-2 text-xs">
               <div className="flex flex-col items-center">
-                <div className="w-2 h-2 rounded-full bg-blue-500 mt-1 shrink-0" />
-                <div className="w-px flex-1 bg-border" />
+                <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#7170ff]" />
+                <div className="w-px flex-1 bg-[rgb(255_255_255_/_0.08)]" />
               </div>
               <div className="flex-1 pb-2">
-                <div className="text-muted-foreground">
+                <div className="text-[#d0d6e0]">
                   {activity.userName || "用户"}
                   {activity.action === "updated" && ` 更新了 ${activity.fieldLabel ?? ""}`}
                   {activity.action === "created" && " 创建了记录"}
                   {activity.action === "deleted" && " 删除了记录"}
                 </div>
-                <div className="text-muted-foreground/60 mt-0.5">
+                <div className="mt-0.5 text-[#8a8f98]">
                   {formatTimeAgo(activity.timestamp)}
                 </div>
               </div>
@@ -96,16 +96,16 @@ export function ActivityStream({ tableId, liveActivities }: ActivityStreamProps)
             history.map((entry) => (
               <div key={entry.id} className="flex gap-2 text-xs">
                 <div className="flex flex-col items-center">
-                  <div className="w-2 h-2 rounded-full bg-zinc-300 mt-1 shrink-0" />
-                  <div className="w-px flex-1 bg-border" />
+                  <div className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[rgb(255_255_255_/_0.28)]" />
+                  <div className="w-px flex-1 bg-[rgb(255_255_255_/_0.08)]" />
                 </div>
                 <div className="flex-1 pb-2">
-                  <div>
-                    <span className="font-medium">{entry.changedByName || "用户"}</span>
+                  <div className="text-[#d0d6e0]">
+                    <span className="font-[510] text-[#f7f8f8]">{entry.changedByName || "用户"}</span>
                     {" 更新了 "}
-                    <span className="font-medium">{entry.fieldLabel}</span>
+                    <span className="font-[510]">{entry.fieldLabel}</span>
                   </div>
-                  <div className="text-muted-foreground/60 mt-0.5">
+                  <div className="mt-0.5 text-[#8a8f98]">
                     {formatTimeAgo(entry.changedAt)}
                   </div>
                 </div>

@@ -34,6 +34,13 @@ export type AutomationActionNode =
   | { id: string; type: "create_record"; tableId: string; values: Record<string, unknown> }
   | {
       id: string;
+      type: "update_related_records";
+      relationFieldKey: string;
+      targetScope: "first" | "all";
+      values: Record<string, unknown>;
+    }
+  | {
+      id: string;
       type: "call_webhook";
       url: string;
       method: "POST" | "PUT";
@@ -110,6 +117,10 @@ export interface AutomationActionContext extends AutomationConditionContext {
 
 export type UpdateFieldAction = Extract<AutomationActionNode, { type: "update_field" }>;
 export type CreateRecordAction = Extract<AutomationActionNode, { type: "create_record" }>;
+export type UpdateRelatedRecordsAction = Extract<
+  AutomationActionNode,
+  { type: "update_related_records" }
+>;
 export type CallWebhookAction = Extract<AutomationActionNode, { type: "call_webhook" }>;
 export type AddCommentAction = Extract<AutomationActionNode, { type: "add_comment" }>;
 

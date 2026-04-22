@@ -166,7 +166,8 @@ export function AutomationConfigPanel({
   }
 
   if (value.canvas.nodes.some((node) => node.id === selectedNodeId && node.type === "condition")) {
-    const condition = value.condition ?? createDefaultCondition();
+    const condition =
+      value.condition?.kind === "group" ? value.condition : createDefaultCondition();
     const leaf = condition.conditions[0];
     const firstLeaf =
       leaf && leaf.kind === "leaf"

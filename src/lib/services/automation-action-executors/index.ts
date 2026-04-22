@@ -1,18 +1,25 @@
-import type { AutomationActionNode } from "@/types/automation";
+import type { AutomationActionNode, AutomationExecutorParams } from "@/types/automation";
+import type { ServiceResult } from "@/types/data-table";
 import { executeAddCommentAction } from "@/lib/services/automation-action-executors/add-comment";
 import { executeCallWebhookAction } from "@/lib/services/automation-action-executors/call-webhook";
 import { executeCreateRecordAction } from "@/lib/services/automation-action-executors/create-record";
 import { executeUpdateFieldAction } from "@/lib/services/automation-action-executors/update-field";
 
-export function getAutomationActionExecutor(action: AutomationActionNode) {
+type AutomationActionExecutor = (
+  params: AutomationExecutorParams
+) => Promise<ServiceResult<unknown>>;
+
+export function getAutomationActionExecutor(
+  action: AutomationActionNode
+): AutomationActionExecutor {
   switch (action.type) {
     case "update_field":
-      return executeUpdateFieldAction;
+      return executeUpdateFieldAction as AutomationActionExecutor;
     case "create_record":
-      return executeCreateRecordAction;
+      return executeCreateRecordAction as AutomationActionExecutor;
     case "call_webhook":
-      return executeCallWebhookAction;
+      return executeCallWebhookAction as AutomationActionExecutor;
     case "add_comment":
-      return executeAddCommentAction;
+      return executeAddCommentAction as AutomationActionExecutor;
   }
 }

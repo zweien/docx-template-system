@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { AutomationEditor } from "@/components/automations/automation-editor";
 import { AutomationRunLog } from "@/components/automations/automation-run-log";
 import { getAutomation } from "@/lib/services/automation.service";
+import type { AutomationRunItem } from "@/types/automation";
 
 export default async function AutomationDetailPage({
   params,
@@ -26,6 +27,20 @@ export default async function AutomationDetailPage({
     orderBy: { createdAt: "desc" },
     take: 10,
   });
+  const runItems: AutomationRunItem[] = runs.map((run) => ({
+    id: run.id,
+    automationId: run.automationId,
+    status: run.status as AutomationRunItem["status"],
+    triggerSource: run.triggerSource as AutomationRunItem["triggerSource"],
+    triggerPayload: (run.triggerPayload ?? {}) as Record<string, unknown>,
+    contextSnapshot: (run.contextSnapshot ?? {}) as Record<string, unknown>,
+    startedAt: run.startedAt,
+    finishedAt: run.finishedAt,
+    durationMs: run.durationMs,
+    errorCode: run.errorCode,
+    errorMessage: run.errorMessage,
+    createdAt: run.createdAt,
+  }));
 
   return (
     <div className="space-y-6">
@@ -49,7 +64,7 @@ export default async function AutomationDetailPage({
         initialValue={result.data.definition}
       />
 
-      <AutomationRunLog items={runs} />
+      <AutomationRunLog items={runItems} />
     </div>
   );
 }

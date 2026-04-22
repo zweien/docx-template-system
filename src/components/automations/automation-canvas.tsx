@@ -96,7 +96,11 @@ export function AutomationCanvas({
               <div className="space-y-2">
                 <NodeCard
                   title="条件分支"
-                  subtitle={value.condition ? value.condition.operator : "AND"}
+                  subtitle={
+                    value.condition?.kind === "group"
+                      ? value.condition.operator
+                      : "条件判断"
+                  }
                   selected={selectedNodeId === conditionNode.id}
                   onClick={() => onSelectNode(conditionNode.id)}
                 >

@@ -170,7 +170,8 @@ export function AutomationEditor({
         | { error?: { message?: string } };
 
       if (!response.ok) {
-        setError(payload.error?.message ?? "保存自动化失败");
+        const message = "error" in payload ? payload.error?.message : undefined;
+        setError(message ?? "保存自动化失败");
         return;
       }
 

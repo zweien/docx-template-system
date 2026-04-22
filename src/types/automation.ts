@@ -27,6 +27,8 @@ export type AutomationConditionGroup = {
   conditions: Array<AutomationConditionLeaf | AutomationConditionGroup>;
 };
 
+export type AutomationConditionNode = AutomationConditionLeaf | AutomationConditionGroup;
+
 export type AutomationActionNode =
   | { id: string; type: "update_field"; fieldKey: string; value: unknown }
   | { id: string; type: "create_record"; tableId: string; values: Record<string, unknown> }
@@ -60,7 +62,7 @@ export type AutomationDefinition = {
     edges: AutomationCanvasEdge[];
   };
   trigger: AutomationTrigger;
-  condition: AutomationConditionGroup | null;
+  condition: AutomationConditionNode | null;
   thenActions: AutomationActionNode[];
   elseActions: AutomationActionNode[];
 };

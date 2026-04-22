@@ -81,6 +81,41 @@ function applyLinkStyles(container: HTMLElement, links: FrappeGanttLink[]) {
   });
 }
 
+function applyMilestoneShapes(container: HTMLElement) {
+  const milestoneBars = container.querySelectorAll<SVGGElement>(
+    ".gantt .bar-wrapper.timeline-task-milestone"
+  );
+
+  milestoneBars.forEach((wrapper) => {
+    const bar = wrapper.querySelector<SVGRectElement>(".bar");
+    if (!bar) return;
+
+    const baseX = Number(bar.getAttribute("x") ?? 0);
+    const baseY = Number(bar.getAttribute("y") ?? 0);
+    const baseHeight = Number(bar.getAttribute("height") ?? 0);
+    const size = Math.max(10, Math.min(14, baseHeight || 14));
+    const centerY = baseY + baseHeight / 2;
+    const centerX = baseX + size / 2;
+
+    bar.setAttribute("x", String(baseX));
+    bar.setAttribute("y", String(centerY - size / 2));
+    bar.setAttribute("width", String(size));
+    bar.setAttribute("height", String(size));
+    bar.setAttribute("rx", "1");
+    bar.setAttribute("ry", "1");
+    bar.setAttribute("transform", `rotate(45 ${centerX} ${centerY})`);
+
+    const progress = wrapper.querySelector<SVGElement>(".bar-progress");
+    if (progress) {
+      progress.style.display = "none";
+    }
+
+    wrapper.querySelectorAll<SVGElement>(".handle").forEach((handle) => {
+      handle.style.display = "none";
+    });
+  });
+}
+
 export function TimelineGanttFrappe({
   tasks,
   links,
@@ -130,6 +165,7 @@ export function TimelineGanttFrappe({
       });
       if (containerRef.current) {
         applyLinkStyles(containerRef.current, links);
+        applyMilestoneShapes(containerRef.current);
       }
     };
 
@@ -233,8 +269,9 @@ export function TimelineGanttFrappe({
           stroke-width: 1.5px !important;
         }
         .timeline-task-milestone .bar {
-          rx: 2px !important;
-          ry: 2px !important;
+          fill: #f59e0b !important;
+          stroke: #d97706 !important;
+          stroke-width: 1.2px !important;
         }
         .gantt-container .current-highlight {
           background: #16a34a !important;

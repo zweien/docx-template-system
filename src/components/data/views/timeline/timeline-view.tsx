@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -63,6 +63,7 @@ export function TimelineView({
   const [showConfig, setShowConfig] = useState(false);
   const [dependencies, setDependencies] = useState<TaskDependencyItem[]>([]);
   const [isDependencyLoading, setIsDependencyLoading] = useState(false);
+  const previousConflictCountRef = useRef<number | null>(null);
 
   const startDateField = asFieldKey(view.viewOptions.startDateField);
   const endDateField = asFieldKey(view.viewOptions.endDateField);
@@ -197,6 +198,18 @@ export function TimelineView({
     () => new Set(conflict.recordIds),
     [conflict.recordIds]
   );
+
+  useEffect(() => {
+    const currentCount = conflict.dependencyIds.length;
+    const previousCount = previousConflictCountRef.current;
+    previousConflictCountRef.current = currentCount;
+
+    if (isDependencyLoading || previousCount === null) return;
+    if (currentCount > previousCount) {
+      toast.warning(`依赖冲突增加到 ${currentCount} 条，请检查任务先后关系`);
+    }
+  }, [conflict.dependencyIds.length, isDependencyLoading]);
+
   const dependencyTaskIdSet = useMemo(() => {
     const ids = new Set<string>();
     for (const link of graph.links) {

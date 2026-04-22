@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { Bot, Database, FilePenLine, FileText, FolderHeart, House, LayoutGrid, Settings2, ShieldCheck, Users, WandSparkles } from "lucide-react";
+import { Bot, Database, FilePenLine, FileText, FolderHeart, GitBranch, House, LayoutGrid, Settings2, ShieldCheck, Users, WandSparkles } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 
 export type NavSection = "main" | "admin";
@@ -21,6 +21,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: "drafts", icon: FilePenLine, href: "/drafts", label: "我的草稿", section: "main", order: 3 },
   { id: "templates", icon: LayoutGrid, href: "/templates", label: "模板管理", section: "main", order: 4 },
   { id: "data", icon: Database, href: "/data", label: "主数据", section: "main", order: 5 },
+  { id: "automations", icon: GitBranch, href: "/automations", label: "自动化", section: "main", order: 5.5 },
   { id: "collections", icon: FolderHeart, href: "/collections", label: "文档收集", section: "main", order: 6 },
   { id: "ai-agent2", icon: Bot, href: "/ai-agent2", label: "智能助手", section: "main", order: 7 },
   {

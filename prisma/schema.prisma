@@ -51,6 +51,8 @@ model User {
   apiTokens                     ApiToken[]
   formShareTokens               FormShareToken[]
   dataRecordComments            DataRecordComment[] @relation("DataRecordComments")
+  createdAutomations            Automation[]       @relation("AutomationCreatedBy")
+  updatedAutomations            Automation[]       @relation("AutomationUpdatedBy")
 }
 
 enum TemplateStatus {
@@ -331,6 +333,7 @@ model DataTable {
   templateVersions TemplateVersion[]
   views            DataView[]
   taskDependencies TaskDependency[]
+  automations      Automation[]
   createdBy        User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdById      String
   createdAt        DateTime          @default(now())
@@ -469,6 +472,68 @@ model DataView {
   shareTokens   FormShareToken[]
 
   @@unique([tableId, name])
+}
+
+model Automation {
+  id                String          @id @default(cuid())
+  tableId           String
+  table             DataTable       @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  name              String
+  description       String?
+  enabled           Boolean         @default(true)
+  triggerType       String
+  definitionVersion Int             @default(1)
+  definition        Json
+  createdById       String
+  createdBy         User            @relation("AutomationCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  updatedById       String?
+  updatedBy         User?           @relation("AutomationUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  runs              AutomationRun[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([tableId, enabled])
+  @@index([createdById])
+}
+
+model AutomationRun {
+  id              String              @id @default(cuid())
+  automationId    String
+  automation      Automation          @relation(fields: [automationId], references: [id], onDelete: Cascade)
+  status          String
+  triggerSource   String
+  triggerPayload  Json
+  contextSnapshot Json
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  durationMs      Int?
+  errorCode       String?
+  errorMessage    String?
+  steps           AutomationRunStep[]
+  createdAt       DateTime            @default(now())
+
+  @@index([automationId, createdAt])
+  @@index([status, createdAt])
+}
+
+model AutomationRunStep {
+  id           String         @id @default(cuid())
+  runId        String
+  run          AutomationRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  nodeId       String
+  stepType     String
+  branch       String
+  status       String
+  input        Json
+  output       Json?
+  errorCode    String?
+  errorMessage String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  durationMs   Int?
+
+  @@index([runId, branch])
+  @@index([runId, nodeId])
 }
 
 model Record {

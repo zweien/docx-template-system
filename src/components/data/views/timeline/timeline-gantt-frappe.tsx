@@ -34,6 +34,8 @@ interface TimelineGanttFrappeProps {
   links: FrappeGanttLink[];
   scale: TimelineScale;
   onScaleChange?: (scale: TimelineScale) => void;
+  focusTaskId?: string | null;
+  focusNonce?: number;
   onOpenRecord: (recordId: string) => void;
   onTaskDateChange?: (taskId: string, startDate: Date, endDate: Date) => Promise<void> | void;
 }
@@ -121,6 +123,8 @@ export function TimelineGanttFrappe({
   links,
   scale,
   onScaleChange,
+  focusTaskId,
+  focusNonce,
   onOpenRecord,
   onTaskDateChange,
 }: TimelineGanttFrappeProps) {
@@ -129,6 +133,28 @@ export function TimelineGanttFrappe({
   const [isPanning, setIsPanning] = useState(false);
   const panStateRef = useRef<{ startX: number; startScrollLeft: number } | null>(null);
   const lastScaleWheelRef = useRef(0);
+
+  useEffect(() => {
+    if (!focusTaskId || !containerRef.current || !scrollRef.current) return;
+    const safeId = focusTaskId.replace(/["\\]/g, "\\$&");
+    const wrapper = containerRef.current.querySelector<SVGGElement>(
+      `.gantt .bar-wrapper[data-id="${safeId}"]`
+    );
+    if (!wrapper) return;
+
+    const bar = wrapper.querySelector<SVGGraphicsElement>(".bar");
+    const x = Number(bar?.getAttribute("x") ?? 0);
+    scrollRef.current.scrollTo({
+      left: Math.max(0, x - 140),
+      behavior: "smooth",
+    });
+
+    wrapper.classList.add("timeline-task-focus");
+    const timer = window.setTimeout(() => {
+      wrapper.classList.remove("timeline-task-focus");
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [focusNonce, focusTaskId]);
 
   const preparedTasks = useMemo<FrappeGanttTask[]>(() => {
     const depByTask = new Map<string, string[]>();
@@ -267,6 +293,11 @@ export function TimelineGanttFrappe({
           fill: #fecaca !important;
           stroke: #dc2626 !important;
           stroke-width: 1.5px !important;
+        }
+        .timeline-task-focus .bar {
+          stroke: #f97316 !important;
+          stroke-width: 2px !important;
+          filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.55));
         }
         .timeline-task-milestone .bar {
           fill: #f59e0b !important;

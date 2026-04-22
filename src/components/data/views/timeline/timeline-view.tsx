@@ -63,6 +63,8 @@ export function TimelineView({
   const [showConfig, setShowConfig] = useState(false);
   const [dependencies, setDependencies] = useState<TaskDependencyItem[]>([]);
   const [isDependencyLoading, setIsDependencyLoading] = useState(false);
+  const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
+  const [focusNonce, setFocusNonce] = useState(0);
   const previousConflictCountRef = useRef<number | null>(null);
 
   const startDateField = asFieldKey(view.viewOptions.startDateField);
@@ -251,6 +253,13 @@ export function TimelineView({
     [conflictDepIdSet, graph.links]
   );
 
+  const firstConflictTaskId = useMemo(() => {
+    if (conflict.dependencyIds.length === 0) return null;
+    const firstDepId = conflict.dependencyIds[0];
+    const link = graph.links.find((item) => item.dependencyId === firstDepId);
+    return link?.successorTaskId ?? link?.predecessorTaskId ?? null;
+  }, [conflict.dependencyIds, graph.links]);
+
   const handleTaskDateChange = useCallback(
     async (taskId: string, startDate: Date, endDate: Date) => {
       if (!startDateField) return;
@@ -323,15 +332,30 @@ export function TimelineView({
             links={frappeLinks}
             scale={scale}
             onScaleChange={handleScaleChange}
+            focusTaskId={focusTaskId}
+            focusNonce={focusNonce}
             onOpenRecord={onOpenRecord}
             onTaskDateChange={handleTaskDateChange}
           />
           {(isDependencyLoading || conflict.dependencyIds.length > 0) && (
-            <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
               {isDependencyLoading
                 ? "正在加载依赖数据..."
                 : `检测到 ${conflict.dependencyIds.length} 条依赖冲突（已高亮显示）`}
-            </p>
+              {conflict.dependencyIds.length > 0 && firstConflictTaskId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  onClick={() => {
+                    setFocusTaskId(firstConflictTaskId);
+                    setFocusNonce((prev) => prev + 1);
+                  }}
+                >
+                  定位冲突
+                </Button>
+              )}
+            </div>
           )}
         </div>
       ) : (

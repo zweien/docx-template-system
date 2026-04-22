@@ -19,6 +19,10 @@ import {
 } from "./timeline-adapter";
 import { calculateTimelineConflicts } from "./timeline-conflicts";
 import { TimelineGanttFrappe } from "./timeline-gantt-frappe";
+import {
+  findFirstConflictTaskId,
+  shouldWarnConflictGrowth,
+} from "./timeline-view-helpers";
 
 interface TimelineViewProps {
   tableId: string;
@@ -206,8 +210,13 @@ export function TimelineView({
     const previousCount = previousConflictCountRef.current;
     previousConflictCountRef.current = currentCount;
 
-    if (isDependencyLoading || previousCount === null) return;
-    if (currentCount > previousCount) {
+    if (
+      shouldWarnConflictGrowth({
+        previousCount,
+        currentCount,
+        isDependencyLoading,
+      })
+    ) {
       toast.warning(`依赖冲突增加到 ${currentCount} 条，请检查任务先后关系`);
     }
   }, [conflict.dependencyIds.length, isDependencyLoading]);
@@ -254,10 +263,10 @@ export function TimelineView({
   );
 
   const firstConflictTaskId = useMemo(() => {
-    if (conflict.dependencyIds.length === 0) return null;
-    const firstDepId = conflict.dependencyIds[0];
-    const link = graph.links.find((item) => item.dependencyId === firstDepId);
-    return link?.successorTaskId ?? link?.predecessorTaskId ?? null;
+    return findFirstConflictTaskId({
+      conflictDependencyIds: conflict.dependencyIds,
+      links: graph.links,
+    });
   }, [conflict.dependencyIds, graph.links]);
 
   const handleTaskDateChange = useCallback(

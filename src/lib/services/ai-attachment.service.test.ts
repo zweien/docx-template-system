@@ -63,7 +63,8 @@ describe("ai-attachment.service", () => {
     if (!result.success) {
       return;
     }
-    expect(result.data.extractStatus).toBe("pending");
+    const attachment = result.data as { extractStatus: string };
+    expect(attachment.extractStatus).toBe("pending");
     expect(saveUploadedFileMock).toHaveBeenCalled();
     expect(dbMock.aiAttachment.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -125,7 +126,8 @@ describe("ai-attachment.service", () => {
         extractSummary: "摘要",
       },
     });
-    expect(result.data.extractStatus).toBe("completed");
+    const attachment = result.data as { extractStatus: string };
+    expect(attachment.extractStatus).toBe("completed");
   });
 
   it("completeAttachmentExtraction 应更新摘要和完成状态", async () => {
@@ -146,7 +148,8 @@ describe("ai-attachment.service", () => {
     if (!result.success) {
       return;
     }
-    expect(result.data.extractStatus).toBe("completed");
+    const attachment = result.data as { extractStatus: string };
+    expect(attachment.extractStatus).toBe("completed");
     expect(dbMock.aiAttachment.update).toHaveBeenCalledWith({
       where: { id: "att-1" },
       data: {
@@ -174,7 +177,8 @@ describe("ai-attachment.service", () => {
     if (!result.success) {
       return;
     }
-    expect(result.data.extractStatus).toBe("failed");
+    const attachment = result.data as { extractStatus: string };
+    expect(attachment.extractStatus).toBe("failed");
     expect(dbMock.aiAttachment.update).toHaveBeenCalledWith({
       where: { id: "att-1" },
       data: {

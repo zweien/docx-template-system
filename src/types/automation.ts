@@ -146,6 +146,15 @@ export interface AutomationItem {
   updatedById: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
+  latestRun: {
+    id: string;
+    status: AutomationRunStatus;
+    triggerSource: AutomationTriggerSource;
+    createdAt: Date | string;
+    finishedAt: Date | string | null;
+    durationMs: number | null;
+    errorMessage: string | null;
+  } | null;
 }
 
 export interface AutomationDetail extends AutomationItem {

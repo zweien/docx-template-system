@@ -125,6 +125,7 @@ describe("MessageParts", () => {
       parts: [
         {
           type: "tool-generateChart",
+          toolCallId: "tool-call-1",
           state: "output-available",
           input: {
             type: "bar",

@@ -4,6 +4,8 @@ import type {
   AutomationDefinition,
   AutomationDetail,
   AutomationItem,
+  AutomationRunStatus,
+  AutomationTriggerSource,
   AutomationTriggerType,
 } from "@/types/automation";
 import type { ServiceResult } from "@/types/data-table";
@@ -29,7 +31,18 @@ function mapAutomationItem(row: {
   createdAt: Date;
   updatedAt: Date;
   table?: { name: string } | null;
+  runs?: Array<{
+    id: string;
+    status: string;
+    triggerSource: string;
+    createdAt: Date;
+    finishedAt: Date | null;
+    durationMs: number | null;
+    errorMessage: string | null;
+  }>;
 }): AutomationItem {
+  const latestRun = row.runs?.[0] ?? null;
+
   return {
     id: row.id,
     tableId: row.tableId,
@@ -43,6 +56,17 @@ function mapAutomationItem(row: {
     updatedById: row.updatedById,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    latestRun: latestRun
+      ? {
+          id: latestRun.id,
+          status: latestRun.status as AutomationRunStatus,
+          triggerSource: latestRun.triggerSource as AutomationTriggerSource,
+          createdAt: latestRun.createdAt,
+          finishedAt: latestRun.finishedAt,
+          durationMs: latestRun.durationMs,
+          errorMessage: latestRun.errorMessage,
+        }
+      : null,
   };
 }
 
@@ -101,6 +125,19 @@ export async function listAutomations(userId: string): Promise<ServiceResult<Aut
       include: {
         table: {
           select: { name: true },
+        },
+        runs: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: {
+            id: true,
+            status: true,
+            triggerSource: true,
+            createdAt: true,
+            finishedAt: true,
+            durationMs: true,
+            errorMessage: true,
+          },
         },
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],

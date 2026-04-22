@@ -346,7 +346,13 @@ describe("ChatArea", () => {
     expect(submitButton).toBeDisabled()
     expect(attachmentButton).toBeDisabled()
 
-    resolveConversation?.({
+    if (!resolveConversation) {
+      throw new Error("历史消息请求未进入挂起状态")
+    }
+
+    const resolvePendingConversation = resolveConversation as (value: unknown) => void
+
+    resolvePendingConversation({
       ok: true,
       json: async () => ({
         success: true,

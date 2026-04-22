@@ -34,7 +34,10 @@ describe("agent2-settings.service", () => {
     const result = await getSettings("user-1")
 
     expect(result.success).toBe(true)
-    expect(result.data?.defaultModel).toBe("gpt-4o")
+    if (!result.success) {
+      throw new Error("Expected success")
+    }
+    expect(result.data.defaultModel).toBe("gpt-4o")
     expect(updateMock).not.toHaveBeenCalled()
   })
 })

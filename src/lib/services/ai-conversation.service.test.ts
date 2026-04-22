@@ -64,7 +64,8 @@ describe("ai-conversation.service", () => {
     if (!result.success) {
       return;
     }
-    expect(result.data[0]?.id).toBe("conv-2");
+    const conversations = result.data as Array<{ id: string }>;
+    expect(conversations[0]?.id).toBe("conv-2");
   });
 
   it("renameConversation 应仅更新当前用户拥有的会话", async () => {

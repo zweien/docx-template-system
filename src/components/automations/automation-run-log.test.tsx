@@ -37,8 +37,8 @@ describe("AutomationRunLog", () => {
                 stepType: "call_webhook",
                 branch: "THEN",
                 status: "FAILED",
-                input: { id: "a1" },
-                output: null,
+                input: { status: "pending", retry: 0 },
+                output: { status: "failed", retry: 1 },
                 errorCode: "WEBHOOK_FAILED",
                 errorMessage: "Webhook returned 500",
                 startedAt: "2026-04-22T00:00:00.000Z",
@@ -78,5 +78,8 @@ describe("AutomationRunLog", () => {
       expect(screen.getByText("步骤执行")).toBeInTheDocument();
     });
     expect(screen.getByText("Webhook returned 500")).toBeInTheDocument();
+    expect(screen.getByText("差异摘要")).toBeInTheDocument();
+    expect(screen.getByText("status")).toBeInTheDocument();
+    expect(screen.getByText(/pending → failed/)).toBeInTheDocument();
   });
 });

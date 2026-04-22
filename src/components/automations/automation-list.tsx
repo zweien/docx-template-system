@@ -15,6 +15,31 @@ const TRIGGER_LABELS: Record<AutomationItem["triggerType"], string> = {
   manual: "手动触发",
 };
 
+const RUN_STATUS_LABELS = {
+  PENDING: "排队中",
+  RUNNING: "执行中",
+  SUCCEEDED: "最近成功",
+  FAILED: "最近失败",
+  CANCELED: "最近取消",
+} satisfies Record<NonNullable<AutomationItem["latestRun"]>["status"], string>;
+
+const RUN_STATUS_VARIANTS = {
+  PENDING: "secondary",
+  RUNNING: "secondary",
+  SUCCEEDED: "default",
+  FAILED: "destructive",
+  CANCELED: "secondary",
+} satisfies Record<
+  NonNullable<AutomationItem["latestRun"]>["status"],
+  "default" | "secondary" | "destructive"
+>;
+
+const TRIGGER_SOURCE_LABELS = {
+  EVENT: "事件触发",
+  SCHEDULE: "定时触发",
+  MANUAL: "手动触发",
+} satisfies Record<NonNullable<AutomationItem["latestRun"]>["triggerSource"], string>;
+
 function formatDateTime(value: Date | string): string {
   const date = value instanceof Date ? value : new Date(value);
   return date.toLocaleString("zh-CN", {
@@ -24,6 +49,18 @@ function formatDateTime(value: Date | string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatDuration(durationMs: number | null): string {
+  if (durationMs === null) {
+    return "执行中";
+  }
+
+  if (durationMs < 1000) {
+    return `${durationMs} ms`;
+  }
+
+  return `${(durationMs / 1000).toFixed(1)} s`;
 }
 
 export function AutomationList({ items }: { items: AutomationItem[] }) {
@@ -82,6 +119,33 @@ export function AutomationList({ items }: { items: AutomationItem[] }) {
                 <Badge variant="outline" className="border-border/70 bg-background/70 text-muted-foreground">
                   DSL v{item.definitionVersion}
                 </Badge>
+              </div>
+
+              <div className="rounded-xl border border-border/60 bg-background/60 px-3 py-3">
+                {item.latestRun ? (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={RUN_STATUS_VARIANTS[item.latestRun.status]}>
+                        {RUN_STATUS_LABELS[item.latestRun.status]}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {TRIGGER_SOURCE_LABELS[item.latestRun.triggerSource]} ·{" "}
+                        {formatDateTime(item.latestRun.createdAt)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      耗时 {formatDuration(item.latestRun.durationMs)}
+                      {item.latestRun.errorMessage ? ` · ${item.latestRun.errorMessage}` : ""}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-sm font-[520] text-foreground">最近运行</p>
+                    <p className="text-sm text-muted-foreground">
+                      暂无运行记录，保存并触发后这里会显示最近一次执行结果。
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between border-t border-border/60 pt-3 text-sm">

@@ -45,6 +45,63 @@ function formatJson(value: unknown): string {
   }
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatValuePreview(value: unknown): string {
+  if (value === null) {
+    return "null";
+  }
+
+  if (value === undefined) {
+    return "undefined";
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+
+  const serialized = formatJson(value).replace(/\s+/g, " ").trim();
+  return serialized.length > 64 ? `${serialized.slice(0, 61)}...` : serialized;
+}
+
+function getStepDiffEntries(step: AutomationRunStepItem) {
+  const input = step.input;
+  const output = step.output;
+
+  if (!isPlainRecord(input) || !isPlainRecord(output)) {
+    return [];
+  }
+
+  const keys = Array.from(new Set([...Object.keys(input), ...Object.keys(output)])).sort();
+
+  return keys
+    .map((key) => {
+      const before = input[key];
+      const after = output[key];
+
+      if (!(key in input)) {
+        return { key, kind: "added" as const, before: undefined, after };
+      }
+
+      if (!(key in output)) {
+        return { key, kind: "removed" as const, before, after: undefined };
+      }
+
+      if (formatJson(before) === formatJson(after)) {
+        return null;
+      }
+
+      return { key, kind: "changed" as const, before, after };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
+}
+
 function StepStatusBadge({ status }: { status: AutomationRunStepItem["status"] }) {
   const variant =
     status === "FAILED" ? "destructive" : status === "SUCCEEDED" ? "default" : "secondary";
@@ -182,37 +239,80 @@ export function AutomationRunLog({ items }: { items: AutomationRunItem[] }) {
                                 key={step.id}
                                 className="space-y-3 rounded-lg border border-border/60 bg-background/70 p-3"
                               >
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <div className="space-y-1">
-                                    <p className="font-mono text-xs text-muted-foreground">{step.id}</p>
-                                    <p className="text-sm font-[520] text-foreground">
-                                      {step.stepType} · {step.branch}
-                                    </p>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <StepStatusBadge status={step.status} />
-                                    <span className="text-xs text-muted-foreground">
-                                      {step.durationMs !== null ? `${step.durationMs} ms` : "-"}
-                                    </span>
-                                  </div>
-                                </div>
-                                {step.errorMessage ? (
-                                  <p className="text-sm text-destructive">{step.errorMessage}</p>
-                                ) : null}
-                                <div className="grid gap-3 lg:grid-cols-2">
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">输入</p>
-                                    <pre className="mt-1 overflow-x-auto rounded-md bg-card px-3 py-2 text-xs text-foreground">
-                                      {formatJson(step.input)}
-                                    </pre>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-muted-foreground">输出</p>
-                                    <pre className="mt-1 overflow-x-auto rounded-md bg-card px-3 py-2 text-xs text-foreground">
-                                      {formatJson(step.output)}
-                                    </pre>
-                                  </div>
-                                </div>
+                                {(() => {
+                                  const diffEntries = getStepDiffEntries(step);
+
+                                  return (
+                                    <>
+                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="space-y-1">
+                                          <p className="font-mono text-xs text-muted-foreground">{step.id}</p>
+                                          <p className="text-sm font-[520] text-foreground">
+                                            {step.stepType} · {step.branch}
+                                          </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <StepStatusBadge status={step.status} />
+                                          <span className="text-xs text-muted-foreground">
+                                            {step.durationMs !== null ? `${step.durationMs} ms` : "-"}
+                                          </span>
+                                        </div>
+                                      </div>
+                                      {step.errorMessage ? (
+                                        <p className="text-sm text-destructive">{step.errorMessage}</p>
+                                      ) : null}
+                                      {diffEntries.length > 0 ? (
+                                        <div className="rounded-md border border-border/60 bg-card/80 p-3">
+                                          <p className="text-xs font-[520] uppercase tracking-[0.14em] text-muted-foreground">
+                                            差异摘要
+                                          </p>
+                                          <div className="mt-2 space-y-2">
+                                            {diffEntries.slice(0, 8).map((entry) => (
+                                              <div
+                                                key={entry.key}
+                                                className="rounded-md bg-background/70 px-3 py-2 text-xs text-foreground"
+                                              >
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                  <span className="font-mono">{entry.key}</span>
+                                                  <Badge variant="outline">
+                                                    {entry.kind === "added"
+                                                      ? "新增"
+                                                      : entry.kind === "removed"
+                                                        ? "移除"
+                                                        : "变更"}
+                                                  </Badge>
+                                                </div>
+                                                <p className="mt-1 text-muted-foreground">
+                                                  {formatValuePreview(entry.before)} →{" "}
+                                                  {formatValuePreview(entry.after)}
+                                                </p>
+                                              </div>
+                                            ))}
+                                            {diffEntries.length > 8 ? (
+                                              <p className="text-xs text-muted-foreground">
+                                                其余 {diffEntries.length - 8} 项变化请查看下方原始 JSON。
+                                              </p>
+                                            ) : null}
+                                          </div>
+                                        </div>
+                                      ) : null}
+                                      <div className="grid gap-3 lg:grid-cols-2">
+                                        <div>
+                                          <p className="text-xs text-muted-foreground">输入</p>
+                                          <pre className="mt-1 overflow-x-auto rounded-md bg-card px-3 py-2 text-xs text-foreground">
+                                            {formatJson(step.input)}
+                                          </pre>
+                                        </div>
+                                        <div>
+                                          <p className="text-xs text-muted-foreground">输出</p>
+                                          <pre className="mt-1 overflow-x-auto rounded-md bg-card px-3 py-2 text-xs text-foreground">
+                                            {formatJson(step.output)}
+                                          </pre>
+                                        </div>
+                                      </div>
+                                    </>
+                                  );
+                                })()}
                               </div>
                             ))
                           ) : (

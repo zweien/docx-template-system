@@ -33,6 +33,11 @@ interface TimelineGanttFrappeProps {
   tasks: FrappeGanttTask[];
   links: FrappeGanttLink[];
   scale: TimelineScale;
+  onScaleChange?: (scale: TimelineScale) => void;
+  dependencyTaskIds?: string[];
+  conflictTaskIds?: string[];
+  focusTaskId?: string | null;
+  focusNonce?: number;
   onOpenRecord: (recordId: string) => void;
   onTaskDateChange?: (taskId: string, startDate: Date, endDate: Date) => Promise<void> | void;
 }
@@ -42,6 +47,8 @@ type GanttCtor = new (
   tasks: FrappeGanttTask[],
   options: {
     view_mode?: "Week" | "Month";
+    scroll_to?: "today" | "start" | "end" | string;
+    today_button?: boolean;
     on_click?: (task: FrappeGanttApiTask) => void;
     on_date_change?: (task: FrappeGanttApiTask, start: Date, end: Date) => void;
   }
@@ -78,10 +85,68 @@ function applyLinkStyles(container: HTMLElement, links: FrappeGanttLink[]) {
   });
 }
 
+function applyMilestoneShapes(container: HTMLElement) {
+  const milestoneBars = container.querySelectorAll<SVGGElement>(
+    ".gantt .bar-wrapper.timeline-task-milestone"
+  );
+
+  milestoneBars.forEach((wrapper) => {
+    const bar = wrapper.querySelector<SVGRectElement>(".bar");
+    if (!bar) return;
+
+    const baseX = Number(bar.getAttribute("x") ?? 0);
+    const baseY = Number(bar.getAttribute("y") ?? 0);
+    const baseHeight = Number(bar.getAttribute("height") ?? 0);
+    const size = Math.max(10, Math.min(14, baseHeight || 14));
+    const centerY = baseY + baseHeight / 2;
+    const centerX = baseX + size / 2;
+
+    bar.setAttribute("x", String(baseX));
+    bar.setAttribute("y", String(centerY - size / 2));
+    bar.setAttribute("width", String(size));
+    bar.setAttribute("height", String(size));
+    bar.setAttribute("rx", "1");
+    bar.setAttribute("ry", "1");
+    bar.setAttribute("transform", `rotate(45 ${centerX} ${centerY})`);
+
+    const progress = wrapper.querySelector<SVGElement>(".bar-progress");
+    if (progress) {
+      progress.style.display = "none";
+    }
+
+    wrapper.querySelectorAll<SVGElement>(".handle").forEach((handle) => {
+      handle.style.display = "none";
+    });
+  });
+}
+
+function applyTaskStateStyles(
+  container: HTMLElement,
+  dependencyTaskIds: Set<string>,
+  conflictTaskIds: Set<string>
+) {
+  const wrappers = container.querySelectorAll<SVGGElement>(".gantt .bar-wrapper");
+  wrappers.forEach((wrapper) => {
+    const taskId = wrapper.getAttribute("data-id");
+    if (!taskId) return;
+    if (dependencyTaskIds.has(taskId)) {
+      wrapper.classList.add("timeline-task-dependent");
+    }
+    if (conflictTaskIds.has(taskId)) {
+      wrapper.classList.add("timeline-task-conflict");
+    }
+  });
+}
+
 export function TimelineGanttFrappe({
   tasks,
   links,
   scale,
+  onScaleChange,
+  dependencyTaskIds = [],
+  conflictTaskIds = [],
+  focusTaskId,
+  focusNonce,
   onOpenRecord,
   onTaskDateChange,
 }: TimelineGanttFrappeProps) {
@@ -89,6 +154,29 @@ export function TimelineGanttFrappe({
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const panStateRef = useRef<{ startX: number; startScrollLeft: number } | null>(null);
+  const lastScaleWheelRef = useRef(0);
+
+  useEffect(() => {
+    if (!focusTaskId || !containerRef.current || !scrollRef.current) return;
+    const safeId = focusTaskId.replace(/["\\]/g, "\\$&");
+    const wrapper = containerRef.current.querySelector<SVGGElement>(
+      `.gantt .bar-wrapper[data-id="${safeId}"]`
+    );
+    if (!wrapper) return;
+
+    const bar = wrapper.querySelector<SVGGraphicsElement>(".bar");
+    const x = Number(bar?.getAttribute("x") ?? 0);
+    scrollRef.current.scrollTo({
+      left: Math.max(0, x - 140),
+      behavior: "smooth",
+    });
+
+    wrapper.classList.add("timeline-task-focus");
+    const timer = window.setTimeout(() => {
+      wrapper.classList.remove("timeline-task-focus");
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [focusNonce, focusTaskId]);
 
   const preparedTasks = useMemo<FrappeGanttTask[]>(() => {
     const depByTask = new Map<string, string[]>();
@@ -116,6 +204,8 @@ export function TimelineGanttFrappe({
       const Gantt = (mod.default ?? mod) as GanttCtor;
       new Gantt(containerRef.current, preparedTasks, {
         view_mode: VIEW_MODE_BY_SCALE[scale],
+        scroll_to: "today",
+        today_button: false,
         on_click: (task) => onOpenRecord(task.id),
         on_date_change: (task, start, end) => {
           void onTaskDateChange?.(task.id, start, end);
@@ -123,6 +213,12 @@ export function TimelineGanttFrappe({
       });
       if (containerRef.current) {
         applyLinkStyles(containerRef.current, links);
+        applyMilestoneShapes(containerRef.current);
+        applyTaskStateStyles(
+          containerRef.current,
+          new Set(dependencyTaskIds),
+          new Set(conflictTaskIds)
+        );
       }
     };
 
@@ -131,7 +227,15 @@ export function TimelineGanttFrappe({
     return () => {
       disposed = true;
     };
-  }, [links, onOpenRecord, onTaskDateChange, preparedTasks, scale]);
+  }, [
+    conflictTaskIds,
+    dependencyTaskIds,
+    links,
+    onOpenRecord,
+    onTaskDateChange,
+    preparedTasks,
+    scale,
+  ]);
 
   if (preparedTasks.length === 0) {
     return (
@@ -193,18 +297,51 @@ export function TimelineGanttFrappe({
           setIsPanning(false);
           panStateRef.current = null;
         }}
+        onWheel={(event) => {
+          const now = Date.now();
+          if (now - lastScaleWheelRef.current < 150) return;
+          if (Math.abs(event.deltaY) < 4) return;
+          event.preventDefault();
+          lastScaleWheelRef.current = now;
+
+          const nextScale =
+            event.deltaY > 0
+              ? scale === "week"
+                ? "month"
+                : "quarter"
+              : scale === "quarter"
+                ? "month"
+                : "week";
+          if (nextScale !== scale) {
+            onScaleChange?.(nextScale);
+          }
+        }}
       >
         <div ref={containerRef} className="min-w-[960px] p-2" />
       </div>
       <style jsx global>{`
+        .timeline-task-dependent .bar {
+          stroke: #2563eb !important;
+          stroke-width: 1.25px !important;
+        }
         .timeline-task-conflict .bar {
           fill: #fecaca !important;
           stroke: #dc2626 !important;
           stroke-width: 1.5px !important;
         }
+        .timeline-task-focus .bar {
+          stroke: #f97316 !important;
+          stroke-width: 2px !important;
+          filter: drop-shadow(0 0 4px rgba(249, 115, 22, 0.55));
+        }
         .timeline-task-milestone .bar {
-          rx: 2px !important;
-          ry: 2px !important;
+          fill: #f59e0b !important;
+          stroke: #d97706 !important;
+          stroke-width: 1.2px !important;
+        }
+        .gantt-container .current-highlight {
+          background: #16a34a !important;
+          width: 2px !important;
         }
       `}</style>
     </div>

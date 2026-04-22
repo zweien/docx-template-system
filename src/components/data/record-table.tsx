@@ -178,6 +178,32 @@ export function RecordTable({
     };
   }, [tableId, viewId, viewType]);
 
+  // Fallback sync: when URL carries a viewId but view list lags,
+  // fetch view detail directly to ensure correct renderer.
+  useEffect(() => {
+    if (!viewId) return;
+    let cancelled = false;
+
+    void fetch(`/api/data-tables/${tableId}/views/${viewId}`)
+      .then(async (res) => {
+        if (!res.ok) return null;
+        const data = (await res.json()) as { success?: boolean; data?: DataViewItem };
+        return data.success ? data.data : null;
+      })
+      .then((view) => {
+        if (!cancelled && view?.type) {
+          setViewType(view.type as ViewType);
+        }
+      })
+      .catch(() => {
+        // Ignore fallback sync failures and keep current UI state.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tableId, viewId]);
+
   // ── Patch single field (for Kanban drag-and-drop) ────────────────────────
   const handlePatchRecord = useCallback(
     async (recordId: string, fieldKey: string, value: unknown) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Settings2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,10 @@ import {
 } from "./timeline-adapter";
 import { calculateTimelineConflicts } from "./timeline-conflicts";
 import { TimelineGanttFrappe } from "./timeline-gantt-frappe";
+import {
+  findFirstConflictTaskId,
+  shouldWarnConflictGrowth,
+} from "./timeline-view-helpers";
 
 interface TimelineViewProps {
   tableId: string;
@@ -63,6 +67,9 @@ export function TimelineView({
   const [showConfig, setShowConfig] = useState(false);
   const [dependencies, setDependencies] = useState<TaskDependencyItem[]>([]);
   const [isDependencyLoading, setIsDependencyLoading] = useState(false);
+  const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
+  const [focusNonce, setFocusNonce] = useState(0);
+  const previousConflictCountRef = useRef<number | null>(null);
 
   const startDateField = asFieldKey(view.viewOptions.startDateField);
   const endDateField = asFieldKey(view.viewOptions.endDateField);
@@ -198,21 +205,45 @@ export function TimelineView({
     [conflict.recordIds]
   );
 
+  useEffect(() => {
+    const currentCount = conflict.dependencyIds.length;
+    const previousCount = previousConflictCountRef.current;
+    previousConflictCountRef.current = currentCount;
+
+    if (
+      shouldWarnConflictGrowth({
+        previousCount,
+        currentCount,
+        isDependencyLoading,
+      })
+    ) {
+      toast.warning(`依赖冲突增加到 ${currentCount} 条，请检查任务先后关系`);
+    }
+  }, [conflict.dependencyIds.length, isDependencyLoading]);
+
+  const dependencyTaskIdSet = useMemo(() => {
+    const ids = new Set<string>();
+    for (const link of graph.links) {
+      ids.add(link.predecessorTaskId);
+      ids.add(link.successorTaskId);
+    }
+    return ids;
+  }, [graph.links]);
+
   const frappeTasks = useMemo(
     () =>
       graph.tasks.map((task) => {
         const baseClass = task.isMilestone ? "timeline-task-milestone" : "timeline-task";
-        const conflictClass = conflictTaskIdSet.has(task.recordId) ? " timeline-task-conflict" : "";
         return {
           id: task.id,
           name: task.label,
           start: formatDateOnly(task.startDate),
           end: formatDateOnly(task.isMilestone ? task.startDate : task.endDate),
           progress: 0,
-          custom_class: `${baseClass}${conflictClass}`,
+          custom_class: baseClass,
         };
       }),
-    [conflictTaskIdSet, graph.tasks]
+    [graph.tasks]
   );
 
   const frappeLinks = useMemo(
@@ -226,6 +257,13 @@ export function TimelineView({
       })),
     [conflictDepIdSet, graph.links]
   );
+
+  const firstConflictTaskId = useMemo(() => {
+    return findFirstConflictTaskId({
+      conflictDependencyIds: conflict.dependencyIds,
+      links: graph.links,
+    });
+  }, [conflict.dependencyIds, graph.links]);
 
   const handleTaskDateChange = useCallback(
     async (taskId: string, startDate: Date, endDate: Date) => {
@@ -298,15 +336,33 @@ export function TimelineView({
             tasks={frappeTasks}
             links={frappeLinks}
             scale={scale}
+            onScaleChange={handleScaleChange}
+            dependencyTaskIds={[...dependencyTaskIdSet]}
+            conflictTaskIds={[...conflictTaskIdSet]}
+            focusTaskId={focusTaskId}
+            focusNonce={focusNonce}
             onOpenRecord={onOpenRecord}
             onTaskDateChange={handleTaskDateChange}
           />
           {(isDependencyLoading || conflict.dependencyIds.length > 0) && (
-            <p className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
               {isDependencyLoading
                 ? "正在加载依赖数据..."
                 : `检测到 ${conflict.dependencyIds.length} 条依赖冲突（已高亮显示）`}
-            </p>
+              {conflict.dependencyIds.length > 0 && firstConflictTaskId && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7"
+                  onClick={() => {
+                    setFocusTaskId(firstConflictTaskId);
+                    setFocusNonce((prev) => prev + 1);
+                  }}
+                >
+                  定位冲突
+                </Button>
+              )}
+            </div>
           )}
         </div>
       ) : (

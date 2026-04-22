@@ -30,12 +30,15 @@ function isBackupDue(schedule: BackupConfig["schedule"], lastBackupAt: string | 
 export async function register() {
   // Only run on server side, not during build
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const [{ getGlobalSettings }, { runBackup }] = await Promise.all([
+    const [{ getGlobalSettings }, { runBackup }, { registerAutomationScheduler }] = await Promise.all([
       import("@/lib/services/agent2-global-settings.service"),
       import("@/lib/services/backup.service"),
+      import("@/lib/services/automation-scheduler.service"),
     ]);
 
     console.log("[backup] Registering backup scheduler...");
+    console.log("[automation] Registering automation scheduler...");
+    registerAutomationScheduler();
 
     // Check every hour if backup is due
     cron.schedule("0 * * * *", async () => {

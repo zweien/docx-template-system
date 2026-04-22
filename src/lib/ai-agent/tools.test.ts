@@ -29,8 +29,8 @@ describe('listTables', () => {
         icon: 'users',
         _count: { fields: 5, records: 10 },
         createdAt: new Date(),
-      }
-    ]);
+      },
+    ] as never);
 
     const result = await listTables();
     if (result.success) {
@@ -87,8 +87,7 @@ describe('getTableSchema', () => {
           sortOrder: 0,
         },
       ],
-      _count: { records: 10 },
-    });
+    } as never);
 
     const result = await getTableSchema('1');
     if (result.success) {
@@ -136,8 +135,7 @@ describe('searchRecords', () => {
           sortOrder: 0,
         },
       ],
-      _count: { records: 10 },
-    });
+    } as never);
 
     // Second call: findMany for records
     vi.mocked(db.dataRecord.findMany).mockResolvedValue([
@@ -148,8 +146,9 @@ describe('searchRecords', () => {
         createdAt: new Date(),
         updatedAt: new Date(),
         createdById: 'u1',
+        updatedById: 'u1',
       },
-    ]);
+    ] as never);
 
     // Third call: count
     vi.mocked(db.dataRecord.count).mockResolvedValue(1);
@@ -200,8 +199,7 @@ describe('aggregateRecords', () => {
           sortOrder: 0,
         },
       ],
-      _count: { records: 10 },
-    });
+    } as never);
 
     // Count call
     vi.mocked(db.dataRecord.count).mockResolvedValue(10);

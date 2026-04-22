@@ -32,6 +32,7 @@ describe("useAttachmentStatusPoller", () => {
           id: "att-1",
           fileName: "note.txt",
           extractStatus: "pending",
+          extractSummary: null,
         },
       ])
     );

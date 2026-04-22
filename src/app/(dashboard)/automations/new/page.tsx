@@ -1,0 +1,42 @@
+import { auth } from "@/lib/auth";
+import { createDefaultAutomationDefinition } from "@/lib/automation-defaults";
+import { AutomationEditor } from "@/components/automations/automation-editor";
+import { listTables } from "@/lib/services/data-table.service";
+
+export default async function NewAutomationPage() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return null;
+  }
+
+  const tablesResult = await listTables();
+  const tables = tablesResult.success
+    ? [...tablesResult.data].sort((left, right) => left.name.localeCompare(right.name, "zh-CN"))
+    : [];
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-2xl border border-border/80 bg-card/90 p-6">
+        <p className="text-xs font-[520] uppercase tracking-[0.18em] text-muted-foreground">
+          新建自动化
+        </p>
+        <h1 className="mt-2 text-3xl font-[520] tracking-[-0.04em] text-foreground">
+          创建规则
+        </h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          先选择目标数据表，再配置触发器、条件和动作。创建后会跳转到详情页继续编辑。
+        </p>
+      </div>
+
+      <AutomationEditor
+        mode="create"
+        initialTableId={tables[0]?.id ?? ""}
+        availableTables={tables}
+        initialName="未命名自动化"
+        initialDescription={null}
+        initialEnabled={true}
+        initialValue={createDefaultAutomationDefinition()}
+      />
+    </div>
+  );
+}

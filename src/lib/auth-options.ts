@@ -8,10 +8,12 @@ import { getAuthentikConfig } from "@/lib/authentik";
 import { syncOidcUser } from "@/lib/oidc-user-sync";
 import { logAudit } from "@/lib/services/audit-log.service";
 
+const isProductionBuildPhase = process.env.NEXT_PHASE === "phase-production-build";
+const isProductionRuntime = process.env.NODE_ENV === "production" && !isProductionBuildPhase;
 const devBypassAuth = process.env.DEV_BYPASS_AUTH === "true";
 
 // Hard guard: refuse to enable bypass auth outside development
-if (devBypassAuth && process.env.NODE_ENV === "production") {
+if (devBypassAuth && isProductionRuntime) {
   throw new Error(
     "FATAL: DEV_BYPASS_AUTH is enabled in production. " +
     "This is a security risk and the server will not start. " +

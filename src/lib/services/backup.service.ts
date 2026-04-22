@@ -1,11 +1,15 @@
 import { writeFile, readdir, readFile, stat } from "fs/promises";
-import { join } from "path";
+import { isAbsolute, join, normalize } from "path";
 import { db } from "@/lib/db";
 import type { ServiceResult } from "@/types/data-table";
 import type { BackupConfig } from "@/types/agent2";
 import type { Prisma } from "@/generated/prisma/client";
 
-const BACKUP_DIR = process.env.BACKUP_DIR || ".data/backups";
+const DEFAULT_BACKUP_DIR = join(
+  /* turbopackIgnore: true */ process.cwd(),
+  ".data",
+  "backups"
+);
 
 interface BackupMeta {
   filename: string;
@@ -14,12 +18,32 @@ interface BackupMeta {
 }
 
 async function ensureBackupDir() {
+  const backupDir = getBackupDir();
+
   try {
-    await readdir(BACKUP_DIR);
+    await readdir(backupDir);
   } catch {
     const { mkdir } = await import("fs/promises");
-    await mkdir(BACKUP_DIR, { recursive: true });
+    await mkdir(backupDir, { recursive: true });
   }
+}
+
+function getBackupDir() {
+  const configuredDir = process.env.BACKUP_DIR?.trim();
+
+  if (!configuredDir) {
+    return DEFAULT_BACKUP_DIR;
+  }
+
+  const normalizedDir = normalize(configuredDir);
+  if (isAbsolute(normalizedDir)) {
+    return normalizedDir;
+  }
+
+  return join(
+    /* turbopackIgnore: true */ process.cwd(),
+    normalizedDir
+  );
 }
 
 /**
@@ -72,7 +96,7 @@ export async function runBackup(): Promise<ServiceResult<BackupMeta>> {
     const now = new Date();
     const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const filename = `backup_${timestamp}.json`;
-    const filepath = join(BACKUP_DIR, filename);
+    const filepath = join(getBackupDir(), filename);
 
     await writeFile(filepath, JSON.stringify(backupData, null, 2), "utf-8");
     const fileStat = await stat(filepath);
@@ -109,12 +133,13 @@ export async function runBackup(): Promise<ServiceResult<BackupMeta>> {
 export async function listBackups(): Promise<ServiceResult<BackupMeta[]>> {
   try {
     await ensureBackupDir();
-    const files = await readdir(BACKUP_DIR);
+    const backupDir = getBackupDir();
+    const files = await readdir(backupDir);
     const backups: BackupMeta[] = [];
 
     for (const file of files) {
       if (!file.startsWith("backup_") || !file.endsWith(".json")) continue;
-      const filepath = join(BACKUP_DIR, file);
+      const filepath = join(backupDir, file);
       const fileStat = await stat(filepath);
       backups.push({
         filename: file,
@@ -147,7 +172,7 @@ export async function readBackup(
     if (!filename.startsWith("backup_") || !filename.endsWith(".json") || filename.includes("/") || filename.includes("..")) {
       return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
     }
-    const filepath = join(BACKUP_DIR, filename);
+    const filepath = join(getBackupDir(), filename);
     const data = await readFile(filepath);
     const fileStat = await stat(filepath);
     return { success: true, data: { data, size: fileStat.size } };
@@ -167,7 +192,7 @@ export async function deleteBackup(
       return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
     }
     const { unlink } = await import("fs/promises");
-    const filepath = join(BACKUP_DIR, filename);
+    const filepath = join(getBackupDir(), filename);
     await unlink(filepath);
     return { success: true, data: { filename } };
   } catch {
@@ -193,7 +218,7 @@ export async function restoreBackup(
       return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
     }
 
-    const filepath = join(BACKUP_DIR, filename);
+    const filepath = join(getBackupDir(), filename);
     const content = await readFile(filepath, "utf-8");
     const backup = JSON.parse(content) as {
       version: string;

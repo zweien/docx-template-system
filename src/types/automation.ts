@@ -182,3 +182,8 @@ export interface AutomationRunStepItem {
   finishedAt: Date | string | null;
   durationMs: number | null;
 }
+
+export interface AutomationRunDetail {
+  run: AutomationRunItem;
+  steps: AutomationRunStepItem[];
+}

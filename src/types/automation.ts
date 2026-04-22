@@ -100,6 +100,22 @@ export interface AutomationConditionContext extends AutomationExecutionContext {
   triggerSource: AutomationTriggerSource;
 }
 
+export interface AutomationActionContext extends AutomationConditionContext {
+  automationId: string;
+  recordId?: string | null;
+}
+
+export type UpdateFieldAction = Extract<AutomationActionNode, { type: "update_field" }>;
+export type CreateRecordAction = Extract<AutomationActionNode, { type: "create_record" }>;
+export type CallWebhookAction = Extract<AutomationActionNode, { type: "call_webhook" }>;
+export type AddCommentAction = Extract<AutomationActionNode, { type: "add_comment" }>;
+
+export interface AutomationExecutorParams<TAction extends AutomationActionNode = AutomationActionNode> {
+  action: TAction;
+  context: AutomationActionContext;
+  runId: string;
+}
+
 export interface EnqueueAutomationRunInput {
   automationId: string;
   triggerSource: AutomationTriggerSource;

@@ -89,6 +89,7 @@ export interface AutomationActorSnapshot {
 
 export interface AutomationExecutionContext {
   tableId: string;
+  recordId?: string | null;
   record: Record<string, unknown> | null;
   previousRecord: Record<string, unknown> | null;
   changedFields: string[];
@@ -116,11 +117,18 @@ export interface AutomationExecutorParams<TAction extends AutomationActionNode =
   runId: string;
 }
 
+export interface AutomationExecutionTarget {
+  id: string;
+  tableId: string;
+  definition: AutomationDefinition;
+}
+
 export interface EnqueueAutomationRunInput {
   automationId: string;
   triggerSource: AutomationTriggerSource;
   triggerPayload: Record<string, unknown>;
   contextSnapshot: AutomationExecutionContext;
+  automation?: AutomationExecutionTarget;
 }
 
 export interface AutomationItem {

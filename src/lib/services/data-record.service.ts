@@ -14,6 +14,7 @@ import type {
 import { normalizeFilters, parseFieldOptions, parseRelationFieldRef } from "@/types/data-table";
 import { evaluateFormula } from "@/lib/formula";
 import { publishRealtimeEvent } from "@/lib/services/realtime-notify.service";
+import { dispatchAutomationEvent } from "@/lib/services/automation-trigger.service";
 
 // Strip control characters (U+0000-U+001F except TAB/LF/CR) from string values
 const CONTROL_CHAR_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F]/g;
@@ -72,6 +73,22 @@ function detectFieldChanges(
     }
   }
   return changes;
+}
+
+function collectChangedFieldKeys(
+  oldData: Record<string, unknown>,
+  newData: Record<string, unknown>
+): string[] {
+  const changedFields: string[] = [];
+  const allKeys = new Set([...Object.keys(oldData), ...Object.keys(newData)]);
+
+  for (const key of allKeys) {
+    if (JSON.stringify(oldData[key]) !== JSON.stringify(newData[key])) {
+      changedFields.push(key);
+    }
+  }
+
+  return changedFields;
 }
 
 type PrismaTx = Parameters<Parameters<typeof db.$transaction>[0]>[0];
@@ -789,6 +806,15 @@ export async function createRecord(
       createdByName: mapped.createdByName ?? "",
       createdAt: new Date().toISOString(),
     }).catch(() => {});
+    void dispatchAutomationEvent({
+      tableId,
+      triggerType: "record_created",
+      recordId: mapped.id,
+      record: mapped.data,
+      previousRecord: null,
+      changedFields: [],
+      actorId: userId,
+    }).catch(() => {});
 
     return { success: true, data: mapped };
   } catch (error) {
@@ -894,10 +920,23 @@ export async function updateRecord(
     if (!existingRecord) {
       return { success: false, error: { code: "NOT_FOUND", message: "记录不存在" } };
     }
+    const previousData = existingRecord.data as Record<string, unknown>;
 
     const result = await db.$transaction(tx =>
       doUpdateRecord(tx, id, data, existingRecord, userId)
     );
+    const changedFields = collectChangedFieldKeys(previousData, result.data);
+
+    void dispatchAutomationEvent({
+      tableId: existingRecord.tableId,
+      triggerType: "record_updated",
+      recordId: result.id,
+      record: result.data,
+      previousRecord: previousData,
+      changedFields,
+      actorId: userId,
+    }).catch(() => {});
+
     return { success: true, data: result };
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新记录失败";
@@ -1038,6 +1077,15 @@ export async function patchField(
       changedByName: mapped.updatedByName ?? mapped.createdByName ?? "",
       changedAt: new Date().toISOString(),
     }).catch(() => {});
+    void dispatchAutomationEvent({
+      tableId: existingRecord.tableId,
+      triggerType: "record_updated",
+      recordId,
+      record: mapped.data,
+      previousRecord: currentData,
+      changedFields: changes.map((item) => item.fieldKey),
+      actorId: userId,
+    }).catch(() => {});
 
     return { success: true, data: mapped };
   } catch (error) {
@@ -1087,6 +1135,15 @@ export async function deleteRecord(
       deletedById: userId ?? "",
       deletedByName,
       deletedAt: new Date().toISOString(),
+    }).catch(() => {});
+    void dispatchAutomationEvent({
+      tableId: record.tableId,
+      triggerType: "record_deleted",
+      recordId: id,
+      record: null,
+      previousRecord: record.data as Record<string, unknown>,
+      changedFields: [],
+      actorId: userId ?? null,
     }).catch(() => {});
 
     return { success: true, data: null };

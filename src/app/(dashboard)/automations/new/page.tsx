@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { createDefaultAutomationDefinition } from "@/lib/automation-defaults";
 import { AutomationEditor } from "@/components/automations/automation-editor";
+import { listTables } from "@/lib/services/data-table.service";
 
 export default async function NewAutomationPage() {
   const session = await auth();
@@ -9,16 +9,10 @@ export default async function NewAutomationPage() {
     return null;
   }
 
-  const tables = await db.dataTable.findMany({
-    where: {
-      createdById: session.user.id,
-    },
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      name: true,
-    },
-  });
+  const tablesResult = await listTables();
+  const tables = tablesResult.success
+    ? [...tablesResult.data].sort((left, right) => left.name.localeCompare(right.name, "zh-CN"))
+    : [];
 
   return (
     <div className="space-y-6">

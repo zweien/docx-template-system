@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { AutomationCanvas } from "@/components/automations/automation-canvas";
 import { AutomationConfigPanel } from "@/components/automations/automation-config-panel";
 import type { AutomationDefinition } from "@/types/automation";
@@ -83,6 +90,10 @@ export function AutomationEditor({
   const nextActionId = useMemo(
     () => value.thenActions.length + value.elseActions.length + 1,
     [value.elseActions.length, value.thenActions.length]
+  );
+  const selectedTable = useMemo(
+    () => availableTables?.find((table) => table.id === tableId) ?? null,
+    [availableTables, tableId]
   );
 
   function addCondition() {
@@ -216,17 +227,26 @@ export function AutomationEditor({
               {mode === "create" ? (
                 <div className="space-y-2">
                   <label className="text-sm font-[520] text-foreground">目标数据表</label>
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
-                    value={tableId}
-                    onChange={(event) => setTableId(event.target.value)}
-                  >
-                    {availableTables.map((table) => (
-                      <option key={table.id} value={table.id}>
-                        {table.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Select value={tableId} onValueChange={(nextValue) => setTableId(nextValue ?? "")}>
+                    <SelectTrigger className="h-9 w-full" data-testid="automation-table-select-trigger">
+                      <SelectValue placeholder="请选择数据表">
+                        {selectedTable?.name ?? "请选择数据表"}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent data-testid="automation-table-select-content">
+                      {availableTables.length === 0 ? (
+                        <SelectItem value="_empty" disabled>
+                          暂无数据表
+                        </SelectItem>
+                      ) : (
+                        availableTables.map((table) => (
+                          <SelectItem key={table.id} value={table.id}>
+                            {table.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
               ) : null}
               <div className="space-y-2">

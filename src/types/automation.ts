@@ -96,6 +96,10 @@ export interface AutomationExecutionContext {
   actor?: AutomationActorSnapshot | null;
 }
 
+export interface AutomationConditionContext extends AutomationExecutionContext {
+  triggerSource: AutomationTriggerSource;
+}
+
 export interface EnqueueAutomationRunInput {
   automationId: string;
   triggerSource: AutomationTriggerSource;

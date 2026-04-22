@@ -81,6 +81,28 @@ export type AutomationRunStepStatus =
   | "FAILED"
   | "SKIPPED";
 
+export interface AutomationActorSnapshot {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+}
+
+export interface AutomationExecutionContext {
+  tableId: string;
+  record: Record<string, unknown> | null;
+  previousRecord: Record<string, unknown> | null;
+  changedFields: string[];
+  triggeredAt: string;
+  actor?: AutomationActorSnapshot | null;
+}
+
+export interface EnqueueAutomationRunInput {
+  automationId: string;
+  triggerSource: AutomationTriggerSource;
+  triggerPayload: Record<string, unknown>;
+  contextSnapshot: AutomationExecutionContext;
+}
+
 export interface AutomationItem {
   id: string;
   tableId: string;

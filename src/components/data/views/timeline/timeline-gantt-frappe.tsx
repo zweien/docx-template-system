@@ -34,6 +34,8 @@ interface TimelineGanttFrappeProps {
   links: FrappeGanttLink[];
   scale: TimelineScale;
   onScaleChange?: (scale: TimelineScale) => void;
+  dependencyTaskIds?: string[];
+  conflictTaskIds?: string[];
   focusTaskId?: string | null;
   focusNonce?: number;
   onOpenRecord: (recordId: string) => void;
@@ -118,11 +120,31 @@ function applyMilestoneShapes(container: HTMLElement) {
   });
 }
 
+function applyTaskStateStyles(
+  container: HTMLElement,
+  dependencyTaskIds: Set<string>,
+  conflictTaskIds: Set<string>
+) {
+  const wrappers = container.querySelectorAll<SVGGElement>(".gantt .bar-wrapper");
+  wrappers.forEach((wrapper) => {
+    const taskId = wrapper.getAttribute("data-id");
+    if (!taskId) return;
+    if (dependencyTaskIds.has(taskId)) {
+      wrapper.classList.add("timeline-task-dependent");
+    }
+    if (conflictTaskIds.has(taskId)) {
+      wrapper.classList.add("timeline-task-conflict");
+    }
+  });
+}
+
 export function TimelineGanttFrappe({
   tasks,
   links,
   scale,
   onScaleChange,
+  dependencyTaskIds = [],
+  conflictTaskIds = [],
   focusTaskId,
   focusNonce,
   onOpenRecord,
@@ -192,6 +214,11 @@ export function TimelineGanttFrappe({
       if (containerRef.current) {
         applyLinkStyles(containerRef.current, links);
         applyMilestoneShapes(containerRef.current);
+        applyTaskStateStyles(
+          containerRef.current,
+          new Set(dependencyTaskIds),
+          new Set(conflictTaskIds)
+        );
       }
     };
 
@@ -200,7 +227,15 @@ export function TimelineGanttFrappe({
     return () => {
       disposed = true;
     };
-  }, [links, onOpenRecord, onTaskDateChange, preparedTasks, scale]);
+  }, [
+    conflictTaskIds,
+    dependencyTaskIds,
+    links,
+    onOpenRecord,
+    onTaskDateChange,
+    preparedTasks,
+    scale,
+  ]);
 
   if (preparedTasks.length === 0) {
     return (

@@ -5,6 +5,8 @@ import {
 } from "@/lib/services/automation-dispatcher.service";
 import {
   createAutomationRun,
+  getAutomationRunDetail,
+  listAutomationRuns,
   markAutomationRunStarted,
   markAutomationRunSucceeded,
 } from "@/lib/services/automation-run.service";
@@ -12,10 +14,13 @@ import {
 const { dbMock } = vi.hoisted(() => ({
   dbMock: {
     automation: {
+      findFirst: vi.fn(),
       findUnique: vi.fn(),
     },
     automationRun: {
       create: vi.fn(),
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
       findUnique: vi.fn(),
       update: vi.fn(),
     },
@@ -97,6 +102,92 @@ describe("automation-run.service", () => {
         status: "SUCCEEDED",
         finishedAt: expect.any(Date),
         durationMs: expect.any(Number),
+      },
+    });
+  });
+
+  it("lists runs for an owned automation", async () => {
+    dbMock.automation.findFirst.mockResolvedValue({ id: "aut-1" });
+    dbMock.automationRun.findMany.mockResolvedValue([
+      {
+        id: "run-1",
+        automationId: "aut-1",
+        status: "SUCCEEDED",
+        triggerSource: "MANUAL",
+        triggerPayload: { source: "manual" },
+        contextSnapshot: { tableId: "tbl-1" },
+        startedAt: new Date("2026-04-22T00:00:00.000Z"),
+        finishedAt: new Date("2026-04-22T00:00:01.000Z"),
+        durationMs: 1000,
+        errorCode: null,
+        errorMessage: null,
+        createdAt: new Date("2026-04-22T00:00:00.000Z"),
+      },
+    ]);
+
+    const result = await listAutomationRuns("aut-1", "user-1");
+
+    expect(result.success).toBe(true);
+    expect(dbMock.automation.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "aut-1",
+        createdById: "user-1",
+      },
+      select: { id: true },
+    });
+    expect(dbMock.automationRun.findMany).toHaveBeenCalledWith({
+      where: { automationId: "aut-1" },
+      orderBy: { createdAt: "desc" },
+    });
+  });
+
+  it("returns run detail with steps", async () => {
+    dbMock.automationRun.findFirst.mockResolvedValue({
+      id: "run-1",
+      automationId: "aut-1",
+      status: "FAILED",
+      triggerSource: "MANUAL",
+      triggerPayload: { source: "manual" },
+      contextSnapshot: { tableId: "tbl-1" },
+      startedAt: new Date("2026-04-22T00:00:00.000Z"),
+      finishedAt: new Date("2026-04-22T00:00:01.000Z"),
+      durationMs: 1000,
+      errorCode: "WEBHOOK_FAILED",
+      errorMessage: "Webhook returned 500",
+      createdAt: new Date("2026-04-22T00:00:00.000Z"),
+      steps: [
+        {
+          id: "step-1",
+          runId: "run-1",
+          nodeId: "a1",
+          stepType: "call_webhook",
+          branch: "THEN",
+          status: "FAILED",
+          input: { id: "a1" },
+          output: null,
+          errorCode: "WEBHOOK_FAILED",
+          errorMessage: "Webhook returned 500",
+          startedAt: new Date("2026-04-22T00:00:00.000Z"),
+          finishedAt: new Date("2026-04-22T00:00:01.000Z"),
+          durationMs: 1000,
+        },
+      ],
+    });
+
+    const result = await getAutomationRunDetail("run-1", "user-1");
+
+    expect(result.success).toBe(true);
+    expect(dbMock.automationRun.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: "run-1",
+        automation: {
+          createdById: "user-1",
+        },
+      },
+      include: {
+        steps: {
+          orderBy: { startedAt: "asc" },
+        },
       },
     });
   });

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { CircleAlert, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +13,24 @@ import { AutomationConfigPanel } from "@/components/automations/automation-confi
 import type { AutomationDefinition } from "@/types/automation";
 
 type AutomationEditorProps = {
-  automationId: string;
   initialName: string;
   initialDescription: string | null;
   initialEnabled: boolean;
   initialValue: AutomationDefinition;
-};
+} & (
+  | {
+      mode: "edit";
+      automationId: string;
+      initialTableId?: string;
+      availableTables?: Array<{ id: string; name: string }>;
+    }
+  | {
+      mode: "create";
+      initialTableId: string;
+      availableTables: Array<{ id: string; name: string }>;
+      automationId?: string;
+    }
+);
 
 function createDefaultAction(actionId: string) {
   return {
@@ -47,15 +60,20 @@ function validateBeforeSave(nextValue: AutomationDefinition) {
 }
 
 export function AutomationEditor({
+  mode,
   automationId,
+  initialTableId,
+  availableTables,
   initialName,
   initialDescription,
   initialEnabled,
   initialValue,
 }: AutomationEditorProps) {
+  const router = useRouter();
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription ?? "");
   const [enabled, setEnabled] = useState(initialEnabled);
+  const [tableId, setTableId] = useState(initialTableId ?? "");
   const [value, setValue] = useState(initialValue);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>("trigger-1");
   const [error, setError] = useState<string | null>(null);
@@ -153,10 +171,11 @@ export function AutomationEditor({
 
     setSaving(true);
     try {
-      const response = await fetch(`/api/automations/${automationId}`, {
-        method: "PATCH",
+      const response = await fetch(mode === "create" ? "/api/automations" : `/api/automations/${automationId}`, {
+        method: mode === "create" ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          ...(mode === "create" ? { tableId } : {}),
           name,
           description: description || null,
           enabled,
@@ -166,7 +185,7 @@ export function AutomationEditor({
       });
 
       const payload = (await response.json()) as
-        | { success: true }
+        | { success: true; data?: { id?: string } }
         | { error?: { message?: string } };
 
       if (!response.ok) {
@@ -176,7 +195,11 @@ export function AutomationEditor({
       }
 
       setError(null);
-      setSavedMessage("自动化已保存");
+      setSavedMessage(mode === "create" ? "自动化已创建" : "自动化已保存");
+      if (mode === "create" && "success" in payload && payload.success && payload.data?.id) {
+        router.push(`/automations/${payload.data.id}`);
+        router.refresh();
+      }
     } catch {
       setError("保存自动化失败");
     } finally {
@@ -190,6 +213,22 @@ export function AutomationEditor({
         <CardContent className="space-y-4 p-5">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
             <div className="space-y-4">
+              {mode === "create" ? (
+                <div className="space-y-2">
+                  <label className="text-sm font-[520] text-foreground">目标数据表</label>
+                  <select
+                    className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
+                    value={tableId}
+                    onChange={(event) => setTableId(event.target.value)}
+                  >
+                    {availableTables.map((table) => (
+                      <option key={table.id} value={table.id}>
+                        {table.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <label className="text-sm font-[520] text-foreground">自动化名称</label>
                 <Input value={name} onChange={(event) => setName(event.target.value)} />

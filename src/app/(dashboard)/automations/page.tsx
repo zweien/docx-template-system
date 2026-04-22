@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { listAutomations } from "@/lib/services/automation.service";
 import { AutomationList } from "@/components/automations/automation-list";
+import { LinkButton } from "@/components/ui/button";
 
 export default async function AutomationsPage() {
   const session = await auth();
@@ -27,6 +28,11 @@ export default async function AutomationsPage() {
                 管理表级触发器、条件分支和动作执行。当前版本支持记录创建/更新/删除、
                 字段变更、定时触发与手动触发。
               </p>
+              <div className="pt-1">
+                <LinkButton href="/automations/new">
+                  新建自动化
+                </LinkButton>
+              </div>
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1 xl:grid-cols-3">

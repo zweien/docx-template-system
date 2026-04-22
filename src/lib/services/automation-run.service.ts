@@ -2,7 +2,9 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import type {
   AutomationActionNode,
+  AutomationRunItem,
   AutomationRunBranch,
+  AutomationRunStepItem,
   AutomationRunStepStatus,
   EnqueueAutomationRunInput,
 } from "@/types/automation";
@@ -15,6 +17,68 @@ function toJsonValue(value: unknown): Prisma.InputJsonValue {
 function computeDurationMs(startedAt: Date | null, finishedAt: Date): number | null {
   if (!startedAt) return null;
   return Math.max(0, finishedAt.getTime() - startedAt.getTime());
+}
+
+function mapAutomationRunItem(row: {
+  id: string;
+  automationId: string;
+  status: string;
+  triggerSource: string;
+  triggerPayload: unknown;
+  contextSnapshot: unknown;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  durationMs: number | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  createdAt: Date;
+}): AutomationRunItem {
+  return {
+    id: row.id,
+    automationId: row.automationId,
+    status: row.status as AutomationRunItem["status"],
+    triggerSource: row.triggerSource as AutomationRunItem["triggerSource"],
+    triggerPayload: (row.triggerPayload ?? {}) as Record<string, unknown>,
+    contextSnapshot: (row.contextSnapshot ?? {}) as Record<string, unknown>,
+    startedAt: row.startedAt,
+    finishedAt: row.finishedAt,
+    durationMs: row.durationMs,
+    errorCode: row.errorCode,
+    errorMessage: row.errorMessage,
+    createdAt: row.createdAt,
+  };
+}
+
+function mapAutomationRunStepItem(row: {
+  id: string;
+  runId: string;
+  nodeId: string;
+  stepType: string;
+  branch: string;
+  status: string;
+  input: unknown;
+  output: unknown;
+  errorCode: string | null;
+  errorMessage: string | null;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  durationMs: number | null;
+}): AutomationRunStepItem {
+  return {
+    id: row.id,
+    runId: row.runId,
+    nodeId: row.nodeId,
+    stepType: row.stepType as AutomationRunStepItem["stepType"],
+    branch: row.branch as AutomationRunStepItem["branch"],
+    status: row.status as AutomationRunStepItem["status"],
+    input: (row.input ?? {}) as Record<string, unknown>,
+    output: row.output ? (row.output as Record<string, unknown>) : null,
+    errorCode: row.errorCode,
+    errorMessage: row.errorMessage,
+    startedAt: row.startedAt,
+    finishedAt: row.finishedAt,
+    durationMs: row.durationMs,
+  };
 }
 
 export async function createAutomationRunStep(input: {
@@ -207,5 +271,70 @@ export async function createSkippedAutomationRunSteps(input: {
   } catch (error) {
     const message = error instanceof Error ? error.message : "创建跳过步骤失败";
     return { success: false, error: { code: "CREATE_SKIPPED_STEPS_FAILED", message } };
+  }
+}
+
+export async function listAutomationRuns(
+  automationId: string,
+  userId: string
+): Promise<ServiceResult<AutomationRunItem[]>> {
+  try {
+    const automation = await db.automation.findFirst({
+      where: {
+        id: automationId,
+        createdById: userId,
+      },
+      select: { id: true },
+    });
+
+    if (!automation) {
+      return { success: false, error: { code: "NOT_FOUND", message: "自动化不存在" } };
+    }
+
+    const rows = await db.automationRun.findMany({
+      where: { automationId },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return { success: true, data: rows.map(mapAutomationRunItem) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "获取自动化运行记录失败";
+    return { success: false, error: { code: "LIST_RUNS_FAILED", message } };
+  }
+}
+
+export async function getAutomationRunDetail(
+  runId: string,
+  userId: string
+): Promise<ServiceResult<{ run: AutomationRunItem; steps: AutomationRunStepItem[] }>> {
+  try {
+    const row = await db.automationRun.findFirst({
+      where: {
+        id: runId,
+        automation: {
+          createdById: userId,
+        },
+      },
+      include: {
+        steps: {
+          orderBy: { startedAt: "asc" },
+        },
+      },
+    });
+
+    if (!row) {
+      return { success: false, error: { code: "NOT_FOUND", message: "运行记录不存在" } };
+    }
+
+    return {
+      success: true,
+      data: {
+        run: mapAutomationRunItem(row),
+        steps: row.steps.map(mapAutomationRunStepItem),
+      },
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "获取运行记录详情失败";
+    return { success: false, error: { code: "GET_RUN_DETAIL_FAILED", message } };
   }
 }

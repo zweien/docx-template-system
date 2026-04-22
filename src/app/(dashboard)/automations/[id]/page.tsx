@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { AutomationEditor } from "@/components/automations/automation-editor";
 import { AutomationRunLog } from "@/components/automations/automation-run-log";
+import { AutomationRunActions } from "@/components/automations/automation-run-actions";
 import { getAutomation } from "@/lib/services/automation.service";
 import type { AutomationRunItem } from "@/types/automation";
 
@@ -54,13 +55,18 @@ export default async function AutomationDetailPage({
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           编辑触发器、条件分支和动作执行顺序。当前为第一期受限画布模式。
         </p>
+        <div className="mt-4">
+          <AutomationRunActions automationId={result.data.id} />
+        </div>
       </div>
 
       <AutomationEditor
+        mode="edit"
         automationId={result.data.id}
         initialName={result.data.name}
         initialDescription={result.data.description}
         initialEnabled={result.data.enabled}
+        initialTableId={result.data.tableId}
         initialValue={result.data.definition}
       />
 

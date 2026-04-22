@@ -2,12 +2,20 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AutomationEditor } from "@/components/automations/automation-editor";
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    refresh: vi.fn(),
+  }),
+}));
+
 describe("AutomationEditor", () => {
   it("blocks saving when more than one trigger node exists", async () => {
     vi.stubGlobal("fetch", vi.fn());
 
     render(
       <AutomationEditor
+        mode="edit"
         automationId="aut-1"
         initialName="测试自动化"
         initialDescription={null}

@@ -44,7 +44,9 @@ interface RecordTableProps {
   fields: DataFieldItem[];
   isAdmin: boolean;
   onOpenDetail?: (recordId: string) => void;
+  onOpenEdit?: (recordId: string) => void;
   onRecordIdsChange?: (ids: string[]) => void;
+  refreshSignal?: number;
 }
 
 // ─── Fallback view when no saved view is selected ────────────────────────────
@@ -74,7 +76,9 @@ export function RecordTable({
   fields,
   isAdmin,
   onOpenDetail,
+  onOpenEdit,
   onRecordIdsChange,
+  refreshSignal,
 }: RecordTableProps) {
   const router = useRouter();
   const [viewType, setViewType] = useState<ViewType>("GRID");
@@ -83,6 +87,7 @@ export function RecordTable({
   const [quickFormatValue, setQuickFormatValue] = useState<string | undefined>();
   const [showActivity, setShowActivity] = useState(false);
   const lastSyncedRecordIdsRef = useRef<string[]>([]);
+  const lastRefreshSignalRef = useRef(refreshSignal);
   const {
     records,
     totalCount,
@@ -123,6 +128,15 @@ export function RecordTable({
     onLockLost,
     cursorPositions,
   } = useTableData({ tableId, fields });
+
+  useEffect(() => {
+    if (refreshSignal === undefined || lastRefreshSignalRef.current === refreshSignal) {
+      return;
+    }
+
+    lastRefreshSignalRef.current = refreshSignal;
+    refresh();
+  }, [refresh, refreshSignal]);
 
   // Sync record IDs to parent for drawer navigation
   useEffect(() => {
@@ -484,6 +498,7 @@ export function RecordTable({
             tableId={tableId}
             onPatchRecord={handlePatchRecord}
             onOpenRecord={onOpenDetail ?? (() => {})}
+            onOpenCreatedRecord={onOpenEdit ?? onOpenDetail ?? (() => {})}
             onRecordCreated={refresh}
             onViewOptionsChange={setViewOptions}
           />

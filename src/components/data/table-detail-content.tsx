@@ -26,6 +26,8 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
   const searchParams = useSearchParams();
   const [detailRecordId, setDetailRecordId] = useState<string | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [detailMode, setDetailMode] = useState<"view" | "edit">("view");
+  const [recordRefreshSignal, setRecordRefreshSignal] = useState(0);
   const [recordIds, setRecordIds] = useState<string[]>([]);
 
   // Auto-open record detail from search params
@@ -33,6 +35,7 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
     const rid = searchParams.get("recordId");
     if (rid) {
       setDetailRecordId(rid);
+      setDetailMode("view");
       setDetailOpen(true);
     }
   }, [searchParams]);
@@ -194,9 +197,16 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
         isAdmin={isAdmin}
         onOpenDetail={(recordId) => {
           setDetailRecordId(recordId);
+          setDetailMode("view");
+          setDetailOpen(true);
+        }}
+        onOpenEdit={(recordId) => {
+          setDetailRecordId(recordId);
+          setDetailMode("edit");
           setDetailOpen(true);
         }}
         onRecordIdsChange={setRecordIds}
+        refreshSignal={recordRefreshSignal}
       />
 
       <RecordDetailDrawer
@@ -205,6 +215,7 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
           if (!open) {
             setDetailOpen(false);
             setDetailRecordId(null);
+            setDetailMode("view");
           }
         }}
         recordId={detailRecordId}
@@ -212,7 +223,14 @@ export function TableDetailContent({ tableId, table, isAdmin }: TableDetailConte
         fields={table.fields}
         isAdmin={isAdmin}
         recordIds={recordIds}
-        onNavigate={(id) => setDetailRecordId(id)}
+        initialMode={detailMode}
+        onNavigate={(id) => {
+          setDetailMode("view");
+          setDetailRecordId(id);
+        }}
+        onRecordSaved={() => {
+          setRecordRefreshSignal((current) => current + 1);
+        }}
       />
 
       <Sheet open={aiOpen} onOpenChange={handleAiClose}>

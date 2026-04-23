@@ -16,6 +16,7 @@ interface CalendarViewProps {
   tableId: string;
   onPatchRecord: (recordId: string, fieldKey: string, value: unknown) => Promise<void>;
   onOpenRecord: (recordId: string) => void;
+  onOpenCreatedRecord?: (recordId: string) => void;
   onRecordCreated?: () => void;
   onViewOptionsChange?: (options: Record<string, unknown>) => void;
 }
@@ -62,6 +63,7 @@ export function CalendarView({
   isAdmin,
   onPatchRecord,
   onOpenRecord,
+  onOpenCreatedRecord,
   onRecordCreated,
   onViewOptionsChange,
 }: CalendarViewProps) {
@@ -206,7 +208,7 @@ export function CalendarView({
                 : null;
           onRecordCreated?.();
           if (newRecordId) {
-            onOpenRecord(newRecordId);
+            (onOpenCreatedRecord ?? onOpenRecord)(newRecordId);
           }
         } else {
           const data = await res.json().catch(() => ({}));
@@ -218,7 +220,7 @@ export function CalendarView({
         creatingRef.current = false;
       }
     },
-    [isAdmin, dateField, tableId, onRecordCreated, onOpenRecord]
+    [isAdmin, dateField, tableId, onRecordCreated, onOpenCreatedRecord, onOpenRecord]
   );
 
   const today = toLocalDateString(new Date());

@@ -64,7 +64,7 @@ describe("CalendarView", () => {
     vi.unstubAllGlobals();
   });
 
-  it("点击空白日期创建记录后应打开新记录编辑界面", async () => {
+  it("点击空白日期创建记录后应以编辑态打开新记录", async () => {
     const fetchMock = vi.mocked(fetch);
     fetchMock.mockResolvedValue(
       new Response(JSON.stringify({ id: "record-new" }), {
@@ -73,6 +73,7 @@ describe("CalendarView", () => {
       })
     );
     const onOpenRecord = vi.fn();
+    const onOpenCreatedRecord = vi.fn();
     const onRecordCreated = vi.fn();
     const now = new Date();
     const expectedDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-15`;
@@ -86,6 +87,7 @@ describe("CalendarView", () => {
         isAdmin
         onPatchRecord={vi.fn()}
         onOpenRecord={onOpenRecord}
+        onOpenCreatedRecord={onOpenCreatedRecord}
         onRecordCreated={onRecordCreated}
       />
     );
@@ -93,8 +95,9 @@ describe("CalendarView", () => {
     fireEvent.click(screen.getByText("15"));
 
     await waitFor(() => {
-      expect(onOpenRecord).toHaveBeenCalledWith("record-new");
+      expect(onOpenCreatedRecord).toHaveBeenCalledWith("record-new");
     });
+    expect(onOpenRecord).not.toHaveBeenCalled();
     expect(onRecordCreated).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/data-tables/table-1/records",

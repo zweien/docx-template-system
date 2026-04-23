@@ -29,6 +29,7 @@ interface DynamicRecordFormProps {
   fields: DataFieldItem[];
   initialData?: DataRecordItem | null;
   onSubmit: (data: Record<string, unknown>) => Promise<void>;
+  onCancel?: () => void;
   submitLabel?: string;
 }
 
@@ -130,6 +131,7 @@ export function DynamicRecordForm({
   fields,
   initialData,
   onSubmit,
+  onCancel,
   submitLabel = "保存",
 }: DynamicRecordFormProps) {
   const router = useRouter();
@@ -500,7 +502,7 @@ export function DynamicRecordForm({
         <Button
           type="button"
           variant="outline"
-          onClick={() => router.back()}
+          onClick={onCancel ?? (() => router.back())}
           disabled={isSubmitting}
         >
           取消

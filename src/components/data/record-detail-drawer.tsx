@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Pencil, Trash2, History, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
-import { Button, LinkButton } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -20,6 +20,9 @@ import { FieldTypeIcon } from "./field-type-icon";
 import { CommentPanel } from "./comment-panel";
 import { FieldType } from "@/generated/prisma/enums";
 import { RichTextPreview } from "./rich-text-cell-editor";
+import { DynamicRecordForm } from "./dynamic-record-form";
+
+type RecordDetailMode = "view" | "edit";
 
 export interface RecordDetailDrawerProps {
   open: boolean;
@@ -32,6 +35,8 @@ export interface RecordDetailDrawerProps {
   onDelete?: (recordId: string) => void;
   recordIds?: string[];
   onNavigate?: (recordId: string) => void;
+  initialMode?: RecordDetailMode;
+  onRecordSaved?: () => void;
 }
 
 function formatDateTime(value: string | Date): string {
@@ -45,7 +50,19 @@ function formatChangeValue(value: unknown): string {
 }
 
 export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
-  const { open, onOpenChange, recordId, tableId, fields, isAdmin, onDelete, recordIds, onNavigate } =
+  const {
+    open,
+    onOpenChange,
+    recordId,
+    tableId,
+    fields,
+    isAdmin,
+    onDelete,
+    recordIds,
+    onNavigate,
+    initialMode = "view",
+    onRecordSaved,
+  } =
     props;
 
   const currentIndex = recordId && recordIds ? recordIds.indexOf(recordId) : -1;
@@ -55,6 +72,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
   const [record, setRecord] = useState<DataRecordItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("fields");
+  const [mode, setMode] = useState<RecordDetailMode>(initialMode);
 
   // History state
   const [historyEntries, setHistoryEntries] = useState<ChangeHistoryEntry[]>([]);
@@ -113,6 +131,12 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
     };
   }, [open, recordId, tableId]);
 
+  useEffect(() => {
+    if (open && recordId) {
+      setMode(initialMode);
+    }
+  }, [initialMode, open, recordId]);
+
   const loadHistory = useCallback(async (page: number, append = false) => {
     if (!recordId) return;
     setHistoryLoading(true);
@@ -156,6 +180,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
   // Reset tab when drawer closes
   useEffect(() => {
     if (!open) {
+      setMode("view");
       setActiveTab("fields");
       setHistoryEntries([]);
       setHistoryTotal(0);
@@ -176,8 +201,32 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
     if (!recordIds || !onNavigate || currentIndex < 0) return;
     const nextIndex = currentIndex + direction;
     if (nextIndex < 0 || nextIndex >= recordIds.length) return;
+    setMode("view");
     onNavigate(recordIds[nextIndex]);
   }, [recordIds, onNavigate, currentIndex]);
+
+  const handleSave = useCallback(async (data: Record<string, unknown>) => {
+    if (!record) return;
+
+    const response = await fetch(
+      `/api/data-tables/${tableId}/records/${record.id}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data }),
+      }
+    );
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(payload.error ?? "保存失败");
+    }
+
+    const updatedRecord = (await response.json()) as DataRecordItem;
+    setRecord(updatedRecord);
+    setMode("view");
+    onRecordSaved?.();
+  }, [onRecordSaved, record, tableId]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -212,7 +261,9 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
           <div className="space-y-4">
             <SheetHeader className="border-b border-[rgb(255_255_255_/_0.08)]">
               <div className="flex items-center justify-between">
-                <SheetTitle className="text-lg font-[510] text-[#f7f8f8]">记录详情</SheetTitle>
+                <SheetTitle className="text-lg font-[510] text-[#f7f8f8]">
+                  {mode === "edit" ? "编辑记录" : "记录详情"}
+                </SheetTitle>
                 {recordIds && recordIds.length > 0 && currentIndex >= 0 && (
                   <div className="flex items-center gap-1 relative z-10">
                     <Button
@@ -241,6 +292,18 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
               </div>
             </SheetHeader>
 
+            {mode === "edit" ? (
+              <div className="px-4 pb-4 pt-4">
+                <DynamicRecordForm
+                  tableId={tableId}
+                  fields={fields}
+                  initialData={record}
+                  onSubmit={handleSave}
+                  onCancel={() => setMode("view")}
+                  submitLabel="保存修改"
+                />
+              </div>
+            ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="mx-4">
                 <TabsTrigger value="fields">字段</TabsTrigger>
@@ -257,14 +320,14 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
               <TabsContent value="fields" className="space-y-6 px-4 pb-4 pt-4">
                 {isAdmin && (
                   <div className="flex flex-wrap gap-2">
-                    <LinkButton
+                    <Button
                       variant="outline"
                       size="sm"
-                      href={`/data/${tableId}/${record.id}/edit`}
+                      onClick={() => setMode("edit")}
                     >
                       <Pencil className="h-4 w-4" />
                       编辑
-                    </LinkButton>
+                    </Button>
                     <Button
                       variant="destructive"
                       size="sm"
@@ -398,6 +461,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                 )}
               </TabsContent>
             </Tabs>
+            )}
           </div>
         )}
       </SheetContent>

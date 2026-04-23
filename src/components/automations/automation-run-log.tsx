@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -109,20 +109,35 @@ function StepStatusBadge({ status }: { status: AutomationRunStepItem["status"] }
   return <Badge variant={variant}>{status}</Badge>;
 }
 
-export function AutomationRunLog({ items }: { items: AutomationRunItem[] }) {
+type AutomationRunLogProps = {
+  items: AutomationRunItem[];
+  helperText?: string;
+  detailReloadToken?: number;
+};
+
+export function AutomationRunLog({
+  items,
+  helperText,
+  detailReloadToken = 0,
+}: AutomationRunLogProps) {
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [detailMap, setDetailMap] = useState<Record<string, AutomationRunDetail | undefined>>({});
   const [loadingRunId, setLoadingRunId] = useState<string | null>(null);
   const [errorMap, setErrorMap] = useState<Record<string, string | undefined>>({});
+  const detailMapRef = useRef(detailMap);
+  const loadingRunIdRef = useRef(loadingRunId);
+  const lastReloadTokenRef = useRef(detailReloadToken);
 
-  async function handleToggle(runId: string) {
-    if (expandedRunId === runId) {
-      setExpandedRunId(null);
-      return;
-    }
+  useEffect(() => {
+    detailMapRef.current = detailMap;
+  }, [detailMap]);
 
-    setExpandedRunId(runId);
-    if (detailMap[runId] || loadingRunId === runId) {
+  useEffect(() => {
+    loadingRunIdRef.current = loadingRunId;
+  }, [loadingRunId]);
+
+  const loadRunDetail = useCallback(async (runId: string, force = false) => {
+    if (!force && (detailMapRef.current[runId] || loadingRunIdRef.current === runId)) {
       return;
     }
 
@@ -148,6 +163,25 @@ export function AutomationRunLog({ items }: { items: AutomationRunItem[] }) {
     } finally {
       setLoadingRunId(null);
     }
+  }, []);
+
+  useEffect(() => {
+    if (!expandedRunId || lastReloadTokenRef.current === detailReloadToken) {
+      return;
+    }
+
+    lastReloadTokenRef.current = detailReloadToken;
+    void loadRunDetail(expandedRunId, true);
+  }, [detailReloadToken, expandedRunId, loadRunDetail]);
+
+  async function handleToggle(runId: string) {
+    if (expandedRunId === runId) {
+      setExpandedRunId(null);
+      return;
+    }
+
+    setExpandedRunId(runId);
+    await loadRunDetail(runId);
   }
 
   return (
@@ -156,6 +190,9 @@ export function AutomationRunLog({ items }: { items: AutomationRunItem[] }) {
         <CardTitle className="text-base font-[520]">最近运行</CardTitle>
       </CardHeader>
       <CardContent>
+        {helperText ? (
+          <p className="mb-3 text-xs text-muted-foreground">{helperText}</p>
+        ) : null}
         {items.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 bg-background/50 px-4 py-10 text-center text-sm text-muted-foreground">
             还没有运行记录。执行手动触发或等待数据变更后，这里会展示每次运行状态。

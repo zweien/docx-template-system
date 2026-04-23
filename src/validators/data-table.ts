@@ -183,7 +183,7 @@ export type JsonImportOptionsInput = z.infer<typeof jsonImportOptionsSchema>;
 
 // ========== View Schemas ==========
 
-export const viewTypeNameSchema = z.enum(["GRID", "KANBAN", "GALLERY", "TIMELINE", "FORM"]);
+export const viewTypeNameSchema = z.enum(["GRID", "KANBAN", "GALLERY", "TIMELINE", "FORM", "CALENDAR"]);
 
 export const patchFieldSchema = z.object({
   fieldKey: z.string().regex(/^[a-z][a-z0-9_]*$/),

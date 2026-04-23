@@ -4,6 +4,12 @@ import type { ReactNode } from "react";
 import type { DataFieldItem, RelationSubtableValueItem } from "@/types/data-table";
 import { parseSelectOptions, SELECT_COLORS } from "@/types/data-table";
 import { FileIcon } from "lucide-react";
+import {
+  extractRichTextPlainText,
+  formatCellText,
+  formatDateValue,
+  isEmptyCell,
+} from "@/lib/format-cell-text";
 
 type ColorPair = { bg: string; fg: string };
 
@@ -30,19 +36,6 @@ function getSelectColor(value: string, colorMap: Map<string, ColorPair>): ColorP
   for (let i = 0; i < value.length; i++) hash = value.charCodeAt(i) + ((hash << 5) - hash);
   const preset = SELECT_COLORS[Math.abs(hash) % SELECT_COLORS.length];
   return { bg: preset.bg, fg: preset.fg };
-}
-
-function isEmptyCell(value: unknown): boolean {
-  return value === null || value === undefined || value === "";
-}
-
-function formatDateValue(value: unknown): string {
-  try {
-    const date = new Date(value as string);
-    return date.toLocaleDateString("zh-CN");
-  } catch {
-    return String(value);
-  }
 }
 
 function isRelationSubtableItem(
@@ -305,86 +298,4 @@ export function formatCellValue(
   }
 }
 
-export function formatCellText(field: DataFieldItem, value: unknown): string {
-  if (isEmptyCell(value)) {
-    return "";
-  }
-
-  switch (field.type) {
-    case FieldType.DATE:
-      return formatDateValue(value);
-    case FieldType.RELATION: {
-      const obj = value as Record<string, unknown> | null;
-      return String(obj?.display ?? obj?.displayValue ?? value);
-    }
-    case FieldType.URL:
-    case FieldType.BOOLEAN:
-    case FieldType.AUTO_NUMBER:
-    case FieldType.SYSTEM_TIMESTAMP:
-    case FieldType.SYSTEM_USER:
-    case FieldType.FORMULA:
-    case FieldType.COUNT:
-    case FieldType.LOOKUP:
-    case FieldType.ROLLUP:
-    case FieldType.RICH_TEXT:
-      return extractRichTextPlainText(value);
-    case FieldType.RATING:
-      return `${Number(value)}/${(field.options as Record<string, unknown>)?.ratingMax ?? 5}`;
-    case FieldType.CURRENCY: {
-      const code = (field.options as Record<string, unknown>)?.currencyCode as string ?? "CNY";
-      const dec = (field.options as Record<string, unknown>)?.currencyDecimals as number ?? 2;
-      const symbol = { CNY: "\u00a5", USD: "$", EUR: "\u20ac" }[code] ?? code;
-      return `${symbol}${Number(value).toLocaleString(undefined, { minimumFractionDigits: dec, maximumFractionDigits: dec })}`;
-    }
-    case FieldType.PERCENTAGE: {
-      const dec = (field.options as Record<string, unknown>)?.percentageDecimals as number ?? 0;
-      return `${(Number(value) * 100).toFixed(dec)}%`;
-    }
-    case FieldType.DURATION: {
-      const fmt = (field.options as Record<string, unknown>)?.durationFormat as string ?? "hh:mm";
-      const totalSec = Math.round(Number(value));
-      const h = Math.floor(totalSec / 3600);
-      const m = Math.floor((totalSec % 3600) / 60);
-      const s = totalSec % 60;
-      const pad = (n: number) => String(n).padStart(2, "0");
-      if (fmt === "hh:mm:ss") return `${pad(h)}:${pad(m)}:${pad(s)}`;
-      if (fmt === "mm:ss") return `${pad(Math.floor(totalSec / 60))}:${pad(s)}`;
-      return `${pad(h)}:${pad(m)}`;
-    }
-    default:
-      return String(value);
-  }
-}
-
-function extractRichTextPlainText(value: unknown): string {
-  if (!value) return "";
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return richTextDocToText(parsed);
-    } catch {
-      return value.length > 100 ? value.slice(0, 100) + "..." : value;
-    }
-  }
-  if (typeof value === "object") {
-    const text = richTextDocToText(value as Record<string, unknown>);
-    return text.length > 100 ? text.slice(0, 100) + "..." : text;
-  }
-  return String(value);
-}
-
-function richTextDocToText(doc: Record<string, unknown>): string {
-  if (!doc?.content || !Array.isArray(doc.content)) return "";
-  return (doc.content as Array<Record<string, unknown>>)
-    .map((node) => richTextNodeToText(node))
-    .join(" ")
-    .trim();
-}
-
-function richTextNodeToText(node: Record<string, unknown>): string {
-  if (node.type === "text") return (node.text as string) || "";
-  if (!node.content || !Array.isArray(node.content)) return "";
-  return (node.content as Array<Record<string, unknown>>)
-    .map((n) => richTextNodeToText(n))
-    .join("");
-}
+export { formatCellText };

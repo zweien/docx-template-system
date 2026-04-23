@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.9](https://github.com/zweien/docx-template-system/compare/v0.6.8...v0.6.9) (2026-04-23)
+
+
+### Features
+
+* **automation:** add email action and failure alerts ([d8f4f45](https://github.com/zweien/docx-template-system/commit/d8f4f45da0c7a1a74cfc57f80040dc64499babff))
+
+
+### Bug Fixes
+
+* **agent2:** stabilize tool collapsible state ([f93c153](https://github.com/zweien/docx-template-system/commit/f93c15305c3326773461c457ce7142f81b65ee70))
+
 ## [0.6.8](https://github.com/zweien/docx-template-system/compare/v0.6.7...v0.6.8) (2026-04-23)
 
 

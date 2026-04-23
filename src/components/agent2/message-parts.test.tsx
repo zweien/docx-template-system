@@ -118,6 +118,31 @@ describe("MessageParts", () => {
     )
   })
 
+  it("chat 已结束时应忽略残留的 part streaming 状态", () => {
+    const message: UIMessage = {
+      id: "msg-completed",
+      role: "assistant",
+      parts: [
+        {
+          type: "text",
+          text: "回答已完成",
+          state: "streaming",
+        },
+      ],
+    }
+
+    render(<MessageParts message={message} chatStatus="ready" />)
+
+    expect(screen.getByTestId("assistant-stream-state")).toHaveAttribute(
+      "data-status",
+      "正在生成回复"
+    )
+    expect(screen.getByTestId("assistant-stream-state")).toHaveAttribute(
+      "data-streaming",
+      "false"
+    )
+  })
+
   it("应将 tool-generateChart 的结果交给 ChartRenderer 渲染", () => {
     const message: UIMessage = {
       id: "msg-1",

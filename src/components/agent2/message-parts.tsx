@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { UIMessage, DynamicToolUIPart, FileUIPart, ToolUIPart } from "ai"
+import type { ChatStatus, UIMessage, DynamicToolUIPart, FileUIPart, ToolUIPart } from "ai"
 import { MessageResponse } from "@/components/ai-elements/message"
 import { Reasoning, ReasoningTrigger, ReasoningContent } from "@/components/ai-elements/reasoning"
 import { Tool, ToolHeader, ToolContent, ToolInput, ToolOutput } from "@/components/ai-elements/tool"
@@ -42,6 +42,7 @@ interface ConfirmToolOutput {
 
 interface MessagePartsProps {
   message: UIMessage
+  chatStatus?: ChatStatus
   onToolConfirm?: (params: {
     toolCallId: string
     toolName: string
@@ -73,7 +74,7 @@ function getToolProgressLabel(toolName: string) {
   }
 }
 
-function getMessageProgress(message: UIMessage) {
+function getMessageProgress(message: UIMessage, chatStatus?: ChatStatus) {
   if (message.role !== "assistant" || !message.parts || message.parts.length === 0) {
     return null
   }
@@ -143,15 +144,17 @@ function getMessageProgress(message: UIMessage) {
     return null
   }
 
+  const effectiveStreaming = chatStatus ? chatStatus === "streaming" && isStreaming : isStreaming
+
   return {
     status: timeline[timeline.length - 1],
     timeline,
-    isStreaming,
+    isStreaming: effectiveStreaming,
     hasContent: hasVisibleText,
   }
 }
 
-export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
+export function MessageParts({ message, chatStatus, onToolConfirm }: MessagePartsProps) {
   const [confirmState, setConfirmState] = useState<ConfirmState>({
     open: false,
     toolName: "",
@@ -188,7 +191,7 @@ export function MessageParts({ message, onToolConfirm }: MessagePartsProps) {
   }>
   const reasoningText = reasoningParts.map((p) => p.text).join("")
   const isReasoningStreaming = reasoningParts.some((p) => p.state === "streaming")
-  const messageProgress = getMessageProgress(message)
+  const messageProgress = getMessageProgress(message, chatStatus)
 
   return (
     <>

@@ -17,6 +17,7 @@ describe("AssistantStreamState", () => {
     expect(screen.getByText("3 个步骤")).toBeInTheDocument();
     expect(screen.getByText("正在分析问题")).toBeInTheDocument();
     expect(screen.getByText("正在查询数据")).toBeInTheDocument();
+    expect(screen.getByTestId("assistant-stream-summary-status")).toHaveTextContent("正在生成回复");
     expect(screen.getAllByText("正在生成回复").length).toBeGreaterThan(0);
   });
 
@@ -30,8 +31,9 @@ describe("AssistantStreamState", () => {
       />
     );
 
-    expect(screen.getByText("已完成")).toBeInTheDocument();
+    expect(screen.getByTestId("assistant-stream-summary-status")).toHaveTextContent("已完成");
     expect(screen.getByText("2 个步骤")).toBeInTheDocument();
+    expect(screen.getAllByText("正在生成回复")).toHaveLength(1);
   });
 
   it("停止后应展示停止态", () => {

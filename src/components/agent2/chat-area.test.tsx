@@ -3,7 +3,7 @@ import { createContext, useContext, useState, type FormEvent, type ReactNode } f
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ChatArea } from "./chat-area"
 import type { PromptInputMessage } from "@/components/ai-elements/prompt-input"
-import type { FileUIPart } from "ai"
+import type { FileUIPart, UIMessage } from "ai"
 
 const {
   sendMessageMock,
@@ -13,6 +13,7 @@ const {
   fetchMock,
   uploadAgent2FilesMock,
   buildAttachmentMessageTextMock,
+  messagePartsMock,
   mockState,
 } = vi.hoisted(() => ({
   sendMessageMock: vi.fn(),
@@ -22,8 +23,11 @@ const {
   fetchMock: vi.fn(),
   uploadAgent2FilesMock: vi.fn(),
   buildAttachmentMessageTextMock: vi.fn(),
+  messagePartsMock: vi.fn(() => null),
   mockState: {
     selectedFiles: [] as FileUIPart[],
+    chatMessages: [] as UIMessage[],
+    chatStatus: "ready" as "submitted" | "streaming" | "ready" | "error",
   },
 }))
 const PromptInputControllerContext = createContext<{
@@ -34,8 +38,8 @@ const openFileDialogMock = vi.fn()
 
 vi.mock("@ai-sdk/react", () => ({
   useChat: vi.fn(() => ({
-    messages: [],
-    status: "ready",
+    messages: mockState.chatMessages,
+    status: mockState.chatStatus,
     sendMessage: sendMessageMock,
     stop: stopMock,
     error: undefined,
@@ -77,7 +81,7 @@ vi.mock("@/components/ai-elements/message", () => ({
 }))
 
 vi.mock("./message-parts", () => ({
-  MessageParts: () => null,
+  MessageParts: messagePartsMock,
 }))
 
 vi.mock("@/components/ai-elements/attachments", () => ({
@@ -203,6 +207,8 @@ describe("ChatArea", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockState.selectedFiles = []
+    mockState.chatMessages = []
+    mockState.chatStatus = "ready"
     openFileDialogMock.mockReset()
     fetchMock.mockReset()
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
@@ -306,6 +312,103 @@ describe("ChatArea", () => {
     })
   })
 
+  it("应将 useChat 顶层状态传给消息渲染组件", async () => {
+    mockState.chatMessages = [
+      {
+        id: "msg-1",
+        role: "assistant",
+        parts: [{ type: "text", text: "历史回答", state: "streaming" }],
+      },
+    ]
+
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url === "/api/agent2/settings") {
+        return {
+          json: async () => ({
+            success: true,
+            data: { defaultModel: "MiniMax-M2.5" },
+          }),
+        }
+      }
+
+      if (url === "/api/agent2/conversations/conv-1") {
+        return {
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: {
+              id: "conv-1",
+              messages: mockState.chatMessages,
+            },
+          }),
+        }
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    render(
+      <ChatArea
+        conversationId="conv-1"
+        onToggleSidebar={vi.fn()}
+        sidebarCollapsed={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(messagePartsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatStatus: "ready",
+          message: expect.objectContaining({ id: "msg-1" }),
+        }),
+        undefined
+      )
+    })
+  })
+
+  it("生成新回复时只有最新 assistant 消息保持流式状态", async () => {
+    mockState.chatStatus = "streaming"
+    mockState.chatMessages = [
+      {
+        id: "msg-old",
+        role: "assistant",
+        parts: [{ type: "text", text: "旧回答", state: "streaming" }],
+      },
+      {
+        id: "msg-new",
+        role: "assistant",
+        parts: [{ type: "text", text: "新回答", state: "streaming" }],
+      },
+    ]
+
+    render(
+      <ChatArea
+        conversationId="conv-1"
+        onToggleSidebar={vi.fn()}
+        sidebarCollapsed={false}
+      />
+    )
+
+    await waitFor(() => {
+      expect(messagePartsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatStatus: "ready",
+          message: expect.objectContaining({ id: "msg-old" }),
+        }),
+        undefined
+      )
+      expect(messagePartsMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatStatus: "streaming",
+          message: expect.objectContaining({ id: "msg-new" }),
+        }),
+        undefined
+      )
+    })
+  })
+
   it("历史消息加载完成前应禁止发送，避免覆盖新消息", async () => {
     let resolveConversation: ((value: unknown) => void) | null = null
 
@@ -324,6 +427,24 @@ describe("ChatArea", () => {
       if (url === "/api/agent2/conversations/conv-1") {
         return new Promise((resolve) => {
           resolveConversation = resolve
+        })
+      }
+
+      if (url === "/api/agent2/suggestions") {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: [],
+          }),
+        })
+      }
+
+      if (url === "/api/agent2/models") {
+        return Promise.resolve({
+          json: async () => ({
+            success: true,
+            data: [],
+          }),
         })
       }
 

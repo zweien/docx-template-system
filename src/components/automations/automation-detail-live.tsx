@@ -30,12 +30,18 @@ export function AutomationDetailLive({
   const [runs, setRuns] = useState(initialRuns);
   const seenTerminalRef = useRef(new Set<string>());
   const [connectionHint, setConnectionHint] = useState<string | null>(null);
+  const [detailReloadToken, setDetailReloadToken] = useState(0);
 
   const handleRunUpdated = useCallback((run: AutomationRunItem) => {
     setRuns((current) => upsertRun(current, run));
 
     const isTerminal = run.status === "SUCCEEDED" || run.status === "FAILED";
-    if (!isTerminal || seenTerminalRef.current.has(run.id)) {
+    if (!isTerminal) {
+      return;
+    }
+
+    setDetailReloadToken((current) => current + 1);
+    if (seenTerminalRef.current.has(run.id)) {
       return;
     }
 
@@ -52,6 +58,9 @@ export function AutomationDetailLive({
     automationId,
     onRunCreated: (run) => setRuns((current) => upsertRun(current, run)),
     onRunUpdated: handleRunUpdated,
+    onRunStepUpdated: () => {
+      setDetailReloadToken((current) => current + 1);
+    },
   });
 
   useEffect(() => {
@@ -66,10 +75,11 @@ export function AutomationDetailLive({
   return (
     <div className="space-y-4">
       <AutomationRunActions automationId={automationId} />
-      {connectionHint ? (
-        <p className="text-xs text-muted-foreground">{connectionHint}</p>
-      ) : null}
-      <AutomationRunLog items={runs} />
+      <AutomationRunLog
+        items={runs}
+        helperText={connectionHint ?? undefined}
+        detailReloadToken={detailReloadToken}
+      />
     </div>
   );
 }

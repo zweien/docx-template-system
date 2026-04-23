@@ -10,6 +10,15 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 
+vi.mock("pg", () => ({
+  Client: class MockClient {
+    connect = vi.fn().mockResolvedValue(undefined);
+    query = vi.fn().mockResolvedValue(undefined);
+    on = vi.fn();
+    end = vi.fn().mockResolvedValue(undefined);
+  },
+}));
+
 describe("automation-realtime.service", () => {
   beforeEach(() => {
     vi.clearAllMocks();

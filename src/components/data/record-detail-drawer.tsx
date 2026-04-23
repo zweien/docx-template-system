@@ -248,20 +248,20 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] sm:max-w-md">
+      <SheetContent side="right" className="w-full overflow-y-auto border-border bg-card text-card-foreground sm:max-w-md">
         {loading ? (
           <div className="flex min-h-full items-center justify-center py-12">
             <Spinner className="size-6" />
           </div>
         ) : !record ? (
-          <div className="flex min-h-full items-center justify-center py-12 text-sm text-[#8a8f98]">
+          <div className="flex min-h-full items-center justify-center py-12 text-sm text-muted-foreground">
             记录不存在
           </div>
         ) : (
           <div className="space-y-4">
-            <SheetHeader className="border-b border-[rgb(255_255_255_/_0.08)]">
+            <SheetHeader className="border-b border-border">
               <div className="flex items-center justify-between">
-                <SheetTitle className="text-lg font-[510] text-[#f7f8f8]">
+                <SheetTitle className="text-lg font-[510] text-foreground">
                   {mode === "edit" ? "编辑记录" : "记录详情"}
                 </SheetTitle>
                 {recordIds && recordIds.length > 0 && currentIndex >= 0 && (
@@ -275,7 +275,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <span className="min-w-[3rem] text-center text-xs tabular-nums text-[#8a8f98]">
+                    <span className="min-w-[3rem] text-center text-xs tabular-nums text-muted-foreground">
                       {currentIndex + 1} / {recordIds.length}
                     </span>
                     <Button
@@ -341,12 +341,12 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
 
                 <div className="space-y-4">
                   {fields.map((field) => (
-                    <div key={field.id} className="space-y-1.5 rounded-md border border-[rgb(255_255_255_/_0.06)] bg-[rgb(255_255_255_/_0.02)] p-2.5">
-                      <div className="flex items-center gap-1 text-xs font-[510] text-[#8a8f98]">
+                    <div key={field.id} className="space-y-1.5 rounded-md border border-border bg-background/70 p-2.5">
+                      <div className="flex items-center gap-1 text-xs font-[510] text-muted-foreground">
                         <FieldTypeIcon type={field.type} />
                         {field.label}
                       </div>
-                      <div className="break-words text-sm text-[#d0d6e0]">
+                      <div className="break-words text-sm text-foreground">
                         {field.type === FieldType.RICH_TEXT
                           ? <RichTextPreview value={record.data[field.key]} />
                           : formatCellValue(field, record.data[field.key])}
@@ -355,23 +355,23 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                   ))}
                 </div>
 
-                <Separator className="bg-[rgb(255_255_255_/_0.08)]" />
+                <Separator />
 
                 <div className="space-y-3">
-                  <div className="text-xs font-[510] text-[#8a8f98]">
+                  <div className="text-xs font-[510] text-muted-foreground">
                     元信息
                   </div>
-                  <div className="grid gap-2 text-sm text-[#d0d6e0]">
+                  <div className="grid gap-2 text-sm text-foreground">
                     <div className="grid grid-cols-[88px_1fr] gap-2">
-                      <span className="text-[#8a8f98]">创建人</span>
+                      <span className="text-muted-foreground">创建人</span>
                       <span>{record.createdByName || "-"}</span>
                     </div>
                     <div className="grid grid-cols-[88px_1fr] gap-2">
-                      <span className="text-[#8a8f98]">创建时间</span>
+                      <span className="text-muted-foreground">创建时间</span>
                       <span>{formatDateTime(record.createdAt)}</span>
                     </div>
                     <div className="grid grid-cols-[88px_1fr] gap-2">
-                      <span className="text-[#8a8f98]">更新时间</span>
+                      <span className="text-muted-foreground">更新时间</span>
                       <span>{formatDateTime(record.updatedAt)}</span>
                     </div>
                   </div>
@@ -392,7 +392,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                     onChange={(e) => setStartDate(e.target.value)}
                     className="h-7 text-xs"
                   />
-                  <span className="shrink-0 text-[#8a8f98]">至</span>
+                  <span className="shrink-0 text-muted-foreground">至</span>
                   <Input
                     type="date"
                     value={endDate}
@@ -414,7 +414,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                     <Spinner className="size-5" />
                   </div>
                 ) : historyEntries.length === 0 ? (
-                  <div className="py-12 text-center text-sm text-[#8a8f98]">
+                  <div className="py-12 text-center text-sm text-muted-foreground">
                     暂无变更记录
                   </div>
                 ) : (
@@ -424,14 +424,14 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                         <div key={entry.id} className="flex gap-3 text-sm">
                           <div className="flex flex-col items-center">
                             <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#7170ff]" />
-                            <div className="w-px flex-1 bg-[rgb(255_255_255_/_0.08)]" />
+                            <div className="w-px flex-1 bg-border" />
                           </div>
                           <div className="flex-1 pb-4">
-                            <div className="text-xs text-[#8a8f98]">
+                            <div className="text-xs text-muted-foreground">
                               {formatDateTime(entry.changedAt)} · {entry.changedByName}
                             </div>
-                            <div className="mt-1 text-[#d0d6e0]">
-                              <span className="font-[510] text-[#f7f8f8]">{entry.fieldLabel}</span>
+                            <div className="mt-1 text-foreground">
+                              <span className="font-[510] text-foreground">{entry.fieldLabel}</span>
                               {" : "}
                               <span className="text-red-300/80 line-through">
                                 {formatChangeValue(entry.oldValue)}

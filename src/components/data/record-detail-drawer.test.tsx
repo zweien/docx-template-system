@@ -7,9 +7,21 @@ import type { DataFieldItem, DataRecordItem } from "@/types/data-table";
 vi.mock("@/components/ui/sheet", () => ({
   Sheet: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div>{children}</div> : null,
-  SheetContent: ({ children }: { children: React.ReactNode }) => <section>{children}</section>,
+  SheetContent: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <section className={className}>{children}</section>,
   SheetHeader: ({ children }: { children: React.ReactNode }) => <header>{children}</header>,
-  SheetTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  SheetTitle: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => <h2 className={className}>{children}</h2>,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -99,5 +111,35 @@ describe("RecordDetailDrawer", () => {
     );
     expect(screen.getByText("记录详情")).toBeInTheDocument();
     expect(screen.getByText("补填标题")).toBeInTheDocument();
+  });
+
+  it("编辑态抽屉应使用主题色，避免浅色主题文字不可见", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify(record), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    render(
+      <RecordDetailDrawer
+        open
+        onOpenChange={vi.fn()}
+        recordId="record-new"
+        tableId="table-1"
+        fields={fields}
+        isAdmin
+        initialMode="edit"
+      />
+    );
+
+    const title = await screen.findByRole("heading", { name: "编辑记录" });
+    const sheet = title.closest("section");
+
+    expect(sheet).toHaveClass("bg-card", "text-card-foreground");
+    expect(sheet?.className).not.toContain("bg-[#191a1b]");
+    expect(title).toHaveClass("text-foreground");
+    expect(title.className).not.toContain("text-[#f7f8f8]");
   });
 });

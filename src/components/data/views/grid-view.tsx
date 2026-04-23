@@ -29,6 +29,7 @@ import { useUndoManager } from "@/hooks/use-undo-manager";
 import { cn } from "@/lib/utils";
 import { useSummaryRow } from "@/hooks/use-summary-row";
 import { useVirtualRows } from "@/hooks/use-virtual-rows";
+import { getRowHeightClasses } from "@/components/data/views/grid-row-height";
 import {
   TextCellEditor,
   NumberCellEditor,
@@ -153,17 +154,6 @@ function groupRecords(
   return groups;
 }
 
-// ─── Row height style helper ────────────────────────────────────────────────
-
-function getRowHeightClasses(h: number) {
-  switch (h) {
-    case 24: return { td: "p-0.5", text: "text-xs" };
-    case 32: return { td: "p-1", text: "" };
-    case 56: return { td: "p-3 whitespace-normal", text: "" };
-    default: return { td: "p-2", text: "" }; // 40px
-  }
-}
-
 // ─── Frozen style helper ──────────────────────────────────────────────────
 
 function getFrozenStyle(
@@ -235,21 +225,23 @@ function DragHandleRow({
   index,
   children,
   style,
+  height,
 }: {
   record: DataRecordItem;
   index: number;
   children: React.ReactNode;
   style?: React.CSSProperties;
+  height: number;
 }) {
   const { ref, isDragging } = useSortable({ id: record.id, index });
   return (
     <tr
       ref={ref}
       className={cn(
-        "border-b transition-colors hover:bg-muted/50 sm:h-auto h-[44px]",
+        "border-b transition-colors hover:bg-muted/50",
         isDragging && "opacity-50 bg-muted"
       )}
-      style={style}
+      style={{ ...(style ?? {}), height }}
     >
       {children}
     </tr>
@@ -661,8 +653,9 @@ export function GridView({
   // 虚拟滚动在中小数据量场景收益有限，且在 table 结构下会出现占位高度失效导致只显示首屏的问题。
   // 这里采用阈值策略：仅在大数据量时启用虚拟滚动，优先保证数据完整可见。
   const shouldUseVirtualRows = flatRecords.length > 400;
+  const rowHeightConfig = useMemo(() => getRowHeightClasses(rowHeight ?? 40), [rowHeight]);
   const { startIndex, endIndex, topPadding, bottomPadding, scrollRef } =
-    useVirtualRows(flatRecords.length, undefined, rowHeight);
+    useVirtualRows(flatRecords.length, undefined, rowHeightConfig.height);
   const visibleFlatRecords = shouldUseVirtualRows
     ? flatRecords.slice(startIndex, endIndex)
     : flatRecords;
@@ -1730,12 +1723,16 @@ export function GridView({
   // ── Record row rendering ────────────────────────────────────────────────
   const renderRecordRow = (record: DataRecordItem, index: number, flatRowIndex: number) => {
       const rowStyle = recordStyles[record.id];
+      const rhClasses = rowHeightConfig;
+      const controlCellStyle: React.CSSProperties = { height: rhClasses.height };
+      const actionButtonSize = rhClasses.height <= 32 ? "icon-xs" : "sm";
       const cellRuleMap = cellRuleMapByRecord[record.id] ?? {};
 
       const rowContent = (
         <>
           <td
-            className="w-10 sticky left-0 z-[5] bg-background isolate border-r px-1"
+            style={controlCellStyle}
+            className="w-10 sticky left-0 z-[5] bg-background isolate border-r p-0"
             onContextMenu={(e) => captureRowHeader(e, record.id, flatRowIndex)}
           >
             <Checkbox
@@ -1744,13 +1741,15 @@ export function GridView({
             />
           </td>
           {canDragSort && (
-            <td className="w-8 px-1 text-muted-foreground cursor-grab active:cursor-grabbing">
+            <td
+              style={controlCellStyle}
+              className="w-8 p-0 text-muted-foreground cursor-grab active:cursor-grabbing"
+            >
               <GripVertical className="h-4 w-4 mx-auto" />
             </td>
           )}
           {orderedVisibleFields.map((field, fieldIndex) => {
             const frozenTdStyle = getFrozenStyle(fieldIndex, frozenFieldCountValue, orderedVisibleFields, columnWidths);
-            const rhClasses = getRowHeightClasses(rowHeight ?? 40);
             const isActive =
               stableActiveCell?.rowIndex === flatRowIndex &&
               stableActiveCell?.colIndex === fieldIndex;
@@ -1775,6 +1774,7 @@ export function GridView({
             const mergedStyle: React.CSSProperties = {
               ...(frozenTdStyle ?? {}),
               ...(cellStyle ?? {}),
+              height: rhClasses.height,
             };
             return (
               <td
@@ -1785,7 +1785,7 @@ export function GridView({
                 className={cn(
                   "align-middle border-r border-neutral-400", rhClasses.td,
                   !(isEditing && field.type === FieldType.RELATION) && "overflow-hidden",
-                  (rowHeight ?? 40) < 56 && "whitespace-nowrap",
+                  rowHeightConfig.height < 56 && "whitespace-nowrap",
                   rhClasses.text,
                   frozenTdStyle && "bg-background isolate",
                   frozenFieldCountValue > 0 &&
@@ -1867,13 +1867,15 @@ export function GridView({
               </td>
             );
           })}
-          <td className="p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0">
-            <div className="flex gap-1">
+          <td
+            style={controlCellStyle}
+            className={cn("align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0", rhClasses.actionTd)}
+          >
+            <div className="flex items-center gap-1 overflow-hidden">
               {onOpenDetail && (
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="h-8 px-2"
+                  size={actionButtonSize}
                   onClick={() => onOpenDetail(record.id)}
                   title="查看详情"
                 >
@@ -1882,7 +1884,7 @@ export function GridView({
               )}
               {commentCounts[record.id] > 0 && (
                 <span
-                  className="inline-flex items-center gap-0.5 text-xs text-muted-foreground cursor-pointer hover:text-primary"
+                  className="inline-flex items-center gap-0.5 text-xs leading-none text-muted-foreground cursor-pointer hover:text-primary"
                   title={`${commentCounts[record.id]} 条未解决评论`}
                   onClick={() => onOpenDetail?.(record.id)}
                 >
@@ -1893,8 +1895,8 @@ export function GridView({
               {isAdmin && (
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="h-8 px-2 text-red-600"
+                  size={actionButtonSize}
+                  className="text-red-600"
                   onClick={() => void handleDeleteWithUndo(record.id)}
                   disabled={deletingIds.has(record.id)}
                 >
@@ -1912,14 +1914,18 @@ export function GridView({
 
       if (canDragSort) {
         return (
-          <DragHandleRow key={record.id} record={record} index={index} style={rowStyle}>
+          <DragHandleRow key={record.id} record={record} index={index} style={rowStyle} height={rhClasses.height}>
             {rowContent}
           </DragHandleRow>
         );
       }
 
       return (
-        <tr key={record.id} className="border-b transition-colors hover:bg-primary/8 data-[state=selected]:bg-muted sm:h-auto h-[44px]" style={rowStyle}>
+        <tr
+          key={record.id}
+          className="border-b transition-colors hover:bg-primary/8 data-[state=selected]:bg-muted"
+          style={{ ...(rowStyle ?? {}), height: rhClasses.height }}
+        >
           {rowContent}
         </tr>
       );

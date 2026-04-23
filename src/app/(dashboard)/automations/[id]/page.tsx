@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { AutomationEditor } from "@/components/automations/automation-editor";
-import { AutomationRunLog } from "@/components/automations/automation-run-log";
-import { AutomationRunActions } from "@/components/automations/automation-run-actions";
+import { AutomationDetailLive } from "@/components/automations/automation-detail-live";
 import { getAutomation } from "@/lib/services/automation.service";
 import type { AutomationRunItem } from "@/types/automation";
 
@@ -56,7 +55,10 @@ export default async function AutomationDetailPage({
           编辑触发器、条件分支和动作执行顺序。当前为第一期受限画布模式。
         </p>
         <div className="mt-4">
-          <AutomationRunActions automationId={result.data.id} />
+          <AutomationDetailLive
+            automationId={result.data.id}
+            initialRuns={runItems}
+          />
         </div>
       </div>
 
@@ -69,8 +71,6 @@ export default async function AutomationDetailPage({
         initialTableId={result.data.tableId}
         initialValue={result.data.definition}
       />
-
-      <AutomationRunLog items={runItems} />
     </div>
   );
 }

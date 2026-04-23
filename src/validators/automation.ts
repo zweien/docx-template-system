@@ -88,6 +88,13 @@ const automationActionSchema = z.discriminatedUnion("type", [
   }),
   z.object({
     id: z.string().trim().min(1),
+    type: z.literal("update_related_records"),
+    relationFieldKey: z.string().trim().min(1),
+    targetScope: z.enum(["first", "all"]),
+    values: z.record(z.string(), z.unknown()),
+  }),
+  z.object({
+    id: z.string().trim().min(1),
     type: z.literal("call_webhook"),
     url: z.string().url("Webhook URL 不合法"),
     method: z.enum(["POST", "PUT"]),

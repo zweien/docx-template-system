@@ -10,6 +10,7 @@ import type {
   CallWebhookAction,
   CreateRecordAction,
   UpdateFieldAction,
+  UpdateRelatedRecordsAction,
   AddCommentAction,
 } from "@/types/automation";
 
@@ -293,6 +294,14 @@ export function AutomationConfigPanel({
                   ? { id: action.id, type: nextType, fieldKey: "status", value: "" }
                   : nextType === "create_record"
                     ? { id: action.id, type: nextType, tableId: value.canvas.nodes[0]?.id ?? "", values: {} }
+                    : nextType === "update_related_records"
+                      ? {
+                          id: action.id,
+                          type: nextType,
+                          relationFieldKey: "relation",
+                          targetScope: "all",
+                          values: {},
+                        }
                     : nextType === "call_webhook"
                       ? { id: action.id, type: nextType, url: "", method: "POST" }
                       : { id: action.id, type: nextType, target: "current_record", content: "" };
@@ -302,6 +311,7 @@ export function AutomationConfigPanel({
             <option value="add_comment">添加评论</option>
             <option value="update_field">更新字段</option>
             <option value="create_record">创建记录</option>
+            <option value="update_related_records">更新关联记录</option>
             <option value="call_webhook">调用 Webhook</option>
           </select>
         </div>
@@ -365,6 +375,62 @@ export function AutomationConfigPanel({
                     onChange(
                       updateAction(value, action.id, (current) => ({
                         ...(current as CreateRecordAction),
+                        values: nextValues,
+                      }))
+                    );
+                  } catch {
+                    // 保持最后一个合法值，避免 UI 状态与 DSL 失配
+                  }
+                }}
+              />
+            </div>
+          </>
+        )}
+
+        {action.type === "update_related_records" && (
+          <>
+            <div className="space-y-2">
+              <label className="text-sm font-[520] text-foreground">关系字段 Key</label>
+              <Input
+                value={(action as UpdateRelatedRecordsAction).relationFieldKey}
+                onChange={(event) =>
+                  onChange(
+                    updateAction(value, action.id, (current) => ({
+                      ...(current as UpdateRelatedRecordsAction),
+                      relationFieldKey: event.target.value,
+                    }))
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-[520] text-foreground">作用范围</label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
+                value={(action as UpdateRelatedRecordsAction).targetScope}
+                onChange={(event) =>
+                  onChange(
+                    updateAction(value, action.id, (current) => ({
+                      ...(current as UpdateRelatedRecordsAction),
+                      targetScope: event.target.value as "first" | "all",
+                    }))
+                  )
+                }
+              >
+                <option value="first">first</option>
+                <option value="all">all</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-[520] text-foreground">更新值 JSON</label>
+              <Textarea
+                value={JSON.stringify((action as UpdateRelatedRecordsAction).values, null, 2)}
+                onChange={(event) => {
+                  try {
+                    const nextValues = JSON.parse(event.target.value) as Record<string, unknown>;
+                    onChange(
+                      updateAction(value, action.id, (current) => ({
+                        ...(current as UpdateRelatedRecordsAction),
                         values: nextValues,
                       }))
                     );

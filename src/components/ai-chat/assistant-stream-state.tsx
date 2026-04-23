@@ -60,8 +60,12 @@ export function AssistantStreamState({
     return null;
   }
 
-  const resolvedStatus = status ?? "正在回复";
-  const isStopped = resolvedStatus.includes("停止");
+  const isStopped = (status ?? "").includes("停止");
+  const resolvedStatus = isStopped
+    ? status ?? "已停止生成"
+    : isStreaming
+      ? status ?? "正在回复"
+      : "已完成";
   const summaryTone = isStopped
     ? "bg-amber-50 text-amber-700 ring-amber-100"
     : isStreaming
@@ -92,18 +96,16 @@ export function AssistantStreamState({
             />
             <span className={`relative inline-flex h-2 w-2 rounded-full ${summaryDotTone}`} />
           </span>
-          <span>{resolvedStatus}</span>
+          <span data-testid="assistant-stream-summary-status">{resolvedStatus}</span>
         </span>
         <span className="text-zinc-400">
           {timeline.length > 1 ? `${timeline.length} 个步骤` : "查看过程"}
         </span>
-        {!isStreaming ? (
+        {!isStreaming && isStopped ? (
           <span
-            className={`inline-flex items-center rounded-full px-1.5 py-0.5 ${
-              isStopped ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
-            }`}
+            className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-amber-700"
           >
-            {isStopped ? "已停止" : "已完成"}
+            已停止
           </span>
         ) : null}
         {isStreaming && hasContent ? (

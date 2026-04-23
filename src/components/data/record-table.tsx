@@ -350,6 +350,22 @@ export function RecordTable({
     [currentConfig.viewOptions, setViewOptions]
   );
 
+  const handleExportExcel = useCallback(() => {
+    const searchParams = new URLSearchParams();
+
+    currentConfig.visibleFields.forEach((fieldKey) => {
+      searchParams.append("visibleField", fieldKey);
+    });
+
+    currentConfig.fieldOrder.forEach((fieldKey) => {
+      searchParams.append("fieldOrder", fieldKey);
+    });
+
+    const query = searchParams.toString();
+    const exportUrl = `/api/data-tables/${tableId}/export${query ? `?${query}` : ""}`;
+    window.open(exportUrl);
+  }, [currentConfig.fieldOrder, currentConfig.visibleFields, tableId]);
+
   // ── Row reorder ────────────────────────────────────────────────────────
   const reorderRecords = useCallback(
     async (orderedIds: string[]) => {
@@ -616,7 +632,7 @@ export function RecordTable({
             />
             <DropdownMenuContent align="end">
               <DropdownMenuItem
-                onClick={() => window.open(`/api/data-tables/${tableId}/export`)}
+                onClick={handleExportExcel}
               >
                 导出 Excel
               </DropdownMenuItem>

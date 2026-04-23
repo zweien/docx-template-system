@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
 import { getTable } from "./data-table.service";
+import { formatCellText } from "@/lib/format-cell-text";
 import type { ServiceResult, DataFieldItem, ExportBundle, BundleField, BundleTable } from "@/types/data-table";
 
 // ── Shared Types ──
@@ -60,6 +61,27 @@ export async function getTableExportData(
   };
 }
 
+export interface ExcelExportOptions {
+  visibleFields?: string[];
+  fieldOrder?: string[];
+}
+
+function getOrderedExportFields(
+  fields: DataFieldItem[],
+  options?: ExcelExportOptions
+): DataFieldItem[] {
+  const fieldMap = new Map(fields.map((field) => [field.key, field]));
+  const visibleKeys = options?.visibleFields ?? fields.map((field) => field.key);
+  const orderKeys = options?.fieldOrder ?? fields.map((field) => field.key);
+  const visibleSet = new Set(visibleKeys);
+  const orderedKeys = orderKeys.filter((key) => visibleSet.has(key) && fieldMap.has(key));
+  const remainingKeys = visibleKeys.filter((key) => !orderedKeys.includes(key) && fieldMap.has(key));
+
+  return [...orderedKeys, ...remainingKeys]
+    .map((key) => fieldMap.get(key))
+    .filter((field): field is DataFieldItem => field !== undefined);
+}
+
 // ── Legacy Record Export ──
 
 export function exportRecordToExcel(
@@ -114,7 +136,8 @@ export function exportRecordToExcel(
 // ── Excel Export ──
 
 export async function exportToExcel(
-  tableId: string
+  tableId: string,
+  options?: ExcelExportOptions
 ): Promise<ServiceResult<Buffer>> {
   try {
     const dataResult = await getTableExportData(tableId);
@@ -123,17 +146,12 @@ export async function exportToExcel(
     }
 
     const { table, fields, records } = dataResult.data;
+    const exportFields = getOrderedExportFields(fields, options);
 
-    const headers = fields.map((f) => f.label);
+    const headers = exportFields.map((field) => field.label);
     const rows = records.map((record) => {
       const data = record.data;
-      return fields.map((f) => {
-        const value = data[f.key];
-        if (f.type === "MULTISELECT" && Array.isArray(value)) {
-          return value.join(", ");
-        }
-        return value ?? "";
-      });
+      return exportFields.map((field) => formatCellText(field, data[field.key]));
     });
 
     const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);

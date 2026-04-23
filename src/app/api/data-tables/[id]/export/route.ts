@@ -25,7 +25,13 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   }
 
   const table = tableResult.data;
-  const result = await exportToExcel(tableId);
+  const { searchParams } = new URL(_request.url);
+  const visibleFields = searchParams.getAll("visibleField");
+  const fieldOrder = searchParams.getAll("fieldOrder");
+  const result = await exportToExcel(tableId, {
+    visibleFields: visibleFields.length > 0 ? visibleFields : undefined,
+    fieldOrder: fieldOrder.length > 0 ? fieldOrder : undefined,
+  });
 
   if (!result.success) {
     return NextResponse.json(

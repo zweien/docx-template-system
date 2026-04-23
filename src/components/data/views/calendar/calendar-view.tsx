@@ -16,6 +16,7 @@ interface CalendarViewProps {
   tableId: string;
   onPatchRecord: (recordId: string, fieldKey: string, value: unknown) => Promise<void>;
   onOpenRecord: (recordId: string) => void;
+  onOpenCreatedRecord?: (recordId: string) => void;
   onRecordCreated?: () => void;
   onViewOptionsChange?: (options: Record<string, unknown>) => void;
 }
@@ -62,6 +63,7 @@ export function CalendarView({
   isAdmin,
   onPatchRecord,
   onOpenRecord,
+  onOpenCreatedRecord,
   onRecordCreated,
   onViewOptionsChange,
 }: CalendarViewProps) {
@@ -195,7 +197,19 @@ export function CalendarView({
           body: JSON.stringify({ data: { [dateField]: dateStr } }),
         });
         if (res.ok) {
+          const data = (await res.json().catch(() => null)) as
+            | { id?: unknown; data?: { id?: unknown } }
+            | null;
+          const newRecordId =
+            typeof data?.id === "string"
+              ? data.id
+              : typeof data?.data?.id === "string"
+                ? data.data.id
+                : null;
           onRecordCreated?.();
+          if (newRecordId) {
+            (onOpenCreatedRecord ?? onOpenRecord)(newRecordId);
+          }
         } else {
           const data = await res.json().catch(() => ({}));
           toast.error(data.error ?? "创建失败");
@@ -206,7 +220,7 @@ export function CalendarView({
         creatingRef.current = false;
       }
     },
-    [isAdmin, dateField, tableId, onRecordCreated]
+    [isAdmin, dateField, tableId, onRecordCreated, onOpenCreatedRecord, onOpenRecord]
   );
 
   const today = toLocalDateString(new Date());

@@ -101,9 +101,9 @@ export function SaveViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] text-[#f7f8f8]">
+      <DialogContent className="border-border bg-card text-card-foreground">
         <DialogHeader>
-          <DialogTitle className="font-[510] tracking-[-0.13px]">保存视图</DialogTitle>
+          <DialogTitle className="font-[510] tracking-[-0.13px] text-foreground">保存视图</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4">
@@ -122,17 +122,17 @@ export function SaveViewDialog({
             />
           </div>
 
-          <Separator className="bg-[rgb(255_255_255_/_0.08)]" />
+          <Separator />
 
           {/* Config summary */}
-          <div className="flex flex-col gap-1.5 rounded-md border border-[rgb(255_255_255_/_0.06)] bg-[rgb(255_255_255_/_0.02)] p-2.5 text-sm">
-            <span className="text-[#8a8f98]">
+          <div className="flex flex-col gap-1.5 rounded-md border border-border bg-background/70 p-2.5 text-sm">
+            <span className="text-muted-foreground">
               {currentConfig.filters.length} 个筛选条件
             </span>
-            <span className="text-[#8a8f98]">
+            <span className="text-muted-foreground">
               排序: {sortSummary}
             </span>
-            <span className="text-[#8a8f98]">
+            <span className="text-muted-foreground">
               {currentConfig.visibleFields.length} 个可见字段
             </span>
           </div>

@@ -116,7 +116,7 @@ export const automationDefinitionSchema = z.object({
 
 export const createAutomationSchema = z.object({
   name: z.string().trim().min(1, "自动化名称不能为空"),
-  description: z.string().trim().max(1000).optional(),
+  description: z.string().trim().max(1000).nullable().optional(),
   enabled: z.boolean().default(true),
   triggerType: automationTriggerTypeSchema,
   definition: automationDefinitionSchema,

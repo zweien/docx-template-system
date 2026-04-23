@@ -1,19 +1,25 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { Loader2, PlayCircle } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 
-export function AutomationRunActions({ automationId }: { automationId: string }) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+type AutomationRunActionsProps = {
+  automationId: string;
+  onRunQueued?: (runId: string) => void;
+};
+
+export function AutomationRunActions({
+  automationId,
+  onRunQueued,
+}: AutomationRunActionsProps) {
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   async function handleRun() {
+    setPending(true);
     setError(null);
-    setSuccessMessage(null);
 
     try {
       const response = await fetch(`/api/automations/${automationId}/run`, {
@@ -30,17 +36,19 @@ export function AutomationRunActions({ automationId }: { automationId: string })
       if (!response.ok) {
         const message = "error" in payload ? payload.error?.message : undefined;
         setError(message ?? "触发自动化失败");
+        toast.error(message ?? "触发自动化失败");
         return;
       }
 
       if ("success" in payload && payload.success) {
-        setSuccessMessage(`已创建运行任务 ${payload.data.runId}`);
+        onRunQueued?.(payload.data.runId);
+        toast.success(`已创建运行任务 ${payload.data.runId}`);
       }
-      startTransition(() => {
-        router.refresh();
-      });
     } catch {
       setError("触发自动化失败");
+      toast.error("触发自动化失败");
+    } finally {
+      setPending(false);
     }
   }
 
@@ -51,7 +59,6 @@ export function AutomationRunActions({ automationId }: { automationId: string })
         手动运行
       </Button>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
-      {successMessage ? <p className="text-xs text-emerald-600 dark:text-emerald-300">{successMessage}</p> : null}
     </div>
   );
 }

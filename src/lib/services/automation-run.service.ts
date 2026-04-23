@@ -1,5 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import { publishAutomationRealtimeEvent } from "@/lib/services/automation-realtime.service";
 import type {
   AutomationActionNode,
   AutomationRunItem,
@@ -9,6 +10,21 @@ import type {
   EnqueueAutomationRunInput,
 } from "@/types/automation";
 import type { ServiceResult } from "@/types/data-table";
+
+const automationRunSelect = {
+  id: true,
+  automationId: true,
+  status: true,
+  triggerSource: true,
+  triggerPayload: true,
+  contextSnapshot: true,
+  startedAt: true,
+  finishedAt: true,
+  durationMs: true,
+  errorCode: true,
+  errorMessage: true,
+  createdAt: true,
+} as const;
 
 function toJsonValue(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
@@ -81,6 +97,27 @@ function mapAutomationRunStepItem(row: {
   };
 }
 
+async function publishRunUpdated(row: {
+  id: string;
+  automationId: string;
+  status: string;
+  triggerSource: string;
+  triggerPayload: unknown;
+  contextSnapshot: unknown;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  durationMs: number | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  createdAt: Date;
+}) {
+  await publishAutomationRealtimeEvent({
+    type: "automation_run_updated",
+    automationId: row.automationId,
+    run: mapAutomationRunItem(row),
+  });
+}
+
 export async function createAutomationRunStep(input: {
   runId: string;
   nodeId: string;
@@ -123,10 +160,16 @@ export async function createAutomationRun(
         triggerPayload: toJsonValue(input.triggerPayload),
         contextSnapshot: toJsonValue(input.contextSnapshot),
       },
-      select: { id: true },
+      select: automationRunSelect,
     });
 
-    return { success: true, data: created };
+    await publishAutomationRealtimeEvent({
+      type: "automation_run_created",
+      automationId: created.automationId,
+      run: mapAutomationRunItem(created),
+    });
+
+    return { success: true, data: { id: created.id } };
   } catch (error) {
     const message = error instanceof Error ? error.message : "创建自动化运行记录失败";
     return { success: false, error: { code: "CREATE_RUN_FAILED", message } };
@@ -135,14 +178,16 @@ export async function createAutomationRun(
 
 export async function markAutomationRunStarted(runId: string): Promise<ServiceResult<null>> {
   try {
-    await db.automationRun.update({
+    const updated = await db.automationRun.update({
       where: { id: runId },
       data: {
         status: "RUNNING",
         startedAt: new Date(),
       },
+      select: automationRunSelect,
     });
 
+    await publishRunUpdated(updated);
     return { success: true, data: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : "标记自动化运行开始失败";
@@ -158,15 +203,17 @@ export async function markAutomationRunSucceeded(runId: string): Promise<Service
     });
     const finishedAt = new Date();
 
-    await db.automationRun.update({
+    const updated = await db.automationRun.update({
       where: { id: runId },
       data: {
         status: "SUCCEEDED",
         finishedAt,
         durationMs: computeDurationMs(existing?.startedAt ?? null, finishedAt),
       },
+      select: automationRunSelect,
     });
 
+    await publishRunUpdated(updated);
     return { success: true, data: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : "标记自动化运行成功失败";
@@ -185,7 +232,7 @@ export async function markAutomationRunFailed(
     });
     const finishedAt = new Date();
 
-    await db.automationRun.update({
+    const updated = await db.automationRun.update({
       where: { id: runId },
       data: {
         status: "FAILED",
@@ -194,8 +241,10 @@ export async function markAutomationRunFailed(
         errorCode: error.code ?? "RUN_FAILED",
         errorMessage: error.message,
       },
+      select: automationRunSelect,
     });
 
+    await publishRunUpdated(updated);
     return { success: true, data: null };
   } catch (updateError) {
     const message = updateError instanceof Error ? updateError.message : "标记自动化运行失败失败";
@@ -209,15 +258,32 @@ export async function markAutomationRunStepSucceeded(
 ): Promise<ServiceResult<null>> {
   try {
     const finishedAt = new Date();
-    await db.automationRunStep.update({
+    const updated = await db.automationRunStep.update({
       where: { id: stepId },
       data: {
         status: "SUCCEEDED",
         output: toJsonValue(output),
         finishedAt,
       },
+      select: {
+        id: true,
+        runId: true,
+        status: true,
+        run: {
+          select: {
+            automationId: true,
+          },
+        },
+      },
     });
 
+    await publishAutomationRealtimeEvent({
+      type: "automation_run_step_updated",
+      automationId: updated.run.automationId,
+      runId: updated.runId,
+      stepId: updated.id,
+      status: updated.status as AutomationRunStepStatus,
+    });
     return { success: true, data: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : "标记自动化步骤成功失败";
@@ -231,7 +297,7 @@ export async function markAutomationRunStepFailed(
 ): Promise<ServiceResult<null>> {
   try {
     const finishedAt = new Date();
-    await db.automationRunStep.update({
+    const updated = await db.automationRunStep.update({
       where: { id: stepId },
       data: {
         status: "FAILED",
@@ -239,8 +305,25 @@ export async function markAutomationRunStepFailed(
         errorMessage: error.message,
         finishedAt,
       },
+      select: {
+        id: true,
+        runId: true,
+        status: true,
+        run: {
+          select: {
+            automationId: true,
+          },
+        },
+      },
     });
 
+    await publishAutomationRealtimeEvent({
+      type: "automation_run_step_updated",
+      automationId: updated.run.automationId,
+      runId: updated.runId,
+      stepId: updated.id,
+      status: updated.status as AutomationRunStepStatus,
+    });
     return { success: true, data: null };
   } catch (updateError) {
     const message = updateError instanceof Error ? updateError.message : "标记自动化步骤失败失败";

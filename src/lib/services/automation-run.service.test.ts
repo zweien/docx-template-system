@@ -8,10 +8,11 @@ import {
   getAutomationRunDetail,
   listAutomationRuns,
   markAutomationRunStarted,
+  markAutomationRunStepFailed,
   markAutomationRunSucceeded,
 } from "@/lib/services/automation-run.service";
 
-const { dbMock } = vi.hoisted(() => ({
+const { dbMock, publishAutomationRealtimeEventMock } = vi.hoisted(() => ({
   dbMock: {
     automation: {
       findFirst: vi.fn(),
@@ -29,10 +30,15 @@ const { dbMock } = vi.hoisted(() => ({
       update: vi.fn(),
     },
   },
+  publishAutomationRealtimeEventMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
   db: dbMock,
+}));
+
+vi.mock("@/lib/services/automation-realtime.service", () => ({
+  publishAutomationRealtimeEvent: publishAutomationRealtimeEventMock,
 }));
 
 describe("automation-run.service", () => {
@@ -42,7 +48,22 @@ describe("automation-run.service", () => {
   });
 
   it("creates a pending automation run", async () => {
-    dbMock.automationRun.create.mockResolvedValue({ id: "run-1" });
+    dbMock.automationRun.create.mockResolvedValue({
+      id: "run-1",
+      automationId: "aut-1",
+      status: "PENDING",
+      triggerSource: "MANUAL",
+      triggerPayload: { source: "manual" },
+      contextSnapshot: {
+        tableId: "tbl-1",
+      },
+      startedAt: null,
+      finishedAt: null,
+      durationMs: null,
+      errorCode: null,
+      errorMessage: null,
+      createdAt: new Date("2026-04-22T00:00:00.000Z"),
+    });
 
     const result = await createAutomationRun({
       automationId: "aut-1",
@@ -74,12 +95,46 @@ describe("automation-run.service", () => {
           actor: { id: "user-1" },
         },
       },
-      select: { id: true },
+      select: expect.any(Object),
     });
+    expect(publishAutomationRealtimeEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "automation_run_created",
+        automationId: "aut-1",
+      })
+    );
   });
 
   it("marks a run started and then succeeded", async () => {
-    dbMock.automationRun.update.mockResolvedValue({ id: "run-1" });
+    dbMock.automationRun.update
+      .mockResolvedValueOnce({
+        id: "run-1",
+        automationId: "aut-1",
+        status: "RUNNING",
+        triggerSource: "MANUAL",
+        triggerPayload: {},
+        contextSnapshot: {},
+        startedAt: new Date("2026-04-22T00:00:00.000Z"),
+        finishedAt: null,
+        durationMs: null,
+        errorCode: null,
+        errorMessage: null,
+        createdAt: new Date("2026-04-22T00:00:00.000Z"),
+      })
+      .mockResolvedValueOnce({
+        id: "run-1",
+        automationId: "aut-1",
+        status: "SUCCEEDED",
+        triggerSource: "MANUAL",
+        triggerPayload: {},
+        contextSnapshot: {},
+        startedAt: new Date("2026-04-22T00:00:00.000Z"),
+        finishedAt: new Date("2026-04-22T00:00:01.000Z"),
+        durationMs: 1000,
+        errorCode: null,
+        errorMessage: null,
+        createdAt: new Date("2026-04-22T00:00:00.000Z"),
+      });
     dbMock.automationRun.findUnique.mockResolvedValue({
       startedAt: new Date("2026-04-22T00:00:00.000Z"),
     });
@@ -95,6 +150,7 @@ describe("automation-run.service", () => {
         status: "RUNNING",
         startedAt: expect.any(Date),
       },
+      select: expect.any(Object),
     });
     expect(dbMock.automationRun.update).toHaveBeenNthCalledWith(2, {
       where: { id: "run-1" },
@@ -103,6 +159,48 @@ describe("automation-run.service", () => {
         finishedAt: expect.any(Date),
         durationMs: expect.any(Number),
       },
+      select: expect.any(Object),
+    });
+    expect(publishAutomationRealtimeEventMock).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        type: "automation_run_updated",
+        automationId: "aut-1",
+        run: expect.objectContaining({ id: "run-1", status: "RUNNING" }),
+      })
+    );
+    expect(publishAutomationRealtimeEventMock).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        type: "automation_run_updated",
+        automationId: "aut-1",
+        run: expect.objectContaining({ id: "run-1", status: "SUCCEEDED" }),
+      })
+    );
+  });
+
+  it("publishes a step update after marking a step failed", async () => {
+    dbMock.automationRunStep.update.mockResolvedValue({
+      id: "step-1",
+      runId: "run-1",
+      status: "FAILED",
+      run: {
+        automationId: "aut-1",
+      },
+    });
+
+    const result = await markAutomationRunStepFailed("step-1", {
+      code: "ACTION_EXECUTION_FAILED",
+      message: "Webhook returned 500",
+    });
+
+    expect(result.success).toBe(true);
+    expect(publishAutomationRealtimeEventMock).toHaveBeenCalledWith({
+      type: "automation_run_step_updated",
+      automationId: "aut-1",
+      runId: "run-1",
+      stepId: "step-1",
+      status: "FAILED",
     });
   });
 
@@ -200,8 +298,55 @@ describe("automation-dispatcher.service", () => {
   });
 
   it("creates a pending run before execution", async () => {
-    dbMock.automationRun.create.mockResolvedValue({ id: "run-1" });
-    dbMock.automationRun.update.mockResolvedValue({ id: "run-1" });
+    dbMock.automationRun.create.mockResolvedValue({
+      id: "run-1",
+      automationId: "aut-1",
+      status: "PENDING",
+      triggerSource: "MANUAL",
+      triggerPayload: { source: "manual" },
+      contextSnapshot: {
+        tableId: "tbl-1",
+      },
+      startedAt: null,
+      finishedAt: null,
+      durationMs: null,
+      errorCode: null,
+      errorMessage: null,
+      createdAt: new Date("2026-04-22T00:00:00.000Z"),
+    });
+    dbMock.automationRun.update
+      .mockResolvedValueOnce({
+        id: "run-1",
+        automationId: "aut-1",
+        status: "RUNNING",
+        triggerSource: "MANUAL",
+        triggerPayload: { source: "manual" },
+        contextSnapshot: {
+          tableId: "tbl-1",
+        },
+        startedAt: new Date("2026-04-22T00:00:00.000Z"),
+        finishedAt: null,
+        durationMs: null,
+        errorCode: null,
+        errorMessage: null,
+        createdAt: new Date("2026-04-22T00:00:00.000Z"),
+      })
+      .mockResolvedValueOnce({
+        id: "run-1",
+        automationId: "aut-1",
+        status: "SUCCEEDED",
+        triggerSource: "MANUAL",
+        triggerPayload: { source: "manual" },
+        contextSnapshot: {
+          tableId: "tbl-1",
+        },
+        startedAt: new Date("2026-04-22T00:00:00.000Z"),
+        finishedAt: new Date("2026-04-22T00:00:01.000Z"),
+        durationMs: 1000,
+        errorCode: null,
+        errorMessage: null,
+        createdAt: new Date("2026-04-22T00:00:00.000Z"),
+      });
     dbMock.automationRun.findUnique.mockResolvedValue({
       startedAt: new Date("2026-04-22T00:00:00.000Z"),
     });
@@ -248,7 +393,7 @@ describe("automation-dispatcher.service", () => {
           actor: { id: "user-1" },
         },
       },
-      select: { id: true },
+      select: expect.any(Object),
     });
 
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -260,6 +405,7 @@ describe("automation-dispatcher.service", () => {
         status: "RUNNING",
         startedAt: expect.any(Date),
       },
+      select: expect.any(Object),
     });
     expect(dbMock.automationRun.update).toHaveBeenNthCalledWith(2, {
       where: { id: "run-1" },
@@ -268,6 +414,7 @@ describe("automation-dispatcher.service", () => {
         finishedAt: expect.any(Date),
         durationMs: expect.any(Number),
       },
+      select: expect.any(Object),
     });
   });
 
@@ -279,14 +426,49 @@ describe("automation-dispatcher.service", () => {
         status: 500,
       })
     );
-    dbMock.automationRun.update.mockResolvedValue({ id: "run-1" });
+    dbMock.automationRun.update
+      .mockResolvedValueOnce({
+        id: "run-1",
+        automationId: "aut-1",
+        status: "RUNNING",
+        triggerSource: "MANUAL",
+        triggerPayload: {},
+        contextSnapshot: {},
+        startedAt: new Date("2026-04-22T00:00:00.000Z"),
+        finishedAt: null,
+        durationMs: null,
+        errorCode: null,
+        errorMessage: null,
+        createdAt: new Date("2026-04-22T00:00:00.000Z"),
+      })
+      .mockResolvedValueOnce({
+        id: "run-1",
+        automationId: "aut-1",
+        status: "FAILED",
+        triggerSource: "MANUAL",
+        triggerPayload: {},
+        contextSnapshot: {},
+        startedAt: new Date("2026-04-22T00:00:00.000Z"),
+        finishedAt: new Date("2026-04-22T00:00:01.000Z"),
+        durationMs: 1000,
+        errorCode: "WEBHOOK_FAILED",
+        errorMessage: "Webhook returned 500",
+        createdAt: new Date("2026-04-22T00:00:00.000Z"),
+      });
     dbMock.automationRun.findUnique.mockResolvedValue({
       startedAt: new Date("2026-04-22T00:00:00.000Z"),
     });
     dbMock.automationRunStep.create
       .mockResolvedValueOnce({ id: "step-1" })
       .mockResolvedValueOnce({ id: "step-2" });
-    dbMock.automationRunStep.update.mockResolvedValue({ id: "step-1" });
+    dbMock.automationRunStep.update.mockResolvedValue({
+      id: "step-1",
+      runId: "run-1",
+      status: "FAILED",
+      run: {
+        automationId: "aut-1",
+      },
+    });
 
     const result = await executeQueuedAutomationRun({
       runId: "run-1",
@@ -354,6 +536,7 @@ describe("automation-dispatcher.service", () => {
         errorMessage: "Webhook returned 500",
         finishedAt: expect.any(Date),
       },
+      select: expect.any(Object),
     });
     expect(dbMock.automationRunStep.create).toHaveBeenNthCalledWith(2, {
       data: {
@@ -379,6 +562,7 @@ describe("automation-dispatcher.service", () => {
         errorCode: "WEBHOOK_FAILED",
         errorMessage: "Webhook returned 500",
       },
+      select: expect.any(Object),
     });
   });
 });

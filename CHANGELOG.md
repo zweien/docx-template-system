@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.8](https://github.com/zweien/docx-template-system/compare/v0.6.7...v0.6.8) (2026-04-23)
+
+
+### Features
+
+* add automation engine runtime and management ui ([#136](https://github.com/zweien/docx-template-system/issues/136)) ([1ed5787](https://github.com/zweien/docx-template-system/commit/1ed578711b9c13b75b66603d8cd63b199209faf1))
+* **automation:** add realtime run updates ([977f282](https://github.com/zweien/docx-template-system/commit/977f282e3ef6d85bc4ef3e61c4ea4641a3d2f464))
+* **automation:** support related-record update action ([812a040](https://github.com/zweien/docx-template-system/commit/812a0409a44582f6f6094fd42cb517cdd14314bc))
+* **forms:** AI 填充助手支持停止回答 ([50b7da8](https://github.com/zweien/docx-template-system/commit/50b7da8fb6dfa5c960cf19d64a7267491ccc2aee))
+* **forms:** 支持 AI 填充助手增量自动填表 ([3b76cd2](https://github.com/zweien/docx-template-system/commit/3b76cd29356a9f20547e6a15aac02f0a82c240eb))
+
+
+### Bug Fixes
+
+* **agent2:** clear completed stream status ([#145](https://github.com/zweien/docx-template-system/issues/145)) ([ccee289](https://github.com/zweien/docx-template-system/commit/ccee289a6fc390586b14e8fd4729e2566e62ea14))
+* **data:** apply explicit grid row heights ([#144](https://github.com/zweien/docx-template-system/issues/144)) ([5631d70](https://github.com/zweien/docx-template-system/commit/5631d70acfdd325ac421e77479a6661b88ac6a2b))
+* **data:** improve calendar view record creation ([dc30e05](https://github.com/zweien/docx-template-system/commit/dc30e05588a786a5b17c105b750489329bac0129))
+
 ## [0.6.7](https://github.com/zweien/docx-template-system/compare/v0.6.6...v0.6.7) (2026-04-21)
 
 ## [0.6.2](https://github.com/zweien/docx-template-system/compare/v0.6.1...v0.6.2) (2026-04-19)

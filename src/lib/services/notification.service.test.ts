@@ -8,6 +8,9 @@ const dbMock = {
     updateMany: vi.fn(),
     findFirst: vi.fn(),
   },
+  automationRun: {
+    findUnique: vi.fn(),
+  },
   documentCollectionTask: {
     findFirst: vi.fn(),
   },
@@ -54,6 +57,8 @@ describe("notification.service", () => {
           {
             recipientId: "user-1",
             taskId: "task-1",
+            automationId: null,
+            runId: null,
             type: "TASK_ASSIGNED",
             title: "新任务",
             content: "您被分配了一个新任务",
@@ -61,6 +66,8 @@ describe("notification.service", () => {
           {
             recipientId: "user-2",
             taskId: "task-1",
+            automationId: null,
+            runId: null,
             type: "TASK_ASSIGNED",
             title: "新任务",
             content: "您被分配了一个新任务",
@@ -628,6 +635,60 @@ describe("notification.service", () => {
           }),
         ],
       });
+    });
+  });
+
+  describe("notifyAutomationRunFailed", () => {
+    it("creates automation failure notification with automation and run ids", async () => {
+      dbMock.notification.findFirst.mockResolvedValueOnce(null);
+      dbMock.automationRun.findUnique.mockResolvedValue({
+        id: "run-1",
+        automationId: "aut-1",
+        errorMessage: "Webhook returned 500",
+        finishedAt: new Date("2026-04-23T11:00:00.000Z"),
+        createdAt: new Date("2026-04-23T10:59:00.000Z"),
+        automation: {
+          name: "论文审批通知",
+          createdById: "creator-1",
+        },
+        steps: [
+          {
+            nodeId: "action-1",
+            stepType: "send_email",
+            errorMessage: "SMTP connection timeout",
+          },
+        ],
+      });
+      dbMock.notification.createMany.mockResolvedValue({ count: 1 });
+
+      const service = await import("./notification.service");
+      const result = await service.notifyAutomationRunFailed("run-1");
+
+      expect(result.success).toBe(true);
+      expect(dbMock.notification.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            recipientId: "creator-1",
+            taskId: null,
+            automationId: "aut-1",
+            runId: "run-1",
+            type: "AUTOMATION_FAILED",
+            title: "自动化「论文审批通知」执行失败",
+            content: expect.stringContaining("SMTP connection timeout"),
+          },
+        ],
+      });
+    });
+
+    it("skips duplicate automation failure notification for same run", async () => {
+      dbMock.notification.findFirst.mockResolvedValueOnce({ id: "notif-1" });
+
+      const service = await import("./notification.service");
+      const result = await service.notifyAutomationRunFailed("run-1");
+
+      expect(result.success).toBe(true);
+      expect(dbMock.automationRun.findUnique).not.toHaveBeenCalled();
+      expect(dbMock.notification.createMany).not.toHaveBeenCalled();
     });
   });
 });

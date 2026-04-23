@@ -7,12 +7,13 @@ import {
   createAutomationRun,
   getAutomationRunDetail,
   listAutomationRuns,
+  markAutomationRunFailed,
   markAutomationRunStarted,
   markAutomationRunStepFailed,
   markAutomationRunSucceeded,
 } from "@/lib/services/automation-run.service";
 
-const { dbMock, publishAutomationRealtimeEventMock } = vi.hoisted(() => ({
+const { dbMock, publishAutomationRealtimeEventMock, notifyAutomationRunFailedMock } = vi.hoisted(() => ({
   dbMock: {
     automation: {
       findFirst: vi.fn(),
@@ -31,6 +32,7 @@ const { dbMock, publishAutomationRealtimeEventMock } = vi.hoisted(() => ({
     },
   },
   publishAutomationRealtimeEventMock: vi.fn(),
+  notifyAutomationRunFailedMock: vi.fn(),
 }));
 
 vi.mock("@/lib/db", () => ({
@@ -39,6 +41,10 @@ vi.mock("@/lib/db", () => ({
 
 vi.mock("@/lib/services/automation-realtime.service", () => ({
   publishAutomationRealtimeEvent: publishAutomationRealtimeEventMock,
+}));
+
+vi.mock("@/lib/services/notification.service", () => ({
+  notifyAutomationRunFailed: notifyAutomationRunFailedMock,
 }));
 
 describe("automation-run.service", () => {
@@ -202,6 +208,38 @@ describe("automation-run.service", () => {
       stepId: "step-1",
       status: "FAILED",
     });
+  });
+
+  it("creates creator notification after marking a run failed", async () => {
+    dbMock.automationRun.findUnique.mockResolvedValue({
+      startedAt: new Date("2026-04-22T00:00:00.000Z"),
+    });
+    dbMock.automationRun.update.mockResolvedValue({
+      id: "run-1",
+      automationId: "aut-1",
+      status: "FAILED",
+      triggerSource: "MANUAL",
+      triggerPayload: {},
+      contextSnapshot: {},
+      startedAt: new Date("2026-04-22T00:00:00.000Z"),
+      finishedAt: new Date("2026-04-22T00:00:01.000Z"),
+      durationMs: 1000,
+      errorCode: "EMAIL_SEND_FAILED",
+      errorMessage: "SMTP timeout",
+      createdAt: new Date("2026-04-22T00:00:00.000Z"),
+    });
+    notifyAutomationRunFailedMock.mockResolvedValue({
+      success: true,
+      data: null,
+    });
+
+    const result = await markAutomationRunFailed("run-1", {
+      code: "EMAIL_SEND_FAILED",
+      message: "SMTP timeout",
+    });
+
+    expect(result.success).toBe(true);
+    expect(notifyAutomationRunFailedMock).toHaveBeenCalledWith("run-1");
   });
 
   it("lists runs for an owned automation", async () => {

@@ -4,14 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
+  AddCommentAction,
   AutomationActionNode,
   AutomationDefinition,
   AutomationTrigger,
   CallWebhookAction,
   CreateRecordAction,
+  SendEmailAction,
   UpdateFieldAction,
   UpdateRelatedRecordsAction,
-  AddCommentAction,
 } from "@/types/automation";
 
 type ConfigPanelProps = {
@@ -49,6 +50,35 @@ function updateAction(
       action.id === actionId ? updater(action) : action
     ),
   };
+}
+
+function createDefaultAction(actionId: string, type: AutomationActionNode["type"]): AutomationActionNode {
+  switch (type) {
+    case "update_field":
+      return { id: actionId, type, fieldKey: "status", value: "" };
+    case "create_record":
+      return { id: actionId, type, tableId: "", values: {} };
+    case "update_related_records":
+      return {
+        id: actionId,
+        type,
+        relationFieldKey: "relation",
+        targetScope: "all",
+        values: {},
+      };
+    case "call_webhook":
+      return { id: actionId, type, url: "", method: "POST" };
+    case "add_comment":
+      return { id: actionId, type, target: "current_record", content: "" };
+    case "send_email":
+      return {
+        id: actionId,
+        type,
+        to: "{{ actor.email }}",
+        subject: "自动化通知：{{ recordId }}",
+        body: "记录 {{ recordId }} 已触发自动化。",
+      };
+  }
 }
 
 export function AutomationConfigPanel({
@@ -289,23 +319,9 @@ export function AutomationConfigPanel({
             value={action.type}
             onChange={(event) => {
               const nextType = event.target.value as AutomationActionNode["type"];
-              const nextAction: AutomationActionNode =
-                nextType === "update_field"
-                  ? { id: action.id, type: nextType, fieldKey: "status", value: "" }
-                  : nextType === "create_record"
-                    ? { id: action.id, type: nextType, tableId: value.canvas.nodes[0]?.id ?? "", values: {} }
-                    : nextType === "update_related_records"
-                      ? {
-                          id: action.id,
-                          type: nextType,
-                          relationFieldKey: "relation",
-                          targetScope: "all",
-                          values: {},
-                        }
-                    : nextType === "call_webhook"
-                      ? { id: action.id, type: nextType, url: "", method: "POST" }
-                      : { id: action.id, type: nextType, target: "current_record", content: "" };
-              onChange(updateAction(value, action.id, () => nextAction));
+              onChange(
+                updateAction(value, action.id, () => createDefaultAction(action.id, nextType))
+              );
             }}
           >
             <option value="add_comment">添加评论</option>
@@ -313,6 +329,7 @@ export function AutomationConfigPanel({
             <option value="create_record">创建记录</option>
             <option value="update_related_records">更新关联记录</option>
             <option value="call_webhook">调用 Webhook</option>
+            <option value="send_email">发送邮件</option>
           </select>
         </div>
 
@@ -495,6 +512,58 @@ export function AutomationConfigPanel({
               }
             />
           </div>
+        )}
+
+        {action.type === "send_email" && (
+          <>
+            <div className="space-y-2">
+              <label className="text-sm font-[520] text-foreground">收件人</label>
+              <Input
+                value={(action as SendEmailAction).to}
+                onChange={(event) =>
+                  onChange(
+                    updateAction(value, action.id, (current) => ({
+                      ...(current as SendEmailAction),
+                      to: event.target.value,
+                    }))
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-[520] text-foreground">邮件主题</label>
+              <Input
+                value={(action as SendEmailAction).subject}
+                onChange={(event) =>
+                  onChange(
+                    updateAction(value, action.id, (current) => ({
+                      ...(current as SendEmailAction),
+                      subject: event.target.value,
+                    }))
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-[520] text-foreground">邮件内容</label>
+              <Textarea
+                value={(action as SendEmailAction).body}
+                onChange={(event) =>
+                  onChange(
+                    updateAction(value, action.id, (current) => ({
+                      ...(current as SendEmailAction),
+                      body: event.target.value,
+                    }))
+                  )
+                }
+              />
+              <p className="text-xs text-muted-foreground">
+                支持模板变量，例如{" "}
+                <code>{"{{ record.title }}"}</code>
+                、<code>{"{{ actor.email }}"}</code>、<code>{"{{ previousRecord.status }}"}</code>
+              </p>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>

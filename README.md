@@ -66,8 +66,8 @@
 
 - **多种触发器** — 支持记录创建、记录更新、记录删除、字段变更、定时触发、手动触发
 - **条件分支** — 支持单条件节点下的 `AND/OR` 组合判断，并根据结果走 `Then/Else` 分支
-- **动作执行** — 当前支持更新字段、创建记录、调用 Webhook、给当前记录添加评论
-- **运行日志** — 为每次自动化执行落库 `run/step` 记录，保留执行状态、耗时、错误信息
+- **动作执行** — 当前支持更新字段、创建记录、更新关联记录、调用 Webhook、给当前记录添加评论、发送模板邮件
+- **运行日志与告警** — 为每次自动化执行落库 `run/step` 记录，保留执行状态、耗时、错误信息；运行失败时向创建者推送站内通知
 - **受限画布编辑器** — 提供触发器 → 条件 → 分支动作的结构化画布，避免自由拖拽带来的拓扑失控
 
 ### 系统管理
@@ -112,6 +112,12 @@ AUTHENTIK_CLIENT_ID="从 authentik 复制"
 AUTHENTIK_CLIENT_SECRET="从 authentik 复制"
 AUTHENTIK_LOGOUT_REDIRECT_URL="http://127.0.0.1:8081"
 AUTHENTIK_ADMIN_EMAILS="admin@example.com,asfd@qqc.co"
+SMTP_HOST="smtp.example.com"
+SMTP_PORT="587"
+SMTP_SECURE="false"
+SMTP_USER="bot@example.com"
+SMTP_PASS="smtp-password"
+SMTP_FROM="DOCX Template System <bot@example.com>"
 ```
 
 关键说明：
@@ -119,6 +125,7 @@ AUTHENTIK_ADMIN_EMAILS="admin@example.com,asfd@qqc.co"
 - `AUTHENTIK_ISSUER` 必须指向 authentik 中对应应用的 issuer，例如 `http://127.0.0.1:9000/application/o/docx-template-system`
 - `AUTHENTIK_CLIENT_ID` 和 `AUTHENTIK_CLIENT_SECRET` 只能从 authentik 后台复制
 - `AUTHENTIK_ADMIN_EMAILS` 只用于首次统一登录时自动赋予本地 `ADMIN` 角色
+- `SMTP_*` 为自动化邮件动作的可选配置；未配置时，“发送邮件”动作会执行失败，并触发自动化失败告警
 - 本地 `User.role` 仍然保留，统一认证只负责"是谁"，业务权限仍由本系统负责
 
 ### 开发模式绕过认证

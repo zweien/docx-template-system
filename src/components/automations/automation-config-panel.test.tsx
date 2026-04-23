@@ -91,4 +91,93 @@ describe("AutomationConfigPanel", () => {
       })
     );
   });
+
+  it("renders send-email action fields", () => {
+    const onChange = vi.fn();
+
+    render(
+      <AutomationConfigPanel
+        selectedNodeId="action-1"
+        onChange={onChange}
+        value={{
+          version: 1,
+          canvas: {
+            nodes: [
+              { id: "trigger-1", type: "trigger", x: 0, y: 0 },
+              { id: "action-1", type: "action", x: 100, y: 0 },
+            ],
+            edges: [{ source: "trigger-1", target: "action-1" }],
+          },
+          trigger: { type: "record_created" },
+          condition: null,
+          thenActions: [
+            {
+              id: "action-1",
+              type: "send_email",
+              to: "{{ actor.email }}",
+              subject: "审批通知",
+              body: "记录 {{ record.title }} 已变更",
+            },
+          ],
+          elseActions: [],
+        }}
+      />
+    );
+
+    expect(screen.getByText("收件人")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("{{ actor.email }}")).toBeInTheDocument();
+    expect(screen.getByText("邮件主题")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("审批通知")).toBeInTheDocument();
+    expect(screen.getByText("邮件内容")).toBeInTheDocument();
+  });
+
+  it("allows switching action type to send-email", () => {
+    const onChange = vi.fn();
+
+    render(
+      <AutomationConfigPanel
+        selectedNodeId="action-1"
+        onChange={onChange}
+        value={{
+          version: 1,
+          canvas: {
+            nodes: [
+              { id: "trigger-1", type: "trigger", x: 0, y: 0 },
+              { id: "action-1", type: "action", x: 100, y: 0 },
+            ],
+            edges: [{ source: "trigger-1", target: "action-1" }],
+          },
+          trigger: { type: "record_created" },
+          condition: null,
+          thenActions: [
+            {
+              id: "action-1",
+              type: "add_comment",
+              target: "current_record",
+              content: "created",
+            },
+          ],
+          elseActions: [],
+        }}
+      />
+    );
+
+    fireEvent.change(screen.getByRole("combobox"), {
+      target: { value: "send_email" },
+    });
+
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        thenActions: [
+          expect.objectContaining({
+            id: "action-1",
+            type: "send_email",
+            to: "{{ actor.email }}",
+            subject: "自动化通知：{{ recordId }}",
+            body: "记录 {{ recordId }} 已触发自动化。",
+          }),
+        ],
+      })
+    );
+  });
 });

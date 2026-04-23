@@ -3,6 +3,7 @@ import type { ServiceResult } from "@/types/data-table";
 import { executeAddCommentAction } from "@/lib/services/automation-action-executors/add-comment";
 import { executeCallWebhookAction } from "@/lib/services/automation-action-executors/call-webhook";
 import { executeCreateRecordAction } from "@/lib/services/automation-action-executors/create-record";
+import { executeSendEmailAction } from "@/lib/services/automation-action-executors/send-email";
 import { executeUpdateRelatedRecordsAction } from "@/lib/services/automation-action-executors/update-related-records";
 import { executeUpdateFieldAction } from "@/lib/services/automation-action-executors/update-field";
 
@@ -24,5 +25,7 @@ export function getAutomationActionExecutor(
       return executeCallWebhookAction as AutomationActionExecutor;
     case "add_comment":
       return executeAddCommentAction as AutomationActionExecutor;
+    case "send_email":
+      return executeSendEmailAction as AutomationActionExecutor;
   }
 }

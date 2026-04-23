@@ -47,7 +47,8 @@ export type AutomationActionNode =
       headers?: Record<string, string>;
       body?: unknown;
     }
-  | { id: string; type: "add_comment"; target: "current_record"; content: string };
+  | { id: string; type: "add_comment"; target: "current_record"; content: string }
+  | { id: string; type: "send_email"; to: string; subject: string; body: string };
 
 export type AutomationCanvasNode = {
   id: string;
@@ -123,6 +124,7 @@ export type UpdateRelatedRecordsAction = Extract<
 >;
 export type CallWebhookAction = Extract<AutomationActionNode, { type: "call_webhook" }>;
 export type AddCommentAction = Extract<AutomationActionNode, { type: "add_comment" }>;
+export type SendEmailAction = Extract<AutomationActionNode, { type: "send_email" }>;
 
 export interface AutomationExecutorParams<TAction extends AutomationActionNode = AutomationActionNode> {
   action: TAction;

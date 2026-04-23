@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import type { AutomationActionNode } from "@/types/automation";
 import type { ServiceResult } from "@/types/data-table";
 import type { NotificationType, NotificationItem } from "@/types/notification";
 
@@ -7,6 +8,8 @@ import type { NotificationType, NotificationItem } from "@/types/notification";
 type CreateNotificationInput = {
   recipientId: string;
   taskId?: string | null;
+  automationId?: string | null;
+  runId?: string | null;
   type: NotificationType;
   title: string;
   content: string;
@@ -48,6 +51,25 @@ function formatDate(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+function formatDateTime(date: Date): string {
+  return date.toLocaleString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+const AUTOMATION_STEP_LABELS: Record<AutomationActionNode["type"], string> = {
+  update_field: "更新字段",
+  create_record: "创建记录",
+  update_related_records: "更新关联记录",
+  call_webhook: "调用 Webhook",
+  add_comment: "添加评论",
+  send_email: "发送邮件",
+};
+
 // ========== Service Functions ==========
 
 export async function createNotifications(
@@ -62,6 +84,8 @@ export async function createNotifications(
       data: items.map((item) => ({
         recipientId: item.recipientId,
         taskId: item.taskId ?? null,
+        automationId: item.automationId ?? null,
+        runId: item.runId ?? null,
         type: item.type,
         title: item.title,
         content: item.content,
@@ -121,6 +145,8 @@ export async function getNotifications(
           title: item.title,
           content: item.content,
           taskId: item.taskId,
+          automationId: item.automationId,
+          runId: item.runId,
           isRead: item.isRead,
           createdAt: item.createdAt,
         })),
@@ -245,6 +271,8 @@ export async function checkAndGenerateDueReminders(
       data: toCreate.map((item) => ({
         recipientId: item.recipientId,
         taskId: item.taskId ?? null,
+        automationId: item.automationId ?? null,
+        runId: item.runId ?? null,
         type: item.type,
         title: item.title,
         content: item.content,
@@ -255,6 +283,88 @@ export async function checkAndGenerateDueReminders(
   } catch (error) {
     const message = error instanceof Error ? error.message : "检查到期提醒失败";
     return { success: false, error: { code: "CHECK_FAILED", message } };
+  }
+}
+
+export async function notifyAutomationRunFailed(runId: string): Promise<ServiceResult<null>> {
+  try {
+    const existing = await db.notification.findFirst({
+      where: {
+        type: "AUTOMATION_FAILED",
+        runId,
+      },
+      select: { id: true },
+    });
+
+    if (existing) {
+      return { success: true, data: null };
+    }
+
+    const run = await db.automationRun.findUnique({
+      where: { id: runId },
+      select: {
+        id: true,
+        automationId: true,
+        errorMessage: true,
+        finishedAt: true,
+        createdAt: true,
+        automation: {
+          select: {
+            name: true,
+            createdById: true,
+          },
+        },
+        steps: {
+          where: { status: "FAILED" },
+          orderBy: [{ finishedAt: "desc" }, { id: "desc" }],
+          take: 1,
+          select: {
+            nodeId: true,
+            stepType: true,
+            errorMessage: true,
+          },
+        },
+      },
+    });
+
+    if (!run) {
+      return {
+        success: false,
+        error: {
+          code: "NOT_FOUND",
+          message: "自动化运行不存在",
+        },
+      };
+    }
+
+    const failedStep = run.steps[0] ?? null;
+    const failedAt = run.finishedAt ?? run.createdAt;
+    const stepLabel = failedStep
+      ? AUTOMATION_STEP_LABELS[failedStep.stepType as AutomationActionNode["type"]] ??
+        failedStep.stepType
+      : "运行步骤";
+    const reason = failedStep?.errorMessage ?? run.errorMessage ?? "未知错误";
+    const content = `步骤「${stepLabel}」${failedStep ? `（${failedStep.nodeId}）` : ""}于 ${formatDateTime(failedAt)} 失败：${reason}`;
+
+    const created = await createNotifications([
+      {
+        recipientId: run.automation.createdById,
+        automationId: run.automationId,
+        runId: run.id,
+        type: "AUTOMATION_FAILED",
+        title: `自动化「${run.automation.name}」执行失败`,
+        content,
+      },
+    ]);
+
+    if (!created.success) {
+      return created;
+    }
+
+    return { success: true, data: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "创建自动化失败告警失败";
+    return { success: false, error: { code: "CREATE_FAILED", message } };
   }
 }
 

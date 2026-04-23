@@ -14,6 +14,7 @@ const TYPE_BADGE: Record<NotificationType, { color: string; label: string }> = {
   MANUAL_REMIND: { color: "bg-amber-500", label: "催办提醒" },
   COMMENT_MENTION: { color: "bg-purple-500", label: "提及通知" },
   COMMENT_REPLY: { color: "bg-green-500", label: "评论回复" },
+  AUTOMATION_FAILED: { color: "bg-rose-500", label: "自动化失败" },
 };
 
 function formatRelativeTime(date: Date): string {
@@ -116,6 +117,12 @@ export function NotificationBell() {
         );
         setUnreadCount((c) => Math.max(0, c - 1));
         setOpen(false);
+        if (notification.automationId) {
+          const query = notification.runId ? `?runId=${notification.runId}` : "";
+          router.push(`/automations/${notification.automationId}${query}`);
+          return;
+        }
+
         if (notification.taskId) {
           router.push(`/collections/${notification.taskId}`);
         }

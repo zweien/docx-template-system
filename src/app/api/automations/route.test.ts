@@ -103,4 +103,47 @@ describe("api/automations route", () => {
     });
     expect(body.success).toBe(true);
   });
+
+  it("POST 应接受空描述创建自动化", async () => {
+    authMock.mockResolvedValue({ user: { id: "user-1" } });
+    createAutomationMock.mockResolvedValue({
+      success: true,
+      data: { id: "aut-1", name: "新自动化" },
+    });
+    const { POST } = await import("./route");
+
+    const response = await POST(
+      new Request("http://localhost/api/automations", {
+        method: "POST",
+        body: JSON.stringify({
+          tableId: "tbl-1",
+          name: "新自动化",
+          description: null,
+          enabled: true,
+          triggerType: "manual",
+          definition: {
+            version: 1,
+            canvas: {
+              nodes: [{ id: "trigger-1", type: "trigger", x: 0, y: 0 }],
+              edges: [],
+            },
+            trigger: { type: "manual" },
+            condition: null,
+            thenActions: [],
+            elseActions: [],
+          },
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }) as never
+    );
+
+    expect(response.status).toBe(201);
+    expect(createAutomationMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.objectContaining({ description: null }),
+      })
+    );
+  });
 });

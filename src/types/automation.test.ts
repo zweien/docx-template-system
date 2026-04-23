@@ -23,9 +23,10 @@ describe("automation definition types", () => {
       thenActions: [
         {
           id: "action-then-1",
-          type: "add_comment",
-          target: "current_record",
-          content: "created",
+          type: "send_email",
+          to: "{{ actor.email }}",
+          subject: "记录 {{ recordId }} 创建成功",
+          body: "记录 {{ record.title }} 已创建",
         },
       ],
       elseActions: [],

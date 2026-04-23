@@ -771,6 +771,7 @@ enum NotificationType {
   MANUAL_REMIND
   COMMENT_MENTION
   COMMENT_REPLY
+  AUTOMATION_FAILED
 }
 
 model Notification {
@@ -780,12 +781,15 @@ model Notification {
   content     String
   taskId      String?
   task        DocumentCollectionTask? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  automationId String?
+  runId        String?
   recipientId String
   recipient   User                    @relation("UserNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
   isRead      Boolean  @default(false)
   createdAt   DateTime @default(now())
 
   @@index([recipientId, isRead, createdAt])
+  @@index([automationId, runId])
   @@map("notifications")
 }
 

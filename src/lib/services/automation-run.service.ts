@@ -1,6 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { publishAutomationRealtimeEvent } from "@/lib/services/automation-realtime.service";
+import { notifyAutomationRunFailed } from "@/lib/services/notification.service";
 import type {
   AutomationActionNode,
   AutomationRunItem,
@@ -245,6 +246,7 @@ export async function markAutomationRunFailed(
     });
 
     await publishRunUpdated(updated);
+    await notifyAutomationRunFailed(updated.id);
     return { success: true, data: null };
   } catch (updateError) {
     const message = updateError instanceof Error ? updateError.message : "标记自动化运行失败失败";

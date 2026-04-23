@@ -107,6 +107,13 @@ const automationActionSchema = z.discriminatedUnion("type", [
     target: z.literal("current_record"),
     content: z.string().trim().min(1, "评论内容不能为空"),
   }),
+  z.object({
+    id: z.string().trim().min(1),
+    type: z.literal("send_email"),
+    to: z.string().trim().min(1, "收件人不能为空"),
+    subject: z.string().trim().min(1, "邮件主题不能为空"),
+    body: z.string().trim().min(1, "邮件内容不能为空"),
+  }),
 ]);
 
 export const automationDefinitionSchema = z.object({

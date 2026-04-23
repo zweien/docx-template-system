@@ -1,4 +1,11 @@
-export type NotificationType = "TASK_ASSIGNED" | "DUE_TODAY" | "OVERDUE" | "MANUAL_REMIND" | "COMMENT_MENTION" | "COMMENT_REPLY";
+export type NotificationType =
+  | "TASK_ASSIGNED"
+  | "DUE_TODAY"
+  | "OVERDUE"
+  | "MANUAL_REMIND"
+  | "COMMENT_MENTION"
+  | "COMMENT_REPLY"
+  | "AUTOMATION_FAILED";
 
 export type NotificationItem = {
   id: string;
@@ -6,6 +13,8 @@ export type NotificationItem = {
   title: string;
   content: string;
   taskId: string | null;
+  automationId: string | null;
+  runId: string | null;
   isRead: boolean;
   createdAt: Date;
 };

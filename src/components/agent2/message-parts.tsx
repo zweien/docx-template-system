@@ -50,6 +50,12 @@ interface MessagePartsProps {
   }) => void
 }
 
+type ToolPresentationMode = "standard" | "confirm" | "chart"
+
+function getToolRenderKey(index: number, mode: ToolPresentationMode) {
+  return `${index}-${mode}`
+}
+
 function getToolProgressLabel(toolName: string) {
   switch (toolName) {
     case "listTables":
@@ -268,7 +274,7 @@ export function MessageParts({ message, chatStatus, onToolConfirm }: MessagePart
             if (toolOutput && typeof toolOutput === "object" && toolOutput !== null && "_needsConfirm" in toolOutput) {
               const confirmOutput = toolOutput as ConfirmToolOutput
               return (
-                <Tool key={index} open>
+                <Tool key={getToolRenderKey(index, "confirm")} defaultOpen>
                   <ToolHeader
                     type="dynamic-tool"
                     state="approval-requested"
@@ -304,7 +310,7 @@ export function MessageParts({ message, chatStatus, onToolConfirm }: MessagePart
             if (toolPart.toolName === "generateChart" && toolState === "output-available") {
               const chartOutput = (toolPart as DynamicToolUIPart & { state: "output-available"; output: unknown }).output
               return (
-                <Tool key={index} defaultOpen>
+                <Tool key={getToolRenderKey(index, "chart")} defaultOpen>
                   <ToolHeader type="dynamic-tool" state={toolState} toolName={toolPart.toolName} />
                   <ToolContent>
                     <ChartRenderer option={chartOutput as Record<string, unknown>} />
@@ -315,7 +321,7 @@ export function MessageParts({ message, chatStatus, onToolConfirm }: MessagePart
 
             // Standard tool rendering
             return (
-              <Tool key={index}>
+              <Tool key={getToolRenderKey(index, "standard")}>
                 <ToolHeader type="dynamic-tool" state={toolState} toolName={toolPart.toolName} />
                 <ToolContent>
                   <ToolInput input={toolPart.input} />
@@ -341,7 +347,7 @@ export function MessageParts({ message, chatStatus, onToolConfirm }: MessagePart
               if (toolState === "output-available" && toolPart.output && typeof toolPart.output === "object" && toolPart.output !== null && "_needsConfirm" in toolPart.output) {
                 const confirmOutput = toolPart.output as ConfirmToolOutput
                 return (
-                  <Tool key={index} open>
+                  <Tool key={getToolRenderKey(index, "confirm")} defaultOpen>
                     <ToolHeader
                       type="dynamic-tool"
                       state="approval-requested"
@@ -375,7 +381,7 @@ export function MessageParts({ message, chatStatus, onToolConfirm }: MessagePart
 
               if (toolName === "generateChart" && toolState === "output-available") {
                 return (
-                  <Tool key={index} defaultOpen>
+                  <Tool key={getToolRenderKey(index, "chart")} defaultOpen>
                     <ToolHeader type="dynamic-tool" state={toolState} toolName={toolName} />
                     <ToolContent>
                       <ChartRenderer option={toolPart.output as Record<string, unknown>} />
@@ -385,7 +391,7 @@ export function MessageParts({ message, chatStatus, onToolConfirm }: MessagePart
               }
 
               return (
-                <Tool key={index}>
+                <Tool key={getToolRenderKey(index, "standard")}>
                   <ToolHeader type="dynamic-tool" state={toolState} toolName={toolName} />
                   <ToolContent>
                     <ToolInput input={toolPart.input} />

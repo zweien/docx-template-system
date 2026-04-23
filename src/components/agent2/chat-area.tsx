@@ -1,7 +1,7 @@
 "use client"
 
 import { useChat } from "@ai-sdk/react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { DefaultChatTransport, type FileUIPart, type UIMessage } from "ai"
 
 // AI Elements
@@ -231,6 +231,10 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
   }, [conversationId, setMessages])
 
   const historyLoaded = loadedConversationId === conversationId
+  const latestAssistantMessageId = useMemo(
+    () => [...messages].reverse().find((message) => message.role === "assistant")?.id,
+    [messages]
+  )
 
   const handleSubmit = useCallback(
     ({ text, files }: PromptInputMessage) => {
@@ -322,6 +326,7 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
                 <MessageContent>
                   <MessageParts
                     message={message}
+                    chatStatus={message.id === latestAssistantMessageId ? status : "ready"}
                     onToolConfirm={({ toolCallId, toolName, result }) => {
                       addToolOutput({
                         tool: toolName as "dynamic",

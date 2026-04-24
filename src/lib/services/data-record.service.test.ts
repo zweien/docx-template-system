@@ -12,6 +12,7 @@ type FakeRecordRow = {
   createdAt: Date;
   updatedAt: Date;
   createdBy: { name: string };
+  updatedBy?: { name: string } | null;
 };
 
 type FakeFieldRow = {
@@ -135,6 +136,16 @@ const dbMock = vi.hoisted(() => ({
         })
         .map((record) => structuredClone(record))
     ),
+    count: vi.fn(async ({ where }: { where?: { id?: { in: string[] }; tableId?: string } } = {}) =>
+      [...records.values()].filter((record) => {
+        if (where?.id?.in && !where.id.in.includes(record.id)) return false;
+        if (where?.tableId && record.tableId !== where.tableId) return false;
+        return true;
+      }).length
+    ),
+  },
+  dataRecordChangeHistory: {
+    createMany: vi.fn(async () => ({ count: 1 })),
   },
   dataField: {
     findMany: vi.fn(async ({
@@ -510,5 +521,83 @@ describe("data-record.service relation snapshots", () => {
         sortOrder: 0,
       },
     ]);
+  });
+});
+
+describe("data-record.service manual sort", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    records.clear();
+    fields.clear();
+    relationRows.clear();
+    getTableMock.mockResolvedValue({
+      success: true,
+      data: {
+        id: "paper-table",
+        name: "paper",
+        description: null,
+        icon: null,
+        fieldCount: 1,
+        recordCount: 3,
+        createdAt: new Date("2026-04-03T00:00:00.000Z"),
+        fields: [
+          {
+            id: "title-field",
+            key: "title",
+            label: "标题",
+            type: "TEXT",
+            required: true,
+            sortOrder: 0,
+          },
+        ],
+      },
+    });
+
+    records.set("record-1", {
+      id: "record-1",
+      tableId: "paper-table",
+      data: { title: "第一条" },
+      createdAt: new Date("2026-04-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-04-01T00:00:00.000Z"),
+      createdBy: { name: "测试用户" },
+    });
+    records.set("record-2", {
+      id: "record-2",
+      tableId: "paper-table",
+      data: { title: "第二条" },
+      createdAt: new Date("2026-04-02T00:00:00.000Z"),
+      updatedAt: new Date("2026-04-02T00:00:00.000Z"),
+      createdBy: { name: "测试用户" },
+    });
+    records.set("record-3", {
+      id: "record-3",
+      tableId: "paper-table",
+      data: { title: "第三条" },
+      createdAt: new Date("2026-04-03T00:00:00.000Z"),
+      updatedAt: new Date("2026-04-03T00:00:00.000Z"),
+      createdBy: { name: "测试用户" },
+    });
+  });
+
+  it("在无显式排序时按手动排序配置返回记录", async () => {
+    const { listRecords } = await import("./data-record.service");
+
+    const result = await listRecords("paper-table", {
+      page: 1,
+      pageSize: 10,
+      manualSortOrders: {
+        "record-2": 0,
+        "record-1": 1000,
+      },
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.records.map((record) => record.id)).toEqual([
+        "record-2",
+        "record-1",
+        "record-3",
+      ]);
+    }
   });
 });

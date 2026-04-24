@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useSummaryRow } from "@/hooks/use-summary-row";
 import { useVirtualRows } from "@/hooks/use-virtual-rows";
 import { getRowHeightClasses } from "@/components/data/views/grid-row-height";
+import { buildInsertedRecordOrder, getDragSortState } from "@/components/data/views/grid-drag-sort";
 import {
   TextCellEditor,
   NumberCellEditor,
@@ -55,7 +56,8 @@ import { CellCommentPanel } from "@/components/data/cell-comment-panel";
 import { toast } from "sonner";
 
 const DEFAULT_COL_WIDTH = 160;
-const CHECKBOX_COL_WIDTH = 40;
+const CONTROL_COL_WIDTH = 96;
+const ACTION_COL_WIDTH = 72;
 const READONLY_FIELD_TYPES: readonly string[] = [
   FieldType.AUTO_NUMBER,
   FieldType.SYSTEM_TIMESTAMP,
@@ -100,7 +102,6 @@ interface GridViewProps {
   onColumnWidthsChange: (widths: Record<string, number>) => void;
   frozenFieldCount?: number;
   onFrozenFieldCountChange?: (count: number) => void;
-  viewId?: string | null;
   onReorderRecords?: (orderedIds: string[]) => void;
   conditionalFormatRules?: ConditionalFormatRule[];
   onQuickFormat?: (fieldKey: string, value: string) => void;
@@ -163,7 +164,7 @@ function getFrozenStyle(
   widths: Record<string, number>
 ): React.CSSProperties | undefined {
   if (frozenFieldCount <= 0 || index >= frozenFieldCount) return undefined;
-  let left = CHECKBOX_COL_WIDTH;
+  let left = CONTROL_COL_WIDTH;
   for (let i = 0; i < index; i++) {
     left += widths[orderedFields[i].key] ?? DEFAULT_COL_WIDTH;
   }
@@ -229,21 +230,21 @@ function DragHandleRow({
 }: {
   record: DataRecordItem;
   index: number;
-  children: React.ReactNode;
+  children: (dragHandleRef: (element: Element | null) => void) => React.ReactNode;
   style?: React.CSSProperties;
   height: number;
 }) {
-  const { ref, isDragging } = useSortable({ id: record.id, index });
+  const { ref, handleRef, isDragging } = useSortable({ id: record.id, index });
   return (
     <tr
       ref={ref}
       className={cn(
-        "border-b transition-colors hover:bg-muted/50",
+        "group/row border-b transition-colors hover:bg-muted/50",
         isDragging && "opacity-50 bg-muted"
       )}
       style={{ ...(style ?? {}), height }}
     >
-      {children}
+      {children(handleRef)}
     </tr>
   );
 }
@@ -278,7 +279,6 @@ export function GridView({
   onColumnWidthsChange,
   frozenFieldCount,
   onFrozenFieldCountChange,
-  viewId,
   onReorderRecords,
   conditionalFormatRules,
   onQuickFormat,
@@ -323,6 +323,16 @@ export function GridView({
   // ── Cell context menu ────────────────────────────────────────────────────
   const { context, captureCell, captureRowHeader, captureColHeader } = useCellContext();
 
+  const dragSortState = useMemo(
+    () => getDragSortState({
+      isAdmin,
+      hasActiveSorts: sorts.length > 0,
+      hasGroupBy: Boolean(groupBy),
+    }),
+    [groupBy, isAdmin, sorts.length]
+  );
+  const canDragSort = dragSortState.enabled;
+
   const handleInsertRow = useCallback(async (referenceRecordId: string, position: "above" | "below") => {
     try {
       const res = await fetch(`/api/data-tables/${tableId}/records`, {
@@ -331,25 +341,17 @@ export function GridView({
         body: JSON.stringify({ data: {} }),
       });
       if (!res.ok) return;
-      const newRecord = await res.json();
-      if (newRecord.success !== false) {
-        if (position === "below") {
-          const currentIds = records.map((r) => r.id);
-          const refIndex = currentIds.indexOf(referenceRecordId);
-          if (refIndex >= 0 && refIndex < currentIds.length - 1) {
-            const orderedIds = [
-              ...currentIds.slice(0, refIndex + 1),
-              newRecord.data.id,
-              ...currentIds.slice(refIndex + 1),
-            ];
-            await fetch(`/api/data-tables/${tableId}/records/reorder`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ orderedIds }),
-            });
-          }
+      const record = (await res.json()) as DataRecordItem;
+      if (record.id) {
+        const orderedIds = buildInsertedRecordOrder(
+          records.map((item) => item.id),
+          referenceRecordId,
+          position,
+          record.id
+        );
+        if (canDragSort && orderedIds && onReorderRecords) {
+          await onReorderRecords(orderedIds);
         }
-        const record = newRecord as DataRecordItem;
         await undoManager.execute({
           type: "ADD_RECORD",
           description: "插入记录",
@@ -363,7 +365,7 @@ export function GridView({
     } catch {
       toast.error("插入行失败");
     }
-  }, [tableId, records, onRefresh, undoManager, onAddRecord, onRemoveRecord]);
+  }, [tableId, records, canDragSort, onReorderRecords, onRefresh, undoManager, onAddRecord, onRemoveRecord]);
 
   const handleDuplicateRecord = useCallback(async (recordId: string) => {
     const record = records.find((r) => r.id === recordId);
@@ -392,11 +394,6 @@ export function GridView({
   }, [tableId, records, undoManager, onAddRecord, onRemoveRecord, onRefresh]);
 
   // ── Can drag-sort rows? (only when no sorts, no grouping, has viewId, and admin) ──
-  const canDragSort = useMemo(
-    () => sorts.length === 0 && !groupBy && !!viewId && isAdmin,
-    [sorts, groupBy, viewId, isAdmin]
-  );
-
   // ── Conditional formatting styles ──────────────────────────────────────
   const recordStyles = useMemo(() => {
     if (!conditionalFormatRules || conditionalFormatRules.length === 0) return {};
@@ -497,6 +494,11 @@ export function GridView({
         .map((key) => fieldMap.get(key))
         .filter((f): f is DataFieldItem => f !== undefined),
     [fieldOrder, visibleFields, fieldMap]
+  );
+
+  const rowNumberById = useMemo(
+    () => new Map(records.map((record, recordIndex) => [record.id, recordIndex + 1])),
+    [records]
   );
 
   // ── Column width handlers ──────────────────────────────────────────────
@@ -1727,27 +1729,79 @@ export function GridView({
       const controlCellStyle: React.CSSProperties = { height: rhClasses.height };
       const actionButtonSize = rhClasses.height <= 32 ? "icon-xs" : "sm";
       const cellRuleMap = cellRuleMapByRecord[record.id] ?? {};
+      const isSelected = selectedIdsSet.has(record.id);
+      const rowNumber = rowNumberById.get(record.id) ?? index + 1;
+      const handleButtonClassName =
+        rhClasses.height <= 24
+          ? "flex h-5 w-4 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          : "flex h-6 w-5 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
+      const detailButtonClassName = rhClasses.height <= 24 ? "h-5 w-5" : "h-6 w-6";
 
-      const rowContent = (
+      const renderRowContent = (dragHandleRef?: (element: Element | null) => void) => (
         <>
           <td
             style={controlCellStyle}
-            className="w-10 sticky left-0 z-[5] bg-background isolate border-r p-0"
+            className="sticky left-0 z-[5] isolate border-r bg-background px-2"
             onContextMenu={(e) => captureRowHeader(e, record.id, flatRowIndex)}
           >
-            <Checkbox
-              checked={selectedIdsSet.has(record.id)}
-              onCheckedChange={() => toggleRow(record.id)}
-            />
+            <div className="relative flex h-full items-center justify-center">
+              <span
+                className={cn(
+                  "pointer-events-none text-xs font-medium text-muted-foreground transition-opacity duration-150",
+                  isSelected ? "opacity-0" : "opacity-100 group-hover/row:opacity-0"
+                )}
+              >
+                {rowNumber}
+              </span>
+              <div
+                className={cn(
+                  "absolute inset-0 flex items-center justify-center gap-1 px-2 transition-opacity duration-150",
+                  isSelected
+                    ? "opacity-100"
+                    : "opacity-0 group-hover/row:opacity-100 focus-within:opacity-100"
+                )}
+              >
+                <button
+                  type="button"
+                  ref={canDragSort ? dragHandleRef : undefined}
+                  className={cn(
+                    handleButtonClassName,
+                    canDragSort ? "cursor-grab active:cursor-grabbing" : "cursor-not-allowed opacity-50 hover:bg-transparent hover:text-muted-foreground"
+                  )}
+                  title={dragSortState.title}
+                  aria-label={dragSortState.title}
+                  aria-disabled={!canDragSort}
+                  tabIndex={canDragSort ? 0 : -1}
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <GripVertical className="h-3.5 w-3.5" />
+                </button>
+                <div
+                  className="flex items-center justify-center"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleRow(record.id)}
+                  />
+                </div>
+                {onOpenDetail && (
+                  <Button
+                    variant="ghost"
+                    size="icon-xs"
+                    className={detailButtonClassName}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onOpenDetail(record.id);
+                    }}
+                    title="查看详情"
+                  >
+                    <Expand className="h-3 w-3" />
+                  </Button>
+                )}
+              </div>
+            </div>
           </td>
-          {canDragSort && (
-            <td
-              style={controlCellStyle}
-              className="w-8 p-0 text-muted-foreground cursor-grab active:cursor-grabbing"
-            >
-              <GripVertical className="h-4 w-4 mx-auto" />
-            </td>
-          )}
           {orderedVisibleFields.map((field, fieldIndex) => {
             const frozenTdStyle = getFrozenStyle(fieldIndex, frozenFieldCountValue, orderedVisibleFields, columnWidths);
             const isActive =
@@ -1872,16 +1926,6 @@ export function GridView({
             className={cn("align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0", rhClasses.actionTd)}
           >
             <div className="flex items-center gap-1 overflow-hidden">
-              {onOpenDetail && (
-                <Button
-                  variant="ghost"
-                  size={actionButtonSize}
-                  onClick={() => onOpenDetail(record.id)}
-                  title="查看详情"
-                >
-                  <Expand className="h-3 w-3" />
-                </Button>
-              )}
               {commentCounts[record.id] > 0 && (
                 <span
                   className="inline-flex items-center gap-0.5 text-xs leading-none text-muted-foreground cursor-pointer hover:text-primary"
@@ -1915,7 +1959,7 @@ export function GridView({
       if (canDragSort) {
         return (
           <DragHandleRow key={record.id} record={record} index={index} style={rowStyle} height={rhClasses.height}>
-            {rowContent}
+            {(dragHandleRef) => renderRowContent(dragHandleRef)}
           </DragHandleRow>
         );
       }
@@ -1923,16 +1967,16 @@ export function GridView({
       return (
         <tr
           key={record.id}
-          className="border-b transition-colors hover:bg-primary/8 data-[state=selected]:bg-muted"
+          className="group/row border-b transition-colors hover:bg-primary/8 data-[state=selected]:bg-muted"
           style={{ ...(rowStyle ?? {}), height: rhClasses.height }}
         >
-          {rowContent}
+          {renderRowContent()}
         </tr>
       );
   };
 
   // ── Column count ────────────────────────────────────────────────────────
-  const colCount = orderedVisibleFields.length + 1 + (canDragSort ? 1 : 0) + 1; // +1 for checkbox col
+  const colCount = orderedVisibleFields.length + 2;
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
@@ -2079,17 +2123,16 @@ export function GridView({
           onKeyDown={handleKeyDown}
         >
           <colgroup>
-            <col style={{ width: CHECKBOX_COL_WIDTH }} />
-            {canDragSort && <col style={{ width: 32 }} />}
+            <col style={{ width: CONTROL_COL_WIDTH }} />
             {orderedVisibleFields.map((field) => (
               <col key={field.key} style={{ width: columnWidths[field.key] ?? DEFAULT_COL_WIDTH }} />
             ))}
-            <col style={{ width: 80 }} />
+            <col style={{ width: ACTION_COL_WIDTH }} />
           </colgroup>
           <DragDropProvider onDragEnd={handleColumnDragEnd}>
             <thead className="[&_tr]:border-b">
               <tr className="border-b sticky top-0 z-10 bg-muted">
-              <th className="w-10 h-10 sticky left-0 z-[13] bg-muted border-r px-1">
+              <th className="h-10 sticky left-0 z-[13] bg-muted border-r px-2">
                 <Checkbox
                   checked={records.length > 0 && selectedIdsSet.size === records.length}
                   ref={(el) => {
@@ -2100,9 +2143,6 @@ export function GridView({
                   onCheckedChange={toggleAll}
                 />
               </th>
-              {canDragSort && (
-                <th className="h-10 px-1 w-8" />
-              )}
               {orderedVisibleFields.map((field, index) => {
                 const frozenStyle = getFrozenStyle(index, frozenFieldCountValue, orderedVisibleFields, columnWidths);
                 return (
@@ -2218,8 +2258,7 @@ export function GridView({
                   className="border-b hover:bg-primary/5 cursor-pointer group"
                   onClick={handleQuickAddRow}
                 >
-                  <td className="w-10 sticky left-0 z-[5] bg-background isolate border-r" />
-                  {canDragSort && <td className="w-8" />}
+                  <td className="sticky left-0 z-[5] isolate border-r bg-background" />
                   <td
                     colSpan={orderedVisibleFields.length + 1}
                     className="p-1 align-middle text-muted-foreground text-sm"
@@ -2238,7 +2277,7 @@ export function GridView({
         {Object.keys(columnAggregations ?? {}).length > 0 && (
           <tfoot>
             <tr className="border-t bg-muted/30 sticky bottom-0 z-[5]">
-              <td className="p-2 text-xs text-muted-foreground w-10" />
+              <td className="p-2 text-xs text-muted-foreground" />
               {orderedVisibleFields.map((field) => {
                 const agg = columnAggregations?.[field.key];
                 if (!agg) return <td key={field.key} className="p-2 border-r border-neutral-400" />;
@@ -2262,6 +2301,7 @@ export function GridView({
                   </td>
                 );
               })}
+              <td className="p-2" />
             </tr>
           </tfoot>
         )}

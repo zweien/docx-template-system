@@ -8,6 +8,8 @@ import type {
   SortConfig,
 } from "@/types/data-table";
 
+const DEFAULT_VIEW_NAME = "默认视图";
+
 // Helper to convert to Prisma JSON input
 function toJsonValue(value: unknown): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value));
@@ -96,6 +98,67 @@ export async function getView(viewId: string): Promise<ServiceResult<DataViewIte
   } catch (error) {
     const message = error instanceof Error ? error.message : "获取视图失败";
     return { success: false, error: { code: "GET_FAILED", message } };
+  }
+}
+
+export async function getDefaultView(tableId: string): Promise<ServiceResult<DataViewItem | null>> {
+  try {
+    const view = await db.dataView.findFirst({
+      where: { tableId, isDefault: true },
+      orderBy: { createdAt: "asc" },
+    });
+    return { success: true, data: view ? mapViewItem(view) : null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "获取默认视图失败";
+    return { success: false, error: { code: "GET_FAILED", message } };
+  }
+}
+
+export async function ensureDefaultView(tableId: string): Promise<ServiceResult<DataViewItem>> {
+  try {
+    const existing = await db.dataView.findFirst({
+      where: { tableId, isDefault: true },
+      orderBy: { createdAt: "asc" },
+    });
+    if (existing) {
+      return { success: true, data: mapViewItem(existing) };
+    }
+
+    const existingNames = new Set(
+      (
+        await db.dataView.findMany({
+          where: { tableId },
+          select: { name: true },
+        })
+      ).map((view) => view.name)
+    );
+
+    let name = DEFAULT_VIEW_NAME;
+    let suffix = 2;
+    while (existingNames.has(name)) {
+      name = `${DEFAULT_VIEW_NAME} ${suffix}`;
+      suffix += 1;
+    }
+
+    const view = await db.dataView.create({
+      data: {
+        tableId,
+        name,
+        type: ViewType.GRID,
+        isDefault: true,
+        filters: toJsonValue([]),
+        sortBy: toJsonValue([]),
+        visibleFields: toJsonValue([]),
+        fieldOrder: toJsonValue([]),
+        groupBy: null,
+        viewOptions: toJsonValue({}),
+      },
+    });
+
+    return { success: true, data: mapViewItem(view) };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "创建默认视图失败";
+    return { success: false, error: { code: "CREATE_FAILED", message } };
   }
 }
 

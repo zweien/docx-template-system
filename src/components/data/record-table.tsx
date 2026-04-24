@@ -113,6 +113,7 @@ export function RecordTable({
     updateRecordField,
     addRecord,
     removeRecord,
+    reorderRecords: applyRecordOrder,
     switchView,
     refresh,
     isConnected,
@@ -369,22 +370,23 @@ export function RecordTable({
   // ── Row reorder ────────────────────────────────────────────────────────
   const reorderRecords = useCallback(
     async (orderedIds: string[]) => {
-      if (!viewId) return;
+      applyRecordOrder(orderedIds);
       try {
-        const res = await fetch(
-          `/api/data-tables/${tableId}/records/reorder?viewId=${viewId}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ recordIds: orderedIds }),
-          }
-        );
-        if (res.ok) refresh();
+        const query = viewId ? `?viewId=${viewId}` : "";
+        const res = await fetch(`/api/data-tables/${tableId}/records/reorder${query}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recordIds: orderedIds }),
+        });
+        if (!res.ok) {
+          throw new Error("reorder failed");
+        }
+        refresh();
       } catch {
         refresh();
       }
     },
-    [viewId, tableId, refresh]
+    [applyRecordOrder, viewId, tableId, refresh]
   );
 
   // ── Record count ──────────────────────────────────────────────────────
@@ -439,7 +441,6 @@ export function RecordTable({
             onColumnWidthsChange={handleColumnWidthsChange}
             frozenFieldCount={frozenFieldCount}
             onFrozenFieldCountChange={handleFrozenFieldCountChange}
-            viewId={viewId}
             onReorderRecords={reorderRecords}
             conditionalFormatRules={conditionalFormatRules}
             onQuickFormat={(fieldKey, value) => {

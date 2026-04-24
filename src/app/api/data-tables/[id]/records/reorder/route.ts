@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { toJsonInput } from "@/lib/services/data-record.service";
+import { ensureDefaultView } from "@/lib/services/data-view.service";
 
 const reorderSchema = z.object({
   recordIds: z.array(z.string()).min(1).max(200),
@@ -35,14 +36,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const { recordIds } = reorderSchema.parse(body);
 
     // Get viewId from query params
-    const viewId = request.nextUrl.searchParams.get("viewId");
-    if (!viewId) {
-      return NextResponse.json({ error: "需要指定 viewId" }, { status: 400 });
+    const requestedViewId = request.nextUrl.searchParams.get("viewId");
+    let view = null;
+
+    if (requestedViewId) {
+      view = await db.dataView.findUnique({ where: { id: requestedViewId } });
+      if (!view || view.tableId !== tableId) {
+        return NextResponse.json({ error: "视图不存在" }, { status: 404 });
+      }
+    } else {
+      const defaultViewResult = await ensureDefaultView(tableId);
+      if (!defaultViewResult.success) {
+        return NextResponse.json({ error: defaultViewResult.error.message }, { status: 500 });
+      }
+      view = await db.dataView.findUnique({ where: { id: defaultViewResult.data.id } });
     }
 
-    // Verify view exists and belongs to this table
-    const view = await db.dataView.findUnique({ where: { id: viewId } });
-    if (!view || view.tableId !== tableId) {
+    if (!view) {
       return NextResponse.json({ error: "视图不存在" }, { status: 404 });
     }
 
@@ -63,7 +73,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     };
 
     await db.dataView.update({
-      where: { id: viewId },
+      where: { id: view.id },
       data: {
         viewOptions: toJsonInput(updatedOptions),
       },

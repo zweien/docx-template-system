@@ -49,6 +49,7 @@ export interface UseTableDataReturn {
   updateRecordField: (recordId: string, fieldKey: string, value: unknown) => void;
   addRecord: (record: DataRecordItem) => void;
   removeRecord: (recordId: string) => void;
+  reorderRecords: (orderedIds: string[]) => void;
   refresh: () => void;
   isConnected: boolean;
   activityFeed: import("@/types/realtime").ActivityEntry[];
@@ -269,6 +270,36 @@ export function useTableData({
     },
     []
   );
+
+  const reorderRecords = useCallback((orderedIds: string[]) => {
+    setRecordsData((prev) => {
+      if (!prev) return prev;
+
+      const orderMap = new Map(
+        orderedIds.map((recordId, index) => [recordId, index])
+      );
+
+      const nextRecords = [...prev.records].sort((left, right) => {
+        const leftOrder = orderMap.get(left.id);
+        const rightOrder = orderMap.get(right.id);
+        const leftHasOrder = leftOrder !== undefined;
+        const rightHasOrder = rightOrder !== undefined;
+
+        if (leftHasOrder && rightHasOrder) {
+          return leftOrder - rightOrder;
+        }
+        if (leftHasOrder !== rightHasOrder) {
+          return leftHasOrder ? -1 : 1;
+        }
+        return 0;
+      });
+
+      return {
+        ...prev,
+        records: nextRecords,
+      };
+    });
+  }, []);
 
   const {
     isConnected,
@@ -622,6 +653,7 @@ export function useTableData({
     updateRecordField,
     addRecord,
     removeRecord,
+    reorderRecords,
     refresh,
     isConnected,
     activityFeed,

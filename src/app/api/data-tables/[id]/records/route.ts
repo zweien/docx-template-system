@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getRouteSessionUser } from "@/lib/auth";
 import { listRecords, createRecord } from "@/lib/services/data-record.service";
+import { parseManualSortOrders } from "@/lib/manual-sort";
+import { getDefaultView } from "@/lib/services/data-view.service";
 import {
   createRecordSchema,
   filterConditionSchema,
@@ -53,6 +55,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const viewId = searchParams.get("viewId") || undefined;
   let viewFilters: FilterGroup[] | FilterCondition[] | undefined;
   let viewSortBy: SortConfig[] | null | undefined;
+  let manualSortOrders: Record<string, number> | undefined;
 
   if (viewId) {
     const { getView } = await import("@/lib/services/data-view.service");
@@ -61,6 +64,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       viewFilters = viewResult.data.filters.length > 0 ? viewResult.data.filters : undefined;
       viewSortBy =
         viewResult.data.sortBy.length > 0 ? viewResult.data.sortBy : undefined;
+      if (!viewSortBy) {
+        manualSortOrders = parseManualSortOrders(viewResult.data.viewOptions) ?? undefined;
+      }
+    }
+  } else {
+    const defaultViewResult = await getDefaultView(id);
+    if (defaultViewResult.success && defaultViewResult.data) {
+      manualSortOrders = parseManualSortOrders(defaultViewResult.data.viewOptions) ?? undefined;
     }
   }
 
@@ -69,6 +80,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   if (sortByParam) {
     try {
       viewSortBy = zodParseSortBy(sortByParam);
+      manualSortOrders = undefined;
     } catch { /* ignore */ }
   }
 
@@ -93,6 +105,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     search,
     fieldFilters: Object.keys(fieldFilters).length > 0 ? fieldFilters : undefined,
     sortBy: viewSortBy,
+    manualSortOrders,
     filterConditions: viewFilters,
   });
 

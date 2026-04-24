@@ -329,6 +329,7 @@ export async function listRecords(
     // P2: 新增字段筛选
     fieldFilters?: FieldFilters;
     sortBy?: SortConfig[] | null;
+    manualSortOrders?: Record<string, number> | null;
     filterConditions?: FilterGroup[] | FilterCondition[];
   }
 ): Promise<ServiceResult<PaginatedRecords>> {
@@ -426,6 +427,9 @@ export async function listRecords(
 
     // 当有 sortBy 或内存过滤运算符时，需要先取全部数据再分页
     const hasSort = filters.sortBy && filters.sortBy.length > 0;
+    const hasManualSort = !hasSort &&
+      !!filters.manualSortOrders &&
+      Object.keys(filters.manualSortOrders).length > 0;
     const allFields = tableResult.data.fields;
     const sortableFields = hasSort
       ? filters.sortBy!.filter((sortConfig) => {
@@ -440,7 +444,7 @@ export async function listRecords(
           conditions: g.conditions.filter(c => c.op === "between" || c.op === "in" || c.op === "notin"),
         })).filter(g => g.conditions.length > 0)
       : [];
-    const needsFullFetch = hasSort || memoryFilterGroups.length > 0;
+    const needsFullFetch = hasSort || hasManualSort || memoryFilterGroups.length > 0;
 
     let processedRecords: DataRecordItem[];
     let total = 0;
@@ -490,6 +494,24 @@ export async function listRecords(
             if (result !== 0) return result;
           }
           return 0;
+        });
+      } else if (hasManualSort) {
+        const manualSortOrders = filters.manualSortOrders ?? {};
+        processedRecords.sort((a, b) => {
+          const aOrder = manualSortOrders[a.id];
+          const bOrder = manualSortOrders[b.id];
+          const aHasOrder = Number.isFinite(aOrder);
+          const bHasOrder = Number.isFinite(bOrder);
+
+          if (aHasOrder && bHasOrder && aOrder !== bOrder) {
+            return aOrder - bOrder;
+          }
+          if (aHasOrder !== bHasOrder) {
+            return aHasOrder ? -1 : 1;
+          }
+
+          const createdAtDiff = b.createdAt.getTime() - a.createdAt.getTime();
+          return createdAtDiff !== 0 ? createdAtDiff : a.id.localeCompare(b.id);
         });
       }
     } else {

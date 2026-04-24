@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.10](https://github.com/zweien/docx-template-system/compare/v0.6.9...v0.6.10) (2026-04-24)
+
+
+### Features
+
+* **data:** support persistent manual row ordering ([4056e22](https://github.com/zweien/docx-template-system/commit/4056e22dd0c6263d0ccbcfb70cb50b5220df310c))
+
+
+### Bug Fixes
+
+* **export:** align excel output with current view ([d9993a4](https://github.com/zweien/docx-template-system/commit/d9993a4badf296a0af5d94360507872cb2e35820))
+
 ## [0.6.9](https://github.com/zweien/docx-template-system/compare/v0.6.8...v0.6.9) (2026-04-23)
 
 

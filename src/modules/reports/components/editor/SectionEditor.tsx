@@ -97,6 +97,19 @@ function prepareBlocks(blocks: any[]): BlockLike[] {
 
 const aiTransport = new DefaultChatTransport({ api: "/api/reports/chat" });
 
+// AIToolbarButton crashes when editor.getSelection() returns empty blocks.
+// This wrapper only renders it when a valid selection exists.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function AIToolbarButtonSafe({ editor }: { editor: any }) {
+  try {
+    const sel = editor.getSelection();
+    if (!sel || sel.blocks.length === 0) return null;
+  } catch {
+    return null;
+  }
+  return <AIToolbarButton />;
+}
+
 export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }: SectionEditorProps) {
   const { resolvedTheme } = useTheme();
   const onChangeRef = useRef(onChange);
@@ -317,7 +330,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
           formattingToolbar={() => (
             <FormattingToolbar>
               {getFormattingToolbarItems()}
-              <AIToolbarButton key="ai" />
+              <AIToolbarButtonSafe key="ai" editor={editor} />
             </FormattingToolbar>
           )}
         />

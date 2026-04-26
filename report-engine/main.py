@@ -55,7 +55,7 @@ async def render_endpoint(req: RenderRequest):
 
     output_path = tempfile.mktemp(suffix=".docx")
     try:
-        render_report(req.template_path, req.payload, output_path, check_template=False)
+        render_report(req.template_path, output_path, req.payload, check_template=False)
         filename = req.output_filename or "report.docx"
         return FileResponse(output_path, filename=filename, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     except Exception as e:

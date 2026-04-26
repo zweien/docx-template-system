@@ -1,0 +1,14 @@
+{
+  "name": "y-websocket-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs"
+  },
+  "dependencies": {
+    "jose": "^6.0.0",
+    "pg": "^8.16.0"
+  }
+}

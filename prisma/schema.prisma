@@ -971,6 +971,7 @@ model ReportDraft {
   attachments    Json            @default("{}")
   sectionEnabled Json            @default("{}")
   status         String          @default("draft")
+  collaboratorIds String[]        @default([])
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 }

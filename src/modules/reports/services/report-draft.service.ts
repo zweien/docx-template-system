@@ -106,6 +106,7 @@ export async function getReportDraft(id: string, userId: string): Promise<Servic
         attachments: draft.attachments as Record<string, BlockNoteBlock[]>,
         sectionEnabled: draft.sectionEnabled as Record<string, boolean>,
         status: draft.status,
+        collaboratorIds: draft.collaboratorIds as string[],
         createdAt: draft.createdAt.toISOString(),
         updatedAt: draft.updatedAt.toISOString(),
       },

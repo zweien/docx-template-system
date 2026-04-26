@@ -50,6 +50,7 @@ export interface ReportDraftDetail {
   attachments: Record<string, Record<string, unknown>[]>;
   sectionEnabled: Record<string, boolean>;
   status: string;
+  collaboratorIds: string[];
   createdAt: string;
   updatedAt: string;
 }

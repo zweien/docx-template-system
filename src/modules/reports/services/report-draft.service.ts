@@ -178,6 +178,44 @@ export async function updateReportDraft(
   }
 }
 
+export async function addCollaborator(
+  draftId: string,
+  userId: string,
+  collaboratorUserId: string,
+): Promise<ServiceResult<string[]>> {
+  const draft = await db.reportDraft.findUnique({ where: { id: draftId } });
+  if (!draft || draft.userId !== userId) {
+    return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
+  }
+  const ids = (draft.collaboratorIds || []) as string[];
+  if (ids.includes(collaboratorUserId)) {
+    return { success: false, error: { code: "ALREADY_EXISTS", message: "该用户已是协作者" } };
+  }
+  const updated = [...ids, collaboratorUserId];
+  await db.reportDraft.update({
+    where: { id: draftId },
+    data: { collaboratorIds: updated },
+  });
+  return { success: true, data: updated };
+}
+
+export async function removeCollaborator(
+  draftId: string,
+  userId: string,
+  collaboratorUserId: string,
+): Promise<ServiceResult<string[]>> {
+  const draft = await db.reportDraft.findUnique({ where: { id: draftId } });
+  if (!draft || draft.userId !== userId) {
+    return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
+  }
+  const updated = ((draft.collaboratorIds || []) as string[]).filter((id) => id !== collaboratorUserId);
+  await db.reportDraft.update({
+    where: { id: draftId },
+    data: { collaboratorIds: updated },
+  });
+  return { success: true, data: updated };
+}
+
 export async function deleteReportDraft(
   id: string,
   userId: string

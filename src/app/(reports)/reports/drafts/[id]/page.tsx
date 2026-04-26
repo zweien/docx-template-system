@@ -6,22 +6,29 @@ import { PanelLeftOpen, PanelRightOpen } from "lucide-react";
 import { useReportDraftStore } from "@/modules/reports/stores/report-draft-store";
 import { SectionEditor } from "@/modules/reports/components/editor/SectionEditor";
 import { OutlinePanel } from "@/modules/reports/components/editor/OutlinePanel";
+import { CollaborationProvider, useCollaboration } from "@/modules/reports/components/editor/CollaborationProvider";
+import { OnlineUsers } from "@/modules/reports/components/editor/OnlineUsers";
+import { ShareDialog } from "@/modules/reports/components/editor/ShareDialog";
 import type { ReportTemplateStructure } from "@/modules/reports/types";
 
-export default function ReportEditorPage() {
+function EditorContent() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const {
-    draft, activeSection, saveStatus,
+    draft, activeSection, saveStatus, collaboratorIds,
     loadDraft, setActiveSection, updateSection,
     updateContext, updateTitle, toggleSection, save, exportDocx,
+    setCollaboratorIds,
   } = useReportDraftStore();
+
+  const { getFragment, provider } = useCollaboration();
 
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loading, setLoading] = useState(true);
   const [scrollTargetBlockId, setScrollTargetBlockId] = useState<string | undefined>();
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -153,7 +160,7 @@ export default function ReportEditorPage() {
           </button>
         )}
 
-        <div className="mb-4 flex items-center gap-4">
+        <div className="mb-4 flex items-center justify-between">
           <input
             type="text"
             value={draft.title}
@@ -161,9 +168,18 @@ export default function ReportEditorPage() {
             className="text-xl font-semibold bg-transparent border-none outline-none"
             placeholder="报告标题"
           />
-          <span className="text-xs text-muted-foreground">
-            {saveStatus === "saving" ? "保存中..." : saveStatus === "saved" ? "已保存" : saveStatus === "error" ? "保存失败" : ""}
-          </span>
+          <div className="flex items-center gap-3">
+            <OnlineUsers />
+            {saveStatus === "saving" ? <span className="text-xs text-muted-foreground">保存中...</span>
+              : saveStatus === "saved" ? <span className="text-xs text-muted-foreground">已保存</span>
+              : saveStatus === "error" ? <span className="text-xs text-destructive">保存失败</span> : null}
+            <button
+              onClick={() => setShareOpen(true)}
+              className="text-xs px-2 py-1 rounded border border-border hover:bg-muted"
+            >
+              共享
+            </button>
+          </div>
         </div>
         <SectionEditor
           key={activeSection}
@@ -173,6 +189,8 @@ export default function ReportEditorPage() {
           onChange={(blocks: any[]) => { updateSection(activeSection, blocks); scheduleAutoSave(); }}
           scrollToBlockId={scrollTargetBlockId}
           onScrolled={() => setScrollTargetBlockId(undefined)}
+          collabFragment={getFragment(activeSection)}
+          collabProvider={provider}
         />
       </div>
 
@@ -199,6 +217,26 @@ export default function ReportEditorPage() {
         <input ref={importInputRef} type="file" accept=".json" onChange={handleImportPayload} className="hidden" />
         <button onClick={exportDocx} className="rounded bg-primary px-4 py-1.5 text-sm text-primary-foreground hover:bg-primary/90">导出 .docx</button>
       </div>
+
+      <ShareDialog
+        draftId={draft.id}
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        collaboratorIds={collaboratorIds}
+        onCollaboratorsChange={setCollaboratorIds}
+      />
     </div>
+  );
+}
+
+export default function ReportEditorPage() {
+  const { draft, collaboratorIds } = useReportDraftStore();
+
+  if (!draft) return <div className="p-8 text-center text-muted-foreground">加载中...</div>;
+
+  return (
+    <CollaborationProvider draftId={draft.id} collaboratorIds={collaboratorIds}>
+      <EditorContent />
+    </CollaborationProvider>
   );
 }

@@ -87,7 +87,7 @@ export async function getReportDraft(id: string, userId: string): Promise<Servic
         },
       },
     });
-    if (!draft || draft.userId !== userId) {
+    if (!draft || (draft.userId !== userId && !((draft.collaboratorIds || []) as string[]).includes(userId))) {
       return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
     }
     return {

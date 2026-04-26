@@ -18,6 +18,7 @@ interface DraftData {
   attachments: Record<string, BlockNoteBlock[]>;
   sectionEnabled: Record<string, boolean>;
   status: string;
+  collaboratorIds: string[];
 }
 
 interface Payload {
@@ -30,6 +31,7 @@ interface ReportDraftStore {
   activeSection: string;
   isDirty: boolean;
   saveStatus: "idle" | "saving" | "saved" | "error";
+  collaboratorIds: string[];
 
   loadDraft: (id: string) => Promise<void>;
   setActiveSection: (id: string) => void;
@@ -40,6 +42,7 @@ interface ReportDraftStore {
   save: () => Promise<void>;
   exportDocx: () => Promise<void>;
   importPayload: (payload: Payload) => void;
+  setCollaboratorIds: (ids: string[]) => void;
 }
 
 export const useReportDraftStore = create<ReportDraftStore>((set, get) => ({
@@ -47,6 +50,7 @@ export const useReportDraftStore = create<ReportDraftStore>((set, get) => ({
   activeSection: "",
   isDirty: false,
   saveStatus: "idle",
+  collaboratorIds: [],
 
   loadDraft: async (id) => {
     const res = await fetch(`/api/reports/drafts/${id}`);
@@ -58,6 +62,7 @@ export const useReportDraftStore = create<ReportDraftStore>((set, get) => ({
       activeSection: sectionIds[0] || "",
       isDirty: false,
       saveStatus: "idle",
+      collaboratorIds: json.data.collaboratorIds || [],
     });
   },
 
@@ -159,4 +164,6 @@ export const useReportDraftStore = create<ReportDraftStore>((set, get) => ({
       saveStatus: "idle",
     });
   },
+
+  setCollaboratorIds: (ids) => set({ collaboratorIds: ids }),
 }));

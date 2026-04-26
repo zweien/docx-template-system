@@ -6,7 +6,7 @@ import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blockno
 import "@blocknote/shadcn/style.css";
 import "@blocknote/xl-ai/style.css";
 import { useCallback, useEffect, useRef } from "react";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/components/theme/theme-provider";
 import { DefaultChatTransport } from "ai";
 import {
   AIExtension,
@@ -116,6 +116,23 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
   onChangeRef.current = onChange;
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const theme = resolvedTheme === "light" ? "light" : "dark";
+
+  // BlockNote caches colorSchemePreference in internal useState and ignores
+  // subsequent theme prop changes. Use MutationObserver to keep the DOM
+  // attribute in sync with the resolved theme.
+  useEffect(() => {
+    const sync = () => {
+      document
+        .querySelectorAll(".bn-root")
+        .forEach((el) => el.setAttribute("data-color-scheme", theme));
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [theme]);
 
   const editor = useCreateBlockNote({
     schema: reportSchema,
@@ -321,7 +338,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
       <BlockNoteView
         editor={editor}
         onChange={handleEditorChange}
-        theme={resolvedTheme === "light" ? "light" : "dark"}
+        theme={theme}
         slashMenu={false}
         formattingToolbar={false}
         sideMenu

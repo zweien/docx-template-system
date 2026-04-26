@@ -53,6 +53,8 @@ model User {
   dataRecordComments            DataRecordComment[] @relation("DataRecordComments")
   createdAutomations            Automation[]       @relation("AutomationCreatedBy")
   updatedAutomations            Automation[]       @relation("AutomationUpdatedBy")
+  reportTemplates               ReportTemplate[]
+  reportDrafts                  ReportDraft[]
 }
 
 enum TemplateStatus {
@@ -940,4 +942,35 @@ model DataRecordComment {
   @@index([parentId])
   @@index([createdById])
   @@map("data_record_comments")
+}
+
+// ========== Report Writing Module ==========
+
+model ReportTemplate {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  name             String
+  originalFilename String
+  filePath         String
+  parsedStructure  Json
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  drafts           ReportDraft[]
+}
+
+model ReportDraft {
+  id             String          @id @default(cuid())
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  templateId     String
+  template       ReportTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  title          String          @default("未命名报告")
+  context        Json            @default("{}")
+  sections       Json            @default("{}")
+  attachments    Json            @default("{}")
+  sectionEnabled Json            @default("{}")
+  status         String          @default("draft")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 }

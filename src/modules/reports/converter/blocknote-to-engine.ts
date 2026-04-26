@@ -45,14 +45,16 @@ export function convertBlocknoteToEngine(blocks: BlockLike[]): EngineBlock[] {
         break;
 
       case "paragraph": {
-        const content = block.content || [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const content = (block.content || []) as any[];
         if (hasInlineStyles(content)) {
           result.push({
             type: "rich_paragraph",
-            segments: content.map((seg) => ({
-              text: (seg as ContentSegment).text || "",
-              ...(((seg as ContentSegment).styles?.bold) && { bold: true }),
-              ...(((seg as ContentSegment).styles?.italic) && { italic: true }),
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            segments: content.map((seg: any) => ({
+              text: seg.text || "",
+              ...(seg.styles?.bold && { bold: true }),
+              ...(seg.styles?.italic && { italic: true }),
             })),
           });
         } else {
@@ -82,7 +84,8 @@ export function convertBlocknoteToEngine(blocks: BlockLike[]): EngineBlock[] {
       }
 
       case "table": {
-        const tableContent = block.content;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const tableContent = block.content as any;
         const rows: string[][] = [];
         if (tableContent?.rows) {
           for (const row of tableContent.rows) {

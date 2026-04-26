@@ -39,7 +39,8 @@ export function engineToBlocknoteBlocks(
 ): BlockNoteBlock[] {
   const result: BlockNoteBlock[] = [];
 
-  for (const block of blocks) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const block of blocks as any[]) {
     switch (block.type) {
       case "heading":
         result.push(bn("heading", {

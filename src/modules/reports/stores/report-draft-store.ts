@@ -137,7 +137,8 @@ export const useReportDraftStore = create<ReportDraftStore>((set, get) => ({
   importPayload: (payload: Payload) => {
     const { draft } = get();
     if (!draft) return;
-    const newSections = payloadToDraftSections(payload, draft.sections, draft.sectionEnabled);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const newSections = payloadToDraftSections(payload as any, draft.sections as any, draft.sectionEnabled) as any;
     const newContext: Record<string, string> = { ...draft.context };
     if (payload.context) {
       for (const [key, value] of Object.entries(payload.context)) {

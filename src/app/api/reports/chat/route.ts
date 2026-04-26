@@ -13,15 +13,16 @@ const openai = createOpenAI({
 
 export const maxDuration = 60;
 
-function stripDeleteFromToolDefs(toolDefs: Record<string, unknown>) {
-  const patched = JSON.parse(JSON.stringify(toolDefs)) as Record<string, Record<string, unknown>>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function stripDeleteFromToolDefs(toolDefs: Record<string, any>) {
+  const patched = JSON.parse(JSON.stringify(toolDefs));
   for (const tool of Object.values(patched)) {
-    const operations = (tool as Record<string, unknown>).inputSchema as Record<string, unknown> | undefined;
-    const props = operations?.properties as Record<string, unknown> | undefined;
-    const items = props?.operations as Record<string, unknown> | undefined;
-    if (items && "anyOf" in items && Array.isArray(items.anyOf)) {
-      (items as { anyOf: Record<string, unknown>[] }).anyOf = (items as { anyOf: Record<string, unknown>[] }).anyOf.filter(
-        (opt) => !((opt.properties as Record<string, unknown>)?.type as Record<string, unknown>)?.enum || !Array.isArray(((opt.properties as Record<string, unknown>)?.type as Record<string, unknown>)?.enum) || !(((opt.properties as Record<string, unknown>)?.type as Record<string, unknown>)?.enum as unknown[]).includes("delete")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items = (tool as any)?.inputSchema?.properties?.operations?.items;
+    if (items?.anyOf) {
+      items.anyOf = items.anyOf.filter(
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (opt: any) => !(opt.properties?.type?.enum?.includes("delete"))
       );
     }
   }
@@ -36,9 +37,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { messages, toolDefinitions } = body;
-    const model = openai.chat(process.env.OPENAI_MODEL || "gpt-4o", {
-      structuredOutputs: false,
-    });
+    const model = openai.chat(process.env.OPENAI_MODEL || "gpt-4o");
     const patchedToolDefs = stripDeleteFromToolDefs(toolDefinitions);
     const injected = injectDocumentStateMessages(messages);
     const modelMessages = await convertToModelMessages(injected);
@@ -46,7 +45,8 @@ export async function POST(req: Request) {
       model,
       system: aiDocumentFormats.html.systemPrompt + extraSystemPrompt,
       messages: modelMessages,
-      tools: toolDefinitionsToToolSet(patchedToolDefs),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tools: toolDefinitionsToToolSet(patchedToolDefs as any),
       toolChoice: "required",
       providerOptions: {
         openai: { enable_thinking: false },

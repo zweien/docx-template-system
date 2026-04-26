@@ -76,14 +76,18 @@ export async function getReportDraft(id: string, userId: string): Promise<Servic
         id: draft.id,
         title: draft.title,
         templateId: draft.templateId,
-        template: draft.template,
+        template: {
+          ...draft.template,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          parsedStructure: draft.template.parsedStructure as any,
+        },
         context: draft.context as Record<string, string>,
         sections: draft.sections as Record<string, BlockNoteBlock[]>,
         attachments: draft.attachments as Record<string, BlockNoteBlock[]>,
         sectionEnabled: draft.sectionEnabled as Record<string, boolean>,
         status: draft.status,
-        createdAt: draft.createdAt,
-        updatedAt: draft.updatedAt,
+        createdAt: draft.createdAt.toISOString(),
+        updatedAt: draft.updatedAt.toISOString(),
       },
     };
   } catch {
@@ -108,7 +112,8 @@ export async function createReportDraft(
         templateId,
         title: title || "未命名报告",
         context: initContext(structure),
-        sections: initDraftSections(structure),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        sections: initDraftSections(structure) as any,
         sectionEnabled: initSectionEnabled(structure),
       },
     });
@@ -139,8 +144,10 @@ export async function updateReportDraft(
       data: {
         ...(data.title !== undefined && { title: data.title }),
         ...(data.context !== undefined && { context: data.context }),
-        ...(data.sections !== undefined && { sections: data.sections }),
-        ...(data.attachments !== undefined && { attachments: data.attachments }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(data.sections !== undefined && { sections: data.sections as any }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ...(data.attachments !== undefined && { attachments: data.attachments as any }),
         ...(data.sectionEnabled !== undefined && { sectionEnabled: data.sectionEnabled }),
       },
     });

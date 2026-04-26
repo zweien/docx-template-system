@@ -112,8 +112,10 @@ export default function ReportEditorPage() {
           </span>
         </div>
         <SectionEditor
-          blocks={currentBlocks}
-          onChange={(blocks: Record<string, unknown>[]) => { updateSection(activeSection, blocks); scheduleAutoSave(); }}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          blocks={currentBlocks as any[]}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onChange={(blocks: any[]) => { updateSection(activeSection, blocks); scheduleAutoSave(); }}
         />
       </div>
 

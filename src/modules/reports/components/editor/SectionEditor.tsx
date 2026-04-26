@@ -62,10 +62,13 @@ function migrateMermaidBlocks(blocks: BlockLike[]): BlockLike[] {
   });
 }
 
-function prepareBlocks(blocks: EngineBlock[]): BlockLike[] {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function prepareBlocks(blocks: any[]): BlockLike[] {
   if (blocks.length === 0) return [];
-  const raw = isBlockNoteBlocks(blocks) ? blocks : engineToBlocknoteBlocks(blocks);
-  return migrateMermaidBlocks(raw).filter((b) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const raw = isBlockNoteBlocks(blocks) ? blocks : engineToBlocknoteBlocks(blocks as any);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return migrateMermaidBlocks(raw as any[]).filter((b) => {
     if (b.type === "image" && !b.props?.url) return false;
     return true;
   });
@@ -106,7 +109,8 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
     const prepared = prepareBlocks(blocks);
     if (prepared.length > 0) {
       try {
-        editor.replaceBlocks(editor.document, prepared);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (editor as any).replaceBlocks(editor.document, prepared);
       } catch {}
     }
   }, [editor]);

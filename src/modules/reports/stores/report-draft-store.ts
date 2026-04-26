@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import { payloadToDraftSections } from "@/modules/reports/converter/engine-to-blocknote";
 
+type BlockNoteBlock = Record<string, unknown>;
+
 interface DraftData {
   id: string;
   title: string;
@@ -9,18 +11,18 @@ interface DraftData {
     id: string;
     name: string;
     filePath: string;
-    parsedStructure: any;
+    parsedStructure: Record<string, unknown>;
   };
   context: Record<string, string>;
-  sections: Record<string, any[]>;
-  attachments: Record<string, any[]>;
+  sections: Record<string, BlockNoteBlock[]>;
+  attachments: Record<string, BlockNoteBlock[]>;
   sectionEnabled: Record<string, boolean>;
   status: string;
 }
 
 interface Payload {
   context?: Record<string, string>;
-  sections?: { id: string; blocks: any[]; enabled?: boolean }[];
+  sections?: { id: string; blocks: BlockNoteBlock[]; enabled?: boolean }[];
 }
 
 interface ReportDraftStore {
@@ -31,7 +33,7 @@ interface ReportDraftStore {
 
   loadDraft: (id: string) => Promise<void>;
   setActiveSection: (id: string) => void;
-  updateSection: (id: string, blocks: any[]) => void;
+  updateSection: (id: string, blocks: BlockNoteBlock[]) => void;
   updateContext: (key: string, value: string) => void;
   updateTitle: (title: string) => void;
   toggleSection: (id: string) => void;

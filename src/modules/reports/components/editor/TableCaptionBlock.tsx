@@ -3,6 +3,7 @@
 import { createReactBlockSpec, type ReactCustomBlockRenderProps } from "@blocknote/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function TableCaptionBlockRender({ block, editor }: ReactCustomBlockRenderProps<any>) {
   const [localText, setLocalText] = useState(block.props.text || "");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -12,7 +13,7 @@ function TableCaptionBlockRender({ block, editor }: ReactCustomBlockRenderProps<
     if (newText !== localText) {
       setLocalText(newText);
     }
-  }, [block.props.text]);
+  }, [block.props.text, localText]);
 
   const persistText = useCallback(
     (text: string) => {
@@ -66,6 +67,7 @@ export const TableCaptionBlockSpec = createReactBlockSpec(
   },
   {
     render: TableCaptionBlockRender,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     toExternalHTML: (props: any) => (
       <figcaption>{props.block.props.text || ""}</figcaption>
     ),

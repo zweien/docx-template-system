@@ -16,7 +16,7 @@ interface MermaidPreviewProps {
 export default function MermaidPreview({ code }: MermaidPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const idRef = useRef(`mermaid-${Math.random().toString(36).slice(2, 10)}`);
+  const [id] = useState(() => `mermaid-${Math.random().toString(36).slice(2, 10)}`);
 
   useEffect(() => {
     if (!code.trim()) {
@@ -25,7 +25,6 @@ export default function MermaidPreview({ code }: MermaidPreviewProps) {
     }
 
     let cancelled = false;
-    const id = idRef.current;
 
     mermaid
       .render(id, code)

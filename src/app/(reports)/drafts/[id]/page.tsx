@@ -11,7 +11,7 @@ export default function ReportEditorPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const {
-    draft, activeSection, isDirty, saveStatus,
+    draft, activeSection, saveStatus,
     loadDraft, setActiveSection, updateSection,
     updateContext, updateTitle, toggleSection, save, exportDocx,
   } = useReportDraftStore();
@@ -113,7 +113,7 @@ export default function ReportEditorPage() {
         </div>
         <SectionEditor
           blocks={currentBlocks}
-          onChange={(blocks: any[]) => { updateSection(activeSection, blocks); scheduleAutoSave(); }}
+          onChange={(blocks: Record<string, unknown>[]) => { updateSection(activeSection, blocks); scheduleAutoSave(); }}
         />
       </div>
 

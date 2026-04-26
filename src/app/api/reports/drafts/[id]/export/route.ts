@@ -15,7 +15,7 @@ export async function POST(
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
-  const response = result.data as any as Response;
+  const response = result.data as unknown as Response;
   const headers = new Headers();
   headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
   const disposition = response.headers.get("content-disposition");

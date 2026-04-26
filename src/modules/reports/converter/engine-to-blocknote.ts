@@ -7,14 +7,14 @@
 
 export interface EngineBlock {
   type: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface BlockNoteBlock {
   id: string;
   type: string;
-  props?: Record<string, any>;
-  content?: any;
+  props?: Record<string, unknown>;
+  content?: unknown;
   children?: BlockNoteBlock[];
 }
 
@@ -56,7 +56,7 @@ export function engineToBlocknoteBlocks(
 
       case "rich_paragraph":
         result.push(bn("paragraph", {
-          content: (block.segments || []).map((seg: any) => ({
+          content: (block.segments as { text?: string; bold?: boolean; italic?: boolean }[] || []).map((seg) => ({
             type: "text",
             text: seg.text || "",
             styles: {
@@ -184,7 +184,7 @@ export function engineToBlocknoteBlocks(
 function buildTableContent(
   headers: string[],
   rows: string[][]
-): any {
+): Record<string, unknown> {
   const allRows = [headers, ...rows];
   return {
     type: "tableContent",
@@ -212,10 +212,10 @@ function buildTableContent(
  */
 export function payloadToDraftSections(
   payload: { sections?: { id: string; blocks: EngineBlock[] }[] },
-  existingSections: Record<string, any[]>,
-  sectionEnabled: Record<string, boolean>
-): Record<string, any[]> {
-  const result: Record<string, any[]> = {};
+  existingSections: Record<string, BlockNoteBlock[]>,
+  sectionEnabled: Record<string, boolean>, // eslint-disable-line @typescript-eslint/no-unused-vars
+): Record<string, BlockNoteBlock[]> {
+  const result: Record<string, BlockNoteBlock[]> = {};
 
   // Keep existing sections that are not in the payload
   for (const [id, blocks] of Object.entries(existingSections)) {

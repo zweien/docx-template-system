@@ -46,8 +46,8 @@ export interface ReportDraftDetail {
     parsedStructure: ReportTemplateStructure;
   };
   context: Record<string, string>;
-  sections: Record<string, any[]>;
-  attachments: Record<string, any[]>;
+  sections: Record<string, Record<string, unknown>[]>;
+  attachments: Record<string, Record<string, unknown>[]>;
   sectionEnabled: Record<string, boolean>;
   status: string;
   createdAt: string;

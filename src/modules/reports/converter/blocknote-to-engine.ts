@@ -1,24 +1,37 @@
 export interface EngineBlock {
   type: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-function extractText(content: any): string {
+interface ContentSegment {
+  text?: string;
+  styles?: Record<string, unknown>;
+}
+
+function extractText(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
     return content
-      .filter((s: any) => typeof s === "object" && s.text)
-      .map((s: any) => s.text)
+      .filter((s): s is ContentSegment => typeof s === "object" && s !== null && "text" in s)
+      .map((s) => s.text || "")
       .join("");
   }
   return "";
 }
 
-function hasInlineStyles(content: any[]): boolean {
-  return content.some((seg: any) => typeof seg === "object" && seg.styles && Object.keys(seg.styles).length > 0);
+function hasInlineStyles(content: unknown[]): boolean {
+  return content.some((seg) =>
+    typeof seg === "object" && seg !== null && "styles" in seg && Object.keys((seg as ContentSegment).styles || {}).length > 0
+  );
 }
 
-export function convertBlocknoteToEngine(blocks: any[]): EngineBlock[] {
+interface BlockLike {
+  type: string;
+  content?: unknown;
+  props?: Record<string, unknown>;
+}
+
+export function convertBlocknoteToEngine(blocks: BlockLike[]): EngineBlock[] {
   const result: EngineBlock[] = [];
   let i = 0;
 
@@ -36,10 +49,10 @@ export function convertBlocknoteToEngine(blocks: any[]): EngineBlock[] {
         if (hasInlineStyles(content)) {
           result.push({
             type: "rich_paragraph",
-            segments: content.map((seg: any) => ({
-              text: seg.text || "",
-              ...(seg.styles?.bold && { bold: true }),
-              ...(seg.styles?.italic && { italic: true }),
+            segments: content.map((seg) => ({
+              text: (seg as ContentSegment).text || "",
+              ...(((seg as ContentSegment).styles?.bold) && { bold: true }),
+              ...(((seg as ContentSegment).styles?.italic) && { italic: true }),
             })),
           });
         } else {
@@ -73,7 +86,7 @@ export function convertBlocknoteToEngine(blocks: any[]): EngineBlock[] {
         const rows: string[][] = [];
         if (tableContent?.rows) {
           for (const row of tableContent.rows) {
-            rows.push((row.cells || []).map((cell: any) => extractText(cell.content)));
+            rows.push((row.cells || []).map((cell: BlockLike) => extractText(cell.content)));
           }
         }
         if (rows.length > 0) {

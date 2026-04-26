@@ -13,13 +13,15 @@ const openai = createOpenAI({
 
 export const maxDuration = 60;
 
-function stripDeleteFromToolDefs(toolDefs: Record<string, any>) {
-  const patched = JSON.parse(JSON.stringify(toolDefs));
+function stripDeleteFromToolDefs(toolDefs: Record<string, unknown>) {
+  const patched = JSON.parse(JSON.stringify(toolDefs)) as Record<string, Record<string, unknown>>;
   for (const tool of Object.values(patched)) {
-    const items = (tool as any)?.inputSchema?.properties?.operations?.items;
-    if (items?.anyOf) {
-      items.anyOf = items.anyOf.filter(
-        (opt: any) => !(opt.properties?.type?.enum?.includes("delete"))
+    const operations = (tool as Record<string, unknown>).inputSchema as Record<string, unknown> | undefined;
+    const props = operations?.properties as Record<string, unknown> | undefined;
+    const items = props?.operations as Record<string, unknown> | undefined;
+    if (items && "anyOf" in items && Array.isArray(items.anyOf)) {
+      (items as { anyOf: Record<string, unknown>[] }).anyOf = (items as { anyOf: Record<string, unknown>[] }).anyOf.filter(
+        (opt) => !((opt.properties as Record<string, unknown>)?.type as Record<string, unknown>)?.enum || !Array.isArray(((opt.properties as Record<string, unknown>)?.type as Record<string, unknown>)?.enum) || !(((opt.properties as Record<string, unknown>)?.type as Record<string, unknown>)?.enum as unknown[]).includes("delete")
       );
     }
   }
@@ -51,10 +53,10 @@ export async function POST(req: Request) {
       },
     });
     return result.toUIMessageStreamResponse();
-  } catch (e: any) {
-    console.error("[Report AI Chat Error]", e?.message || e);
+  } catch (e: unknown) {
+    console.error("[Report AI Chat Error]", e instanceof Error ? e.message : e);
     return new Response(
-      JSON.stringify({ error: e?.message || "Unknown error" }),
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }

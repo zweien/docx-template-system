@@ -10,14 +10,21 @@ interface HeadingItem {
 }
 
 interface OutlinePanelProps {
-  sections: Record<string, any[]>;
+  sections: Record<string, Record<string, unknown>[]>;
   sectionEnabled: Record<string, boolean>;
   activeSection?: string;
   onNavigateHeading?: (sectionId: string, blockId: string) => void;
 }
 
+interface BlockLike {
+  type?: string;
+  id?: string;
+  content?: unknown[];
+  props?: Record<string, unknown>;
+}
+
 function extractHeadings(
-  sections: Record<string, any[]>,
+  sections: Record<string, Record<string, unknown>[]>,
   sectionEnabled: Record<string, boolean>
 ): HeadingItem[] {
   const headings: HeadingItem[] = [];
@@ -25,16 +32,17 @@ function extractHeadings(
     if (sectionEnabled[sectionId] === false) continue;
     if (!Array.isArray(blocks)) continue;
     for (const block of blocks) {
-      if (block.type === "heading" && block.id) {
-        const text = Array.isArray(block.content)
-          ? block.content
-              .map((s: any) => (typeof s === "object" ? s.text || "" : ""))
+      const b = block as BlockLike;
+      if (b.type === "heading" && b.id) {
+        const text = Array.isArray(b.content)
+          ? b.content
+              .map((s) => (typeof s === "object" && s !== null && "text" in s ? String((s as Record<string, unknown>).text) : ""))
               .join("")
           : "";
         headings.push({
-          id: block.id,
+          id: b.id,
           text,
-          level: block.props?.level || 2,
+          level: (b.props?.level as number) || 2,
           sectionId,
         });
       }

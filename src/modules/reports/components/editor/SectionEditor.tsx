@@ -19,12 +19,13 @@ import { en as aiDictionary } from "@blocknote/xl-ai/locales";
 import {
   engineToBlocknoteBlocks,
   type EngineBlock,
+  type BlockNoteBlock,
 } from "@/modules/reports/converter/engine-to-blocknote";
 import { reportSchema } from "@/modules/reports/schema/blocknote-schema";
 
 interface SectionEditorProps {
   blocks: EngineBlock[];
-  onChange: (blocks: any[]) => void;
+  onChange: (blocks: BlockNoteBlock[]) => void;
   scrollToBlockId?: string;
   onScrolled?: () => void;
 }
@@ -35,12 +36,20 @@ function isBlockNoteBlocks(blocks: EngineBlock[]): boolean {
   );
 }
 
-function migrateMermaidBlocks(blocks: any[]): any[] {
+interface BlockLike {
+  type: string;
+  id?: string;
+  content?: unknown[];
+  children?: unknown[];
+  props?: Record<string, unknown>;
+}
+
+function migrateMermaidBlocks(blocks: BlockLike[]): BlockLike[] {
   return blocks.map((block) => {
     if (block.type === "codeBlock" && block.props?.language === "mermaid") {
       const content = block.content || [];
       const code = content
-        .map((seg: any) => seg?.text || "")
+        .map((seg) => (typeof seg === "object" && seg !== null && "text" in seg ? String((seg as Record<string, unknown>).text) : ""))
         .join("");
       return {
         id: block.id,
@@ -53,10 +62,10 @@ function migrateMermaidBlocks(blocks: any[]): any[] {
   });
 }
 
-function prepareBlocks(blocks: EngineBlock[]): any[] {
+function prepareBlocks(blocks: EngineBlock[]): BlockLike[] {
   if (blocks.length === 0) return [];
   const raw = isBlockNoteBlocks(blocks) ? blocks : engineToBlocknoteBlocks(blocks);
-  return migrateMermaidBlocks(raw).filter((b: any) => {
+  return migrateMermaidBlocks(raw).filter((b) => {
     if (b.type === "image" && !b.props?.url) return false;
     return true;
   });
@@ -129,10 +138,10 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
     async (query: string) => {
       const defaultItems = getDefaultReactSlashMenuItems(editor);
       const mermaidItem = {
-        key: "mermaidBlock" as any,
+        key: "mermaidBlock" as unknown as string,
         title: "Mermaid Diagram",
         subtext: "插入 mermaid 流程图/图表",
-        group: "Advanced" as any,
+        group: "Advanced" as unknown as string,
         aliases: ["mermaid", "diagram", "flowchart", "chart"],
         icon: (
           <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -149,10 +158,10 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
           }),
       };
       const captionItem = {
-        key: "tableCaption" as any,
+        key: "tableCaption" as unknown as string,
         title: "表题",
         subtext: "在表格上方插入表题/标题",
-        group: "Advanced" as any,
+        group: "Advanced" as unknown as string,
         aliases: ["caption", "biaoti", "biao ti", "table caption", "title"],
         icon: (
           <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -172,7 +181,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
       const items = [...defaultItems];
       let insertIdx = items.length;
       for (let i = items.length - 1; i >= 0; i--) {
-        if ((items[i] as any).group === "Advanced") {
+        if ((items[i] as Record<string, unknown>).group === "Advanced") {
           insertIdx = i + 1;
           break;
         }

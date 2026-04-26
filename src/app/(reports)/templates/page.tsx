@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface ReportTemplate {
   id: string;
@@ -10,6 +11,7 @@ interface ReportTemplate {
 }
 
 export default function ReportTemplatesPage() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -43,7 +45,9 @@ export default function ReportTemplatesPage() {
       body: JSON.stringify({ templateId }),
     });
     const json = await res.json();
-    if (json.success) window.location.href = `/reports/drafts/${json.data.id}`;
+    if (json.success) {
+      router.push(`/reports/drafts/${json.data.id}`);
+    }
   };
 
   if (loading) return <div className="p-8 text-center text-muted-foreground">加载中...</div>;

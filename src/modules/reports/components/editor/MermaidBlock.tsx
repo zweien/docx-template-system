@@ -4,6 +4,7 @@ import { createReactBlockSpec, type ReactCustomBlockRenderProps } from "@blockno
 import { useCallback, useEffect, useRef, useState } from "react";
 import MermaidPreview from "./MermaidPreview";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function MermaidBlockRender({ block, editor }: ReactCustomBlockRenderProps<any>) {
   const [mode, setMode] = useState<"code" | "preview">("code");
   const [localCode, setLocalCode] = useState(block.props.code || "");
@@ -16,7 +17,7 @@ function MermaidBlockRender({ block, editor }: ReactCustomBlockRenderProps<any>)
     if (newCode !== localCode) {
       setLocalCode(newCode);
     }
-  }, [block.props.code]);
+  }, [block.props.code, localCode]);
 
   const persistCode = useCallback(
     (code: string) => {
@@ -132,6 +133,7 @@ export const MermaidBlockSpec = createReactBlockSpec(
   },
   {
     render: MermaidBlockRender,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     toExternalHTML: (props: any) => (
       <pre>
         <code className="language-mermaid">{props.block.props.code || ""}</code>

@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
     return NextResponse.json({ success: true, data: result.data }, { status: 201 });
-  } catch (e: any) {
-    if ("issues" in e) {
+  } catch (e: unknown) {
+    if (e instanceof Error && "issues" in e) {
       return NextResponse.json({ error: { code: "VALIDATION", message: "参数校验失败" } }, { status: 400 });
     }
-    return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: e.message } }, { status: 500 });
+    return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: e instanceof Error ? e.message : "Internal error" } }, { status: 500 });
   }
 }

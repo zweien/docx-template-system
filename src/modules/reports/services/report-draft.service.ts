@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import type { ReportTemplateStructure } from "../types";
+import type { ReportDraftDetail, ReportTemplateStructure } from "../types";
 
 type ServiceResult<T> =
   | { success: true; data: T }
@@ -7,8 +7,10 @@ type ServiceResult<T> =
 
 const REPORT_ENGINE_URL = process.env.REPORT_ENGINE_URL || "http://localhost:8066";
 
-function initDraftSections(structure: ReportTemplateStructure): Record<string, any[]> {
-  const sections: Record<string, any[]> = {};
+type BlockNoteBlock = Record<string, unknown>;
+
+function initDraftSections(structure: ReportTemplateStructure): Record<string, BlockNoteBlock[]> {
+  const sections: Record<string, BlockNoteBlock[]> = {};
   for (const s of structure.sections) {
     sections[s.id] = [];
   }
@@ -31,7 +33,7 @@ function initContext(structure: ReportTemplateStructure): Record<string, string>
   return ctx;
 }
 
-export async function listReportDrafts(userId: string): Promise<ServiceResult<any[]>> {
+export async function listReportDrafts(userId: string): Promise<ServiceResult<Record<string, unknown>[]>> {
   try {
     const drafts = await db.reportDraft.findMany({
       where: { userId },
@@ -55,7 +57,7 @@ export async function listReportDrafts(userId: string): Promise<ServiceResult<an
   }
 }
 
-export async function getReportDraft(id: string, userId: string): Promise<ServiceResult<any>> {
+export async function getReportDraft(id: string, userId: string): Promise<ServiceResult<ReportDraftDetail>> {
   try {
     const draft = await db.reportDraft.findUnique({
       where: { id },
@@ -76,8 +78,8 @@ export async function getReportDraft(id: string, userId: string): Promise<Servic
         templateId: draft.templateId,
         template: draft.template,
         context: draft.context as Record<string, string>,
-        sections: draft.sections as Record<string, any[]>,
-        attachments: draft.attachments as Record<string, any[]>,
+        sections: draft.sections as Record<string, BlockNoteBlock[]>,
+        attachments: draft.attachments as Record<string, BlockNoteBlock[]>,
         sectionEnabled: draft.sectionEnabled as Record<string, boolean>,
         status: draft.status,
         createdAt: draft.createdAt,
@@ -93,7 +95,7 @@ export async function createReportDraft(
   userId: string,
   templateId: string,
   title?: string
-): Promise<ServiceResult<any>> {
+): Promise<ServiceResult<{ id: string; title: string }>> {
   try {
     const template = await db.reportTemplate.findUnique({ where: { id: templateId } });
     if (!template || template.userId !== userId) {
@@ -111,8 +113,8 @@ export async function createReportDraft(
       },
     });
     return { success: true, data: { id: draft.id, title: draft.title } };
-  } catch (e: any) {
-    return { success: false, error: { code: "CREATE_FAILED", message: e.message || "创建报告草稿失败" } };
+  } catch (e: unknown) {
+    return { success: false, error: { code: "CREATE_FAILED", message: e instanceof Error ? e.message : "创建报告草稿失败" } };
   }
 }
 
@@ -122,8 +124,8 @@ export async function updateReportDraft(
   data: {
     title?: string;
     context?: Record<string, string>;
-    sections?: Record<string, any[]>;
-    attachments?: Record<string, any[]>;
+    sections?: Record<string, BlockNoteBlock[]>;
+    attachments?: Record<string, BlockNoteBlock[]>;
     sectionEnabled?: Record<string, boolean>;
   }
 ): Promise<ServiceResult<void>> {
@@ -181,8 +183,8 @@ export async function exportReportDraft(
     const payload = buildPayload(
       {
         context: draft.context as Record<string, string>,
-        sections: draft.sections as Record<string, any[]>,
-        attachments: draft.attachments as Record<string, any[]>,
+        sections: draft.sections as Record<string, BlockNoteBlock[]>,
+        attachments: draft.attachments as Record<string, BlockNoteBlock[]>,
         sectionEnabled: draft.sectionEnabled as Record<string, boolean>,
       },
       structure
@@ -203,21 +205,21 @@ export async function exportReportDraft(
       return { success: false, error: { code: "EXPORT_FAILED", message: err } };
     }
 
-    return { success: true, data: response as any };
-  } catch (e: any) {
-    return { success: false, error: { code: "EXPORT_FAILED", message: e.message || "导出报告失败" } };
+    return { success: true, data: response as unknown as Response };
+  } catch (e: unknown) {
+    return { success: false, error: { code: "EXPORT_FAILED", message: e instanceof Error ? e.message : "导出报告失败" } };
   }
 }
 
 function buildPayload(
   draftData: {
     context: Record<string, string>;
-    sections: Record<string, any[]>;
-    attachments: Record<string, any[]>;
+    sections: Record<string, BlockNoteBlock[]>;
+    attachments: Record<string, BlockNoteBlock[]>;
     sectionEnabled: Record<string, boolean>;
   },
   structure: ReportTemplateStructure
-): any {
+): Record<string, unknown> {
   const sections = structure.sections.map((secMeta) => {
     const blocks = draftData.sections[secMeta.id] || [];
     return {

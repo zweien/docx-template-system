@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const meta = await saveReportImage(buffer, file.name, id);
     return NextResponse.json({ success: true, data: { url: meta.urlPath } });
-  } catch (e: any) {
-    return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: e.message } }, { status: 500 });
+  } catch (e: unknown) {
+    return NextResponse.json({ error: { code: "INTERNAL_ERROR", message: e instanceof Error ? e.message : "Internal error" } }, { status: 500 });
   }
 }

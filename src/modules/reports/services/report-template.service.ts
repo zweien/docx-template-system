@@ -1,6 +1,5 @@
 import { db } from "@/lib/db";
 import { saveReportTemplateFile, deleteReportTemplateFile } from "@/lib/file.service";
-import type { ReportTemplateStructure } from "../types";
 
 type ServiceResult<T> =
   | { success: true; data: T }
@@ -8,7 +7,15 @@ type ServiceResult<T> =
 
 const REPORT_ENGINE_URL = process.env.REPORT_ENGINE_URL || "http://localhost:8066";
 
-export async function listReportTemplates(userId: string): Promise<ServiceResult<any[]>> {
+interface ReportTemplateListItem {
+  id: string;
+  name: string;
+  originalFilename: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export async function listReportTemplates(userId: string): Promise<ServiceResult<ReportTemplateListItem[]>> {
   try {
     const templates = await db.reportTemplate.findMany({
       where: { userId },
@@ -27,7 +34,7 @@ export async function listReportTemplates(userId: string): Promise<ServiceResult
 export async function createReportTemplate(
   userId: string,
   file: File
-): Promise<ServiceResult<any>> {
+): Promise<ServiceResult<Record<string, unknown>>> {
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const name = file.name.replace(/\.docx$/i, "");
@@ -66,8 +73,8 @@ export async function createReportTemplate(
         updatedAt: template.updatedAt,
       },
     };
-  } catch (e: any) {
-    return { success: false, error: { code: "CREATE_FAILED", message: e.message || "创建报告模板失败" } };
+  } catch (e: unknown) {
+    return { success: false, error: { code: "CREATE_FAILED", message: e instanceof Error ? e.message : "创建报告模板失败" } };
   }
 }
 

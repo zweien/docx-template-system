@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import type { ReportDraftDetail, ReportTemplateStructure } from "../types";
+import { convertBlocknoteToEngine } from "../converter/blocknote-to-engine";
 
 type ServiceResult<T> =
   | { success: true; data: T }
@@ -228,7 +229,9 @@ function buildPayload(
   structure: ReportTemplateStructure
 ): Record<string, unknown> {
   const sections = structure.sections.map((secMeta) => {
-    const blocks = draftData.sections[secMeta.id] || [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rawBlocks = (draftData.sections[secMeta.id] || []) as any[];
+    const blocks = convertBlocknoteToEngine(rawBlocks);
     return {
       id: secMeta.id,
       placeholder: secMeta.placeholder,

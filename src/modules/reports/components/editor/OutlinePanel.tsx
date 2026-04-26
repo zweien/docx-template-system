@@ -63,25 +63,21 @@ export function OutlinePanel({
   );
 
   if (headings.length === 0) {
-    return (
-      <aside className="w-48 border-l border-border bg-card p-3 overflow-y-auto">
-        <p className="text-xs text-muted-foreground">暂无标题</p>
-      </aside>
-    );
+    return <p className="px-3 pt-3 text-xs text-muted-foreground">暂无标题</p>;
   }
 
   return (
-    <aside className="w-48 border-l border-border bg-card overflow-y-auto flex flex-col">
+    <>
       <div className="px-3 pt-3 pb-2">
         <p className="text-xs font-medium text-muted-foreground">大纲</p>
       </div>
       <div className="flex-1 px-1 pb-3">
-        {headings.map((h) => {
+        {headings.map((h, idx) => {
           const isActive = h.sectionId === activeSection;
           const indent = Math.max(0, h.level - 1) * 12;
           return (
             <button
-              key={`${h.sectionId}-${h.id}`}
+              key={`${idx}-${h.sectionId}-${h.id}`}
               onClick={() => onNavigateHeading?.(h.sectionId, h.id)}
               className={`block w-full text-left px-2 py-1 rounded text-xs truncate transition-colors ${
                 isActive
@@ -96,6 +92,6 @@ export function OutlinePanel({
           );
         })}
       </div>
-    </aside>
+    </>
   );
 }

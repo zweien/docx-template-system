@@ -3,7 +3,9 @@ import pkg from "./package.json";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["node-cron"],
+  serverExternalPackages: [
+    "node-cron",
+  ],
   images: {
     unoptimized: true,
   },

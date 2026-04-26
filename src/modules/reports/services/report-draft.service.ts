@@ -1,0 +1,241 @@
+import { db } from "@/lib/db";
+import type { ReportTemplateStructure } from "../types";
+
+type ServiceResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: { code: string; message: string } };
+
+const REPORT_ENGINE_URL = process.env.REPORT_ENGINE_URL || "http://localhost:8066";
+
+function initDraftSections(structure: ReportTemplateStructure): Record<string, any[]> {
+  const sections: Record<string, any[]> = {};
+  for (const s of structure.sections) {
+    sections[s.id] = [];
+  }
+  return sections;
+}
+
+function initSectionEnabled(structure: ReportTemplateStructure): Record<string, boolean> {
+  const enabled: Record<string, boolean> = {};
+  for (const s of structure.sections) {
+    enabled[s.id] = true;
+  }
+  return enabled;
+}
+
+function initContext(structure: ReportTemplateStructure): Record<string, string> {
+  const ctx: Record<string, string> = {};
+  for (const v of structure.context_vars) {
+    ctx[v] = "";
+  }
+  return ctx;
+}
+
+export async function listReportDrafts(userId: string): Promise<ServiceResult<any[]>> {
+  try {
+    const drafts = await db.reportDraft.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true, title: true, status: true,
+        createdAt: true, updatedAt: true,
+        template: { select: { id: true, name: true } },
+      },
+    });
+    return {
+      success: true,
+      data: drafts.map((d) => ({
+        ...d,
+        templateId: d.template.id,
+        templateName: d.template.name,
+      })),
+    };
+  } catch {
+    return { success: false, error: { code: "LIST_FAILED", message: "获取报告草稿列表失败" } };
+  }
+}
+
+export async function getReportDraft(id: string, userId: string): Promise<ServiceResult<any>> {
+  try {
+    const draft = await db.reportDraft.findUnique({
+      where: { id },
+      include: {
+        template: {
+          select: { id: true, name: true, filePath: true, parsedStructure: true },
+        },
+      },
+    });
+    if (!draft || draft.userId !== userId) {
+      return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
+    }
+    return {
+      success: true,
+      data: {
+        id: draft.id,
+        title: draft.title,
+        templateId: draft.templateId,
+        template: draft.template,
+        context: draft.context as Record<string, string>,
+        sections: draft.sections as Record<string, any[]>,
+        attachments: draft.attachments as Record<string, any[]>,
+        sectionEnabled: draft.sectionEnabled as Record<string, boolean>,
+        status: draft.status,
+        createdAt: draft.createdAt,
+        updatedAt: draft.updatedAt,
+      },
+    };
+  } catch {
+    return { success: false, error: { code: "GET_FAILED", message: "获取报告草稿失败" } };
+  }
+}
+
+export async function createReportDraft(
+  userId: string,
+  templateId: string,
+  title?: string
+): Promise<ServiceResult<any>> {
+  try {
+    const template = await db.reportTemplate.findUnique({ where: { id: templateId } });
+    if (!template || template.userId !== userId) {
+      return { success: false, error: { code: "NOT_FOUND", message: "报告模板不存在" } };
+    }
+    const structure = template.parsedStructure as unknown as ReportTemplateStructure;
+    const draft = await db.reportDraft.create({
+      data: {
+        userId,
+        templateId,
+        title: title || "未命名报告",
+        context: initContext(structure),
+        sections: initDraftSections(structure),
+        sectionEnabled: initSectionEnabled(structure),
+      },
+    });
+    return { success: true, data: { id: draft.id, title: draft.title } };
+  } catch (e: any) {
+    return { success: false, error: { code: "CREATE_FAILED", message: e.message || "创建报告草稿失败" } };
+  }
+}
+
+export async function updateReportDraft(
+  id: string,
+  userId: string,
+  data: {
+    title?: string;
+    context?: Record<string, string>;
+    sections?: Record<string, any[]>;
+    attachments?: Record<string, any[]>;
+    sectionEnabled?: Record<string, boolean>;
+  }
+): Promise<ServiceResult<void>> {
+  try {
+    const draft = await db.reportDraft.findUnique({ where: { id } });
+    if (!draft || draft.userId !== userId) {
+      return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
+    }
+    await db.reportDraft.update({
+      where: { id },
+      data: {
+        ...(data.title !== undefined && { title: data.title }),
+        ...(data.context !== undefined && { context: data.context }),
+        ...(data.sections !== undefined && { sections: data.sections }),
+        ...(data.attachments !== undefined && { attachments: data.attachments }),
+        ...(data.sectionEnabled !== undefined && { sectionEnabled: data.sectionEnabled }),
+      },
+    });
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: { code: "UPDATE_FAILED", message: "更新报告草稿失败" } };
+  }
+}
+
+export async function deleteReportDraft(
+  id: string,
+  userId: string
+): Promise<ServiceResult<void>> {
+  try {
+    const draft = await db.reportDraft.findUnique({ where: { id } });
+    if (!draft || draft.userId !== userId) {
+      return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
+    }
+    await db.reportDraft.delete({ where: { id } });
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: { code: "DELETE_FAILED", message: "删除报告草稿失败" } };
+  }
+}
+
+export async function exportReportDraft(
+  id: string,
+  userId: string
+): Promise<ServiceResult<Response>> {
+  try {
+    const draft = await db.reportDraft.findUnique({
+      where: { id },
+      include: { template: true },
+    });
+    if (!draft || draft.userId !== userId) {
+      return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
+    }
+
+    const structure = draft.template.parsedStructure as unknown as ReportTemplateStructure;
+    const payload = buildPayload(
+      {
+        context: draft.context as Record<string, string>,
+        sections: draft.sections as Record<string, any[]>,
+        attachments: draft.attachments as Record<string, any[]>,
+        sectionEnabled: draft.sectionEnabled as Record<string, boolean>,
+      },
+      structure
+    );
+
+    const response = await fetch(`${REPORT_ENGINE_URL}/render`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        template_path: draft.template.filePath,
+        payload,
+        output_filename: `${draft.title}.docx`,
+      }),
+    });
+
+    if (!response.ok) {
+      const err = await response.text();
+      return { success: false, error: { code: "EXPORT_FAILED", message: err } };
+    }
+
+    return { success: true, data: response as any };
+  } catch (e: any) {
+    return { success: false, error: { code: "EXPORT_FAILED", message: e.message || "导出报告失败" } };
+  }
+}
+
+function buildPayload(
+  draftData: {
+    context: Record<string, string>;
+    sections: Record<string, any[]>;
+    attachments: Record<string, any[]>;
+    sectionEnabled: Record<string, boolean>;
+  },
+  structure: ReportTemplateStructure
+): any {
+  const sections = structure.sections.map((secMeta) => {
+    const blocks = draftData.sections[secMeta.id] || [];
+    return {
+      id: secMeta.id,
+      placeholder: secMeta.placeholder,
+      flag_name: secMeta.flag_name,
+      enabled: draftData.sectionEnabled[secMeta.id] ?? true,
+      blocks,
+    };
+  });
+
+  return {
+    context: draftData.context,
+    sections,
+    attachments: [],
+    attachments_bundle: structure.attachments_bundle
+      ? { enabled: true, ...structure.attachments_bundle }
+      : null,
+    style_map: {},
+  };
+}

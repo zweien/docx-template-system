@@ -156,3 +156,30 @@ export function resolveStoredFilePath(storagePath: string): string {
 
   return storagePath;
 }
+
+export async function saveReportTemplateFile(
+  buffer: Buffer,
+  originalName: string,
+  id: string
+): Promise<FilePathMeta> {
+  const targetDir = join(process.cwd(), UPLOAD_DIR, "report-templates");
+  return saveFileToDirectory(buffer, targetDir, "report-templates", id, {
+    extension: "docx",
+  });
+}
+
+export async function saveReportImage(
+  buffer: Buffer,
+  originalName: string,
+  id: string
+): Promise<FilePathMeta> {
+  const targetDir = join(process.cwd(), UPLOAD_DIR, "reports", "images");
+  const ext = originalName.split(".").pop() || "png";
+  return saveFileToDirectory(buffer, targetDir, "reports/images", id, {
+    extension: ext,
+  });
+}
+
+export async function deleteReportTemplateFile(filePath: string): Promise<void> {
+  await deleteFile(filePath);
+}

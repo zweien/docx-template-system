@@ -55,6 +55,8 @@ export function convertBlocknoteToEngine(blocks: BlockLike[]): EngineBlock[] {
               text: seg.text || "",
               ...(seg.styles?.bold && { bold: true }),
               ...(seg.styles?.italic && { italic: true }),
+              ...(seg.styles?.subscript && { sub: true }),
+              ...(seg.styles?.superscript && { sup: true }),
             })),
           });
         } else {
@@ -116,7 +118,7 @@ export function convertBlocknoteToEngine(blocks: BlockLike[]): EngineBlock[] {
         if (lang === "mermaid") {
           result.push({ type: "mermaid", code });
         } else {
-          result.push({ type: "code_block", code });
+          result.push({ type: "code_block", code, language: lang });
         }
         break;
       }
@@ -138,14 +140,15 @@ export function convertBlocknoteToEngine(blocks: BlockLike[]): EngineBlock[] {
         break;
 
       case "checkListItem": {
-        const items: string[] = [];
-        const checked: boolean[] = [];
+        const items: { text: string; checked: boolean }[] = [];
         while (i < blocks.length && blocks[i]?.type === "checkListItem") {
-          items.push(extractText(blocks[i].content));
-          checked.push(!!blocks[i].props?.checked);
+          items.push({
+            text: extractText(blocks[i].content),
+            checked: !!blocks[i].props?.checked,
+          });
           i++;
         }
-        result.push({ type: "checklist", items, checked });
+        result.push({ type: "checklist", items });
         continue;
       }
     }

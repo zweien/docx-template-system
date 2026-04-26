@@ -18,10 +18,7 @@ export default function ReportEditorPage() {
 
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadDraft(params.id).finally(() => setLoading(false));
-  }, [params.id, loadDraft]);
+  const [scrollTargetBlockId, setScrollTargetBlockId] = useState<string | undefined>();
 
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -30,6 +27,33 @@ export default function ReportEditorPage() {
       if (isDirty) doSave();
     }, 3000);
   }, []);
+
+  const handleNavigateHeading = useCallback((sectionId: string, blockId: string) => {
+    if (sectionId !== activeSection) setActiveSection(sectionId);
+    setScrollTargetBlockId(blockId);
+  }, [activeSection, setActiveSection]);
+
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const handleImportPayload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const payload = JSON.parse(reader.result as string);
+        useReportDraftStore.getState().importPayload(payload);
+        scheduleAutoSave();
+      } catch {
+        alert("无效的 JSON 文件");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }, [scheduleAutoSave]);
+
+  useEffect(() => {
+    loadDraft(params.id).finally(() => setLoading(false));
+  }, [params.id, loadDraft]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -116,12 +140,14 @@ export default function ReportEditorPage() {
           blocks={currentBlocks as any[]}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onChange={(blocks: any[]) => { updateSection(activeSection, blocks); scheduleAutoSave(); }}
+          scrollToBlockId={scrollTargetBlockId}
+          onScrolled={() => setScrollTargetBlockId(undefined)}
         />
       </div>
 
       {/* 右侧：大纲面板 */}
       <div className="w-48 shrink-0 border-l border-border bg-card overflow-y-auto">
-        <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} />
+        <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} activeSection={activeSection} onNavigateHeading={handleNavigateHeading} />
       </div>
 
       {/* 底部操作栏 */}
@@ -129,6 +155,8 @@ export default function ReportEditorPage() {
            style={{ left: "var(--sidebar-width, 16rem)" }}>
         <button onClick={() => router.push("/reports/drafts")} className="rounded border border-border px-4 py-1.5 text-sm hover:bg-muted">返回</button>
         <button onClick={save} className="rounded border border-border px-4 py-1.5 text-sm hover:bg-muted">保存</button>
+        <button onClick={() => importInputRef.current?.click()} className="rounded border border-border px-4 py-1.5 text-sm hover:bg-muted">导入 Payload</button>
+        <input ref={importInputRef} type="file" accept=".json" onChange={handleImportPayload} className="hidden" />
         <button onClick={exportDocx} className="rounded bg-primary px-4 py-1.5 text-sm text-primary-foreground hover:bg-primary/90">导出 .docx</button>
       </div>
     </div>

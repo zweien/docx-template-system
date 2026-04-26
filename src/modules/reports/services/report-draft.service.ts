@@ -13,7 +13,26 @@ type BlockNoteBlock = Record<string, unknown>;
 function initDraftSections(structure: ReportTemplateStructure): Record<string, BlockNoteBlock[]> {
   const sections: Record<string, BlockNoteBlock[]> = {};
   for (const s of structure.sections) {
-    sections[s.id] = [];
+    const th = s.template_headings;
+    if (th && th.length > 0) {
+      sections[s.id] = th.map((h, idx) => ({
+        id: `heading-${s.id}-${idx}`,
+        type: "heading",
+        props: { level: h.level },
+        content: [{ type: "text", text: h.text }],
+        children: [],
+      }));
+    } else {
+      sections[s.id] = [
+        {
+          id: `heading-${s.id}`,
+          type: "heading",
+          props: { level: 1 },
+          content: [{ type: "text", text: s.title || s.id }],
+          children: [],
+        },
+      ];
+    }
   }
   return sections;
 }
@@ -219,6 +238,22 @@ export async function exportReportDraft(
   }
 }
 
+function stripTemplateHeadings(
+  blocks: { type: string }[],
+  secMeta: { template_headings?: { text: string; level: number }[] }
+): { type: string }[] {
+  const th = secMeta.template_headings;
+  if (!th || th.length === 0) return blocks;
+  const n = th.length;
+  let headingCount = 0;
+  for (const b of blocks) {
+    if (b.type === "heading") headingCount++;
+    else break;
+  }
+  if (headingCount >= n) return blocks.slice(n);
+  return blocks;
+}
+
 function buildPayload(
   draftData: {
     context: Record<string, string>;
@@ -232,12 +267,13 @@ function buildPayload(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawBlocks = (draftData.sections[secMeta.id] || []) as any[];
     const blocks = convertBlocknoteToEngine(rawBlocks);
+    const stripped = stripTemplateHeadings(blocks, secMeta);
     return {
       id: secMeta.id,
       placeholder: secMeta.placeholder,
       flag_name: secMeta.flag_name,
       enabled: draftData.sectionEnabled[secMeta.id] ?? true,
-      blocks,
+      blocks: stripped,
     };
   });
 

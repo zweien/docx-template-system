@@ -7,8 +7,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from src.report_engine.renderer import render_report
-from src.report_engine.template_parser import parse_template
+import sys
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+from report_engine.renderer import render_report
+from report_engine.template_parser import parse_template
 
 app = FastAPI(title="Report Engine", version="1.0.0")
 

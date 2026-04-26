@@ -64,8 +64,6 @@ export function engineToBlocknoteBlocks(
             styles: {
               ...(seg.bold ? { bold: true } : {}),
               ...(seg.italic ? { italic: true } : {}),
-              ...(seg.sub ? { subscript: true } : {}),
-              ...(seg.sup ? { superscript: true } : {}),
             },
           })),
         }));
@@ -243,7 +241,13 @@ export function payloadToDraftSections(
   if (payload.sections) {
     for (const sec of payload.sections) {
       if (sec.id in result) {
-        result[sec.id] = engineToBlocknoteBlocks(sec.blocks || []);
+        // Preserve template headings (blocks with id like "heading-{sectionId}-{idx}")
+        const prefix = `heading-${sec.id}`;
+        const templateHeadings = (result[sec.id] || []).filter(
+          (b) => typeof b.id === "string" && b.id.startsWith(prefix)
+        );
+        const converted = engineToBlocknoteBlocks(sec.blocks || []);
+        result[sec.id] = [...templateHeadings, ...converted];
       }
     }
   }

@@ -62,6 +62,7 @@ export function Sidebar() {
   const role = session?.user?.role as Role | undefined;
   const navItems = filterNavItemsByRole(NAV_ITEMS, role);
   const mainItems = navItems.filter((item) => item.section === "main");
+  const reportItems = navItems.filter((item) => item.section === "reports");
   const adminItems = navItems.filter((item) => item.section === "admin");
 
   return (
@@ -91,6 +92,21 @@ export function Sidebar() {
             <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
           ))}
         </div>
+
+        {reportItems.length > 0 ? (
+          <div className="mt-6 border-t border-[rgb(255_255_255_/_0.05)] pt-4">
+            {!collapsed ? (
+              <p className="mb-2 px-3 text-xs font-[510] uppercase tracking-wider text-[#62666d]">
+                报告撰写
+              </p>
+            ) : null}
+            <div className="space-y-1.5">
+              {reportItems.map((item) => (
+                <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {adminItems.length > 0 ? (
           <div className="mt-6 border-t border-[rgb(255_255_255_/_0.05)] pt-4">

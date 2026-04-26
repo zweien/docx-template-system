@@ -12,7 +12,8 @@
     "test:coverage": "vitest run --coverage",
     "release": "commit-and-tag-version",
     "release:minor": "commit-and-tag-version --release-as minor",
-    "release:major": "commit-and-tag-version --release-as major"
+    "release:major": "commit-and-tag-version --release-as major",
+    "dev:collab": "node y-websocket-server/server.mjs"
   },
   "dependencies": {
     "@ai-sdk/mcp": "^1.0.35",

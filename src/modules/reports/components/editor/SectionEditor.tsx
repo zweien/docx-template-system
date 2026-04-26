@@ -6,6 +6,8 @@ import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blockno
 import "@blocknote/shadcn/style.css";
 import "@blocknote/xl-ai/style.css";
 import { useCallback, useEffect, useRef } from "react";
+import * as Y from "yjs";
+import type { WebsocketProvider } from "y-websocket";
 import { useTheme } from "@/components/theme/theme-provider";
 import { DefaultChatTransport } from "ai";
 import {
@@ -22,12 +24,15 @@ import {
   type BlockNoteBlock,
 } from "@/modules/reports/converter/engine-to-blocknote";
 import { reportSchema } from "@/modules/reports/schema/blocknote-schema";
+import { useSession } from "next-auth/react";
 
 interface SectionEditorProps {
   blocks: EngineBlock[];
   onChange: (blocks: BlockNoteBlock[]) => void;
   scrollToBlockId?: string;
   onScrolled?: () => void;
+  collabFragment?: Y.XmlFragment | null;
+  collabProvider?: WebsocketProvider | null;
 }
 
 function isBlockNoteBlocks(blocks: EngineBlock[]): boolean {
@@ -110,8 +115,9 @@ function AIToolbarButtonSafe({ editor }: { editor: any }) {
   return <AIToolbarButton />;
 }
 
-export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }: SectionEditorProps) {
+export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, collabFragment, collabProvider }: SectionEditorProps) {
   const { resolvedTheme } = useTheme();
+  const { data: session } = useSession();
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -140,6 +146,17 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
     extensions: [
       AIExtension({ transport: aiTransport }),
     ],
+    ...(collabFragment && collabProvider ? {
+      collaboration: {
+        fragment: collabFragment,
+        provider: collabProvider,
+        user: {
+          name: session?.user?.name || "Anonymous",
+          color: "#f97316",
+        },
+        showCursorLabels: "activity" as const,
+      },
+    } : {}),
     uploadFile: async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
@@ -157,6 +174,8 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
   useEffect(() => {
     if (blocksLoadedRef.current) return;
     blocksLoadedRef.current = true;
+    // In collaborative mode, blocks come from Yjs fragment, not props
+    if (collabFragment) return;
     const prepared = prepareBlocks(blocks);
     if (prepared.length > 0) {
       try {
@@ -165,6 +184,18 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
       } catch {}
     }
   }, [editor]);
+
+  // Sync initial blocks into Yjs fragment when entering collaborative mode
+  useEffect(() => {
+    if (!collabFragment || !editor) return;
+    // Only sync if the fragment is empty (first time entering collaborative mode)
+    if (collabFragment.length > 0) return;
+    const prepared = prepareBlocks(blocks);
+    if (prepared.length === 0) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { blocksToYXmlFragment } = require("@blocknote/core/yjs") as any;
+    blocksToYXmlFragment(editor, prepared, collabFragment);
+  }, [collabFragment, editor, blocks]);
 
   const lastDocJsonRef = useRef<string>("");
   const handleEditorChange = useCallback(() => {

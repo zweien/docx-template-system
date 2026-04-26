@@ -62,13 +62,34 @@ function migrateMermaidBlocks(blocks: BlockLike[]): BlockLike[] {
   });
 }
 
+const UNSUPPORTED_STYLES = new Set(["subscript", "superscript"]);
+
+function sanitizeStyles(blocks: BlockLike[]): BlockLike[] {
+  return blocks.map((block) => {
+    if (!block.content || !Array.isArray(block.content)) return block;
+    const content = block.content.map((seg) => {
+      if (typeof seg !== "object" || seg === null || !("styles" in seg)) return seg;
+      const styles = (seg as Record<string, unknown>).styles as Record<string, unknown>;
+      if (!styles) return seg;
+      const cleaned = { ...styles };
+      let changed = false;
+      for (const key of UNSUPPORTED_STYLES) {
+        if (key in cleaned) { delete cleaned[key]; changed = true; }
+      }
+      if (!changed) return seg;
+      return { ...seg, styles: cleaned };
+    });
+    return { ...block, content };
+  });
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function prepareBlocks(blocks: any[]): BlockLike[] {
   if (blocks.length === 0) return [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const raw = isBlockNoteBlocks(blocks) ? blocks : engineToBlocknoteBlocks(blocks as any);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return migrateMermaidBlocks(raw as any[]).filter((b) => {
+  return sanitizeStyles(migrateMermaidBlocks(raw as any[])).filter((b) => {
     if (b.type === "image" && !b.props?.url) return false;
     return true;
   });
@@ -97,7 +118,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
         body: formData,
       });
       const json = await res.json();
-      return json.url;
+      return json.data?.url || json.url;
     },
   });
 
@@ -115,11 +136,16 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
     }
   }, [editor]);
 
+  const lastDocJsonRef = useRef<string>("");
   const handleEditorChange = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      onChangeRef.current(editor.document);
-    }, 100);
+      const json = JSON.stringify(editor.document);
+      if (json !== lastDocJsonRef.current) {
+        lastDocJsonRef.current = json;
+        onChangeRef.current(editor.document);
+      }
+    }, 300);
   }, [editor]);
 
   // Scroll to a specific block after editor mounts
@@ -200,6 +226,82 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled }:
     },
     [editor],
   );
+
+  // Prevent popover close while a form popover (caption/rename) is open.
+  // BlockNote's FileCaptionButton/FileNameButton call updateBlock on each keystroke,
+  // which triggers ProseMirror transaction → React re-render → popover unmounts.
+  // Fix: intercept updateBlock to suppress the transaction, and override the input's
+  // value setter to prevent React from resetting the native value during re-renders.
+  // When the popover closes, flush the last updateBlock to persist the data.
+  useEffect(() => {
+    const getPopoverInput = () =>
+      document.querySelector(".bn-popover-content.bn-form-popover input") as HTMLInputElement | null;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const origUpdateBlock = (editor as any).updateBlock.bind(editor);
+    let popoverActive = false;
+    let pendingBlockId = "";
+    let pendingProps: Record<string, unknown> = {};
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (editor as any).updateBlock = function (blockId: string, partial: any) {
+      const popover = document.querySelector(".bn-popover-content.bn-form-popover");
+      if (popover && partial.props) {
+        const val = partial.props.caption ?? partial.props.name;
+        if (val !== undefined) {
+          popoverActive = true;
+          pendingBlockId = blockId;
+          pendingProps = partial.props;
+          return;
+        }
+      }
+      origUpdateBlock(blockId, partial);
+    };
+
+    // Watch for popover — override input value setter to prevent React from
+    // resetting the user's typed text during controlled-component re-renders.
+    const valueDescriptor = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!;
+    const guardedInputs = new WeakSet<HTMLInputElement>();
+    const observer = new MutationObserver(() => {
+      const popover = document.querySelector(".bn-popover-content.bn-form-popover");
+      const input = getPopoverInput();
+
+      if (popover && input && !guardedInputs.has(input)) {
+        popoverActive = true;
+        guardedInputs.add(input);
+        Object.defineProperty(input, "value", {
+          get() {
+            return valueDescriptor.get!.call(this);
+          },
+          set(val: string) {
+            if (!popoverActive) {
+              valueDescriptor.set!.call(this, val);
+            }
+            // When popoverActive, ignore React's value reset — let the native
+            // value persist so the user sees what they type.
+          },
+          configurable: true,
+        });
+      }
+
+      // When popover closes, flush the pending updateBlock
+      if (!popover && popoverActive) {
+        popoverActive = false;
+        if (pendingBlockId) {
+          origUpdateBlock(pendingBlockId, { props: pendingProps });
+          pendingBlockId = "";
+          pendingProps = {};
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    return () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (editor as any).updateBlock = origUpdateBlock;
+      observer.disconnect();
+    };
+  }, [editor]);
 
   return (
     <div className="min-h-[400px]">

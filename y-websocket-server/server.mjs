@@ -32,7 +32,6 @@ import * as decoding from "lib0/decoding";
 
 // -- y-leveldb persistence --
 import { LeveldbPersistence } from "y-leveldb";
-import * as Y from "yjs";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -111,7 +110,8 @@ const docs = new Map();
 const awarenessMap = new Map();
 
 /**
- * Map<ws, { roomName, userId, awarenessClientId }> — metadata per connection.
+ * Map<ws, { roomName, userId, awarenessClientId? }> — metadata per connection.
+ * awarenessClientId is populated when the client first sends an awareness update.
  */
 const connMeta = new Map();
 
@@ -128,18 +128,6 @@ function broadcast(roomName, message, exclude = null) {
       conn.send(buf);
     }
   }
-}
-
-/**
- * Deterministically generate a color from a string.
- */
-function stringToColor(str) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 70%, 50%)`;
 }
 
 // ---------------------------------------------------------------------------
@@ -291,15 +279,9 @@ async function handleConnection(ws, req) {
   const conns = rooms.get(roomName);
   conns.add(ws);
 
-  // Set awareness local state for this client
-  const awarenessClientId = Math.floor(Math.random() * 2 ** 32);
-  awareness.setLocalStateField("user", {
-    name: user.name || user.email || "Anonymous",
-    color: stringToColor(userId),
-  });
-
   // Store connection metadata
-  connMeta.set(ws, { roomName, userId, awarenessClientId });
+  // awarenessClientId is populated when the client first sends an awareness update
+  connMeta.set(ws, { roomName, userId });
 
   console.log(
     `[room=${roomName}] Client connected: userId=${userId}, clients=${conns.size}`
@@ -327,11 +309,17 @@ async function handleConnection(ws, req) {
         }
         case WS_MSG_AWARENESS: {
           // Awareness update from client
-          applyAwarenessUpdate(
-            awareness,
-            decoding.readVarUint8Array(decoder),
-            ws
-          );
+          const update = decoding.readVarUint8Array(decoder);
+          // Extract clientID from awareness update (first 4 bytes are clientID)
+          const clientID = new DataView(
+            update.buffer,
+            update.byteOffset
+          ).getUint32(0, true);
+          const meta = connMeta.get(ws);
+          if (meta && !meta.awarenessClientId) {
+            meta.awarenessClientId = clientID;
+          }
+          applyAwarenessUpdate(awareness, update, ws);
           break;
         }
         case WS_MSG_AUTH: {
@@ -359,7 +347,7 @@ async function handleConnection(ws, req) {
     const meta = connMeta.get(ws);
     if (!meta) return;
 
-    const { roomName: rName, awarenessClientId: cid } = meta;
+    const { roomName: rName } = meta;
     const roomConns = rooms.get(rName);
     if (roomConns) {
       roomConns.delete(ws);
@@ -368,7 +356,9 @@ async function handleConnection(ws, req) {
       );
 
       // Remove awareness state for disconnected client
-      removeAwarenessStates(awareness, [cid]);
+      if (meta.awarenessClientId) {
+        removeAwarenessStates(awareness, [meta.awarenessClientId]);
+      }
 
       // Clean up empty rooms
       if (roomConns.size === 0) {

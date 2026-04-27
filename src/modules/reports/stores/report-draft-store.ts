@@ -44,6 +44,7 @@ interface ReportDraftStore {
   exportDocx: () => Promise<void>;
   importPayload: (payload: Payload) => void;
   setCollaboratorIds: (ids: string[]) => void;
+  setCollaborators: (users: { id: string; name: string; email: string }[]) => void;
 }
 
 export const useReportDraftStore = create<ReportDraftStore>((set, get) => ({
@@ -167,4 +168,12 @@ export const useReportDraftStore = create<ReportDraftStore>((set, get) => ({
   },
 
   setCollaboratorIds: (ids) => set({ collaboratorIds: ids }),
+  setCollaborators: (users) => {
+    const { draft } = get();
+    if (!draft) return;
+    set({
+      collaboratorIds: users.map((u) => u.id),
+      draft: { ...draft, collaboratorIds: users.map((u) => u.id), collaborators: users },
+    });
+  },
 }));

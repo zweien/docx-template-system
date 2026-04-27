@@ -14,7 +14,7 @@ interface ShareDialogProps {
   onClose: () => void;
   collaboratorIds: string[];
   collaborators: UserItem[];
-  onCollaboratorsChange: (ids: string[]) => void;
+  onCollaboratorsChange: (users: UserItem[]) => void;
 }
 
 export function ShareDialog({
@@ -91,7 +91,7 @@ export function ShareDialog({
         setError(data.error || "添加失败");
         return;
       }
-      onCollaboratorsChange(data.collaboratorIds);
+      onCollaboratorsChange(data.collaborators);
     } catch {
       setError("网络错误");
     } finally {
@@ -108,7 +108,7 @@ export function ShareDialog({
       });
       const data = await res.json();
       if (!res.ok) return;
-      onCollaboratorsChange(data.collaboratorIds);
+      onCollaboratorsChange(data.collaborators);
     } catch {
       // silent
     }

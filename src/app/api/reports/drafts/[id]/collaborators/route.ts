@@ -20,7 +20,7 @@ export async function POST(
     const status = result.error.code === "NOT_FOUND" ? 404 : 409;
     return NextResponse.json({ error: result.error.message }, { status });
   }
-  return NextResponse.json({ collaboratorIds: result.data });
+  return NextResponse.json({ collaborators: result.data });
 }
 
 export async function DELETE(
@@ -37,5 +37,5 @@ export async function DELETE(
   if (!result.success) {
     return NextResponse.json({ error: result.error.message }, { status: 404 });
   }
-  return NextResponse.json({ collaboratorIds: result.data });
+  return NextResponse.json({ collaborators: result.data });
 }

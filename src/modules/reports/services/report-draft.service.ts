@@ -196,7 +196,7 @@ export async function addCollaborator(
   draftId: string,
   userId: string,
   collaboratorUserId: string,
-): Promise<ServiceResult<string[]>> {
+): Promise<ServiceResult<{ id: string; name: string; email: string }[]>> {
   const draft = await db.reportDraft.findUnique({ where: { id: draftId } });
   if (!draft || draft.userId !== userId) {
     return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
@@ -205,29 +205,37 @@ export async function addCollaborator(
   if (ids.includes(collaboratorUserId)) {
     return { success: false, error: { code: "ALREADY_EXISTS", message: "该用户已是协作者" } };
   }
-  const updated = [...ids, collaboratorUserId];
+  const updatedIds = [...ids, collaboratorUserId];
   await db.reportDraft.update({
     where: { id: draftId },
-    data: { collaboratorIds: updated },
+    data: { collaboratorIds: updatedIds },
   });
-  return { success: true, data: updated };
+  const users = await db.user.findMany({
+    where: { id: { in: updatedIds } },
+    select: { id: true, name: true, email: true },
+  });
+  return { success: true, data: users };
 }
 
 export async function removeCollaborator(
   draftId: string,
   userId: string,
   collaboratorUserId: string,
-): Promise<ServiceResult<string[]>> {
+): Promise<ServiceResult<{ id: string; name: string; email: string }[]>> {
   const draft = await db.reportDraft.findUnique({ where: { id: draftId } });
   if (!draft || draft.userId !== userId) {
     return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
   }
-  const updated = ((draft.collaboratorIds || []) as string[]).filter((id) => id !== collaboratorUserId);
+  const updatedIds = ((draft.collaboratorIds || []) as string[]).filter((id) => id !== collaboratorUserId);
   await db.reportDraft.update({
     where: { id: draftId },
-    data: { collaboratorIds: updated },
+    data: { collaboratorIds: updatedIds },
   });
-  return { success: true, data: updated };
+  const users = await db.user.findMany({
+    where: { id: { in: updatedIds } },
+    select: { id: true, name: true, email: true },
+  });
+  return { success: true, data: users };
 }
 
 export async function deleteReportDraft(

@@ -17,7 +17,7 @@ function EditorContent() {
     draft, activeSection, saveStatus, collaboratorIds,
     setActiveSection, updateSection,
     updateContext, updateTitle, toggleSection, save, exportDocx,
-    setCollaboratorIds,
+    setCollaborators,
   } = useReportDraftStore();
 
   const collaborators = draft?.collaborators || [];
@@ -219,7 +219,7 @@ function EditorContent() {
         onClose={() => setShareOpen(false)}
         collaboratorIds={collaboratorIds}
         collaborators={collaborators}
-        onCollaboratorsChange={setCollaboratorIds}
+        onCollaboratorsChange={setCollaborators}
       />
     </div>
   );

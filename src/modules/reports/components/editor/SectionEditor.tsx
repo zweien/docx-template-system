@@ -142,7 +142,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
 
   const editor = useCreateBlockNote({
     schema: reportSchema,
-    dictionary: { ...coreDictionary, aiDictionary },
+    dictionary: { ...coreDictionary, ai: aiDictionary },
     extensions: [
       AIExtension({ transport: aiTransport }),
     ],

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import base64
 import logging
+import os
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
+from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_LINE_SPACING
@@ -43,6 +45,48 @@ class BlockRenderError(ValueError):
     pass
 
 
+def _resolve_image_path(path: str) -> Optional[Path]:
+    """将图片路径解析为本地文件系统路径。
+
+    支持三种路径格式：
+    1. HTTP/HTTPS URL：下载到临时文件
+    2. Web 相对路径（如 /uploads/...）：通过 PUBLIC_DIR 环境变量映射到本地
+    3. 本地绝对/相对路径：直接使用
+    """
+    parsed = urlparse(path)
+    if parsed.scheme in ("http", "https"):
+        try:
+            suffix = Path(parsed.path).suffix or ".tmp"
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp.write(urlopen(path, timeout=30).read())
+                return Path(tmp.name)
+        except Exception as e:
+            logger.warning("Failed to download image %s: %s", path, e)
+            return None
+
+    p = Path(path)
+    if p.exists():
+        return p
+
+    # Web 相对路径：尝试通过 PUBLIC_DIR 映射
+    if path.startswith("/"):
+        public_dir = os.environ.get("PUBLIC_DIR")
+        if public_dir:
+            resolved = Path(public_dir) / path.lstrip("/")
+            if resolved.exists():
+                return resolved
+        # 尝试从 report-engine 所在位置推断 public 目录
+        # blocks.py -> report_engine -> src -> report-engine -> project-root
+        engine_dir = Path(__file__).resolve().parent.parent.parent.parent
+        inferred_public = engine_dir / "public"
+        if inferred_public.exists():
+            resolved = inferred_public / path.lstrip("/")
+            if resolved.exists():
+                return resolved
+
+    return None
+
+
 class BlockRegistry:
     def __init__(self) -> None:
         self._renderers: Dict[str, Callable[..., None]] = {}
@@ -64,7 +108,11 @@ def _get_style_name(doc: Any, preferred: str, fallback: str) -> str:
     except AttributeError:
         # doc 可能是 _Cell 等不支持 styles 的对象
         return fallback
-    return preferred if preferred in style_names else fallback
+    if preferred in style_names:
+        return preferred
+    if fallback in style_names:
+        return fallback
+    return "Normal"
 
 
 def _set_table_borders(table: Any) -> None:
@@ -333,21 +381,33 @@ def add_three_line_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[
 
 
 def add_image_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
-    image_path = Path(block["path"])
+    raw_path = block["path"]
+    image_path = _resolve_image_path(raw_path)
+    is_temp = image_path is not None and raw_path.startswith(("http://", "https://"))
 
     figure_style = _get_style_name(doc, style_map["figure_paragraph"], style_map["body"])
     p = doc.add_paragraph(style=figure_style)
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    if image_path.exists():
+    if image_path and image_path.exists():
         run = p.add_run()
         width_cm = block.get("width_cm")
-        if width_cm is not None:
-            run.add_picture(str(image_path), width=Cm(float(width_cm)))
-        else:
-            run.add_picture(str(image_path))
+        try:
+            if width_cm is not None:
+                run.add_picture(str(image_path), width=Cm(float(width_cm)))
+            else:
+                run.add_picture(str(image_path))
+        except Exception as e:
+            logger.warning("Failed to insert image %s: %s", raw_path, e)
+            p.add_run(f"[图片插入失败：{raw_path}]")
+        finally:
+            if is_temp:
+                try:
+                    image_path.unlink()
+                except OSError:
+                    pass
     else:
-        p.add_run(f"[图片缺失：{image_path}]")
+        p.add_run(f"[图片缺失：{raw_path}]")
 
     if block.get("caption"):
         caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
@@ -432,16 +492,28 @@ def add_two_images_row_block(doc: Any, block: Dict[str, Any], style_map: Dict[st
         p.style = doc.styles[figure_style_name]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        image_path = Path(img["path"])
-        if image_path.exists():
+        raw_path = img["path"]
+        image_path = _resolve_image_path(raw_path)
+        is_temp = image_path is not None and raw_path.startswith(("http://", "https://"))
+        if image_path and image_path.exists():
             run = p.add_run()
             width_cm = img.get("width_cm")
-            if width_cm is not None:
-                run.add_picture(str(image_path), width=Cm(float(width_cm)))
-            else:
-                run.add_picture(str(image_path))
+            try:
+                if width_cm is not None:
+                    run.add_picture(str(image_path), width=Cm(float(width_cm)))
+                else:
+                    run.add_picture(str(image_path))
+            except Exception as e:
+                logger.warning("Failed to insert image %s: %s", raw_path, e)
+                p.add_run(f"[图片插入失败：{raw_path}]")
+            finally:
+                if is_temp:
+                    try:
+                        image_path.unlink()
+                    except OSError:
+                        pass
         else:
-            p.add_run(f"[图片缺失：{image_path}]")
+            p.add_run(f"[图片缺失：{raw_path}]")
 
         if img.get("caption"):
             cp = cell.add_paragraph(str(img["caption"]))

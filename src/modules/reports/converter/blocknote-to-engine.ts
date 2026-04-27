@@ -12,8 +12,15 @@ function extractText(content: unknown): string {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {
     return content
-      .filter((s): s is ContentSegment => typeof s === "object" && s !== null && "text" in s)
-      .map((s) => s.text || "")
+      .map((s) => {
+        if (typeof s !== "object" || s === null) return "";
+        if ("text" in s) return String((s as ContentSegment).text || "");
+        // BlockNote link segment: { type: "link", href: "...", content: [...] }
+        if ("content" in s && Array.isArray((s as Record<string, unknown>).content)) {
+          return extractText((s as Record<string, unknown>).content);
+        }
+        return "";
+      })
       .join("");
   }
   return "";

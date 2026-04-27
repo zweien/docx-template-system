@@ -170,12 +170,46 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
   });
 
   // Load content after mount via replaceBlocks so errors can be caught.
-  // In collab mode, page.tsx remounts editor when synced becomes true, so
-  // this also seeds an empty fragment with initial blocks.
+  // In collab mode: wait until the Yjs provider has synced so we know whether
+  // the server already holds content. Seed only when the fragment is empty,
+  // otherwise the collaboration plugin loads remote content automatically.
   const blocksLoadedRef = useRef(false);
   useEffect(() => {
     if (blocksLoadedRef.current) return;
     blocksLoadedRef.current = true;
+
+    if (collabFragment && collabProvider) {
+      const seedIfEmpty = () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const isEmpty = collabFragment.length === 0;
+        if (!isEmpty) return;
+        const prepared = prepareBlocks(blocks);
+        if (prepared.length > 0) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (editor as any).replaceBlocks(editor.document, prepared);
+          } catch (err) {
+            console.error("[SectionEditor] collab seed error:", err);
+          }
+        }
+      };
+
+      if (collabProvider.synced) {
+        // Already synced — seed on next tick so BlockNote collaboration plugin
+        // has finished its initial ProseMirror document setup.
+        setTimeout(seedIfEmpty, 0);
+      } else {
+        const onSync = (isSynced: boolean) => {
+          if (isSynced) {
+            collabProvider.off("sync", onSync);
+            seedIfEmpty();
+          }
+        };
+        collabProvider.on("sync", onSync);
+      }
+      return;
+    }
+
     const prepared = prepareBlocks(blocks);
     if (prepared.length > 0) {
       try {
@@ -184,7 +218,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
       } catch {}
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editor]);
+  }, [editor, collabFragment, collabProvider]);
 
   const lastDocJsonRef = useRef<string>("");
   const handleEditorChange = useCallback(() => {

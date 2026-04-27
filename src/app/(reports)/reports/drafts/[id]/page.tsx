@@ -13,6 +13,18 @@ import type { ReportTemplateStructure } from "@/modules/reports/types";
 
 function EditorContent() {
   const router = useRouter();
+
+  // Diagnostic: capture RangeError stack to pinpoint the source
+  useEffect(() => {
+    const handler = (event: ErrorEvent) => {
+      const err = event.error;
+      if (err instanceof RangeError) {
+        console.error("[DIAGNOSTIC] RangeError captured:", err.message, err.stack);
+      }
+    };
+    window.addEventListener("error", handler);
+    return () => window.removeEventListener("error", handler);
+  }, []);
   const {
     draft, activeSection, saveStatus, collaboratorIds,
     setActiveSection, updateSection,

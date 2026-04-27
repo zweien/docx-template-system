@@ -102,7 +102,7 @@ export function CollaborationProvider({
       destroyedRef.current = true;
       provider?.destroy();
     };
-  }, [draftId, collaboratorIds]);
+  }, [draftId]);
 
   const value = useMemo(() => state, [state]);
 

@@ -53,10 +53,19 @@ function initContext(structure: ReportTemplateStructure): Record<string, string>
   return ctx;
 }
 
-export async function listReportDrafts(userId: string): Promise<ServiceResult<Record<string, unknown>[]>> {
+export async function listReportDrafts(
+  userId: string,
+  filter: "owned" | "shared" = "owned"
+): Promise<ServiceResult<Record<string, unknown>[]>> {
   try {
+    const where =
+      filter === "shared"
+        ? {
+            collaboratorIds: { has: userId },
+          }
+        : { userId };
     const drafts = await db.reportDraft.findMany({
-      where: { userId },
+      where,
       orderBy: { updatedAt: "desc" },
       select: {
         id: true, title: true, status: true,

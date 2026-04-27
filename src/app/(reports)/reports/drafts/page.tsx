@@ -11,16 +11,20 @@ interface ReportDraft {
   updatedAt: string;
 }
 
+type Tab = "owned" | "shared";
+
 export default function ReportDraftsPage() {
+  const [tab, setTab] = useState<Tab>("owned");
   const [drafts, setDrafts] = useState<ReportDraft[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/reports/drafts")
+    setLoading(true);
+    fetch(`/api/reports/drafts?filter=${tab}`)
       .then((r) => r.json())
       .then((json) => { if (json.success) setDrafts(json.data); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [tab]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("确定删除此草稿？")) return;
@@ -38,8 +42,24 @@ export default function ReportDraftsPage() {
           从模板创建
         </Link>
       </div>
+      <div className="flex gap-4 border-b border-border">
+        <button
+          onClick={() => setTab("owned")}
+          className={`pb-2 text-sm font-medium ${tab === "owned" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          我所有的
+        </button>
+        <button
+          onClick={() => setTab("shared")}
+          className={`pb-2 text-sm font-medium ${tab === "shared" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
+        >
+          别人共享给我的
+        </button>
+      </div>
       {drafts.length === 0 ? (
-        <div className="py-12 text-center text-muted-foreground">暂无报告草稿，请从模板创建</div>
+        <div className="py-12 text-center text-muted-foreground">
+          {tab === "owned" ? "暂无报告草稿，请从模板创建" : "暂无能查看的共享草稿"}
+        </div>
       ) : (
         <div className="space-y-3">
           {drafts.map((d) => (
@@ -50,9 +70,11 @@ export default function ReportDraftsPage() {
                   模板：{d.templateName} · 更新于 {new Date(d.updatedAt).toLocaleString()}
                 </p>
               </div>
-              <button onClick={() => handleDelete(d.id)} className="rounded border border-border px-3 py-1 text-xs text-destructive hover:bg-destructive/10">
-                删除
-              </button>
+              {tab === "owned" && (
+                <button onClick={() => handleDelete(d.id)} className="rounded border border-border px-3 py-1 text-xs text-destructive hover:bg-destructive/10">
+                  删除
+                </button>
+              )}
             </div>
           ))}
         </div>

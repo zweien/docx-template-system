@@ -3,12 +3,13 @@ import { auth } from "@/lib/auth";
 import { createReportDraftSchema } from "@/modules/reports/validators";
 import * as draftService from "@/modules/reports/services/report-draft.service";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json({ error: { code: "UNAUTHORIZED", message: "未登录" } }, { status: 401 });
   }
-  const result = await draftService.listReportDrafts(session.user.id);
+  const filter = request.nextUrl.searchParams.get("filter") as "owned" | "shared" | null;
+  const result = await draftService.listReportDrafts(session.user.id, filter || "owned");
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }

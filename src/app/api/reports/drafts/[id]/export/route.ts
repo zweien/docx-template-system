@@ -13,7 +13,8 @@ export async function POST(
   const { id } = await params;
   const result = await draftService.exportReportDraft(id, session.user.id);
   if (!result.success) {
-    return NextResponse.json({ error: result.error }, { status: 400 });
+    const status = result.error.code === "NOT_FOUND" ? 404 : 500;
+    return NextResponse.json({ error: result.error }, { status });
   }
   const response = result.data as unknown as Response;
   const headers = new Headers();

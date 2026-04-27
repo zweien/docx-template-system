@@ -131,7 +131,10 @@ export const useReportDraftStore = create<ReportDraftStore>((set, get) => ({
     if (!draft) return;
     await save();
     const res = await fetch(`/api/reports/drafts/${draft.id}/export`, { method: "POST" });
-    if (!res.ok) throw new Error("导出失败");
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`导出失败: ${errText || res.status}`);
+    }
     const blob = await res.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");

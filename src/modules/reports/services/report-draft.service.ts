@@ -157,7 +157,11 @@ export async function updateReportDraft(
 ): Promise<ServiceResult<void>> {
   try {
     const draft = await db.reportDraft.findUnique({ where: { id } });
-    if (!draft || draft.userId !== userId) {
+    if (!draft) {
+      return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
+    }
+    const collaborators = (draft.collaboratorIds || []) as string[];
+    if (draft.userId !== userId && !collaborators.includes(userId)) {
       return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
     }
     await db.reportDraft.update({
@@ -241,7 +245,11 @@ export async function exportReportDraft(
       where: { id },
       include: { template: true },
     });
-    if (!draft || draft.userId !== userId) {
+    if (!draft) {
+      return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
+    }
+    const collabs = (draft.collaboratorIds || []) as string[];
+    if (draft.userId !== userId && !collabs.includes(userId)) {
       return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
     }
 

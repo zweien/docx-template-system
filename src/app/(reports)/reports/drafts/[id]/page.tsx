@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PanelLeftOpen, PanelRightOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { useReportDraftStore } from "@/modules/reports/stores/report-draft-store";
 import { SectionEditor } from "@/modules/reports/components/editor/SectionEditor";
 import { OutlinePanel } from "@/modules/reports/components/editor/OutlinePanel";
@@ -100,7 +100,7 @@ function EditorContent() {
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">章节</h3>
             <button onClick={() => setLeftCollapsed(true)} className="p-0.5 rounded hover:bg-muted text-muted-foreground" title="折叠">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+              <PanelLeftClose width="14" height="14" />
             </button>
           </div>
           <div className="space-y-1">
@@ -208,10 +208,10 @@ function EditorContent() {
         <div className="w-48 flex flex-col flex-1">
           <div className="flex items-center justify-end px-3 pt-3 pb-2">
             <button onClick={() => setRightCollapsed(true)} className="p-0.5 rounded hover:bg-muted text-muted-foreground" title="折叠">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+              <PanelRightClose width="14" height="14" />
             </button>
           </div>
-          <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} activeSection={activeSection} onNavigateHeading={handleNavigateHeading} />
+          <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} activeSection={activeSection} onNavigateHeading={handleNavigateHeading} collapsed={rightCollapsed} />
         </div>
       </div>
 

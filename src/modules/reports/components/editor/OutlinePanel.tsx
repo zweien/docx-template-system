@@ -14,6 +14,7 @@ interface OutlinePanelProps {
   sectionEnabled: Record<string, boolean>;
   activeSection?: string;
   onNavigateHeading?: (sectionId: string, blockId: string) => void;
+  collapsed?: boolean;
 }
 
 interface BlockLike {
@@ -56,7 +57,10 @@ export function OutlinePanel({
   sectionEnabled,
   activeSection,
   onNavigateHeading,
+  collapsed,
 }: OutlinePanelProps) {
+  if (collapsed) return null;
+
   const headings = useMemo(
     () => extractHeadings(sections, sectionEnabled),
     [sections, sectionEnabled]

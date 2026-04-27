@@ -86,8 +86,8 @@ def _extract_section_headings(xml: str, sections: List[dict]) -> None:
             pending_headings.append({"text": text, "level": level})
 
 
-# Matches variable names: ASCII uppercase/digits/underscores OR CJK characters
-_VAR_RE = r"([A-Z_][A-Z0-9_]*|[\u4e00-\u9fff][\u4e00-\u9fffA-Za-z0-9_]*)"
+# Matches variable names: ASCII uppercase/digits/underscores/CJK OR CJK characters
+_VAR_RE = r"([A-Z_][A-Z0-9_\u4e00-\u9fff]*|[\u4e00-\u9fff][A-Za-z0-9_\u4e00-\u9fff]*)"
 
 
 def _extract_scalar_vars(xml: str) -> List[str]:

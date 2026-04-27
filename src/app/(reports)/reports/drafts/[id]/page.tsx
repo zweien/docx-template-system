@@ -12,11 +12,10 @@ import { ShareDialog } from "@/modules/reports/components/editor/ShareDialog";
 import type { ReportTemplateStructure } from "@/modules/reports/types";
 
 function EditorContent() {
-  const params = useParams<{ id: string }>();
   const router = useRouter();
   const {
     draft, activeSection, saveStatus, collaboratorIds,
-    loadDraft, setActiveSection, updateSection,
+    setActiveSection, updateSection,
     updateContext, updateTitle, toggleSection, save, exportDocx,
     setCollaboratorIds,
   } = useReportDraftStore();
@@ -24,7 +23,6 @@ function EditorContent() {
   const { getFragment, provider } = useCollaboration();
 
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [loading, setLoading] = useState(true);
   const [scrollTargetBlockId, setScrollTargetBlockId] = useState<string | undefined>();
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
@@ -62,10 +60,6 @@ function EditorContent() {
   }, [scheduleAutoSave]);
 
   useEffect(() => {
-    loadDraft(params.id).finally(() => setLoading(false));
-  }, [params.id, loadDraft]);
-
-  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -76,8 +70,7 @@ function EditorContent() {
     return () => window.removeEventListener("keydown", handler);
   }, [save]);
 
-  if (loading) return <div className="p-8 text-center text-muted-foreground">加载中...</div>;
-  if (!draft) return <div className="p-8 text-center text-destructive">草稿不存在</div>;
+  if (!draft) return null;
 
   const structure = draft.template.parsedStructure as unknown as ReportTemplateStructure;
   const sections = structure.sections || [];
@@ -230,9 +223,16 @@ function EditorContent() {
 }
 
 export default function ReportEditorPage() {
-  const { draft, collaboratorIds } = useReportDraftStore();
+  const params = useParams<{ id: string }>();
+  const { draft, collaboratorIds, loadDraft } = useReportDraftStore();
+  const [loading, setLoading] = useState(true);
 
-  if (!draft) return <div className="p-8 text-center text-muted-foreground">加载中...</div>;
+  useEffect(() => {
+    loadDraft(params.id).finally(() => setLoading(false));
+  }, [params.id, loadDraft]);
+
+  if (loading) return <div className="p-8 text-center text-muted-foreground">加载中...</div>;
+  if (!draft) return <div className="p-8 text-center text-destructive">草稿不存在</div>;
 
   return (
     <CollaborationProvider draftId={draft.id} collaboratorIds={collaboratorIds}>

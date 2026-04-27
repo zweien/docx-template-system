@@ -24,6 +24,7 @@ import {
   type BlockNoteBlock,
 } from "@/modules/reports/converter/engine-to-blocknote";
 import { reportSchema } from "@/modules/reports/schema/blocknote-schema";
+import { blocksToYXmlFragment } from "@blocknote/core/yjs";
 import { useSession } from "next-auth/react";
 
 interface SectionEditorProps {
@@ -183,6 +184,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
         (editor as any).replaceBlocks(editor.document, prepared);
       } catch {}
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
   // Sync initial blocks into Yjs fragment when entering collaborative mode
@@ -193,8 +195,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
     const prepared = prepareBlocks(blocks);
     if (prepared.length === 0) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { blocksToYXmlFragment } = require("@blocknote/core/yjs") as any;
-    blocksToYXmlFragment(editor, prepared, collabFragment);
+    blocksToYXmlFragment(editor, prepared as any, collabFragment);
   }, [collabFragment, editor, blocks]);
 
   const lastDocJsonRef = useRef<string>("");

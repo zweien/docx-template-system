@@ -16,7 +16,6 @@ import pg from "pg";
 import {
   readSyncMessage,
   writeSyncStep1,
-  writeSyncStep2,
   writeUpdate,
 } from "y-protocols/dist/sync.cjs";
 import {
@@ -150,13 +149,6 @@ function encodeSyncStep1(doc) {
 }
 
 /**
- * Encode a sync step-2 message (server → client, answering client step-1).
- */
-function encodeSyncStep2(doc, encoder) {
-  writeSyncStep2(encoder, doc);
-}
-
-/**
  * Encode an update message (server → all other clients).
  */
 function encodeUpdate(update) {
@@ -230,7 +222,7 @@ async function handleConnection(ws, req) {
   let user;
   try {
     user = await verifyToken(token);
-  } catch (err) {
+  } catch (_err) {
     ws.close(4003, "Invalid or expired token");
     return;
   }

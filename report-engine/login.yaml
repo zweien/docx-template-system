@@ -1,0 +1,18 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e5]: IDRL
+      - heading "文档填表系统" [level=1] [ref=e6]
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]: 开发模式登录
+        - generic [ref=e10]: 选择身份直接登录，无需 Authentik
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - button "管理员登录（admin@example.com）" [ref=e13]
+          - button "普通用户登录（user@example.com）" [ref=e14]
+        - paragraph [ref=e15]: ⚠️ 开发绕过模式（DEV_BYPASS_AUTH=true）· v0.6.10
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e21] [cursor=pointer]:
+    - img [ref=e22]
+  - alert [ref=e25]

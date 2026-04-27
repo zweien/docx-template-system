@@ -1,0 +1,158 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - link "IDRL填表系统 IDRL填表系统" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img "IDRL填表系统" [ref=e6]
+        - generic [ref=e7]: IDRL填表系统
+      - navigation [ref=e8]:
+        - generic [ref=e9]:
+          - link "仪表盘" [ref=e10] [cursor=pointer]:
+            - /url: /
+            - img [ref=e12]
+            - generic [ref=e15]: 仪表盘
+          - link "我要填表" [ref=e16] [cursor=pointer]:
+            - /url: /generate
+            - img [ref=e18]
+            - generic [ref=e21]: 我要填表
+          - link "生成记录" [ref=e22] [cursor=pointer]:
+            - /url: /records
+            - img [ref=e24]
+            - generic [ref=e27]: 生成记录
+          - link "我的草稿" [ref=e28] [cursor=pointer]:
+            - /url: /drafts
+            - img [ref=e30]
+            - generic [ref=e34]: 我的草稿
+          - link "模板管理" [ref=e35] [cursor=pointer]:
+            - /url: /templates
+            - img [ref=e37]
+            - generic [ref=e42]: 模板管理
+          - link "主数据" [ref=e43] [cursor=pointer]:
+            - /url: /data
+            - img [ref=e45]
+            - generic [ref=e49]: 主数据
+          - link "自动化" [ref=e50] [cursor=pointer]:
+            - /url: /automations
+            - img [ref=e52]
+            - generic [ref=e56]: 自动化
+          - link "文档收集" [ref=e57] [cursor=pointer]:
+            - /url: /collections
+            - img [ref=e59]
+            - generic [ref=e62]: 文档收集
+          - link "智能助手" [ref=e63] [cursor=pointer]:
+            - /url: /ai-agent2
+            - img [ref=e65]
+            - generic [ref=e68]: 智能助手
+        - generic [ref=e69]:
+          - paragraph [ref=e70]: 报告撰写
+          - generic [ref=e71]:
+            - link "撰写报告" [ref=e72] [cursor=pointer]:
+              - /url: /reports/drafts
+              - img [ref=e74]
+              - generic [ref=e77]: 撰写报告
+            - link "报告模板" [ref=e78] [cursor=pointer]:
+              - /url: /reports/templates
+              - img [ref=e80]
+              - generic [ref=e85]: 报告模板
+        - generic [ref=e86]:
+          - paragraph [ref=e87]: 管理员
+          - generic [ref=e88]:
+            - link "系统设置" [ref=e89] [cursor=pointer]:
+              - /url: /admin/settings
+              - img [ref=e91]
+              - generic [ref=e94]: 系统设置
+            - link "用户管理" [ref=e95] [cursor=pointer]:
+              - /url: /admin/users
+              - img [ref=e97]
+              - generic [ref=e102]: 用户管理
+            - link "审计日志" [ref=e103] [cursor=pointer]:
+              - /url: /admin/audit-logs
+              - img [ref=e105]
+              - generic [ref=e108]: 审计日志
+      - generic [ref=e109]: IDRL填表系统 v0.6.10
+      - generic [ref=e111]:
+        - button "A" [ref=e113]:
+          - generic [ref=e114]: A
+        - button "折叠侧边栏" [ref=e115]:
+          - img
+    - generic [ref=e116]:
+      - banner [ref=e117]:
+        - heading "撰写报告" [level=1] [ref=e119]
+        - button "搜索... ⌘K" [ref=e120]:
+          - img [ref=e121]
+          - generic [ref=e124]: 搜索...
+          - generic [ref=e125]: ⌘K
+        - button [ref=e126]:
+          - img
+        - button [ref=e128]:
+          - img
+      - main [ref=e129]:
+        - generic [ref=e141]:
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - heading "章节" [level=3] [ref=e145]
+              - button "折叠" [ref=e146]:
+                - img [ref=e147]
+            - generic [ref=e150]:
+              - generic [ref=e151]:
+                - checkbox [checked] [ref=e152]
+                - button "Toc" [ref=e153]
+              - generic [ref=e154]:
+                - checkbox [checked] [ref=e155]
+                - button "Research Content" [ref=e156]
+              - generic [ref=e157]:
+                - checkbox [checked] [ref=e158]
+                - button "Research Basis" [ref=e159]
+              - generic [ref=e160]:
+                - checkbox [checked] [ref=e161]
+                - button "Implementation Plan" [ref=e162]
+              - generic [ref=e163]:
+                - checkbox [checked] [ref=e164]
+                - button "Appendices" [ref=e165]
+            - heading "上下文变量" [level=3] [ref=e166]
+            - generic [ref=e167]:
+              - generic [ref=e168]:
+                - text: PROJECT_NAME
+                - textbox [ref=e169]: 测试项目名称SYNC_TEST
+              - generic [ref=e170]:
+                - text: APPLICANT_ORG
+                - textbox [ref=e171]
+              - generic [ref=e172]:
+                - text: PROJECT_LEADER
+                - textbox [ref=e173]
+              - generic [ref=e174]:
+                - text: PROJECT_PERIOD
+                - textbox [ref=e175]
+          - generic [ref=e176]:
+            - generic [ref=e177]:
+              - textbox "报告标题" [ref=e178]: 未命名报告
+              - generic [ref=e179]:
+                - generic [ref=e180]:
+                  - generic [ref=e181]:
+                    - generic "authentik Default Admin" [ref=e182]: A
+                    - generic "User" [ref=e183]: U
+                  - generic [ref=e184]: 2 在线
+                - generic [ref=e185]: 已保存
+                - button "共享" [ref=e186]
+            - textbox [ref=e189]:
+              - generic [ref=e193]:
+                - paragraph [ref=e194]
+                - text: Enter text or type '/' for commands
+          - generic [ref=e196]:
+            - button "折叠" [ref=e198]:
+              - img [ref=e199]
+            - paragraph [ref=e203]: 大纲
+            - generic [ref=e204]:
+              - button "附件" [ref=e205]
+              - button "二、研究基础" [ref=e206]
+              - button "一、研究内容与技术路线" [ref=e207]
+              - button "三、实施计划" [ref=e208]
+          - generic [ref=e209]:
+            - button "返回" [ref=e210]
+            - button "保存" [ref=e211]
+            - button "导入 Payload" [ref=e212]
+            - button "导出 .docx" [ref=e213]
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e136] [cursor=pointer]:
+    - img [ref=e137]
+  - alert [ref=e140]

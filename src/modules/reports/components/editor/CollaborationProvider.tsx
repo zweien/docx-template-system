@@ -16,6 +16,7 @@ interface CollabState {
   provider: WebsocketProvider | null;
   doc: Y.Doc | null;
   isConnected: boolean;
+  synced: boolean;
   getFragment: (sectionId: string) => Y.XmlFragment | null;
 }
 
@@ -23,6 +24,7 @@ const CollabContext = createContext<CollabState>({
   provider: null,
   doc: null,
   isConnected: false,
+  synced: false,
   getFragment: () => null,
 });
 
@@ -41,6 +43,7 @@ export function CollaborationProvider({
     provider: null,
     doc: null,
     isConnected: false,
+    synced: false,
     getFragment: () => null,
   });
 
@@ -66,7 +69,16 @@ export function CollaborationProvider({
 
         provider.on("status", ({ status }: { status: string }) => {
           if (!destroyedRef.current) {
-            setState((prev) => ({ ...prev, isConnected: status === "connected" }));
+            setState((prev) => ({
+              ...prev,
+              isConnected: status === "connected",
+            }));
+          }
+        });
+
+        provider.on("sync", (isSynced: boolean) => {
+          if (!destroyedRef.current) {
+            setState((prev) => ({ ...prev, synced: isSynced }));
           }
         });
 
@@ -77,6 +89,7 @@ export function CollaborationProvider({
             provider,
             doc,
             isConnected: false,
+            synced: false,
             getFragment: (sectionId: string) => doc.getXmlFragment(`section-${sectionId}`),
           });
         }

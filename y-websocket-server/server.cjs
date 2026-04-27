@@ -16,7 +16,6 @@ const pg = require("pg");
 
 const {
   readSyncMessage,
-  writeSyncStep1,
   writeUpdate,
 } = require("y-protocols/dist/sync.cjs");
 const {
@@ -116,13 +115,6 @@ const WS_MSG_SYNC = 0;
 const WS_MSG_AWARENESS = 1;
 const WS_MSG_AUTH = 2;
 
-function encodeSyncStep1(doc) {
-  const encoder = encoding.createEncoder();
-  encoding.writeVarUint(encoder, WS_MSG_SYNC);
-  writeSyncStep1(encoder, doc);
-  return encoding.toUint8Array(encoder);
-}
-
 function encodeUpdate(update) {
   const encoder = encoding.createEncoder();
   encoding.writeVarUint(encoder, WS_MSG_SYNC);
@@ -133,7 +125,8 @@ function encodeUpdate(update) {
 function encodeAwarenessMessage(awareness, clients) {
   const encoder = encoding.createEncoder();
   encoding.writeVarUint(encoder, WS_MSG_AWARENESS);
-  encodeAwarenessUpdate(encoder, awareness, clients);
+  const update = encodeAwarenessUpdate(awareness, clients);
+  encoding.writeVarUint8Array(encoder, update);
   return encoding.toUint8Array(encoder);
 }
 
@@ -145,7 +138,7 @@ function setupDocObserver(roomName, doc) {
   doc.on("update", (update, origin) => {
     if (origin !== null) {
       const msg = encodeUpdate(update);
-      broadcast(roomName, msg);
+      broadcast(roomName, msg, origin);
     }
   });
 }
@@ -213,6 +206,9 @@ async function handleConnection(ws, req) {
 
   // --- Authorized, set up room ---
 
+  if (!docs.has(roomName)) {
+    docs.set(roomName, null); // prevent concurrent creation
+  }
   let doc = docs.get(roomName);
   if (!doc) {
     doc = await persistence.getYDoc(roomName);
@@ -220,6 +216,9 @@ async function handleConnection(ws, req) {
     setupDocObserver(roomName, doc);
   }
 
+  if (!awarenessMap.has(roomName)) {
+    awarenessMap.set(roomName, null);
+  }
   let awareness = awarenessMap.get(roomName);
   if (!awareness) {
     awareness = new Awareness(doc);
@@ -239,10 +238,10 @@ async function handleConnection(ws, req) {
     `[room=${roomName}] Client connected: userId=${userId}, clients=${conns.size}`
   );
 
-  try {
-    ws.send(encodeSyncStep1(doc));
-  } catch (err) {
-    console.error(`[room=${roomName}] Failed to send sync step 1:`, err);
+  // Send current awareness states to newly connected client
+  if (awareness.getStates().size > 0) {
+    const msg = encodeAwarenessMessage(awareness, Array.from(awareness.getStates().keys()));
+    ws.send(msg);
   }
 
   // --- Handle incoming messages ---
@@ -254,10 +253,11 @@ async function handleConnection(ws, req) {
 
       switch (messageType) {
         case WS_MSG_SYNC: {
-          const encoder = encoding.createEncoder();
-          readSyncMessage(decoder, encoder, doc, ws);
-          if (encoding.length(encoder) > 1) {
-            ws.send(encoding.toUint8Array(encoder));
+          const replyEncoder = encoding.createEncoder();
+          encoding.writeVarUint(replyEncoder, WS_MSG_SYNC);
+          readSyncMessage(decoder, replyEncoder, doc, ws);
+          if (encoding.length(replyEncoder) > 1) {
+            ws.send(encoding.toUint8Array(replyEncoder));
           }
           break;
         }
@@ -278,11 +278,11 @@ async function handleConnection(ws, req) {
         case WS_MSG_AUTH: {
           const encoder = encoding.createEncoder();
           encoding.writeVarUint(encoder, WS_MSG_AWARENESS);
-          encodeAwarenessUpdate(
-            encoder,
+          const update = encodeAwarenessUpdate(
             awareness,
             Array.from(awareness.getStates().keys())
           );
+          encoding.writeVarUint8Array(encoder, update);
           ws.send(encoding.toUint8Array(encoder));
           break;
         }

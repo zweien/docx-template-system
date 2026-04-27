@@ -24,7 +24,6 @@ import {
   type BlockNoteBlock,
 } from "@/modules/reports/converter/engine-to-blocknote";
 import { reportSchema } from "@/modules/reports/schema/blocknote-schema";
-import { blocksToYXmlFragment } from "@blocknote/core/yjs";
 import { useSession } from "next-auth/react";
 
 interface SectionEditorProps {
@@ -143,7 +142,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
 
   const editor = useCreateBlockNote({
     schema: reportSchema,
-    dictionary: { ...coreDictionary, ai: aiDictionary },
+    dictionary: { ...coreDictionary, aiDictionary },
     extensions: [
       AIExtension({ transport: aiTransport }),
     ],
@@ -170,13 +169,13 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
     },
   });
 
-  // Load content after mount via replaceBlocks so errors can be caught
+  // Load content after mount via replaceBlocks so errors can be caught.
+  // In collab mode, page.tsx remounts editor when synced becomes true, so
+  // this also seeds an empty fragment with initial blocks.
   const blocksLoadedRef = useRef(false);
   useEffect(() => {
     if (blocksLoadedRef.current) return;
     blocksLoadedRef.current = true;
-    // In collaborative mode, blocks come from Yjs fragment, not props
-    if (collabFragment) return;
     const prepared = prepareBlocks(blocks);
     if (prepared.length > 0) {
       try {
@@ -186,17 +185,6 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
-
-  // Sync initial blocks into Yjs fragment when entering collaborative mode
-  useEffect(() => {
-    if (!collabFragment || !editor) return;
-    // Only sync if the fragment is empty (first time entering collaborative mode)
-    if (collabFragment.length > 0) return;
-    const prepared = prepareBlocks(blocks);
-    if (prepared.length === 0) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    blocksToYXmlFragment(editor, prepared as any, collabFragment);
-  }, [collabFragment, editor, blocks]);
 
   const lastDocJsonRef = useRef<string>("");
   const handleEditorChange = useCallback(() => {

@@ -20,7 +20,7 @@ function EditorContent() {
     setCollaboratorIds,
   } = useReportDraftStore();
 
-  const { getFragment, provider } = useCollaboration();
+  const { getFragment, provider, synced } = useCollaboration();
 
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [scrollTargetBlockId, setScrollTargetBlockId] = useState<string | undefined>();
@@ -175,7 +175,7 @@ function EditorContent() {
           </div>
         </div>
         <SectionEditor
-          key={`${activeSection}-${provider ? 'collab' : 'local'}`}
+          key={`${activeSection}-${synced ? 'collab' : 'local'}`}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           blocks={currentBlocks as any[]}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

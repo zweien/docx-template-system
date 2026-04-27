@@ -27,13 +27,16 @@ export function OnlineUsers() {
       setUsers(Array.from(seen.values()));
     };
 
+    // Defer to avoid setState during another component's render phase
+    const deferredUpdate = () => setTimeout(updateUsers, 0);
+
     updateUsers();
-    provider.awareness.on("change", updateUsers);
-    provider.on("sync", updateUsers);
+    provider.awareness.on("change", deferredUpdate);
+    provider.on("sync", deferredUpdate);
 
     return () => {
-      provider.awareness.off("change", updateUsers);
-      provider.off("sync", updateUsers);
+      provider.awareness.off("change", deferredUpdate);
+      provider.off("sync", deferredUpdate);
     };
   }, [provider, isConnected]);
 

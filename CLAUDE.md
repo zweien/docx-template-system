@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev          # Start dev server on port 8060
-npm run dev:collab   # Start y-websocket collaboration server on port 8070
+npm run dev:collab   # Start y-websocket collaboration server on port 8072
 npm run build        # Production build
 npm run lint         # ESLint
 npx tsc --noEmit     # Type check

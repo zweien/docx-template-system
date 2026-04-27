@@ -175,14 +175,14 @@ function EditorContent() {
           </div>
         </div>
         <SectionEditor
-          key={activeSection}
+          key={`${activeSection}-${provider ? 'collab' : 'local'}`}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           blocks={currentBlocks as any[]}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           onChange={(blocks: any[]) => { updateSection(activeSection, blocks); scheduleAutoSave(); }}
           scrollToBlockId={scrollTargetBlockId}
           onScrolled={() => setScrollTargetBlockId(undefined)}
-          collabFragment={getFragment(activeSection)}
+          collabFragment={provider ? getFragment(activeSection) : null}
           collabProvider={provider}
         />
       </div>

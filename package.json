@@ -13,7 +13,7 @@
     "release": "commit-and-tag-version",
     "release:minor": "commit-and-tag-version --release-as minor",
     "release:major": "commit-and-tag-version --release-as major",
-    "dev:collab": "node y-websocket-server/server.mjs"
+    "dev:collab": "node y-websocket-server/server.cjs"
   },
   "dependencies": {
     "@ai-sdk/mcp": "^1.0.35",

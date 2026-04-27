@@ -1,36 +1,35 @@
 /**
- * y-websocket collaboration server
+ * y-websocket collaboration server (CJS)
  *
- * Accepts WebSocket connections with ?room=draft-{id}&token={jwt}
+ * Accepts WebSocket connections with room as path: /draft-{id}?token={jwt}
  * Validates NextAuth JWT, checks draft access via PostgreSQL,
  * and syncs Yjs documents using y-protocols.
  *
- * Dependencies: jose, pg (own), y-protocols / y-leveldb / ws / lib0 (hoisted from parent)
+ * Dependencies: jose, pg, y-protocols, y-leveldb, ws, lib0
  */
 
-import { WebSocketServer } from "ws";
-import { jwtVerify } from "jose";
-import pg from "pg";
+"use strict";
 
-// -- y-protocols (CJS, hoisted from parent node_modules) --
-import {
+const { WebSocketServer } = require("ws");
+const { jwtVerify } = require("jose");
+const pg = require("pg");
+
+const {
   readSyncMessage,
   writeSyncStep1,
   writeUpdate,
-} from "y-protocols/dist/sync.cjs";
-import {
+} = require("y-protocols/dist/sync.cjs");
+const {
   Awareness,
   applyAwarenessUpdate,
   encodeAwarenessUpdate,
   removeAwarenessStates,
-} from "y-protocols/dist/awareness.cjs";
+} = require("y-protocols/dist/awareness.cjs");
 
-// -- lib0 encoding --
-import * as encoding from "lib0/encoding";
-import * as decoding from "lib0/decoding";
+const encoding = require("lib0/encoding");
+const decoding = require("lib0/decoding");
 
-// -- y-leveldb persistence --
-import { LeveldbPersistence } from "y-leveldb";
+const { LeveldbPersistence } = require("y-leveldb");
 
 // ---------------------------------------------------------------------------
 // Config
@@ -56,10 +55,6 @@ if (!DATABASE_URL) {
 
 const pool = new pg.Pool({ connectionString: DATABASE_URL });
 
-/**
- * Check if a user (by userId) can access a report draft.
- * Returns true if user is the owner or in collaboratorIds.
- */
 async function canAccessDraft(userId, draftId) {
   const result = await pool.query(
     'SELECT "userId", "collaboratorIds" FROM "ReportDraft" WHERE id = $1',
@@ -93,25 +88,9 @@ const persistence = new LeveldbPersistence(PERSISTENCE_DIR);
 // Room management
 // ---------------------------------------------------------------------------
 
-/**
- * Map<roomName, Set<ws>> — all WebSocket connections per room.
- */
 const rooms = new Map();
-
-/**
- * Map<roomName, Y.Doc> — the Yjs document per room (loaded from persistence).
- */
 const docs = new Map();
-
-/**
- * Map<roomName, Awareness> — awareness instances per room.
- */
 const awarenessMap = new Map();
-
-/**
- * Map<ws, { roomName, userId, awarenessClientId? }> — metadata per connection.
- * awarenessClientId is populated when the client first sends an awareness update.
- */
 const connMeta = new Map();
 
 // ---------------------------------------------------------------------------
@@ -130,17 +109,13 @@ function broadcast(roomName, message, exclude = null) {
 }
 
 // ---------------------------------------------------------------------------
-// Sync protocol: encode/decode helpers
+// Sync protocol: encode helpers
 // ---------------------------------------------------------------------------
 
-// y-websocket wire protocol message types
 const WS_MSG_SYNC = 0;
 const WS_MSG_AWARENESS = 1;
 const WS_MSG_AUTH = 2;
 
-/**
- * Encode a sync step-1 message (server → client).
- */
 function encodeSyncStep1(doc) {
   const encoder = encoding.createEncoder();
   encoding.writeVarUint(encoder, WS_MSG_SYNC);
@@ -148,9 +123,6 @@ function encodeSyncStep1(doc) {
   return encoding.toUint8Array(encoder);
 }
 
-/**
- * Encode an update message (server → all other clients).
- */
 function encodeUpdate(update) {
   const encoder = encoding.createEncoder();
   encoding.writeVarUint(encoder, WS_MSG_SYNC);
@@ -158,9 +130,6 @@ function encodeUpdate(update) {
   return encoding.toUint8Array(encoder);
 }
 
-/**
- * Encode an awareness update message (server → all other clients).
- */
 function encodeAwarenessMessage(awareness, clients) {
   const encoder = encoding.createEncoder();
   encoding.writeVarUint(encoder, WS_MSG_AWARENESS);
@@ -174,7 +143,6 @@ function encodeAwarenessMessage(awareness, clients) {
 
 function setupDocObserver(roomName, doc) {
   doc.on("update", (update, origin) => {
-    // Only broadcast if the update came from a remote client (not persistence load)
     if (origin !== null) {
       const msg = encodeUpdate(update);
       broadcast(roomName, msg);
@@ -200,8 +168,8 @@ function setupAwarenessObserver(roomName, awareness) {
 // ---------------------------------------------------------------------------
 
 async function handleConnection(ws, req) {
-  // y-websocket WebsocketProvider sends room as URL path (e.g., /draft-{id}?token=...)
   const url = new URL(req.url, `http://${req.headers.host}`);
+  // y-websocket WebsocketProvider sends room as URL path (e.g., /draft-{id}?token=...)
   const roomName = url.searchParams.get("room") || url.pathname.replace(/^\//, "");
   const token = url.searchParams.get("token");
 
@@ -210,7 +178,6 @@ async function handleConnection(ws, req) {
     return;
   }
 
-  // Validate room name format: draft-{id}
   const draftMatch = roomName.match(/^draft-(.+)$/);
   if (!draftMatch) {
     ws.close(4002, "Invalid room name format");
@@ -218,7 +185,6 @@ async function handleConnection(ws, req) {
   }
   const draftId = draftMatch[1];
 
-  // Verify JWT
   let user;
   try {
     user = await verifyToken(token);
@@ -233,7 +199,6 @@ async function handleConnection(ws, req) {
     return;
   }
 
-  // Check draft access
   try {
     const hasAccess = await canAccessDraft(userId, draftId);
     if (!hasAccess) {
@@ -248,7 +213,6 @@ async function handleConnection(ws, req) {
 
   // --- Authorized, set up room ---
 
-  // Get or create Yjs Doc
   let doc = docs.get(roomName);
   if (!doc) {
     doc = await persistence.getYDoc(roomName);
@@ -256,7 +220,6 @@ async function handleConnection(ws, req) {
     setupDocObserver(roomName, doc);
   }
 
-  // Get or create Awareness
   let awareness = awarenessMap.get(roomName);
   if (!awareness) {
     awareness = new Awareness(doc);
@@ -264,22 +227,18 @@ async function handleConnection(ws, req) {
     setupAwarenessObserver(roomName, awareness);
   }
 
-  // Add to room connections
   if (!rooms.has(roomName)) {
     rooms.set(roomName, new Set());
   }
   const conns = rooms.get(roomName);
   conns.add(ws);
 
-  // Store connection metadata
-  // awarenessClientId is populated when the client first sends an awareness update
   connMeta.set(ws, { roomName, userId });
 
   console.log(
     `[room=${roomName}] Client connected: userId=${userId}, clients=${conns.size}`
   );
 
-  // Send initial sync step 1 to new client
   try {
     ws.send(encodeSyncStep1(doc));
   } catch (err) {
@@ -295,14 +254,16 @@ async function handleConnection(ws, req) {
 
       switch (messageType) {
         case WS_MSG_SYNC: {
-          // Sync message from client: read and apply
-          readSyncMessage(decoder, doc, ws);
+          const encoder = encoding.createEncoder();
+          readSyncMessage(decoder, encoder, doc, ws);
+          if (encoding.length(encoder) > 1) {
+            ws.send(encoding.toUint8Array(encoder));
+          }
           break;
         }
         case WS_MSG_AWARENESS: {
-          // Awareness update from client
           const update = decoding.readVarUint8Array(decoder);
-          // Extract clientID from awareness update (first 4 bytes are clientID)
+          if (!update || update.byteLength < 4) break;
           const clientID = new DataView(
             update.buffer,
             update.byteOffset
@@ -315,7 +276,6 @@ async function handleConnection(ws, req) {
           break;
         }
         case WS_MSG_AUTH: {
-          // Auth / queryAwareness — respond with current awareness
           const encoder = encoding.createEncoder();
           encoding.writeVarUint(encoder, WS_MSG_AWARENESS);
           encodeAwarenessUpdate(
@@ -347,12 +307,10 @@ async function handleConnection(ws, req) {
         `[room=${rName}] Client disconnected: userId=${meta.userId}, clients=${roomConns.size}`
       );
 
-      // Remove awareness state for disconnected client
       if (meta.awarenessClientId) {
         removeAwarenessStates(awareness, [meta.awarenessClientId]);
       }
 
-      // Clean up empty rooms
       if (roomConns.size === 0) {
         rooms.delete(rName);
         const roomAwareness = awarenessMap.get(rName);
@@ -360,10 +318,6 @@ async function handleConnection(ws, req) {
           roomAwareness.destroy();
           awarenessMap.delete(rName);
         }
-        // Keep the doc in cache for a while in case clients reconnect.
-        // Uncomment the following to immediately clear:
-        // docs.delete(rName);
-        // persistence.clearDocument(rName);
       }
     }
     connMeta.delete(ws);
@@ -394,7 +348,6 @@ wss.on("listening", () => {
   console.log(`Persistence directory: ${PERSISTENCE_DIR}`);
 });
 
-// Graceful shutdown
 function shutdown() {
   console.log("\nShutting down y-websocket server...");
   wss.close(() => {
@@ -403,7 +356,6 @@ function shutdown() {
       process.exit(0);
     });
   });
-  // Force exit after 5 seconds
   setTimeout(() => process.exit(1), 5000);
 }
 

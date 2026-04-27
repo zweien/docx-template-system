@@ -5,12 +5,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
-import { useSession } from "next-auth/react";
 
 interface CollabState {
   provider: WebsocketProvider | null;
@@ -37,7 +37,6 @@ export function CollaborationProvider({
   collaboratorIds,
   children,
 }: CollaborationProviderProps) {
-  const { data: session } = useSession();
   const [state, setState] = useState<CollabState>({
     provider: null,
     doc: null,
@@ -46,51 +45,51 @@ export function CollaborationProvider({
   });
 
   useEffect(() => {
-    // Only connect when there are collaborators (collaborative mode)
-    if (!collaboratorIds || collaboratorIds.length === 0) return;
-
     const doc = new Y.Doc();
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8070";
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const token = (session as any)?.accessToken;
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8072";
 
-    if (!token) return;
+    const destroyedRef = { current: false };
+    let provider: WebsocketProvider | null = null;
 
-    const provider = new WebsocketProvider(
-      wsUrl,
-      `draft-${draftId}`,
-      doc,
-      {
-        connect: false,
-        params: { token },
-      },
-    );
+    (async () => {
+      try {
+        const res = await fetch("/api/reports/collab-token");
+        if (res.status !== 200 || destroyedRef.current) return;
+        const data = await res.json();
+        const token = data.token;
+        if (!token || destroyedRef.current) return;
 
-    provider.on("status", ({ status }: { status: string }) => {
-      setState((prev) => ({
-        ...prev,
-        isConnected: status === "connected",
-      }));
-    });
+        provider = new WebsocketProvider(wsUrl, `draft-${draftId}`, doc, {
+          connect: false,
+          params: { token },
+        });
 
-    provider.connect();
+        provider.on("status", ({ status }: { status: string }) => {
+          if (!destroyedRef.current) {
+            setState((prev) => ({ ...prev, isConnected: status === "connected" }));
+          }
+        });
 
-    const getFragment = (sectionId: string) => {
-      if (!doc) return null;
-      return doc.getXmlFragment(`section-${sectionId}`);
-    };
+        provider.connect();
 
-    setState({
-      provider,
-      doc,
-      isConnected: false,
-      getFragment,
-    });
+        if (!destroyedRef.current) {
+          setState({
+            provider,
+            doc,
+            isConnected: false,
+            getFragment: (sectionId: string) => doc.getXmlFragment(`section-${sectionId}`),
+          });
+        }
+      } catch (err) {
+        console.error("[collab] connection error:", err);
+      }
+    })();
 
     return () => {
-      provider.destroy();
+      destroyedRef.current = true;
+      provider?.destroy();
     };
-  }, [draftId, collaboratorIds, session]);
+  }, [draftId, collaboratorIds]);
 
   const value = useMemo(() => state, [state]);
 

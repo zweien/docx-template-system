@@ -2,6 +2,63 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.11](https://github.com/zweien/docx-template-system/compare/v0.6.10...v0.6.11) (2026-04-27)
+
+
+### Features
+
+* **reports:** 左右面板折叠支持 ([553ec3d](https://github.com/zweien/docx-template-system/commit/553ec3dd22d3defd0e83958d4da454d055044c8e))
+* **reports:** add BlockNote and AI SDK dependencies ([a3c29a3](https://github.com/zweien/docx-template-system/commit/a3c29a3f0e43d7d19ef9d6383e68df02017be99a))
+* **reports:** add BlockNote schema, converters, custom blocks, and draft store ([9220025](https://github.com/zweien/docx-template-system/commit/9220025f4b0ecb9797f3856d269228bbf8b2b53e))
+* **reports:** add CollaborationProvider for Yjs WebSocket ([ba1b884](https://github.com/zweien/docx-template-system/commit/ba1b884f618ff8d1a61f3781378627035ed390ce))
+* **reports:** add collaborator management API endpoint ([e614fc3](https://github.com/zweien/docx-template-system/commit/e614fc31c4f6ed383f666074801e22abd80427c3))
+* **reports:** add collaboratorIds to ReportDraft model ([faa7b26](https://github.com/zweien/docx-template-system/commit/faa7b269a1fd6f4010a63a590ff33587073149db))
+* **reports:** add collapsible left/right panels to report editor ([89e8b84](https://github.com/zweien/docx-template-system/commit/89e8b8490db943d53229c8485561ffd096b6be16))
+* **reports:** add editor components, templates page, drafts page, and editor page ([e55f623](https://github.com/zweien/docx-template-system/commit/e55f623d01718633bb84c61f291bc46da2b07173))
+* **reports:** add OnlineUsers and ShareDialog components ([6816c14](https://github.com/zweien/docx-template-system/commit/6816c140036c0f3e16df314877b635cfa8f3e442))
+* **reports:** add owned/shared tabs on drafts list, patch y-prosemirror RangeError ([98d7d1f](https://github.com/zweien/docx-template-system/commit/98d7d1febbc9504e203e564357a7bae07a4de1c7))
+* **reports:** add report API routes (templates, drafts, chat, upload) ([4ce833e](https://github.com/zweien/docx-template-system/commit/4ce833e6c581db6e725d62277d5856b8cb68c70a))
+* **reports:** add report-engine Python service ([5f935df](https://github.com/zweien/docx-template-system/commit/5f935dfd4d0249e34da111db22ae745624a7fece))
+* **reports:** add reports route group layout and navigation ([f8bfe11](https://github.com/zweien/docx-template-system/commit/f8bfe11db7bf75f0bd5ef62eed0d3fc489d689ac))
+* **reports:** add ReportTemplate and ReportDraft models ([9dc1972](https://github.com/zweien/docx-template-system/commit/9dc1972d0ec42eef40e8e0088f5b797f297616c7))
+* **reports:** add template headings, outline navigation, payload import ([6fb3e52](https://github.com/zweien/docx-template-system/commit/6fb3e5235e69f0374ca1de038fd69a652d709861))
+* **reports:** add types, validators, services, and file storage ([907efa7](https://github.com/zweien/docx-template-system/commit/907efa7ba84795b9b861172e745991539529f115))
+* **reports:** add user autocomplete and display names in share dialog ([3bd7564](https://github.com/zweien/docx-template-system/commit/3bd75643dbb4686fe5464239286a8429593166d7))
+* **reports:** add y-websocket collaboration server ([b4a1363](https://github.com/zweien/docx-template-system/commit/b4a136343553efd6e81b501dbcc45dcef753f099))
+* **reports:** add y-websocket collaboration server ([e27724b](https://github.com/zweien/docx-template-system/commit/e27724b0ed246a014ba1c67211984c92564b5e51))
+* **reports:** integrate Yjs collaboration into SectionEditor ([dfd4e8e](https://github.com/zweien/docx-template-system/commit/dfd4e8e9e8357578f2b1c445c5964e2425b60b99))
+* **reports:** wire up collaboration in editor page ([f182f98](https://github.com/zweien/docx-template-system/commit/f182f98e696d887cff18c5d8a53e23605e5e3dee))
+
+
+### Bug Fixes
+
+* correct argument order in report-engine render endpoint ([cb0deda](https://github.com/zweien/docx-template-system/commit/cb0deda6bea29fe9a88d2ac148c6f0178484c9a1))
+* **report-engine:** 修复 OMML 命名空间声明导致 DOCX 无法打开 ([b6bc8ba](https://github.com/zweien/docx-template-system/commit/b6bc8ba15204b2a550b192d4f57e098961488d5a))
+* **report-engine:** support mixed ASCII-CJK variable names in template parser ([0ed5b41](https://github.com/zweien/docx-template-system/commit/0ed5b4174ddafcafc29a3519cc4e17e362ffeffd))
+* **reports:** 修复导出文件格式错误 ([6cb5ef0](https://github.com/zweien/docx-template-system/commit/6cb5ef085efeefb45a9b3f82e4101a551b99528e))
+* **reports:** add reports URL segment to avoid route group path conflicts ([25a1e31](https://github.com/zweien/docx-template-system/commit/25a1e314c5ca4879c14f6d0fbdb8b8095fd5db8b))
+* **reports:** allow collaborators to save and export drafts ([9271277](https://github.com/zweien/docx-template-system/commit/9271277b2f93a03114b2f1263dfa9f475fe91bcb))
+* **reports:** convert BlockNote blocks to engine format before export ([6656397](https://github.com/zweien/docx-template-system/commit/6656397bd435cb3918cf64f1c509d36eebee81ab))
+* **reports:** defer OnlineUsers setState out of render phase ([4b9bcb1](https://github.com/zweien/docx-template-system/commit/4b9bcb1f2be298304a9ee2005733c287ca397aae))
+* **reports:** fix editor background staying dark in light theme ([b09622a](https://github.com/zweien/docx-template-system/commit/b09622aee4c63ea5db222f42eef23b54ab126f59))
+* **reports:** fix editor loading loop and lint issues ([4a90ef7](https://github.com/zweien/docx-template-system/commit/4a90ef73bd842e7dd10494a72dc4943992bb0397))
+* **reports:** fix report-engine PYTHONPATH for correct module imports ([313905a](https://github.com/zweien/docx-template-system/commit/313905a9db5acd70c2389c4ea6365a9b5da975db))
+* **reports:** fix WebSocket collaboration connection issues ([bf7d9b4](https://github.com/zweien/docx-template-system/commit/bf7d9b459e0e7d882005c9b905bca70544c5c19f))
+* **reports:** guard AIToolbarButton against empty selection crash ([a52aa60](https://github.com/zweien/docx-template-system/commit/a52aa6090d4c874ea49db73251d4c9d2cb85fac6))
+* **reports:** improve export error messages ([1d53ab6](https://github.com/zweien/docx-template-system/commit/1d53ab60182d63266f5febd98e10ce46dcbdccbc))
+* **reports:** improve table caption block stability ([63601f2](https://github.com/zweien/docx-template-system/commit/63601f201991c3612845eb9ff3cc56d19d8c6813))
+* **reports:** make share dialog dropdown opaque and distinct ([83e31e6](https://github.com/zweien/docx-template-system/commit/83e31e625846360ebd38fe8f0710e5157f8b089e))
+* **reports:** preserve section order from template in draft queries ([64b6648](https://github.com/zweien/docx-template-system/commit/64b66480b6881299f86426cebb66f5b304725889))
+* **reports:** prevent caption/rename popover from closing during typing ([6d282f5](https://github.com/zweien/docx-template-system/commit/6d282f50c18e9a65fd76bf8f55558ce0e0cde7dc))
+* **reports:** remove unsupported subscript/superscript styles and preserve template headings ([ee6ba89](https://github.com/zweien/docx-template-system/commit/ee6ba8999d5214c2e59363f84115a0cbe7bfaaa4))
+* **reports:** render reports section in sidebar navigation ([55cb0a3](https://github.com/zweien/docx-template-system/commit/55cb0a3e61f7840d84430da3667eee5fc6754cee))
+* **reports:** replace @blocknote/xl-ai/server with inline implementation for AI chat ([0d5f9e9](https://github.com/zweien/docx-template-system/commit/0d5f9e91f0af8ca3952959ce3cbaa966fae6fce8))
+* **reports:** resolve ESLint errors ([e1083fd](https://github.com/zweien/docx-template-system/commit/e1083fd45defd51af68de87b3f45549e8a26f007))
+* **reports:** resolve real-time collaborative editing sync ([05c3398](https://github.com/zweien/docx-template-system/commit/05c33984264f469edcdba51a49a68dc91e7c4e9c))
+* **reports:** resolve TypeScript type errors with BlockNote compatibility ([5934149](https://github.com/zweien/docx-template-system/commit/59341493fe9e05f54101c41e561a3bbc68e3a166))
+* **reports:** restore correct ai dictionary key name ([10c75f9](https://github.com/zweien/docx-template-system/commit/10c75f91eaf6f811b9b5e2d6a88fd030b89b19a8))
+* **reports:** return full collaborator info on add/remove ([9f20e08](https://github.com/zweien/docx-template-system/commit/9f20e08404410c7aabfbbd066502dd627ecb3e35))
+
 ## [0.6.10](https://github.com/zweien/docx-template-system/compare/v0.6.9...v0.6.10) (2026-04-24)
 
 

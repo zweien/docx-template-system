@@ -78,6 +78,23 @@ export async function createReportTemplate(
   }
 }
 
+export async function renameReportTemplate(
+  id: string,
+  userId: string,
+  name: string
+): Promise<ServiceResult<void>> {
+  try {
+    const template = await db.reportTemplate.findUnique({ where: { id } });
+    if (!template || template.userId !== userId) {
+      return { success: false, error: { code: "NOT_FOUND", message: "报告模板不存在" } };
+    }
+    await db.reportTemplate.update({ where: { id }, data: { name } });
+    return { success: true, data: undefined };
+  } catch {
+    return { success: false, error: { code: "RENAME_FAILED", message: "重命名报告模板失败" } };
+  }
+}
+
 export async function deleteReportTemplate(
   id: string,
   userId: string

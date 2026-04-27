@@ -12,3 +12,7 @@ export const updateReportDraftSchema = z.object({
   attachments: z.record(z.string(), z.array(z.any())).optional(),
   sectionEnabled: z.record(z.string(), z.boolean()).optional(),
 });
+
+export const renameReportTemplateSchema = z.object({
+  name: z.string().min(1).max(200),
+});

@@ -14,6 +14,8 @@ export default function ReportTemplatesPage() {
   const router = useRouter();
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
 
   useEffect(() => {
     fetch("/api/reports/templates")
@@ -50,6 +52,25 @@ export default function ReportTemplatesPage() {
     }
   };
 
+  const startRename = (t: ReportTemplate) => {
+    setEditingId(t.id);
+    setEditName(t.name);
+  };
+
+  const confirmRename = async (id: string) => {
+    if (!editName.trim()) return;
+    const res = await fetch(`/api/reports/templates/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editName.trim() }),
+    });
+    const json = await res.json();
+    if (json.success) {
+      setTemplates((prev) => prev.map((t) => (t.id === id ? { ...t, name: editName.trim() } : t)));
+    }
+    setEditingId(null);
+  };
+
   if (loading) return <div className="p-8 text-center text-muted-foreground">加载中...</div>;
 
   return (
@@ -67,7 +88,22 @@ export default function ReportTemplatesPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((t) => (
             <div key={t.id} className="rounded-lg border border-border bg-card p-4">
-              <h3 className="font-medium">{t.name}</h3>
+              {editingId === t.id ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") confirmRename(t.id); if (e.key === "Escape") setEditingId(null); }}
+                    className="flex-1 rounded border border-border bg-transparent px-2 py-1 text-sm"
+                    autoFocus
+                  />
+                  <button onClick={() => confirmRename(t.id)} className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground hover:bg-primary/90">保存</button>
+                  <button onClick={() => setEditingId(null)} className="rounded border border-border px-2 py-1 text-xs hover:bg-muted">取消</button>
+                </div>
+              ) : (
+                <h3 className="font-medium cursor-pointer hover:text-primary" onClick={() => startRename(t)} title="点击重命名">{t.name}</h3>
+              )}
               <p className="mt-1 text-sm text-muted-foreground">{t.originalFilename}</p>
               <div className="mt-3 flex gap-2">
                 <button onClick={() => handleCreateDraft(t.id)} className="rounded bg-primary px-3 py-1 text-xs text-primary-foreground hover:bg-primary/90">

@@ -19,6 +19,7 @@ interface DraftData {
   sectionEnabled: Record<string, boolean>;
   status: string;
   collaboratorIds: string[];
+  collaborators: { id: string; name: string; email: string }[];
 }
 
 interface Payload {

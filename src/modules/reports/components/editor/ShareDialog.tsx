@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+interface UserItem {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface ShareDialogProps {
   draftId: string;
   open: boolean;
   onClose: () => void;
   collaboratorIds: string[];
+  collaborators: UserItem[];
   onCollaboratorsChange: (ids: string[]) => void;
 }
 
@@ -15,21 +22,69 @@ export function ShareDialog({
   open,
   onClose,
   collaboratorIds,
+  collaborators,
   onCollaboratorsChange,
 }: ShareDialogProps) {
   const [input, setInput] = useState("");
+  const [candidates, setCandidates] = useState<UserItem[]>([]);
+  const [showCandidates, setShowCandidates] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const handleAdd = async () => {
-    if (!input.trim()) return;
+  useEffect(() => {
+    if (!open) {
+      setInput("");
+      setCandidates([]);
+      setShowCandidates(false);
+      setError("");
+      return;
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!input.trim()) {
+      setCandidates([]);
+      setShowCandidates(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/users/search?q=${encodeURIComponent(input.trim())}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const items: UserItem[] = data.items || [];
+        const existing = new Set(collaboratorIds);
+        setCandidates(items.filter((u: UserItem) => !existing.has(u.id)));
+        setShowCandidates(items.length > 0);
+      } catch {
+        // silent
+      }
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [input, collaboratorIds]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setShowCandidates(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleAdd = async (userId: string) => {
     setLoading(true);
     setError("");
+    setShowCandidates(false);
+    setInput("");
     try {
       const res = await fetch(`/api/reports/drafts/${draftId}/collaborators`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: input.trim() }),
+        body: JSON.stringify({ userId }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -37,7 +92,6 @@ export function ShareDialog({
         return;
       }
       onCollaboratorsChange(data.collaboratorIds);
-      setInput("");
     } catch {
       setError("网络错误");
     } finally {
@@ -83,40 +137,60 @@ export function ShareDialog({
         {error && (
           <p className="text-xs text-destructive mb-2">{error}</p>
         )}
-        <div className="flex gap-2 mb-3">
+        <div className="relative mb-3" ref={containerRef}>
           <input
+            ref={inputRef}
             type="text"
-            placeholder="输入用户 ID..."
+            placeholder="搜索用户名或邮箱..."
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            className="flex-1 rounded border px-2 py-1 text-sm bg-background"
+            className="w-full rounded border px-2 py-1 text-sm bg-background"
           />
-          <button
-            onClick={handleAdd}
-            disabled={loading || !input.trim()}
-            className="rounded bg-primary px-2 py-1 text-sm text-primary-foreground disabled:opacity-50"
-          >
-            添加
-          </button>
+          {showCandidates && candidates.length > 0 && (
+            <div className="absolute z-10 w-full mt-1 bg-card border rounded shadow-lg max-h-40 overflow-y-auto">
+              {candidates.map((user) => (
+                <button
+                  key={user.id}
+                  onClick={() => handleAdd(user.id)}
+                  disabled={loading}
+                  className="w-full text-left px-3 py-2 hover:bg-muted disabled:opacity-50"
+                >
+                  <div className="text-sm font-medium">{user.name}</div>
+                  <div className="text-xs text-muted-foreground">{user.email}</div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         {collaboratorIds.length > 0 ? (
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">当前协作者：</p>
-            {collaboratorIds.map((id) => (
-              <div
-                key={id}
-                className="flex items-center justify-between rounded bg-muted px-2 py-1"
-              >
-                <span className="text-xs truncate max-w-[180px]">{id}</span>
-                <button
-                  onClick={() => handleRemove(id)}
-                  className="text-xs text-destructive hover:underline shrink-0 ml-2"
+            {collaboratorIds.map((id) => {
+              const user = collaborators.find((c) => c.id === id);
+              return (
+                <div
+                  key={id}
+                  className="flex items-center justify-between rounded bg-muted px-2 py-1"
                 >
-                  移除
-                </button>
-              </div>
-            ))}
+                  <div className="min-w-0">
+                    <span className="text-xs font-medium truncate block">
+                      {user ? user.name : id}
+                    </span>
+                    {user && (
+                      <span className="text-[10px] text-muted-foreground truncate block">
+                        {user.email}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleRemove(id)}
+                    className="text-xs text-destructive hover:underline shrink-0 ml-2"
+                  >
+                    移除
+                  </button>
+                </div>
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs text-muted-foreground">暂无协作者</p>

@@ -51,6 +51,7 @@ export interface ReportDraftDetail {
   sectionEnabled: Record<string, boolean>;
   status: string;
   collaboratorIds: string[];
+  collaborators: { id: string; name: string; email: string }[];
   createdAt: string;
   updatedAt: string;
 }

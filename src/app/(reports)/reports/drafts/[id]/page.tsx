@@ -20,6 +20,8 @@ function EditorContent() {
     setCollaboratorIds,
   } = useReportDraftStore();
 
+  const collaborators = draft?.collaborators || [];
+
   const { getFragment, provider, synced } = useCollaboration();
 
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -216,6 +218,7 @@ function EditorContent() {
         open={shareOpen}
         onClose={() => setShareOpen(false)}
         collaboratorIds={collaboratorIds}
+        collaborators={collaborators}
         onCollaboratorsChange={setCollaboratorIds}
       />
     </div>

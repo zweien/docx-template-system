@@ -90,6 +90,15 @@ export async function getReportDraft(id: string, userId: string): Promise<Servic
     if (!draft || (draft.userId !== userId && !((draft.collaboratorIds || []) as string[]).includes(userId))) {
       return { success: false, error: { code: "NOT_FOUND", message: "报告草稿不存在" } };
     }
+    const collaboratorIds = (draft.collaboratorIds || []) as string[];
+    let collaborators: { id: string; name: string; email: string }[] = [];
+    if (collaboratorIds.length > 0) {
+      const users = await db.user.findMany({
+        where: { id: { in: collaboratorIds } },
+        select: { id: true, name: true, email: true },
+      });
+      collaborators = users;
+    }
     return {
       success: true,
       data: {
@@ -106,7 +115,8 @@ export async function getReportDraft(id: string, userId: string): Promise<Servic
         attachments: draft.attachments as Record<string, BlockNoteBlock[]>,
         sectionEnabled: draft.sectionEnabled as Record<string, boolean>,
         status: draft.status,
-        collaboratorIds: draft.collaboratorIds as string[],
+        collaboratorIds,
+        collaborators,
         createdAt: draft.createdAt.toISOString(),
         updatedAt: draft.updatedAt.toISOString(),
       },

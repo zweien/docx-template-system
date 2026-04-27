@@ -86,6 +86,25 @@ export async function listReportDrafts(
   }
 }
 
+function reorderByTemplate<T>(
+  record: Record<string, T>,
+  structure: ReportTemplateStructure
+): Record<string, T> {
+  const ordered: Record<string, T> = {};
+  for (const s of structure.sections) {
+    if (s.id in record) {
+      ordered[s.id] = record[s.id];
+    }
+  }
+  // Append any keys not in template (e.g. dynamically added sections)
+  for (const key of Object.keys(record)) {
+    if (!(key in ordered)) {
+      ordered[key] = record[key];
+    }
+  }
+  return ordered;
+}
+
 export async function getReportDraft(id: string, userId: string): Promise<ServiceResult<ReportDraftDetail>> {
   try {
     const draft = await db.reportDraft.findUnique({
@@ -108,6 +127,9 @@ export async function getReportDraft(id: string, userId: string): Promise<Servic
       });
       collaborators = users;
     }
+    const structure = draft.template.parsedStructure as unknown as ReportTemplateStructure;
+    const rawSections = draft.sections as Record<string, BlockNoteBlock[]>;
+    const rawEnabled = draft.sectionEnabled as Record<string, boolean>;
     return {
       success: true,
       data: {
@@ -120,9 +142,9 @@ export async function getReportDraft(id: string, userId: string): Promise<Servic
           parsedStructure: draft.template.parsedStructure as any,
         },
         context: draft.context as Record<string, string>,
-        sections: draft.sections as Record<string, BlockNoteBlock[]>,
+        sections: reorderByTemplate(rawSections, structure),
         attachments: draft.attachments as Record<string, BlockNoteBlock[]>,
-        sectionEnabled: draft.sectionEnabled as Record<string, boolean>,
+        sectionEnabled: reorderByTemplate(rawEnabled, structure),
         status: draft.status,
         collaboratorIds,
         collaborators,

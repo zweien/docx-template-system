@@ -24,10 +24,27 @@ services:
     volumes:
       - uploads:/app/public/uploads:ro
 
+  collab:
+    build: .
+    ports:
+      - "0.0.0.0:8072:8072"
+    env_file: .env.production
+    environment:
+      - Y_WS_PORT=8072
+      - Y_WS_PERSISTENCE_DIR=/app/y-websocket-db
+      - NODE_ENV=production
+    restart: unless-stopped
+    volumes:
+      - collab-persistence:/app/y-websocket-db
+    networks:
+      - default
+    command: ["node", "y-websocket-server/server.cjs"]
+
 volumes:
   uploads:
   collection-uploads:
   backups:
+  collab-persistence:
 
 networks:
   sso_net:

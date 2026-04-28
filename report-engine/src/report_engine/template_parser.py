@@ -1,7 +1,11 @@
 import re
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 from xml.etree import ElementTree as ET
 from zipfile import ZipFile
+
+from docx import Document
+
+from report_engine.prompt_parser import extract_prompts
 
 NS = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
 
@@ -177,10 +181,18 @@ def parse_template(template_path: str) -> Tuple[dict, List[str]]:
 
     _extract_section_headings(_read_document_xml(template_path), sections)
 
+    # Extract PROMPT annotations
+    try:
+        doc = Document(template_path)
+        prompts = extract_prompts(doc)
+    except Exception:
+        prompts = []
+
     structure = {
         "context_vars": context_vars,
         "sections": sections,
         "attachments_bundle": attachments_bundle,
         "required_styles": [],
+        "prompts": prompts,
     }
     return structure, warnings

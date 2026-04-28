@@ -90,6 +90,21 @@ function EditorContent() {
   const sections = structure.sections || [];
   const currentBlocks = draft.sections[activeSection] || [];
 
+  const activeSectionMeta = sections.find((s) => s.id === activeSection);
+  const activePrompt = structure.prompts?.find((p) => {
+    if (p.level !== "section") return false;
+    const targets = [
+      activeSectionMeta?.title,
+      activeSectionMeta?.id,
+      activeSection,
+      ...(activeSectionMeta?.template_headings?.map((h) => h.text) ?? []),
+    ];
+    return targets.some((t) => {
+      if (!t) return false;
+      return t === p.target || t.includes(p.target) || p.target.includes(t);
+    });
+  });
+
   return (
     <div className="flex h-[calc(100vh-8rem)] -m-4 sm:-m-6">
       {/* 左侧：章节面板 */}
@@ -188,6 +203,15 @@ function EditorContent() {
             </button>
           </div>
         </div>
+        {activePrompt && (
+          <div className="mb-4 rounded-lg border border-border bg-muted/50 p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium text-primary">写作指导</span>
+              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{activePrompt.mode}</span>
+            </div>
+            <p className="text-sm text-muted-foreground">{activePrompt.prompt}</p>
+          </div>
+        )}
         <SectionEditor
           key={`${activeSection}-${synced ? 'collab' : 'local'}`}
           // eslint-disable-next-line @typescript-eslint/no-explicit-any

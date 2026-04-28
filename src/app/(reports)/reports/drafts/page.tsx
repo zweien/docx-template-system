@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface ReportDraft {
   id: string;
@@ -14,6 +15,7 @@ interface ReportDraft {
 type Tab = "owned" | "shared";
 
 export default function ReportDraftsPage() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("owned");
   const [drafts, setDrafts] = useState<ReportDraft[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,7 +103,7 @@ export default function ReportDraftsPage() {
                   </div>
                 ) : (
                   <>
-                    <span className="font-medium cursor-pointer hover:text-primary hover:underline" onClick={() => startRename(d)} title="点击重命名">{d.title}</span>
+                    <span className="font-medium cursor-pointer hover:text-primary hover:underline" onClick={() => router.push(`/reports/drafts/${d.id}`)}>{d.title}</span>
                     <p className="mt-0.5 text-sm text-muted-foreground">
                       模板：{d.templateName} · 更新于 {new Date(d.updatedAt).toLocaleString()}
                     </p>

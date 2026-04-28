@@ -6,6 +6,13 @@ export interface ReportTemplateListItem {
   updatedAt: string;
 }
 
+export interface PromptMeta {
+  target: string;
+  prompt: string;
+  mode: string;
+  level: string;
+}
+
 export interface ReportTemplateStructure {
   context_vars: string[];
   sections: ReportSectionMeta[];
@@ -14,6 +21,7 @@ export interface ReportTemplateStructure {
     flag_name: string;
   } | null;
   required_styles: string[];
+  prompts?: PromptMeta[];
 }
 
 export interface ReportSectionMeta {

@@ -10,6 +10,7 @@ from report_engine.blocks import create_default_registry
 from report_engine.compat import normalize_payload
 from report_engine.schema import Payload
 from report_engine.style_checker import ensure_template_styles
+from report_engine.prompt_parser import filter_prompt_paragraphs
 from report_engine.subdoc import build_subdoc
 from report_engine.template_checker import ensure_template_contract
 from report_engine.validator import validate_payload
@@ -151,6 +152,7 @@ def render_report(
         ensure_template_contract(template_path, payload_model)
 
     tpl = DocxTemplate(template_path)
+    filter_prompt_paragraphs(tpl.get_docx())
     context: Dict[str, Any] = dict(payload_model.context)
     style_map = dict(payload_model.style_map)
 

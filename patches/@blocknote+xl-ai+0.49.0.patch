@@ -1,0 +1,13 @@
+diff --git a/node_modules/@blocknote/xl-ai/dist/blocknote-xl-ai.js b/node_modules/@blocknote/xl-ai/dist/blocknote-xl-ai.js
+index 0215e5b..ae404e0 100644
+--- a/node_modules/@blocknote/xl-ai/dist/blocknote-xl-ai.js
++++ b/node_modules/@blocknote/xl-ai/dist/blocknote-xl-ai.js
+@@ -171,7 +171,7 @@ var Se = (e) => {
+ 						o && (r.setState({ aiMenuState: {
+ 							blockId: t,
+ 							status: "ai-writing"
+-						} }), a && e.prosemirrorView.domAtPos(o.posBeforeNode + 1).node.scrollIntoView({ block: "center" }));
++						} }), a && e.prosemirrorView && e.prosemirrorView.domAtPos(o.posBeforeNode + 1).node.scrollIntoView({ block: "center" }));
+ 					},
+ 					onStart: () => {
+ 						a = !0, this.setAIResponseStatus("ai-writing"), c.emptyCursorBlockToDelete && c.editor.getBlock(c.emptyCursorBlockToDelete) && c.editor.removeBlocks([c.emptyCursorBlockToDelete]);

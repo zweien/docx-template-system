@@ -22,7 +22,7 @@ export async function listReportTemplates(userId: string): Promise<ServiceResult
       orderBy: { createdAt: "desc" },
       select: {
         id: true, name: true, originalFilename: true,
-        createdAt: true, updatedAt: true,
+        createdAt: true, updatedAt: true, parsedStructure: true,
       },
     });
     return { success: true, data: templates };
@@ -109,5 +109,27 @@ export async function deleteReportTemplate(
     return { success: true, data: undefined };
   } catch {
     return { success: false, error: { code: "DELETE_FAILED", message: "删除报告模板失败" } };
+  }
+}
+
+export async function updateTemplatePrompts(
+  id: string,
+  userId: string,
+  prompts: Record<string, unknown>[]
+): Promise<ServiceResult<void>> {
+  try {
+    const template = await db.reportTemplate.findUnique({ where: { id } });
+    if (!template || template.userId !== userId) {
+      return { success: false, error: { code: "NOT_FOUND", message: "报告模板不存在" } };
+    }
+    const parsedStructure = JSON.parse(JSON.stringify(template.parsedStructure ?? {})) as Record<string, unknown>;
+    parsedStructure.prompts = prompts;
+    await db.reportTemplate.update({
+      where: { id },
+      data: { parsedStructure: parsedStructure as any },
+    });
+    return { success: true, data: undefined };
+  } catch (e: unknown) {
+    return { success: false, error: { code: "UPDATE_FAILED", message: e instanceof Error ? e.message : "更新 PROMPT 失败" } };
   }
 }

@@ -46,6 +46,7 @@ next-env.d.ts
 # uploads (keep .gitkeep files)
 public/uploads/templates/*
 public/uploads/documents/*
+public/uploads/report-templates/*.docx
 !public/uploads/templates/.gitkeep
 !public/uploads/documents/.gitkeep
 
@@ -72,3 +73,7 @@ test-results/
 /sidebar-test.png
 /tool-error.png
 docs/deploy.md
+
+# Debug scripts
+debug_*.py
+verify_*.py

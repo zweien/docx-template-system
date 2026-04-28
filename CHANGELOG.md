@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.7.3](https://github.com/zweien/docx-template-system/compare/v0.7.2...v0.7.3) (2026-04-28)
+
+
+### Bug Fixes
+
+* **auth:** use request origin for NextAuth base URL in LAN access ([028537d](https://github.com/zweien/docx-template-system/commit/028537dd0f85e59559f2bb5c884476c7421b8982))
+* **dev:** allow LAN access for HMR WebSocket in dev mode ([134a511](https://github.com/zweien/docx-template-system/commit/134a51153eabcb54fd76df8f4856d49f0807dbee))
+
 ## [0.7.2](https://github.com/zweien/docx-template-system/compare/v0.7.1...v0.7.2) (2026-04-28)
 
 

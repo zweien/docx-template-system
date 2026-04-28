@@ -1,6 +1,6 @@
 {
   "name": "docx-template-system",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack -p 8060 --hostname 0.0.0.0",

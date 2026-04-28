@@ -6,6 +6,7 @@ import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blockno
 import "@blocknote/shadcn/style.css";
 import "@blocknote/xl-ai/style.css";
 import { useCallback, useEffect, useRef } from "react";
+
 import * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
 import { useTheme } from "@/components/theme/theme-provider";
@@ -33,6 +34,7 @@ interface SectionEditorProps {
   onScrolled?: () => void;
   collabFragment?: Y.XmlFragment | null;
   collabProvider?: WebsocketProvider | null;
+  onEditorMount?: (editor: any) => void;
 }
 
 function isBlockNoteBlocks(blocks: EngineBlock[]): boolean {
@@ -115,7 +117,7 @@ function AIToolbarButtonSafe({ editor }: { editor: any }) {
   return <AIToolbarButton />;
 }
 
-export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, collabFragment, collabProvider }: SectionEditorProps) {
+export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, collabFragment, collabProvider, onEditorMount }: SectionEditorProps) {
   const { resolvedTheme } = useTheme();
   const { data: session } = useSession();
   const onChangeRef = useRef(onChange);
@@ -168,6 +170,13 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
       return json.data?.url || json.url;
     },
   });
+  useEffect(() => {
+    if (onEditorMount) {
+      onEditorMount(editor);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
+
 
   // Load content after mount via replaceBlocks so errors can be caught.
   // In collab mode: wait until the Yjs provider has synced so we know whether

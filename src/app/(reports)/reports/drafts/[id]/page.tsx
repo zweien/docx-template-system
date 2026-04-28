@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Sparkles, X, RotateCcw } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Sparkles, X, RotateCcw, Pencil, Check } from "lucide-react";
 import { useReportDraftStore } from "@/modules/reports/stores/report-draft-store";
 import { SectionEditor } from "@/modules/reports/components/editor/SectionEditor";
 import { OutlinePanel } from "@/modules/reports/components/editor/OutlinePanel";
@@ -51,6 +51,8 @@ function EditorContent() {
   const [generationError, setGenerationError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const editorRef = useRef<any>(null);
+  const [editedPrompt, setEditedPrompt] = useState("");
+  const [isEditingPrompt, setIsEditingPrompt] = useState(false);
 
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -146,7 +148,7 @@ function EditorContent() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            prompt: activePrompt.prompt,
+            prompt: editedPrompt || activePrompt.prompt,
             target: activeSectionMeta?.title || activeSection,
             existingContent,
             context: draft.context,
@@ -191,7 +193,7 @@ function EditorContent() {
       setIsGenerating(false);
       abortControllerRef.current = null;
     }
-  }, [draft, activeSection, activePrompt, activeSectionMeta, sections]);
+  }, [draft, activeSection, activePrompt, activeSectionMeta, sections, editedPrompt]);
 
   const cancelGeneration = useCallback(() => {
     abortControllerRef.current?.abort();
@@ -281,6 +283,11 @@ function EditorContent() {
     setGenerationError(null);
     setIsGenerating(false);
   }, [activeSection]);
+
+  useEffect(() => {
+    setEditedPrompt(activePrompt?.prompt || "");
+    setIsEditingPrompt(false);
+  }, [activePrompt]);
 
   return (
     <div className="flex h-[calc(100vh-8rem)] -m-4 sm:-m-6">
@@ -387,26 +394,55 @@ function EditorContent() {
                 <span className="text-xs font-medium text-primary">写作指导</span>
                 <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{activePrompt.mode}</span>
               </div>
-              <Button
-                size="xs"
-                variant="outline"
-                disabled={isGenerating}
-                onClick={startGeneration}
-              >
-                {isGenerating ? (
-                  <>
-                    <Spinner className="size-3 mr-1" />
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="size-3 mr-1" />
-                    AI 生成
-                  </>
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  disabled={isGenerating}
+                  onClick={() => setIsEditingPrompt((v) => !v)}
+                >
+                  {isEditingPrompt ? (
+                    <>
+                      <Check className="size-3 mr-1" />
+                      完成
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="size-3 mr-1" />
+                      编辑
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="xs"
+                  variant="outline"
+                  disabled={isGenerating}
+                  onClick={startGeneration}
+                >
+                  {isGenerating ? (
+                    <>
+                      <Spinner className="size-3 mr-1" />
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="size-3 mr-1" />
+                      AI 生成
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground">{activePrompt.prompt}</p>
+            {isEditingPrompt ? (
+              <textarea
+                className="w-full mt-1 rounded border border-border bg-background px-2 py-1.5 text-sm text-muted-foreground resize-y min-h-[60px]"
+                value={editedPrompt}
+                onChange={(e) => setEditedPrompt(e.target.value)}
+                rows={3}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">{editedPrompt || activePrompt.prompt}</p>
+            )}
           </div>
         )}
         {showPreview && (

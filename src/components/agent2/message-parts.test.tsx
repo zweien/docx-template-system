@@ -37,7 +37,7 @@ vi.mock("./chart-renderer", () => ({
   ChartRenderer: chartRendererMock,
 }))
 
-vi.mock("../ai-chat/assistant-stream-state", () => ({
+vi.mock("./assistant-stream-state", () => ({
   AssistantStreamState: assistantStreamStateMock,
 }))
 

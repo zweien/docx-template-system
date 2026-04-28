@@ -11,7 +11,7 @@ import { ToolConfirmDialog } from "./tool-confirm-dialog"
 import { ChartRenderer } from "./chart-renderer"
 import { parseThinkTaggedText } from "@/lib/agent2/think-parser"
 import { extractChartOptionFromText } from "@/lib/agent2/chart-text-parser"
-import { AssistantStreamState } from "../ai-chat/assistant-stream-state"
+import { AssistantStreamState } from "./assistant-stream-state"
 
 interface DetailPreview {
   title: string

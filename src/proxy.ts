@@ -13,8 +13,7 @@ export async function proxy(request: NextRequest) {
   // Allow auth-related routes
   if (
     pathname.startsWith("/login") ||
-    pathname.startsWith("/api/auth") ||
-    pathname.startsWith("/api/ai-agent")
+    pathname.startsWith("/api/auth")
   ) {
     return NextResponse.next();
   }

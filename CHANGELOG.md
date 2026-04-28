@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.7.1](https://github.com/zweien/docx-template-system/compare/v0.7.0...v0.7.1) (2026-04-28)
+
+
+### Features
+
+* **reports:** add AI section auto-fill with streaming preview panel ([518d075](https://github.com/zweien/docx-template-system/commit/518d0753b663e10f7b1289df36da35805ef5d956))
+* **reports:** add PROMPT annotation support and fix Ask AI ([7f5da8b](https://github.com/zweien/docx-template-system/commit/7f5da8bf08b57364209cd022198aa30e3af8b575))
+* **reports:** add rename support for templates and drafts ([c9494ea](https://github.com/zweien/docx-template-system/commit/c9494eae2ffc14f069fffa1309a4047f604eea40))
+* **reports:** add section content generation API endpoint ([e53aa9a](https://github.com/zweien/docx-template-system/commit/e53aa9acf169b0effbdea52ba90811fc6ab87b4f))
+* **reports:** allow editing prompt before AI generation ([70a6f38](https://github.com/zweien/docx-template-system/commit/70a6f38cdbbf7868c4056a2c35f15284acb8c08a))
+* **reports:** expose BlockNote editor instance via onEditorMount callback ([5a1bcc4](https://github.com/zweien/docx-template-system/commit/5a1bcc4a5bc84ab221087e91b0d6ce087fdb4af2))
+
 ## [0.7.0](https://github.com/zweien/docx-template-system/compare/v0.6.11...v0.7.0) (2026-04-27)
 
 ## [0.6.11](https://github.com/zweien/docx-template-system/compare/v0.6.10...v0.6.11) (2026-04-27)

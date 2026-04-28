@@ -2,13 +2,16 @@
 
 import { useEffect, useCallback, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen, Sparkles, X, RotateCcw } from "lucide-react";
 import { useReportDraftStore } from "@/modules/reports/stores/report-draft-store";
 import { SectionEditor } from "@/modules/reports/components/editor/SectionEditor";
 import { OutlinePanel } from "@/modules/reports/components/editor/OutlinePanel";
 import { CollaborationProvider, useCollaboration } from "@/modules/reports/components/editor/CollaborationProvider";
 import { OnlineUsers } from "@/modules/reports/components/editor/OnlineUsers";
 import { ShareDialog } from "@/modules/reports/components/editor/ShareDialog";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Streamdown } from "streamdown";
 import type { ReportTemplateStructure } from "@/modules/reports/types";
 
 function EditorContent() {
@@ -41,6 +44,13 @@ function EditorContent() {
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewText, setPreviewText] = useState("");
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const editorRef = useRef<any>(null);
 
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -104,6 +114,173 @@ function EditorContent() {
       return t === p.target || t.includes(p.target) || p.target.includes(t);
     });
   });
+
+  const startGeneration = useCallback(async () => {
+    if (!draft || !activeSection || !activePrompt) return;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    setIsGenerating(true);
+    setShowPreview(true);
+    setPreviewText("");
+    setGenerationError(null);
+
+    const existingContent = editorRef.current
+      ? editorRef.current.blocksToMarkdownLossy(editorRef.current.document)
+      : "";
+
+    const documentStructure = sections.map((s) => ({
+      id: s.id,
+      title: s.title,
+    }));
+
+    try {
+      const res = await fetch(
+        `/api/reports/drafts/${draft.id}/sections/${activeSection}/generate`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prompt: activePrompt.prompt,
+            target: activeSectionMeta?.title || activeSection,
+            existingContent,
+            context: draft.context,
+            documentStructure,
+          }),
+          signal: abortController.signal,
+        }
+      );
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => "生成失败");
+        throw new Error(errText);
+      }
+
+      if (!res.body) {
+        throw new Error("响应体为空");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let text = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+        setPreviewText(text);
+      }
+
+      if (text.trim().length === 0) {
+        setGenerationError("未生成有效内容，请调整提示词后重试");
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === "AbortError") {
+        // User cancelled — keep partial content
+      } else {
+        setGenerationError(
+          err instanceof Error ? err.message : "生成失败，请检查网络后重试"
+        );
+      }
+    } finally {
+      setIsGenerating(false);
+      abortControllerRef.current = null;
+    }
+  }, [draft, activeSection, activePrompt, activeSectionMeta, sections]);
+
+  const cancelGeneration = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setIsGenerating(false);
+  }, []);
+
+  const retryGeneration = useCallback(() => {
+    setGenerationError(null);
+    setPreviewText("");
+    startGeneration();
+  }, [startGeneration]);
+
+  const applyGenerated = useCallback(
+    (mode: "append" | "replace") => {
+      if (!editorRef.current || !previewText.trim()) return;
+
+      try {
+        const blocks = editorRef.current.tryParseMarkdownToBlocks(previewText);
+
+        if (mode === "replace") {
+          editorRef.current.replaceBlocks(
+            editorRef.current.document,
+            blocks
+          );
+        } else {
+          const doc = editorRef.current.document;
+          if (doc.length === 0) {
+            editorRef.current.replaceBlocks(doc, blocks);
+          } else {
+            editorRef.current.insertBlocks(
+              blocks,
+              doc[doc.length - 1],
+              "after"
+            );
+          }
+        }
+
+        scheduleAutoSave();
+        setShowPreview(false);
+        setPreviewText("");
+        setGenerationError(null);
+      } catch (err: unknown) {
+        console.error("[Apply Generated] Markdown parse failed:", err);
+        try {
+          const fallbackBlocks = [
+            {
+              type: "paragraph",
+              content: previewText,
+            },
+          ];
+          if (mode === "replace") {
+            editorRef.current.replaceBlocks(
+              editorRef.current.document,
+              fallbackBlocks
+            );
+          } else {
+            const doc = editorRef.current.document;
+            if (doc.length === 0) {
+              editorRef.current.replaceBlocks(doc, fallbackBlocks);
+            } else {
+              editorRef.current.insertBlocks(
+                fallbackBlocks,
+                doc[doc.length - 1],
+                "after"
+              );
+            }
+          }
+          scheduleAutoSave();
+          setShowPreview(false);
+          setPreviewText("");
+        } catch (fallbackErr) {
+          console.error("[Apply Generated] Fallback also failed:", fallbackErr);
+        }
+      }
+    },
+    [previewText, scheduleAutoSave]
+  );
+
+  useEffect(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setShowPreview(false);
+    setPreviewText("");
+    setGenerationError(null);
+    setIsGenerating(false);
+  }, [activeSection]);
 
   return (
     <div className="flex h-[calc(100vh-8rem)] -m-4 sm:-m-6">
@@ -205,11 +382,86 @@ function EditorContent() {
         </div>
         {activePrompt && (
           <div className="mb-4 rounded-lg border border-border bg-muted/50 p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium text-primary">写作指导</span>
-              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{activePrompt.mode}</span>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-primary">写作指导</span>
+                <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">{activePrompt.mode}</span>
+              </div>
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={isGenerating}
+                onClick={startGeneration}
+              >
+                {isGenerating ? (
+                  <>
+                    <Spinner className="size-3 mr-1" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="size-3 mr-1" />
+                    AI 生成
+                  </>
+                )}
+              </Button>
             </div>
             <p className="text-sm text-muted-foreground">{activePrompt.prompt}</p>
+          </div>
+        )}
+        {showPreview && (
+          <div className="mb-4 rounded-lg border border-border bg-background p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">AI 生成预览</span>
+                {isGenerating && <Spinner className="size-4" />}
+              </div>
+              <div className="flex items-center gap-2">
+                {isGenerating ? (
+                  <Button size="xs" variant="ghost" onClick={cancelGeneration}>
+                    <X className="size-3 mr-1" />
+                    取消
+                  </Button>
+                ) : generationError ? (
+                  <Button size="xs" variant="ghost" onClick={retryGeneration}>
+                    <RotateCcw className="size-3 mr-1" />
+                    重新生成
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+
+            {generationError ? (
+              <div className="text-sm text-destructive mb-3">{generationError}</div>
+            ) : (
+              <div className="max-h-80 overflow-y-auto mb-3">
+                <div className="prose prose-sm max-w-none">
+                  <Streamdown isAnimating={isGenerating}>{previewText}</Streamdown>
+                  {isGenerating && previewText ? (
+                    <span className="ml-1 inline-block h-4 w-2 animate-pulse rounded-sm bg-current/45 align-middle" />
+                  ) : null}
+                </div>
+              </div>
+            )}
+
+            {!isGenerating && !generationError && previewText.trim().length > 0 && (
+              <div className="flex items-center gap-2 justify-end">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => applyGenerated("append")}
+                >
+                  续写
+                </Button>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => applyGenerated("replace")}
+                >
+                  改写
+                </Button>
+              </div>
+            )}
           </div>
         )}
         <SectionEditor
@@ -222,6 +474,7 @@ function EditorContent() {
           onScrolled={() => setScrollTargetBlockId(undefined)}
           collabFragment={provider ? getFragment(activeSection) : null}
           collabProvider={provider}
+          onEditorMount={(editor) => { editorRef.current = editor; }}
         />
       </div>
 

@@ -1,6 +1,40 @@
 import NextAuth from "next-auth";
 import { authOptions } from "@/lib/auth-options";
 
-const handler = NextAuth(authOptions);
+const nextAuthHandler = NextAuth(authOptions);
 
-export { handler as GET, handler as POST };
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const dynamicBaseUrl = `${url.protocol}//${url.host}`;
+
+  const original = process.env.NEXTAUTH_URL;
+  process.env.NEXTAUTH_URL = dynamicBaseUrl;
+
+  try {
+    return await nextAuthHandler(req);
+  } finally {
+    if (original !== undefined) {
+      process.env.NEXTAUTH_URL = original;
+    } else {
+      delete process.env.NEXTAUTH_URL;
+    }
+  }
+}
+
+export async function POST(req: Request) {
+  const url = new URL(req.url);
+  const dynamicBaseUrl = `${url.protocol}//${url.host}`;
+
+  const original = process.env.NEXTAUTH_URL;
+  process.env.NEXTAUTH_URL = dynamicBaseUrl;
+
+  try {
+    return await nextAuthHandler(req);
+  } finally {
+    if (original !== undefined) {
+      process.env.NEXTAUTH_URL = original;
+    } else {
+      delete process.env.NEXTAUTH_URL;
+    }
+  }
+}

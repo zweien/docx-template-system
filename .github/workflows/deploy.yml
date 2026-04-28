@@ -37,10 +37,23 @@ jobs:
             # Health check
             echo "Waiting for service to start..."
             sleep 15
+
+            # Check main app
             if curl -sf http://127.0.0.1:8060 > /dev/null; then
-              echo "✅ Deploy successful - service is running"
+              echo "✅ App is running"
             else
-              echo "❌ Deploy failed - service not responding"
+              echo "❌ App not responding"
               docker compose logs --tail=50 app
               exit 1
             fi
+
+            # Check collab server (WebSocket port)
+            if timeout 5 bash -c 'exec 3<>/dev/tcp/127.0.0.1/8072'; then
+              echo "✅ Collab server is running"
+            else
+              echo "❌ Collab server not responding"
+              docker compose logs --tail=50 collab
+              exit 1
+            fi
+
+            echo "✅ Deploy successful - all services are running"

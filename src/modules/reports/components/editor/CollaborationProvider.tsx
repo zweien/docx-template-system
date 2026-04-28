@@ -49,7 +49,11 @@ export function CollaborationProvider({
 
   useEffect(() => {
     const doc = new Y.Doc();
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8072";
+    const wsUrl =
+      process.env.NEXT_PUBLIC_WS_URL ||
+      (typeof window !== "undefined"
+        ? `ws://${window.location.host.replace(/:\d+$/, "")}:8072`
+        : "ws://localhost:8072");
 
     const destroyedRef = { current: false };
     let provider: WebsocketProvider | null = null;

@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.7.2](https://github.com/zweien/docx-template-system/compare/v0.7.1...v0.7.2) (2026-04-28)
+
+
+### Features
+
+* **docker:** add y-websocket collaboration server service ([92eabf0](https://github.com/zweien/docx-template-system/commit/92eabf0eb6ec904e13c60302f37d390924f1949f))
+* enable LAN access for development and Docker deployment ([f372a5b](https://github.com/zweien/docx-template-system/commit/f372a5be8996f17a0e102d19ef160175c3233ad6))
+
 ## [0.7.1](https://github.com/zweien/docx-template-system/compare/v0.7.0...v0.7.1) (2026-04-28)
 
 

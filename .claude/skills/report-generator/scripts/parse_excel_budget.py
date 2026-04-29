@@ -630,21 +630,29 @@ def _read_sheet_data(sheet, formula_sheet, config: dict, output_dir: Path) -> Tu
 # ── 内容生成 ─────────────────────────────────────────
 
 
-def _build_table_rows(data_rows: List[Dict], columns_config: dict) -> Tuple[List[str], List[List[str]]]:
+def _build_table_rows(
+    data_rows: List[Dict],
+    columns_config: dict,
+    table_columns: Optional[List[str]] = None,
+) -> Tuple[List[str], List[List[str]]]:
     """构建明细表的 headers 和 rows。
 
-    表格列：名称、规格、单价、数量、经费（不含 reason/basis/image）
+    表格列由 table_columns 参数指定（默认：名称、规格、单价、数量、经费）
     """
-    table_col_keys = ["name", "spec", "unit_price", "quantity", "amount"]
+    if table_columns is None:
+        table_columns = ["name", "spec", "unit_price", "quantity", "amount"]
+
     headers = []
-    for key in table_col_keys:
+    for key in table_columns:
         if key in columns_config:
             headers.append(columns_config[key])
+        else:
+            logger.warning("table_columns 包含未映射的字段 '%s'，可用: %s", key, list(columns_config.keys()))
 
     rows = []
     for row_data in data_rows:
         row_values = []
-        for key in table_col_keys:
+        for key in table_columns:
             if key in columns_config:
                 value = row_data.get(key, "")
                 if key == "amount":
@@ -665,12 +673,8 @@ def _build_table_rows(data_rows: List[Dict], columns_config: dict) -> Tuple[List
                 pass
 
     if has_amount:
-        total_row = ["合计"] + [""] * (len(headers) - 2) + [_fmt_amount(total)]
-        if len(total_row) < len(headers):
-            total_row = ["合计"] + [""] * (len(headers) - 2) + [_fmt_amount(total)]
-            # 确保长度匹配
-            while len(total_row) < len(headers):
-                total_row.insert(1, "")
+        total_row = ["合计"] + [""] * (len(headers) - 1)
+        total_row[-1] = _fmt_amount(total)
         rows.append(total_row)
 
     return headers, rows

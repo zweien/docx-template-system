@@ -5,3 +5,5 @@ python-docx>=0.8.11
 pydantic>=2.0
 pyyaml
 latex2mathml
+openpyxl>=3.1.0
+Pillow>=10.0.0

@@ -1,0 +1,30 @@
+{
+  "productName": "预算报告生成器",
+  "version": "0.1.0",
+  "identifier": "com.example.budget-report",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "预算报告生成器",
+        "width": 1200,
+        "height": 800,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": null,
+      "capabilities": ["default"]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "appimage", "deb"],
+    "icon": []
+  }
+}

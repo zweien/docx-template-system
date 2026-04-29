@@ -29,8 +29,10 @@ import {
   CalendarDays,
   User,
   HardDrive,
+  Download,
 } from "lucide-react";
 import { DeleteTemplateButton } from "./delete-button";
+import { TemplateDownloadButton } from "./download-button";
 import { DataTableLinkWrapper } from "@/components/template/data-table-link-wrapper";
 import { VersionHistoryDialogWrapper } from "./version-history-wrapper";
 import { PlaceholderEditButton } from "./placeholder-edit-wrapper";
@@ -177,11 +179,12 @@ export default async function TemplateDetailPage({
             <FileText className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-sm font-[510]">文件信息</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-2">
             <p className="text-sm font-[510] text-foreground">{template.originalFileName || template.fileName}</p>
             <p className="text-xs text-muted-foreground">
               {formatFileSize(template.fileSize)}
             </p>
+            <TemplateDownloadButton templateId={template.id} />
           </CardContent>
         </Card>
 

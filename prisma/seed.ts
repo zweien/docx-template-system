@@ -18,6 +18,8 @@ async function main() {
 
   const adminPassword = await hash("admin123", 10);
   const userPassword = await hash("user123", 10);
+  const editorPassword = await hash("editor123", 10);
+  const viewerPassword = await hash("viewer123", 10);
 
   const admin = await prisma.user.upsert({
     where: { email: "admin@example.com" },
@@ -41,7 +43,29 @@ async function main() {
     },
   });
 
-  console.log({ admin, user });
+  const editor = await prisma.user.upsert({
+    where: { email: "editor@example.com" },
+    update: {},
+    create: {
+      name: "Editor",
+      email: "editor@example.com",
+      password: editorPassword,
+      role: Role.USER,
+    },
+  });
+
+  const viewer = await prisma.user.upsert({
+    where: { email: "viewer@example.com" },
+    update: {},
+    create: {
+      name: "Viewer",
+      email: "viewer@example.com",
+      password: viewerPassword,
+      role: Role.USER,
+    },
+  });
+
+  console.log({ admin, user, editor, viewer });
   console.log("Seeding completed.");
 }
 

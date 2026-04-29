@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronRight, ChevronDown, Loader2 } from "lucide-react";
+import { ChevronRight, ChevronDown, Loader2, Download } from "lucide-react";
 import type { TemplateVersionListItem, TemplateVersionDetail } from "@/types/template";
 import type { PlaceholderSnapshotItem } from "@/types/placeholder";
 import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
@@ -156,9 +156,19 @@ export function VersionHistoryDialog({ templateId, open, onOpenChange }: Version
                     ) : versionDetail ? (
                       <>
                         {/* File info */}
-                        <div className="text-sm text-muted-foreground space-y-1">
-                          <p><span className="font-medium text-foreground">文件名:</span> {versionDetail.originalFileName}</p>
-                          <p><span className="font-medium text-foreground">文件大小:</span> {formatFileSize(versionDetail.fileSize)}</p>
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p><span className="font-medium text-foreground">文件名:</span> {versionDetail.originalFileName}</p>
+                            <p><span className="font-medium text-foreground">文件大小:</span> {formatFileSize(versionDetail.fileSize)}</p>
+                          </div>
+                          <a
+                            href={`/api/templates/${templateId}/versions/${versionDetail.version}/download`}
+                            download
+                            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-muted transition-colors shrink-0"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            下载
+                          </a>
                         </div>
 
                         {/* Linked data table */}

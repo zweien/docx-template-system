@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.7.4](https://github.com/zweien/docx-template-system/compare/v0.7.3...v0.7.4) (2026-04-29)
+
+
+### Features
+
+* **dev:** one-click login, template download, LAN auth fix ([99931d6](https://github.com/zweien/docx-template-system/commit/99931d6db186372382815db4c375ad82d3b3b4de))
+* **skills:** add report-generator and report-template-builder skills ([6241b14](https://github.com/zweien/docx-template-system/commit/6241b14089f40ed43e1aa039c0fe867a83ebfa5c))
+
+
+### Bug Fixes
+
+* **editor:** skip empty headings when parsing templates and init drafts ([8ba026e](https://github.com/zweien/docx-template-system/commit/8ba026effc641e06a86511844cfb3009a130ae22))
+
 ## [0.7.3](https://github.com/zweien/docx-template-system/compare/v0.7.2...v0.7.3) (2026-04-28)
 
 

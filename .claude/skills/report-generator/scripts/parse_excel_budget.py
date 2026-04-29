@@ -10,23 +10,29 @@
 配置文件格式:
     {
       "title": "XX项目预算报告",
+      "summary": {
+        "sheet_name": "汇总页",
+        "mode": "table",
+        "header_row": 1,
+        "key_column": "科目",
+        "value_column": "金额（元）",
+        "prefix": "SUMMARY_"
+      },
       "sheets": [
         {
           "name": "设备费明细",
           "sheet_name": "设备费",
-          "columns": {
-            "name": "名称",
-            "spec": "规格",
-            "unit_price": "单价",
-            "quantity": "数量",
-            "amount": "经费",
-            "reason": "购置理由",
-            "basis": "测算依据"
-          },
+          "columns": { ... },
           "image_columns": ["报价截图"]
         }
       ]
     }
+
+summary 模式说明:
+  - mode="table": 按表格读取，指定 key_column（行标识列）和 value_column（值列）
+    结果: SUMMARY_设备费=50000, SUMMARY_合计=93000
+  - mode="cell_map": 直接指定单元格 → context key
+    {"mappings": {"TOTAL_AMOUNT": "C5", "PROJECT_NAME": "B2"}}
 """
 
 import argparse
@@ -100,6 +106,247 @@ def _safe_value(cell_value: Any) -> str:
     if isinstance(cell_value, (int, float)):
         return str(cell_value)
     return str(cell_value).strip()
+
+
+# ── 公式计算回退 ─────────────────────────────────────────
+
+
+def _cell_to_num(value: Any) -> Optional[float]:
+    """将单元格值转为数字，非数字返回 None。"""
+    if value is None:
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(str(value).replace(",", "").strip())
+    except ValueError:
+        return None
+
+
+def _replace_sum_in_formula(expr: str, sheet) -> str:
+    """将 Excel SUM(...) 替换为 Python sum([...])。"""
+    pattern = r"SUM\(([^)]+)\)"
+
+    def replacer(match):
+        args = match.group(1)
+        values = []
+        for part in args.split(","):
+            part = part.strip()
+            if ":" in part:
+                # 范围引用如 A1:A5
+                start, end = part.split(":")
+                try:
+                    for row in sheet[start:end]:
+                        for cell in row:
+                            v = _cell_to_num(cell.value)
+                            if v is not None:
+                                values.append(v)
+                except Exception:
+                    pass
+            else:
+                # 单个单元格
+                try:
+                    v = _cell_to_num(sheet[part].value)
+                    if v is not None:
+                        values.append(v)
+                except Exception:
+                    pass
+        return f"sum([{','.join(str(v) for v in values)}])"
+
+    return re.sub(pattern, replacer, expr, flags=re.IGNORECASE)
+
+
+def _replace_cell_refs_in_formula(expr: str, sheet) -> str:
+    """将公式中的单元格引用（如 A1, B2）替换为实际数值。"""
+    # 匹配大写字母+数字的单元格引用（排除已替换的 sum 等）
+    pattern = r"\b([A-Z]{1,3})(\d{1,7})\b"
+
+    def replacer(match):
+        cell_ref = match.group(0)
+        try:
+            val = sheet[cell_ref].value
+            num = _cell_to_num(val)
+            if num is not None:
+                return str(num)
+            if val is not None:
+                # 文本值用引号包裹
+                return repr(str(val))
+            return "0"
+        except Exception:
+            return "0"
+
+    return re.sub(pattern, replacer, expr)
+
+
+def _evaluate_formula(formula: str, sheet) -> Optional[str]:
+    """尝试用 Python 计算 Excel 公式，返回字符串结果或 None。
+
+    支持的公式:
+    - =SUM(A1:A5) / =SUM(A1,A2,A3)
+    - =A1+B2, =A1-B2, =A1*B2, =A1/B2
+    - 混合运算如 =A1+B2*C3
+    """
+    if not formula or not formula.startswith("="):
+        return None
+
+    expr = formula[1:]  # 去掉 '='
+
+    try:
+        # 先替换 SUM 函数
+        expr = _replace_sum_in_formula(expr, sheet)
+        # 再替换剩余单元格引用
+        expr = _replace_cell_refs_in_formula(expr, sheet)
+
+        # 安全 eval（仅允许 sum 和基本运算符）
+        result = eval(expr, {"__builtins__": {}, "sum": sum}, {})
+        if result is None:
+            return None
+        # 格式化数字（整数去掉小数点）
+        if isinstance(result, float):
+            if result == int(result):
+                return str(int(result))
+            return f"{result:.2f}".rstrip("0").rstrip(".")
+        return str(result)
+    except Exception as e:
+        logger.debug("公式计算失败 '%s' -> '%s': %s", formula, expr, e)
+        return None
+
+
+def _get_cell_value(data_cell, formula_cell) -> str:
+    """获取单元格值，支持公式自动计算回退。
+
+    优先使用 data_only=True 的缓存值；如果为空且 formula_cell 是公式，
+    则尝试用 Python 计算。
+    """
+    # 1. 尝试 data_only 值
+    value = data_cell.value
+    if value is not None and str(value).strip() != "":
+        if isinstance(value, (int, float)):
+            return str(value)
+        return str(value).strip()
+
+    # 2. 检查是否是公式，尝试计算
+    formula = formula_cell.value
+    if isinstance(formula, str) and formula.startswith("="):
+        sheet = formula_cell.parent
+        calculated = _evaluate_formula(formula, sheet)
+        if calculated is not None:
+            return calculated
+
+    # 3. 返回空
+    return ""
+
+
+# ── 汇总页读取 ─────────────────────────────────────────
+
+
+def _read_summary_table(sheet, formula_sheet, summary_config: dict) -> Dict[str, str]:
+    """以 table 模式读取汇总页，返回 {context_key: value} 字典。"""
+    result = {}
+    header_row = summary_config.get("header_row", 1)
+    key_col_name = summary_config.get("key_column")
+    value_col_name = summary_config.get("value_column")
+    prefix = summary_config.get("prefix", "SUMMARY_")
+
+    if not key_col_name or not value_col_name:
+        logger.warning("summary table 模式需要 key_column 和 value_column")
+        return result
+
+    # 读取表头
+    header_values = []
+    for cell in sheet[header_row]:
+        header_values.append(_safe_value(cell.value))
+
+    key_col_idx = None
+    value_col_idx = None
+    for idx, hv in enumerate(header_values):
+        if hv == key_col_name:
+            key_col_idx = idx
+        if hv == value_col_name:
+            value_col_idx = idx
+
+    if key_col_idx is None:
+        logger.warning("汇总页未找到 key_column '%s'，可用: %s", key_col_name, header_values)
+        return result
+    if value_col_idx is None:
+        logger.warning("汇总页未找到 value_column '%s'，可用: %s", value_col_name, header_values)
+        return result
+
+    # 读取数据行（同时遍历 data_sheet 和 formula_sheet）
+    data_iter = sheet.iter_rows(min_row=header_row + 1, values_only=False)
+    formula_iter = formula_sheet.iter_rows(min_row=header_row + 1, values_only=False) if formula_sheet else None
+    row_pairs = zip(data_iter, formula_iter) if formula_iter else ((r, None) for r in data_iter)
+
+    for row_idx, (data_row, formula_row) in enumerate(row_pairs, start=header_row + 1):
+        data_key_cell = data_row[key_col_idx] if key_col_idx < len(data_row) else None
+        formula_key_cell = formula_row[key_col_idx] if formula_row and key_col_idx < len(formula_row) else None
+        key = _get_cell_value(data_key_cell, formula_key_cell)
+
+        data_value_cell = data_row[value_col_idx] if value_col_idx < len(data_row) else None
+        formula_value_cell = formula_row[value_col_idx] if formula_row and value_col_idx < len(formula_row) else None
+        value = _get_cell_value(data_value_cell, formula_value_cell)
+
+        if not key:
+            continue
+
+        # 生成 context key: prefix + snake_case(key)
+        context_key = f"{prefix}{_snake_case(key)}"
+        # 对金额类值格式化
+        if _looks_like_amount(value):
+            value = _fmt_amount(value)
+
+        result[context_key] = value
+        logger.debug("汇总页映射: %s -> %s", context_key, value)
+
+    return result
+
+
+def _read_summary_cell_map(sheet, formula_sheet, summary_config: dict) -> Dict[str, str]:
+    """以 cell_map 模式读取汇总页，返回 {context_key: value} 字典。"""
+    result = {}
+    mappings = summary_config.get("mappings", {})
+
+    for context_key, cell_ref in mappings.items():
+        try:
+            data_cell = sheet[cell_ref]
+            formula_cell = formula_sheet[cell_ref] if formula_sheet else None
+            value = _get_cell_value(data_cell, formula_cell)
+            if _looks_like_amount(value):
+                value = _fmt_amount(value)
+            result[context_key] = value
+            logger.debug("汇总页单元格映射: %s (%s) -> %s", context_key, cell_ref, value)
+        except Exception as e:
+            logger.warning("读取汇总页单元格 %s 失败: %s", cell_ref, e)
+
+    return result
+
+
+def _looks_like_amount(value: str) -> bool:
+    """判断字符串是否像金额（纯数字或带小数点的数字）。"""
+    if not value:
+        return False
+    return bool(re.match(r"^[\d,]+(\.\d+)?$", value.strip().replace(",", "")))
+
+
+def _read_summary_sheet(wb_data, wb_formula, summary_config: dict) -> Dict[str, str]:
+    """读取汇总页，返回 context 变量字典。"""
+    sheet_name = summary_config.get("sheet_name")
+    if not sheet_name:
+        return {}
+
+    if sheet_name not in wb_data.sheetnames:
+        logger.warning("汇总页 sheet '%s' 不存在，可用: %s", sheet_name, wb_data.sheetnames)
+        return {}
+
+    sheet = wb_data[sheet_name]
+    formula_sheet = wb_formula[sheet_name] if wb_formula and sheet_name in wb_formula.sheetnames else None
+    mode = summary_config.get("mode", "table")
+    logger.info("读取汇总页: %s (mode=%s)", sheet_name, mode)
+
+    if mode == "cell_map":
+        return _read_summary_cell_map(sheet, formula_sheet, summary_config)
+    else:
+        return _read_summary_table(sheet, formula_sheet, summary_config)
 
 
 # ── 图片提取 ─────────────────────────────────────────
@@ -265,8 +512,12 @@ def _save_image(img_data: bytes, output_path: Path) -> bool:
 # ── 数据读取 ─────────────────────────────────────────
 
 
-def _read_sheet_data(sheet, config: dict, output_dir: Path) -> Tuple[List[Dict[str, Any]], List[str]]:
-    """读取一个 sheet 的数据，返回 (数据行列表, 警告列表)。"""
+def _read_sheet_data(sheet, formula_sheet, config: dict, output_dir: Path) -> Tuple[List[Dict[str, Any]], List[str]]:
+    """读取一个 sheet 的数据，返回 (数据行列表, 警告列表)。
+
+    formula_sheet 用于公式计算回退：当 data_only=True 读取的缓存值为空时，
+    尝试用 Python 计算公式。
+    """
     columns_config = config.get("columns", {})
     image_columns = config.get("image_columns", [])
     header_row = config.get("header_row", 1)  # openpyxl 是 1-based
@@ -317,16 +568,21 @@ def _read_sheet_data(sheet, config: dict, output_dir: Path) -> Tuple[List[Dict[s
             images_by_row[data_row] = []
         images_by_row[data_row].extend(img_data_list)
 
-    # 读取数据行
+    # 读取数据行（同时遍历 data_sheet 和 formula_sheet）
+    data_iter = sheet.iter_rows(min_row=header_row + 1, values_only=False)
+    formula_iter = formula_sheet.iter_rows(min_row=header_row + 1, values_only=False) if formula_sheet else None
+    row_pairs = zip(data_iter, formula_iter) if formula_iter else ((r, None) for r in data_iter)
+
     data_rows = []
-    for row_idx, row in enumerate(sheet.iter_rows(min_row=header_row + 1, values_only=False), start=header_row + 1):
+    for row_idx, (data_row, formula_row) in enumerate(row_pairs, start=header_row + 1):
         row_data = {"__row_idx__": row_idx}
 
         # 检查是否为空行（所有映射列都为空）
         all_empty = True
         for key, col_idx in col_map.items():
-            cell = row[col_idx] if col_idx < len(row) else None
-            value = _safe_value(cell.value if cell else None)
+            data_cell = data_row[col_idx] if col_idx < len(data_row) else None
+            formula_cell = formula_row[col_idx] if formula_row and col_idx < len(formula_row) else None
+            value = _get_cell_value(data_cell, formula_cell)
             row_data[key] = value
             if not _is_empty(value):
                 all_empty = False
@@ -352,7 +608,7 @@ def _read_sheet_data(sheet, config: dict, output_dir: Path) -> Tuple[List[Dict[s
         image_paths = []
         for img_idx, img_data in enumerate(row_images):
             img_filename = f"{config.get('sheet_name', 'sheet')}_{row_idx}_{img_idx + 1}.png"
-            img_path = output_dir / "images" / img_filename
+            img_path = (Path(output_dir) / "images" / img_filename).resolve()
             if _save_image(img_data, img_path):
                 image_paths.append(str(img_path))
 
@@ -493,9 +749,10 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
 
     all_warnings = []
 
-    # 加载工作簿
+    # 加载工作簿（data_only=True 读取缓存值，data_only=False 用于公式计算回退）
     logger.info("加载 Excel: %s", input_path)
-    wb = load_workbook(input_path, data_only=True)
+    wb_data = load_workbook(input_path, data_only=True)
+    wb_formula = load_workbook(input_path, data_only=False)
 
     sections = []
     for sheet_config in config.get("sheets", []):
@@ -503,16 +760,17 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
         if not sheet_name:
             continue
 
-        if sheet_name not in wb.sheetnames:
-            msg = f"Sheet '{sheet_name}' 不存在，可用: {wb.sheetnames}"
+        if sheet_name not in wb_data.sheetnames:
+            msg = f"Sheet '{sheet_name}' 不存在，可用: {wb_data.sheetnames}"
             logger.warning(msg)
             all_warnings.append(msg)
             continue
 
-        sheet = wb[sheet_name]
+        sheet = wb_data[sheet_name]
+        formula_sheet = wb_formula[sheet_name]
         logger.info("处理 Sheet: %s", sheet_name)
 
-        data_rows, warnings = _read_sheet_data(sheet, sheet_config, output_dir)
+        data_rows, warnings = _read_sheet_data(sheet, formula_sheet, sheet_config, output_dir)
         all_warnings.extend(warnings)
 
         if not data_rows:
@@ -525,10 +783,17 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
         logger.info("Sheet '%s' 读取 %d 行数据，%d 张图片", sheet_name, len(data_rows),
                     sum(len(r.get("__image_paths__", [])) for r in data_rows))
 
+    # 读取汇总页数据作为 extra_context
+    extra_context = {}
+    if "summary" in config:
+        summary_data = _read_summary_sheet(wb_data, wb_formula, config["summary"])
+        extra_context.update(summary_data)
+
     content = {
         "title": config.get("title", "预算报告"),
         "sections": sections,
         "attachments": [],
+        "extra_context": extra_context,
     }
 
     return content, all_warnings

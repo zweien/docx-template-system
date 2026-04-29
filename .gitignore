@@ -65,7 +65,10 @@ __pycache__/
 .gstack/
 
 # Local agent/runtime state
-.claude/
+.claude/*
+!.claude/skills/
+.claude/skills/**/__pycache__/
+.superpowers/
 .superpowers/
 .data/
 test-results/

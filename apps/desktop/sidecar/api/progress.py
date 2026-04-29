@@ -4,7 +4,9 @@ import asyncio
 
 router = APIRouter()
 
+# TODO: Replace with actual task progress tracking (e.g., background task queue)
 async def progress_generator(task_id: str):
+    """SSE progress stream - currently a stub that simulates progress."""
     for i in range(3):
         yield f'event: progress\ndata: {{"step":"step{i}","current":{i},"total":3}}\n\n'
         await asyncio.sleep(0.5)

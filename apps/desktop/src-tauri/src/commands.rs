@@ -11,7 +11,7 @@ pub struct SidecarInfo {
 
 #[tauri::command]
 pub fn get_sidecar_port() -> Result<SidecarInfo, String> {
-    let port = SIDECAR_PORT.load(Ordering::Relaxed);
+    let port = SIDECAR_PORT.load(Ordering::SeqCst);
     if port == 0 {
         return Err("Sidecar not ready".to_string());
     }
@@ -37,10 +37,14 @@ pub async fn select_output_dir(app: AppHandle) -> Result<Option<String>, String>
 }
 
 #[tauri::command]
-pub fn open_report(path: String) -> Result<(), String> {
+pub async fn open_report(app: AppHandle, path: String) -> Result<(), String> {
+    use tauri_plugin_shell::ShellExt;
+    app.shell()
+        .open(&path, None)
+        .map_err(|e| format!("Failed to open report: {}", e))?;
     Ok(())
 }
 
 pub fn set_sidecar_port(port: u16) {
-    SIDECAR_PORT.store(port, Ordering::Relaxed);
+    SIDECAR_PORT.store(port, Ordering::SeqCst);
 }

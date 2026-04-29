@@ -1,10 +1,13 @@
 use std::process::Stdio;
+use std::sync::Mutex;
 use tauri::AppHandle;
 use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::process::Command;
+use tokio::process::{Child, Command};
 use tokio::time::{sleep, Duration};
 
 use crate::commands;
+
+static SIDECAR_CHILD: Mutex<Option<Child>> = Mutex::new(None);
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
     let port = find_free_port().ok_or("No free port available")?;
@@ -30,12 +33,29 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         .spawn()
         .map_err(|e| format!("Failed to start sidecar: {}", e))?;
 
+    // Save child handle for cleanup on exit
+    if let Ok(mut guard) = SIDECAR_CHILD.lock() {
+        *guard = Some(child);
+    }
+
+    // Read stdout
     if let Some(stdout) = child.stdout.take() {
         let reader = BufReader::new(stdout);
         tauri::async_runtime::spawn(async move {
             let mut lines = reader.lines();
             while let Ok(Some(line)) = lines.next_line().await {
                 println!("[sidecar stdout] {}", line);
+            }
+        });
+    }
+
+    // Read stderr
+    if let Some(stderr) = child.stderr.take() {
+        let reader = BufReader::new(stderr);
+        tauri::async_runtime::spawn(async move {
+            let mut lines = reader.lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                eprintln!("[sidecar stderr] {}", line);
             }
         });
     }
@@ -57,6 +77,15 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     }
 
     Err("Sidecar health check timeout".to_string())
+}
+
+pub fn stop() {
+    if let Ok(mut guard) = SIDECAR_CHILD.lock() {
+        if let Some(mut child) = guard.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
 }
 
 fn find_free_port() -> Option<u16> {

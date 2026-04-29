@@ -24,7 +24,7 @@ app = FastAPI(title="Budget Report Sidecar", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:1420", "http://localhost:1421"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

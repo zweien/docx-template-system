@@ -44,6 +44,7 @@ def render_report(req: RenderRequest):
             ],
             capture_output=True,
             text=True,
+            timeout=300,
         )
         if result.returncode != 0:
             return RenderResponse(
@@ -64,6 +65,7 @@ def render_report(req: RenderRequest):
             cwd=str(REPORT_ENGINE),
             capture_output=True,
             text=True,
+            timeout=300,
         )
         if result.returncode != 0:
             return RenderResponse(

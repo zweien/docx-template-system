@@ -83,6 +83,9 @@ def _extract_section_headings(xml: str, sections: List[dict]) -> None:
             # Skip paragraphs that contain Jinja template syntax
             if "{{" in text or "{%" in text:
                 continue
+            # Skip empty headings (formatting placeholders in templates)
+            if not text.strip():
+                continue
             try:
                 level = int(style.replace("Heading", "").replace("heading", ""))
             except ValueError:

@@ -14,8 +14,9 @@ function initDraftSections(structure: ReportTemplateStructure): Record<string, B
   const sections: Record<string, BlockNoteBlock[]> = {};
   for (const s of structure.sections) {
     const th = s.template_headings;
-    if (th && th.length > 0) {
-      sections[s.id] = th.map((h, idx) => ({
+    const validHeadings = th?.filter((h) => h.text && h.text.trim().length > 0);
+    if (validHeadings && validHeadings.length > 0) {
+      sections[s.id] = validHeadings.map((h, idx) => ({
         id: `heading-${s.id}-${idx}`,
         type: "heading",
         props: { level: h.level },

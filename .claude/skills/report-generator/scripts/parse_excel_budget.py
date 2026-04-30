@@ -730,11 +730,22 @@ def _build_section(
         for field_def in detail_fields:
             field_key = field_def["field"]
             label = field_def["label"]
+            field_level = field_def.get("level")
             value = row_data.get(field_key, "")
-            if _is_empty(value):
-                blocks.append({"type": "paragraph", "text": f"{label}：[未填写]"})
+
+            if field_level is not None:
+                # label 作为 heading，value 作为 paragraph
+                blocks.append({"type": "heading", "text": label, "level": field_level})
+                if _is_empty(value):
+                    blocks.append({"type": "paragraph", "text": "[未填写]"})
+                else:
+                    blocks.append({"type": "paragraph", "text": value})
             else:
-                blocks.append({"type": "paragraph", "text": f"{label}：{value}"})
+                # 默认：label + value 合并为 paragraph
+                if _is_empty(value):
+                    blocks.append({"type": "paragraph", "text": f"{label}：[未填写]"})
+                else:
+                    blocks.append({"type": "paragraph", "text": f"{label}：{value}"})
 
         # 报价截图（按顺序插入多张）
         if image_columns:

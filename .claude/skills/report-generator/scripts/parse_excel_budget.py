@@ -680,10 +680,25 @@ def _build_table_rows(
     return headers, rows
 
 
-def _build_section(data_rows: List[Dict], config: dict, columns_config: dict) -> Dict[str, Any]:
+def _build_section(
+    data_rows: List[Dict],
+    config: dict,
+    columns_config: dict,
+    table_columns: Optional[List[str]] = None,
+    detail_fields: Optional[List[Dict[str, str]]] = None,
+    image_columns: Optional[List[str]] = None,
+) -> Dict[str, Any]:
     """构建一个 sheet 对应的 section（简化内容描述格式）。"""
     sheet_name = config.get("name", config.get("sheet_name", "明细"))
     section_id = config.get("id") or _snake_case(sheet_name)
+
+    if detail_fields is None:
+        detail_fields = [
+            {"field": "reason", "label": "购置理由"},
+            {"field": "basis", "label": "测算依据"},
+        ]
+    if image_columns is None:
+        image_columns = ["报价截图"]
 
     blocks = []
 
@@ -691,7 +706,7 @@ def _build_section(data_rows: List[Dict], config: dict, columns_config: dict) ->
     blocks.append({"type": "heading", "text": sheet_name, "level": 2})
 
     # 2. 明细表
-    headers, rows = _build_table_rows(data_rows, columns_config)
+    headers, rows = _build_table_rows(data_rows, columns_config, table_columns)
     if headers:
         blocks.append({
             "type": "table",
@@ -703,40 +718,37 @@ def _build_section(data_rows: List[Dict], config: dict, columns_config: dict) ->
     # 3. 逐条详情
     for idx, row_data in enumerate(data_rows, start=1):
         name = row_data.get("name", f"项目{idx}")
-        reason = row_data.get("reason", "")
-        basis = row_data.get("basis", "")
         image_paths = row_data.get("__image_paths__", [])
 
         # 设备名称（三级标题）
         blocks.append({"type": "heading", "text": f"{idx}. {name}", "level": 3})
 
-        # 购置理由
-        if _is_empty(reason):
-            blocks.append({"type": "paragraph", "text": "购置理由：[未填写]"})
-        else:
-            blocks.append({"type": "paragraph", "text": f"购置理由：{reason}"})
-
-        # 测算依据
-        if _is_empty(basis):
-            blocks.append({"type": "paragraph", "text": "测算依据：[未填写]"})
-        else:
-            blocks.append({"type": "paragraph", "text": f"测算依据：{basis}"})
+        # 动态字段段落
+        for field_def in detail_fields:
+            field_key = field_def["field"]
+            label = field_def["label"]
+            value = row_data.get(field_key, "")
+            if _is_empty(value):
+                blocks.append({"type": "paragraph", "text": f"{label}：[未填写]"})
+            else:
+                blocks.append({"type": "paragraph", "text": f"{label}：{value}"})
 
         # 报价截图（按顺序插入多张）
-        if image_paths:
-            for img_idx, img_path in enumerate(image_paths, start=1):
-                caption = f"报价截图 {img_idx}" if len(image_paths) > 1 else "报价截图"
+        if image_columns:
+            if image_paths:
+                for img_idx, img_path in enumerate(image_paths, start=1):
+                    caption = f"报价截图 {img_idx}" if len(image_paths) > 1 else "报价截图"
+                    blocks.append({
+                        "type": "image",
+                        "path": img_path,
+                        "caption": caption,
+                        "width_cm": 14,
+                    })
+            else:
                 blocks.append({
-                    "type": "image",
-                    "path": img_path,
-                    "caption": caption,
-                    "width_cm": 14,
+                    "type": "paragraph",
+                    "text": "报价截图：[未上传]",
                 })
-        else:
-            blocks.append({
-                "type": "paragraph",
-                "text": "报价截图：[未上传]",
-            })
 
     return {
         "name": sheet_name,

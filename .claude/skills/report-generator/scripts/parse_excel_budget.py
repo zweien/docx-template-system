@@ -705,8 +705,11 @@ def _build_section(
 
     blocks = []
 
-    # 1. 科目标题
-    blocks.append({"type": "heading", "text": sheet_name, "level": heading_level})
+    # 1. 科目标题（level=0 时用正文段落）
+    if heading_level == 0:
+        blocks.append({"type": "paragraph", "text": sheet_name})
+    else:
+        blocks.append({"type": "heading", "text": sheet_name, "level": heading_level})
 
     # 2. 明细表
     headers, rows = _build_table_rows(data_rows, columns_config, table_columns)
@@ -723,29 +726,21 @@ def _build_section(
         name = row_data.get("name", f"项目{idx}")
         image_paths = row_data.get("__image_paths__", [])
 
-        # 明细条目标题
-        blocks.append({"type": "heading", "text": f"{idx}. {name}", "level": item_heading_level})
+        # 明细条目标题（level=0 时用正文段落）
+        if item_heading_level == 0:
+            blocks.append({"type": "paragraph", "text": f"{idx}. {name}"})
+        else:
+            blocks.append({"type": "heading", "text": f"{idx}. {name}", "level": item_heading_level})
 
         # 动态字段段落
         for field_def in detail_fields:
             field_key = field_def["field"]
             label = field_def["label"]
-            field_level = field_def.get("level")
             value = row_data.get(field_key, "")
-
-            if field_level is not None:
-                # label 作为 heading，value 作为 paragraph
-                blocks.append({"type": "heading", "text": label, "level": field_level})
-                if _is_empty(value):
-                    blocks.append({"type": "paragraph", "text": "[未填写]"})
-                else:
-                    blocks.append({"type": "paragraph", "text": value})
+            if _is_empty(value):
+                blocks.append({"type": "paragraph", "text": f"{label}：[未填写]"})
             else:
-                # 默认：label + value 合并为 paragraph
-                if _is_empty(value):
-                    blocks.append({"type": "paragraph", "text": f"{label}：[未填写]"})
-                else:
-                    blocks.append({"type": "paragraph", "text": f"{label}：{value}"})
+                blocks.append({"type": "paragraph", "text": f"{label}：{value}"})
 
         # 报价截图（按顺序插入多张）
         if image_columns:

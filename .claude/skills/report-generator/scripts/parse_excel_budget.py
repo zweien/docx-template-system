@@ -793,7 +793,14 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
             logger.warning("Sheet '%s' 未读取到数据", sheet_name)
             continue
 
-        section = _build_section(data_rows, sheet_config, sheet_config.get("columns", {}))
+        section = _build_section(
+            data_rows,
+            sheet_config,
+            sheet_config.get("columns", {}),
+            table_columns=sheet_config.get("table_columns"),
+            detail_fields=sheet_config.get("detail_fields"),
+            image_columns=sheet_config.get("image_columns"),
+        )
         sections.append(section)
 
         logger.info("Sheet '%s' 读取 %d 行数据，%d 张图片", sheet_name, len(data_rows),

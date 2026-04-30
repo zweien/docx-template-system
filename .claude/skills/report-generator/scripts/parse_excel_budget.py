@@ -700,10 +700,13 @@ def _build_section(
     if image_columns is None:
         image_columns = ["报价截图"]
 
+    heading_level = config.get("heading_level", 2)
+    item_heading_level = config.get("item_heading_level", 3)
+
     blocks = []
 
     # 1. 科目标题
-    blocks.append({"type": "heading", "text": sheet_name, "level": 2})
+    blocks.append({"type": "heading", "text": sheet_name, "level": heading_level})
 
     # 2. 明细表
     headers, rows = _build_table_rows(data_rows, columns_config, table_columns)
@@ -720,8 +723,8 @@ def _build_section(
         name = row_data.get("name", f"项目{idx}")
         image_paths = row_data.get("__image_paths__", [])
 
-        # 设备名称（三级标题）
-        blocks.append({"type": "heading", "text": f"{idx}. {name}", "level": 3})
+        # 明细条目标题
+        blocks.append({"type": "heading", "text": f"{idx}. {name}", "level": item_heading_level})
 
         # 动态字段段落
         for field_def in detail_fields:

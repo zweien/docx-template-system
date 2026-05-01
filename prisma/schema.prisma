@@ -748,6 +748,7 @@ model Agent2ModelConfig {
   modelId         String
   baseUrl         String
   apiKeyEncrypted String?
+  extraParams     Json?
   isGlobal        Boolean  @default(false)
   userId          String?
   createdAt       DateTime @default(now())

@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 import { db } from "@/lib/db";
+import { Prisma } from "@/generated/prisma/client";
 import type { Agent2ModelItem } from "@/types/agent2";
 import type { ServiceResult } from "@/types/data-table";
 
@@ -55,6 +56,7 @@ function mapModelItem(row: {
   baseUrl: string;
   isGlobal: boolean;
   userId: string | null;
+  extraParams: unknown;
   createdAt: Date;
 }): Agent2ModelItem {
   return {
@@ -65,6 +67,7 @@ function mapModelItem(row: {
     baseUrl: row.baseUrl,
     isGlobal: row.isGlobal,
     userId: row.userId,
+    extraParams: row.extraParams as Record<string, unknown> | null,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -137,6 +140,7 @@ export async function createModel(
     modelId: string;
     baseUrl: string;
     apiKey?: string;
+    extraParams?: Record<string, unknown>;
   }
 ): Promise<ServiceResult<Agent2ModelItem>> {
   const model = await db.agent2ModelConfig.create({
@@ -146,6 +150,8 @@ export async function createModel(
       modelId: data.modelId,
       baseUrl: data.baseUrl,
       apiKeyEncrypted: data.apiKey ? encrypt(data.apiKey) : null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      extraParams: (data.extraParams ?? undefined) as any,
       isGlobal: false,
       userId,
     },
@@ -190,6 +196,7 @@ export async function updateModel(
     modelId?: string;
     baseUrl?: string;
     apiKey?: string;
+    extraParams?: Record<string, unknown>;
   }
 ): Promise<ServiceResult<Agent2ModelItem>> {
   const existing = await db.agent2ModelConfig.findFirst({
@@ -211,10 +218,11 @@ export async function updateModel(
   if (data.apiKey !== undefined) {
     updateData.apiKeyEncrypted = data.apiKey ? encrypt(data.apiKey) : null;
   }
+  if (data.extraParams !== undefined) updateData.extraParams = (data.extraParams ?? undefined) as any;
 
   const updated = await db.agent2ModelConfig.update({
     where: { id },
-    data: updateData,
+    data: updateData as any,
   });
 
   return {
@@ -299,6 +307,33 @@ export async function getDecryptedApiKey(
 
 // ── Admin global model functions ──
 
+export async function getDecryptedApiKeyAdmin(
+  id: string
+): Promise<ServiceResult<string>> {
+  const model = await db.agent2ModelConfig.findFirst({
+    where: { id },
+  });
+
+  if (!model) {
+    return {
+      success: false,
+      error: { code: "NOT_FOUND", message: "模型配置不存在" },
+    };
+  }
+
+  if (!model.apiKeyEncrypted) {
+    return {
+      success: false,
+      error: { code: "NO_API_KEY", message: "该模型未配置 API Key" },
+    };
+  }
+
+  return {
+    success: true,
+    data: decrypt(model.apiKeyEncrypted),
+  };
+}
+
 export async function listGlobalModels(): Promise<
   ServiceResult<Agent2ModelItem[]>
 > {
@@ -320,6 +355,7 @@ export async function createGlobalModel(
     modelId: string;
     baseUrl: string;
     apiKey?: string;
+    extraParams?: Record<string, unknown>;
   }
 ): Promise<ServiceResult<Agent2ModelItem>> {
   const model = await db.agent2ModelConfig.create({
@@ -329,6 +365,8 @@ export async function createGlobalModel(
       modelId: data.modelId,
       baseUrl: data.baseUrl,
       apiKeyEncrypted: data.apiKey ? encrypt(data.apiKey) : null,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      extraParams: (data.extraParams ?? undefined) as any,
       isGlobal: true,
       userId: null,
     },
@@ -347,6 +385,7 @@ export async function updateGlobalModel(
     baseUrl?: string;
     apiKey?: string;
     modelId?: string;
+    extraParams?: Record<string, unknown>;
   }
 ): Promise<ServiceResult<Agent2ModelItem>> {
   const existing = await db.agent2ModelConfig.findFirst({
@@ -367,10 +406,10 @@ export async function updateGlobalModel(
   if (data.apiKey !== undefined) {
     updateData.apiKeyEncrypted = data.apiKey ? encrypt(data.apiKey) : null;
   }
-
+  if (data.extraParams !== undefined) updateData.extraParams = (data.extraParams ?? undefined) as any;
   const updated = await db.agent2ModelConfig.update({
     where: { id },
-    data: updateData,
+    data: updateData as any,
   });
 
   return {

@@ -13,11 +13,24 @@ interface Model {
   modelId: string
   baseUrl: string
   isGlobal: boolean
+  extraParams?: Record<string, unknown> | null
 }
 
 interface ModelManagerProps {
   settings: { defaultModel: string }
   onUpdateSettings: (updates: Record<string, unknown>) => void
+}
+
+const defaultForm = { name: "", providerId: "custom", modelId: "", baseUrl: "", apiKey: "", extraParams: "" }
+
+function parseExtraParams(value: string): Record<string, unknown> | undefined {
+  const trimmed = value.trim()
+  if (!trimmed) return undefined
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    return undefined
+  }
 }
 
 function loadModels(): Promise<Model[]> {
@@ -29,10 +42,12 @@ function loadModels(): Promise<Model[]> {
 export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) {
   const [models, setModels] = useState<Model[]>([])
   const [addOpen, setAddOpen] = useState(false)
-  const [form, setForm] = useState({ name: "", providerId: "custom", modelId: "", baseUrl: "", apiKey: "" })
+  const [form, setForm] = useState(defaultForm)
+  const [extraParamsError, setExtraParamsError] = useState("")
   const [editOpen, setEditOpen] = useState(false)
   const [editingModel, setEditingModel] = useState<Model | null>(null)
-  const [editForm, setEditForm] = useState({ name: "", providerId: "custom", modelId: "", baseUrl: "", apiKey: "" })
+  const [editForm, setEditForm] = useState(defaultForm)
+  const [editExtraParamsError, setEditExtraParamsError] = useState("")
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ id: string; success: boolean; message: string } | null>(null)
 
@@ -41,15 +56,21 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
   }, [])
 
   const handleAdd = async () => {
+    setExtraParamsError("")
+    const extraParams = form.extraParams.trim() ? parseExtraParams(form.extraParams) : undefined
+    if (form.extraParams.trim() && extraParams === undefined) {
+      setExtraParamsError("JSON 格式无效")
+      return
+    }
     const res = await fetch("/api/agent2/models", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, extraParams }),
     })
     const data = await res.json()
     if (data.success) {
       setAddOpen(false)
-      setForm({ name: "", providerId: "custom", modelId: "", baseUrl: "", apiKey: "" })
+      setForm(defaultForm)
       loadModels().then(setModels)
     }
   }
@@ -68,18 +89,26 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
       modelId: model.modelId,
       baseUrl: model.baseUrl,
       apiKey: "",
+      extraParams: model.extraParams ? JSON.stringify(model.extraParams, null, 2) : "",
     })
+    setEditExtraParamsError("")
     setEditOpen(true)
   }
 
   const handleEditSubmit = async () => {
     if (!editingModel) return
-    // 只在有值时发送 apiKey，空字符串表示不修改
+    setEditExtraParamsError("")
+    const extraParams = editForm.extraParams.trim() ? parseExtraParams(editForm.extraParams) : undefined
+    if (editForm.extraParams.trim() && extraParams === undefined) {
+      setEditExtraParamsError("JSON 格式无效")
+      return
+    }
     const payload = {
       name: editForm.name,
       modelId: editForm.modelId,
       baseUrl: editForm.baseUrl,
       ...(editForm.apiKey && { apiKey: editForm.apiKey }),
+      extraParams,
     }
     const res = await fetch(`/api/agent2/models/${editingModel.id}`, {
       method: "PUT",
@@ -90,8 +119,10 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
     if (data.success) {
       setEditOpen(false)
       setEditingModel(null)
-      setEditForm({ name: "", providerId: "custom", modelId: "", baseUrl: "", apiKey: "" })
+      setEditForm(defaultForm)
       loadModels().then(setModels)
+    } else {
+      setEditExtraParamsError(data.error?.message || "保存失败")
     }
   }
 
@@ -202,6 +233,9 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
               <div>
                 <p className="font-medium">{m.name}</p>
                 <p className="text-xs text-muted-foreground">{m.baseUrl}</p>
+                {m.extraParams && Object.keys(m.extraParams).length > 0 && (
+                  <p className="text-xs text-muted-foreground">额外参数: {JSON.stringify(m.extraParams)}</p>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 <Button
@@ -249,6 +283,15 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
             <Input placeholder="模型 ID (如 gpt-4o)" value={form.modelId} onChange={e => setForm(f => ({ ...f, modelId: e.target.value }))} />
             <Input placeholder="Base URL (如 https://api.openai.com/v1)" value={form.baseUrl} onChange={e => setForm(f => ({ ...f, baseUrl: e.target.value }))} />
             <Input type="password" placeholder="API Key (可选)" value={form.apiKey} onChange={e => setForm(f => ({ ...f, apiKey: e.target.value }))} />
+            <div>
+              <textarea
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder='额外参数 JSON，如 {"thinking": {"type": "disabled"}}'
+                value={form.extraParams}
+                onChange={e => { setForm(f => ({ ...f, extraParams: e.target.value })); setExtraParamsError("") }}
+              />
+              {extraParamsError && <p className="text-xs text-destructive mt-1">{extraParamsError}</p>}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>取消</Button>
@@ -268,6 +311,15 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
             <Input placeholder="模型 ID (如 gpt-4o)" value={editForm.modelId} onChange={e => setEditForm(f => ({ ...f, modelId: e.target.value }))} />
             <Input placeholder="Base URL (如 https://api.openai.com/v1)" value={editForm.baseUrl} onChange={e => setEditForm(f => ({ ...f, baseUrl: e.target.value }))} />
             <Input type="password" placeholder="API Key (留空则不修改)" value={editForm.apiKey} onChange={e => setEditForm(f => ({ ...f, apiKey: e.target.value }))} />
+            <div>
+              <textarea
+                className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder='额外参数 JSON，如 {"thinking": {"type": "disabled"}}'
+                value={editForm.extraParams}
+                onChange={e => { setEditForm(f => ({ ...f, extraParams: e.target.value })); setEditExtraParamsError("") }}
+              />
+              {editExtraParamsError && <p className="text-xs text-destructive mt-1">{editExtraParamsError}</p>}
+            </div>
           </div>
           <DialogFooter>
             <div className="flex-1 min-w-0">
@@ -286,8 +338,9 @@ export function ModelManager({ settings, onUpdateSettings }: ModelManagerProps) 
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
+                    modelId: editingModel.id,
                     baseUrl: editForm.baseUrl,
-                    modelId: editForm.modelId,
+                    modelIdOverride: editForm.modelId,
                     apiKey: editForm.apiKey || undefined,
                   }),
                 })

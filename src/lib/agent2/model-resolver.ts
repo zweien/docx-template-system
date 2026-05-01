@@ -33,6 +33,12 @@ const DEFAULT_MODELS: Record<string, DefaultModelConfig> = {
     : {}),
 };
 
+export interface ResolvedModel {
+  model: LanguageModel;
+  providerName: string;
+  extraParams?: Record<string, unknown>;
+}
+
 // 检测模型是否输出 reasoning_content（需要特殊处理）
 export function isReasoningModel(modelId: string, baseUrl: string): boolean {
   const lowerModelId = modelId.toLowerCase();
@@ -50,7 +56,7 @@ export function isReasoningModel(modelId: string, baseUrl: string): boolean {
 export async function resolveModel(
   modelId: string,
   userId: string
-): Promise<LanguageModel> {
+): Promise<ResolvedModel> {
   // Check if modelId matches a known shorthand
   const defaultConfig = DEFAULT_MODELS[modelId];
   if (defaultConfig) {
@@ -59,7 +65,7 @@ export async function resolveModel(
       baseURL: defaultConfig.baseURL,
       headers: defaultConfig.headers,
     });
-    return openai.chat(defaultConfig.model);
+    return { model: openai.chat(defaultConfig.model), providerName: "openai" };
   }
 
   // Look up custom model config by ID
@@ -76,7 +82,7 @@ export async function resolveModel(
       apiKey: process.env.AI_API_KEY,
       baseURL: process.env.AI_BASE_URL,
     });
-    return openai.chat(process.env.AI_MODEL || "gpt-4o");
+    return { model: openai.chat(process.env.AI_MODEL || "gpt-4o"), providerName: "openai" };
   }
 
   let apiKey = "";
@@ -86,12 +92,16 @@ export async function resolveModel(
     apiKey = process.env.AI_API_KEY || "";
   }
 
-  // 使用 OpenAI 兼容 provider
+  const extraParams = (config.extraParams as Record<string, unknown>) ?? undefined;
+
+  const providerName = config.providerId;
   const provider = createOpenAICompatible({
-    name: "openai-compatible",
+    name: providerName,
     apiKey,
     baseURL: config.baseUrl,
   });
 
-  return provider.languageModel(config.modelId);
+  const model = provider.languageModel(config.modelId);
+
+  return { model, providerName, extraParams };
 }

@@ -18,36 +18,6 @@ from report_engine.validator import validate_payload
 logger = logging.getLogger("report_engine")
 
 
-def _ensure_omml_namespace(docx_path: str) -> None:
-    """在 document.xml 根元素上注入 OMML (m:) 命名空间声明（如有需要）。"""
-    import re
-    import zipfile
-
-    NS_M = 'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"'
-    M_PREFIX_RE = re.compile(r"<\w+:oMath\b|<m:[a-zA-Z]")
-
-    with zipfile.ZipFile(docx_path, "r") as zin:
-        names = zin.namelist()
-        if "word/document.xml" not in names:
-            return
-        xml = zin.read("word/document.xml").decode("utf-8")
-
-    # 如果已经声明了 xmlns:m，或者根本没有使用 m: 前缀，则无需处理
-    if NS_M in xml or not M_PREFIX_RE.search(xml):
-        return
-
-    # 在第一个 <w:document 标签上注入 xmlns:m
-    xml = re.sub(
-        r"(<w:document\b)([^>]*>)",
-        lambda m: f'{m.group(1)} {NS_M}{m.group(2)}',
-        xml,
-        count=1,
-    )
-
-    with zipfile.ZipFile(docx_path, "a") as zout:
-        zout.writestr("word/document.xml", xml.encode("utf-8"))
-
-
 def _build_sections_context(
     tpl: DocxTemplate,
     payload: Payload,
@@ -134,6 +104,41 @@ def _build_bundle_attachments_context(
     context[bundle.placeholder] = bundle_subdoc
 
 
+def _merge_paragraph_runs(docx: Any) -> None:
+    """合并每个段落中被 Word proofErr/语法检查拆分的 run。
+
+    Word 可能将 ``{{p EQUIPMENT_FEE_SUBDOC}}`` 拆成：
+    ``<w:r><w:t>{{p EQUIPMENT_FEE_</w:t></w:r><w:proofErr .../><w:r><w:t>SUBDOC }}</w:t></w:r>``
+    导致 Jinja2 无法识别完整占位符。此函数将同一段落内所有 <w:t> 合并为一个 run。
+    """
+    from lxml import etree
+
+    NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+    body = docx._element.body
+    for p in body.iter(f"{{{NS}}}p"):
+        texts = []
+        for t in p.iter(f"{{{NS}}}t"):
+            if t.text:
+                texts.append(t.text)
+        if len(texts) <= 1:
+            continue
+
+        merged = "".join(texts)
+
+        to_remove = [
+            child for child in p
+            if child.tag in (f"{{{NS}}}r", f"{{{NS}}}proofErr")
+        ]
+        for child in to_remove:
+            p.remove(child)
+
+        r = etree.SubElement(p, f"{{{NS}}}r")
+        t_elem = etree.SubElement(r, f"{{{NS}}}t")
+        t_elem.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        t_elem.text = merged
+
+
 def render_report(
     template_path: str,
     output_path: str,
@@ -152,6 +157,8 @@ def render_report(
         ensure_template_contract(template_path, payload_model)
 
     tpl = DocxTemplate(template_path)
+    _merge_paragraph_runs(tpl.get_docx())
+    _ensure_update_fields(tpl.get_docx())
     filter_prompt_paragraphs(tpl.get_docx())
     context: Dict[str, Any] = dict(payload_model.context)
     style_map = dict(payload_model.style_map)
@@ -162,14 +169,32 @@ def render_report(
 
     tpl.render(context, autoescape=True)
 
+    # 确保 OMML (m:) 命名空间在 document.xml 根元素上已声明，
+    # 否则 formula block 插入的 <m:oMath> 会导致 XML 解析错误。
+    root = tpl.docx._element
+    if "m" not in root.nsmap:
+        root.set(
+            "{http://www.w3.org/2000/xmlns/}m",
+            "http://schemas.openxmlformats.org/officeDocument/2006/math",
+        )
+
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     tpl.save(output_path)
-
-    # 如果 document.xml 中使用了 m: 前缀但没有声明 xmlns:m，
-    # 在根元素上注入声明，避免 Word 解析错误。
-    _ensure_omml_namespace(output_path)
     logger.info("Report saved: %s", output_path)
     return warnings
+
+
+def _ensure_update_fields(docx: Any) -> None:
+    """确保 Word 打开文档时自动更新域代码（SEQ、TOC 等）。"""
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    settings = docx.settings.element
+    existing = settings.find(qn("w:updateFields"))
+    if existing is None:
+        update_fields = OxmlElement("w:updateFields")
+        update_fields.set(qn("w:val"), "true")
+        settings.append(update_fields)
 
 
 def render_grant_advanced(template_path: str, output_path: str, payload: Dict[str, Any]) -> List[str]:

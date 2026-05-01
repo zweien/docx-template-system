@@ -726,11 +726,11 @@ def _build_section(
         name = row_data.get("name", f"项目{idx}")
         image_paths = row_data.get("__image_paths__", [])
 
-        # 明细条目标题（level=0 时用正文段落）
+        # 明细条目标题（level=0 时用正文段落，带编号；heading 由模板样式自动编号）
         if item_heading_level == 0:
             blocks.append({"type": "paragraph", "text": f"{idx}. {name}"})
         else:
-            blocks.append({"type": "heading", "text": f"{idx}. {name}", "level": item_heading_level})
+            blocks.append({"type": "heading", "text": name, "level": item_heading_level})
 
         # 动态字段段落
         for field_def in detail_fields:

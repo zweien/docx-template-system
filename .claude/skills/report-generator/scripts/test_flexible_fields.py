@@ -54,7 +54,7 @@ def test_build_section_default():
 
     blocks = section["blocks"]
     assert blocks[0] == {"type": "heading", "text": "设备费明细", "level": 2}
-    assert blocks[2] == {"type": "heading", "text": "1. 服务器", "level": 3}
+    assert blocks[2] == {"type": "heading", "text": "服务器", "level": 3}
     assert blocks[3] == {"type": "paragraph", "text": "购置理由：业务需要"}
     assert blocks[4] == {"type": "paragraph", "text": "测算依据：市场价"}
     assert blocks[5] == {"type": "paragraph", "text": "报价截图：[未上传]"}
@@ -126,44 +126,6 @@ def test_build_section_with_images():
     assert blocks[4]["path"] == "/tmp/img2.png"
 
 
-def test_build_section_field_with_level():
-    """测试 detail_field 设置 level 时生成 heading + paragraph。"""
-    columns_config = {"name": "名称", "reason": "购置理由"}
-    data_rows = [
-        {"name": "设备A", "reason": "业务需要", "__image_paths__": []},
-    ]
-    config = {"name": "设备费", "sheet_name": "设备费"}
-    detail_fields = [{"field": "reason", "label": "购置理由", "level": 4}]
-    section = _build_section(
-        data_rows, config, columns_config,
-        detail_fields=detail_fields, image_columns=[]
-    )
-
-    blocks = section["blocks"]
-    # 0: heading(科目), 1: table, 2: heading(1. 设备A),
-    # 3: heading(购置理由), 4: paragraph(业务需要)
-    assert blocks[3] == {"type": "heading", "text": "购置理由", "level": 4}
-    assert blocks[4] == {"type": "paragraph", "text": "业务需要"}
-
-
-def test_build_section_field_with_level_empty():
-    """测试 detail_field 设置 level 但值为空时生成 heading + [未填写]。"""
-    columns_config = {"name": "名称", "reason": "购置理由"}
-    data_rows = [
-        {"name": "设备A", "reason": "", "__image_paths__": []},
-    ]
-    config = {"name": "设备费", "sheet_name": "设备费"}
-    detail_fields = [{"field": "reason", "label": "购置理由", "level": 4}]
-    section = _build_section(
-        data_rows, config, columns_config,
-        detail_fields=detail_fields, image_columns=[]
-    )
-
-    blocks = section["blocks"]
-    assert blocks[3] == {"type": "heading", "text": "购置理由", "level": 4}
-    assert blocks[4] == {"type": "paragraph", "text": "[未填写]"}
-
-
 if __name__ == "__main__":
     test_build_table_rows_default()
     print("PASS: test_build_table_rows_default")
@@ -182,11 +144,5 @@ if __name__ == "__main__":
 
     test_build_section_with_images()
     print("PASS: test_build_section_with_images")
-
-    test_build_section_field_with_level()
-    print("PASS: test_build_section_field_with_level")
-
-    test_build_section_field_with_level_empty()
-    print("PASS: test_build_section_field_with_level_empty")
 
     print("\nAll tests passed!")

@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.7.5](https://github.com/zweien/docx-template-system/compare/v0.7.4...v0.7.5) (2026-05-01)
+
+
+### Features
+
+* add auto_number_captions toggle for table/figure caption numbering ([9a840d2](https://github.com/zweien/docx-template-system/commit/9a840d2d97c245b115272898a7553d3568c34371))
+* **agent2:** support extra JSON params per model config ([ad3f448](https://github.com/zweien/docx-template-system/commit/ad3f448f8bb9d9090590df6e388f45cc81896f4b))
+* consolidate report-engine into project with CLI and editable install ([398768e](https://github.com/zweien/docx-template-system/commit/398768e098350be91f6fb7170cdeaa967b7a6ec8))
+* remove manual numbering from heading items (template handles auto-numbering) ([6909c6a](https://github.com/zweien/docx-template-system/commit/6909c6a57483c60363b6898f49d4a1126cc56d2c))
+* **report-generator:** add Excel budget parser for automated report generation ([2a141ce](https://github.com/zweien/docx-template-system/commit/2a141ce38d813f813450a1f088eea3ac1e0cd996))
+* **report-generator:** Excel公式计算回退与中文占位符支持 ([d2b2719](https://github.com/zweien/docx-template-system/commit/d2b27191b19426774d53ff67373bf2d79b5694b2))
+* support configurable heading levels in budget report ([4b1d5f9](https://github.com/zweien/docx-template-system/commit/4b1d5f9d80b92dd84ad1849d2acd89934a173e2f))
+* support custom detail_fields and image_columns in budget report ([55e04a2](https://github.com/zweien/docx-template-system/commit/55e04a25a77afa94dad6b96febacd6d488831dcd))
+* support custom table_columns in budget report ([db8d5a3](https://github.com/zweien/docx-template-system/commit/db8d5a366823e9b204ac33c600aeb3cf7f60e8d8))
+* support level in detail_fields to generate heading + paragraph ([7dfdc11](https://github.com/zweien/docx-template-system/commit/7dfdc11225973b1e98a8223706d86a806b920d47))
+* support level=0 as paragraph for headings ([71eb152](https://github.com/zweien/docx-template-system/commit/71eb152de6b3bf4eaf9541fb3cdff72ca56958cf))
+* use Word SEQ field codes for table/figure auto-numbering ([2860af8](https://github.com/zweien/docx-template-system/commit/2860af881ae0051ced8b9c2f7349cc7c490243cb))
+* wire new config options to section builder ([808d181](https://github.com/zweien/docx-template-system/commit/808d1812fd0ea4f00d499973bdaa612f101aa0af))
+
+
+### Bug Fixes
+
+* **ui:** add expand/collapse toggle for test connection error messages ([c4c189b](https://github.com/zweien/docx-template-system/commit/c4c189b462a0520b49516ccc1eeb81ee5424930c))
+
 ## [0.7.4](https://github.com/zweien/docx-template-system/compare/v0.7.3...v0.7.4) (2026-04-29)
 
 

@@ -44,4 +44,4 @@ class Payload(BaseModel):
     sections: List[Section] = Field(default_factory=list)
     attachments: List[Attachment] = Field(default_factory=list)
     attachments_bundle: Optional[AttachmentsBundle] = None
-    style_map: Dict[str, str] = Field(default_factory=dict)
+    style_map: Dict[str, Any] = Field(default_factory=dict)

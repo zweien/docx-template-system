@@ -37,6 +37,7 @@ DEFAULT_STYLE_MAP = {
     "appendix_table": "AppendixTable",
     "checklist": "Checklist",
     "code_block": "CodeBlock",
+    "auto_number_captions": True,
 }
 
 
@@ -81,6 +82,7 @@ def _add_caption_paragraph(
     text: str,
     style_name: str,
     alignment: Optional[int] = None,
+    auto_number: bool = True,
 ) -> None:
     """添加带 SEQ 域自动编号的标题段落。
 
@@ -91,41 +93,41 @@ def _add_caption_paragraph(
         text: 标题描述文字
         style_name: 段落样式名
         alignment: 可选对齐方式
+        auto_number: 是否使用 SEQ 域自动编号，False 时输出纯文本
     """
     p = doc.add_paragraph(style=style_name)
 
-    # 标签前缀 "表 "
-    p.add_run(f"{label} ")
+    if auto_number:
+        p.add_run(f"{label} ")
 
-    # SEQ 域代码
-    run_begin = p.add_run()
-    fld_begin = OxmlElement("w:fldChar")
-    fld_begin.set(qn("w:fldCharType"), "begin")
-    run_begin._element.append(fld_begin)
+        run_begin = p.add_run()
+        fld_begin = OxmlElement("w:fldChar")
+        fld_begin.set(qn("w:fldCharType"), "begin")
+        run_begin._element.append(fld_begin)
 
-    run_instr = p.add_run()
-    instr = OxmlElement("w:instrText")
-    instr.set(qn("xml:space"), "preserve")
-    instr.text = f" SEQ {seq_id} \\* ARABIC "
-    run_instr._element.append(instr)
+        run_instr = p.add_run()
+        instr = OxmlElement("w:instrText")
+        instr.set(qn("xml:space"), "preserve")
+        instr.text = f" SEQ {seq_id} \\* ARABIC "
+        run_instr._element.append(instr)
 
-    run_sep = p.add_run()
-    fld_sep = OxmlElement("w:fldChar")
-    fld_sep.set(qn("w:fldCharType"), "separate")
-    run_sep._element.append(fld_sep)
+        run_sep = p.add_run()
+        fld_sep = OxmlElement("w:fldChar")
+        fld_sep.set(qn("w:fldCharType"), "separate")
+        run_sep._element.append(fld_sep)
 
-    # 占位符文本（Word 更新域时替换为实际编号）
-    p.add_run("1")
+        p.add_run("1")
 
-    run_end = p.add_run()
-    fld_end = OxmlElement("w:fldChar")
-    fld_end.set(qn("w:fldCharType"), "end")
-    run_end._element.append(fld_end)
+        run_end = p.add_run()
+        fld_end = OxmlElement("w:fldChar")
+        fld_end.set(qn("w:fldCharType"), "end")
+        run_end._element.append(fld_end)
 
-    # 描述文字（去除已有的编号前缀，向后兼容）
-    cleaned = _strip_seq_prefix(text, label) if text else ""
-    if cleaned:
-        p.add_run(f" {cleaned}")
+        cleaned = _strip_seq_prefix(text, label) if text else ""
+        if cleaned:
+            p.add_run(f" {cleaned}")
+    else:
+        p.add_run(str(text) if text else "")
 
     if alignment is not None:
         p.alignment = alignment
@@ -282,7 +284,8 @@ def _add_table_block_impl(
 ) -> None:
     if block.get("title"):
         caption_style = _get_style_name(doc, style_map.get("table_caption", "TableCaption"), "TableCaption")
-        _add_caption_paragraph(doc, "表", "表", str(block["title"]), caption_style)
+        auto_num = style_map.get("auto_number_captions", True)
+        _add_caption_paragraph(doc, "表", "表", str(block["title"]), caption_style, auto_number=auto_num)
 
     headers = block["headers"]
     rows = block["rows"]
@@ -358,9 +361,10 @@ def add_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) 
 
 
 def add_three_line_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
+    auto_num = style_map.get("auto_number_captions", True)
     if block.get("title"):
         caption_style = _get_style_name(doc, style_map.get("table_caption", "TableCaption"), "TableCaption")
-        _add_caption_paragraph(doc, "表", "表", str(block["title"]), caption_style)
+        _add_caption_paragraph(doc, "表", "表", str(block["title"]), caption_style, auto_number=auto_num)
 
     headers = block["headers"]
     rows = block["rows"]
@@ -397,6 +401,7 @@ def add_three_line_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[
 
 
 def add_image_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
+    auto_num = style_map.get("auto_number_captions", True)
     image_path = Path(block["path"])
 
     figure_style = _get_style_name(doc, style_map["figure_paragraph"], style_map["body"])
@@ -415,7 +420,7 @@ def add_image_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) 
 
     if block.get("caption"):
         caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-        _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER)
+        _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
     if block.get("legend"):
         legend_style = _get_style_name(doc, style_map["legend"], style_map["body"])
@@ -465,6 +470,7 @@ def add_quote_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) 
 
 
 def add_two_images_row_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
+    auto_num = style_map.get("auto_number_captions", True)
     images = block["images"]
     if len(images) != 2:
         raise BlockRenderError(f"two_images_row requires exactly 2 images, got {len(images)}")
@@ -508,7 +514,7 @@ def add_two_images_row_block(doc: Any, block: Dict[str, Any], style_map: Dict[st
 
         if img.get("caption"):
             caption_style_name = _get_style_name(doc, caption_style, style_map["body"])
-            _add_caption_paragraph(cell, "图", "图", str(img["caption"]), caption_style_name, WD_ALIGN_PARAGRAPH.CENTER)
+            _add_caption_paragraph(cell, "图", "图", str(img["caption"]), caption_style_name, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
     body_style = _get_style_name(doc, style_map["body"], "Normal")
     doc.add_paragraph("", style=body_style)
@@ -603,6 +609,7 @@ def add_code_block_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, s
 
 
 def add_formula_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
+    auto_num = style_map.get("auto_number_captions", True)
     latex = str(block["latex"])
 
     # 方案 1: LaTeX → MathML → OMML
@@ -660,7 +667,7 @@ def add_formula_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]
     # caption（可选）
     if block.get("caption"):
         caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-        _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER)
+        _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
 
 def _has_cjk(text: str) -> bool:
@@ -681,6 +688,7 @@ def _has_cjk(text: str) -> bool:
 
 
 def add_ascii_diagram_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
+    auto_num = style_map.get("auto_number_captions", True)
     """将 ASCII 文本渲染为图片插入文档。
 
     策略：
@@ -788,7 +796,7 @@ def add_ascii_diagram_block(doc: Any, block: Dict[str, Any], style_map: Dict[str
             # caption
             if block.get("caption"):
                 caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-                _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER)
+                _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
             body_style = _get_style_name(doc, style_map["body"], "Normal")
             doc.add_paragraph("", style=body_style)
@@ -902,7 +910,7 @@ def add_ascii_diagram_block(doc: Any, block: Dict[str, Any], style_map: Dict[str
 
         if block.get("caption"):
             caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-            _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER)
+            _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
         body_style = _get_style_name(doc, style_map["body"], "Normal")
         doc.add_paragraph("", style=body_style)
@@ -994,7 +1002,7 @@ def _render_ascii_as_text(
     # caption（可选）
     if block.get("caption"):
         caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-        _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER)
+        _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
     body_style = _get_style_name(doc, style_map["body"], "Normal")
     doc.add_paragraph("", style=body_style)

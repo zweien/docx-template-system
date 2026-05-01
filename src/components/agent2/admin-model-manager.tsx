@@ -45,6 +45,7 @@ export function AdminModelManager() {
   const [editExtraParamsError, setEditExtraParamsError] = useState("")
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<{ id: string; success: boolean; message: string } | null>(null)
+  const [testExpanded, setTestExpanded] = useState(false)
 
   useEffect(() => {
     loadModels().then(setModels)
@@ -124,6 +125,7 @@ export function AdminModelManager() {
   const handleTestConnection = async (model: Model) => {
     setTestingId(model.id)
     setTestResult(null)
+    setTestExpanded(false)
     try {
       const res = await fetch("/api/admin/agent2/models/test", {
         method: "POST",
@@ -271,11 +273,19 @@ export function AdminModelManager() {
             </div>
           </div>
           <DialogFooter>
-            <div className="flex-1">
-              {testResult && testResult.id === editingModel?.id && (
-                <span className={testResult.success ? "text-green-500 text-sm" : "text-destructive text-sm"}>
-                  {testResult.message}
-                </span>
+            <div className="flex-1 min-w-0">
+              {testResult && testResult.id === editingModel?.id && !testResult.success && (
+                <div>
+                  <p className="text-sm text-destructive break-all" style={testExpanded ? {} : { display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                    {testResult.message}
+                  </p>
+                  <Button variant="link" size="sm" className="h-auto p-0 text-xs" onClick={() => setTestExpanded(e => !e)}>
+                    {testExpanded ? "收起" : "展开"}
+                  </Button>
+                </div>
+              )}
+              {testResult && testResult.id === editingModel?.id && testResult.success && (
+                <p className="text-sm text-green-500">{testResult.message}</p>
               )}
             </div>
             <Button variant="outline" onClick={() => setEditOpen(false)}>取消</Button>

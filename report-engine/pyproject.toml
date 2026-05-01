@@ -1,0 +1,26 @@
+[project]
+name = "report-engine"
+version = "0.1.0"
+description = "Template-driven docx report engine"
+requires-python = ">=3.10"
+dependencies = [
+  "docxtpl[subdoc]",
+  "python-docx",
+  "pydantic>=2.0",
+  "pyyaml",
+  "latex2mathml",
+  "pillow",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+report-engine = "report_engine.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]

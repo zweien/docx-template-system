@@ -30,6 +30,59 @@ def _read_template_xml(template_path: str) -> str:
         return "\n".join(xml_parts)
 
 
+def _read_merged_xml(template_path: str) -> str:
+    """Read template XML with paragraph runs merged (no split placeholders).
+
+    Word may split ``{{p EQUIPMENT_FEE_SUBDOC}}`` across multiple ``<w:r>``
+    elements with ``<w:proofErr>`` tags in between.  This function merges all
+    ``<w:t>`` text within each ``<w:p>`` paragraph back into a single
+    ``<w:r>/<w:t>`` pair so that string-based placeholder matching works.
+    """
+    from xml.etree.ElementTree import Element, SubElement, fromstring, tostring
+
+    NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+    with ZipFile(template_path) as zf:
+        merged_parts = []
+        for name in zf.namelist():
+            if not (name.startswith("word/") and name.endswith(".xml")):
+                continue
+            xml = zf.read(name).decode("utf-8", errors="ignore")
+            try:
+                root = fromstring(xml)
+            except Exception:
+                merged_parts.append(xml)
+                continue
+
+            for p in root.iter(f"{{{NS}}}p"):
+                texts = []
+                for t in p.iter(f"{{{NS}}}t"):
+                    if t.text:
+                        texts.append(t.text)
+                if not texts:
+                    continue
+                merged = "".join(texts)
+
+                to_remove = [
+                    child for child in p
+                    if child.tag in (f"{{{NS}}}r", f"{{{NS}}}proofErr")
+                ]
+                for child in to_remove:
+                    p.remove(child)
+
+                r = Element(f"{{{NS}}}r")
+                t_elem = SubElement(r, f"{{{NS}}}t")
+                t_elem.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+                t_elem.text = merged
+                pPr = p.find(f"{{{NS}}}pPr")
+                if pPr is not None:
+                    p.insert(0, pPr)
+                p.append(r)
+
+            merged_parts.append(tostring(root, encoding="unicode"))
+        return "\n".join(merged_parts)
+
+
 def _extract_scalar_vars(xml: str) -> List[str]:
     """Extract scalar Jinja variables like {{VAR_NAME}} from template XML."""
     pattern = r"\{\{\s*([A-Z_][A-Z0-9_]*)\b"
@@ -37,7 +90,7 @@ def _extract_scalar_vars(xml: str) -> List[str]:
 
 
 def check_template_contract(template_path: str, payload: Payload) -> TemplateCheckResult:
-    xml = _read_template_xml(template_path)
+    xml = _read_merged_xml(template_path)
 
     missing_placeholders: List[str] = []
     missing_flags: List[str] = []

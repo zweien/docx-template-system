@@ -7,8 +7,6 @@
     "dialog:default",
     "shell:default",
     "shell:allow-open",
-    "fs:allow-read-file",
-    "fs:allow-read-dir",
-    "fs:allow-write-file"
+    "fs:default"
   ]
 }

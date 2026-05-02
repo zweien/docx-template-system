@@ -31,3 +31,20 @@ export async function listConfigs(): Promise<{ configs: BudgetConfig[] }> {
   const res = await fetch(`${base}/api/configs`);
   return res.json();
 }
+
+export async function parseTemplate(templatePath: string): Promise<{
+  structure: {
+    context_vars: string[];
+    sections: { id: string; placeholder: string; flag_name: string; title: string }[];
+    attachments_bundle: { placeholder: string; flag_name: string } | null;
+  };
+  warnings: string[];
+}> {
+  const base = await getBaseUrl();
+  const res = await fetch(`${base}/api/parse-template`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ template_path: templatePath }),
+  });
+  return res.json();
+}

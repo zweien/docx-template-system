@@ -1,15 +1,10 @@
-import os
 import json
-import tempfile
-import subprocess
-import sys
 from pathlib import Path
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-PROJECT_ROOT = Path(__file__).parents[3]
-SKILL_DIR = PROJECT_ROOT / ".claude" / "skills" / "report-generator" / "scripts"
-REPORT_ENGINE = PROJECT_ROOT / "report-engine"
+from build_payload import build_payload
+from report_engine.renderer import render_report as _render_report
 
 router = APIRouter()
 
@@ -24,54 +19,18 @@ class RenderResponse(BaseModel):
     error: dict | None = None
 
 @router.post("/render", response_model=RenderResponse)
-def render_report(req: RenderRequest):
+def render_report_endpoint(req: RenderRequest):
     try:
-        # 1. Save content.json
         work_dir = Path(req.output_dir)
         work_dir.mkdir(parents=True, exist_ok=True)
-        content_path = work_dir / "content.json"
-        content_path.write_text(json.dumps(req.content, ensure_ascii=False), encoding="utf-8")
 
-        # 2. Call build_payload.py
-        payload_path = work_dir / "payload.json"
-        result = subprocess.run(
-            [
-                sys.executable,
-                str(SKILL_DIR / "build_payload.py"),
-                "--content", str(content_path),
-                "--output", str(payload_path),
-                "--template", req.template_path,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=300,
-        )
-        if result.returncode != 0:
-            return RenderResponse(
-                success=False,
-                error={"code": "BUILD_PAYLOAD_ERROR", "message": result.stderr},
-            )
-
-        # 3. Call report-engine render
+        payload = build_payload(req.content, template_path=req.template_path)
         output_path = work_dir / "report.docx"
-        result = subprocess.run(
-            [
-                sys.executable, "-m", "report_engine.cli",
-                "render",
-                "--template", req.template_path,
-                "--payload", str(payload_path),
-                "--output", str(output_path),
-            ],
-            cwd=str(REPORT_ENGINE),
-            capture_output=True,
-            text=True,
-            timeout=300,
+        _render_report(
+            template_path=req.template_path,
+            output_path=str(output_path),
+            payload=payload,
         )
-        if result.returncode != 0:
-            return RenderResponse(
-                success=False,
-                error={"code": "RENDER_ERROR", "message": result.stderr},
-            )
 
         return RenderResponse(success=True, output_path=str(output_path))
     except Exception as e:

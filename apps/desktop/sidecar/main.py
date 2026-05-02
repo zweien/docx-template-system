@@ -1,20 +1,20 @@
 import os
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Add project root to path to reuse existing code
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, os.path.join(PROJECT_ROOT, "report-engine", "src"))
-sys.path.insert(0, os.path.join(PROJECT_ROOT, ".claude", "skills", "report-generator", "scripts"))
+SIDEKICK_DIR = Path(__file__).parent
+sys.path.insert(0, str(SIDEKICK_DIR))            # report_engine 包
+sys.path.insert(0, str(SIDEKICK_DIR / "scripts")) # parse/build 脚本
 
 from api import parse, render, config, progress
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app):
     print("Sidecar starting...", flush=True)
     yield
     print("Sidecar shutting down...", flush=True)
@@ -42,5 +42,6 @@ def health():
 
 if __name__ == "__main__":
     import uvicorn
+
     port = int(os.environ.get("SIDECAR_PORT", "8765"))
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")

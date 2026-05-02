@@ -1,27 +1,28 @@
 import os
-import sys
 import tempfile
-from pathlib import Path
 from fastapi import APIRouter
 from pydantic import BaseModel
-
-PROJECT_ROOT = Path(__file__).parents[3]
-SKILL_DIR = PROJECT_ROOT / ".claude" / "skills" / "report-generator" / "scripts"
-sys.path.insert(0, str(SKILL_DIR))
 
 from parse_excel_budget import parse_excel_budget
 
 router = APIRouter()
 
+
 class ParseRequest(BaseModel):
     input_path: str
     config: dict
+
 
 class ParseResponse(BaseModel):
     success: bool
     content: dict | None = None
     warnings: list[str] = []
     error: dict | None = None
+
+
+class ParseTemplateRequest(BaseModel):
+    template_path: str
+
 
 @router.post("/parse-excel", response_model=ParseResponse)
 def parse_excel(req: ParseRequest):
@@ -30,7 +31,6 @@ def parse_excel(req: ParseRequest):
         content, warnings = parse_excel_budget(
             req.input_path, output_dir, req.config
         )
-        # Convert image paths to absolute paths
         for section in content.get("sections", []):
             for block in section.get("blocks", []):
                 if block.get("type") == "image":
@@ -44,3 +44,14 @@ def parse_excel(req: ParseRequest):
             warnings=[],
             error={"code": "PARSE_ERROR", "message": str(e)},
         )
+
+
+@router.post("/parse-template")
+def parse_template_endpoint(req: ParseTemplateRequest):
+    try:
+        from report_engine.template_parser import parse_template
+
+        structure, warnings = parse_template(req.template_path)
+        return {"structure": structure, "warnings": warnings}
+    except Exception as e:
+        return {"error": {"code": "PARSE_TEMPLATE_ERROR", "message": str(e)}}

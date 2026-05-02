@@ -7,6 +7,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_fs::init())
         .setup(|app| {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -21,6 +22,12 @@ pub fn run() {
             commands::select_excel,
             commands::select_output_dir,
             commands::open_report,
+            commands::select_docx,
+            commands::save_file_as,
+            commands::list_templates,
+            commands::import_template,
+            commands::delete_template,
+            commands::get_app_data_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

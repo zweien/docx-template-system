@@ -1,5 +1,5 @@
 {
-  "productName": "预算报告生成器",
+  "productName": "Budget Report Generator",
   "version": "0.4.0",
   "identifier": "com.example.budget-report",
   "build": {

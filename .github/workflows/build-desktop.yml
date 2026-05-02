@@ -19,6 +19,26 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: master
+
+      - name: Merge tagged branch into master
+        if: github.event_name == 'push'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          $tag = "${{ github.ref_name }}"
+          $sha = git rev-parse $tag
+          $branch = git branch -r --contains $sha --format "%(refname:short)" | Select-Object -First 1
+          if ($branch -and $branch -ne "origin/master") {
+            $localBranch = $branch -replace "origin/", ""
+            git merge origin/$localBranch --no-ff -m "merge: $tag"
+            git push origin master
+            Write-Host "Merged $localBranch into master"
+          } else {
+            Write-Host "Tag is already on master, skipping merge"
+          }
 
       - uses: actions/setup-node@v4
         with:

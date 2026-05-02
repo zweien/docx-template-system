@@ -1,0 +1,10 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+pydantic>=2.0
+openpyxl>=3.1.0
+Pillow>=10.0.0
+python-docx>=0.8.11
+docxtpl[subdoc]>=0.16.0
+pyyaml
+latex2mathml
+lxml

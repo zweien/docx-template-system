@@ -1,0 +1,14 @@
+{
+  "identifier": "default",
+  "description": "Default capabilities",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default",
+    "shell:default",
+    "shell:allow-open",
+    "fs:default",
+    "opener:default",
+    "opener:allow-open-path"
+  ]
+}

@@ -1,0 +1,201 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;510;590;600;700&display=swap');
+
+/* ─── Linear Design System ─── */
+
+@theme {
+  /* Fonts */
+  --font-sans: 'Inter', -apple-system, system-ui, Segoe UI, Roboto, Helvetica Neue, sans-serif;
+  --font-mono: 'SF Mono', 'Menlo', 'Monaco', 'Consolas', ui-monospace, monospace;
+
+  /* Dark Canvas */
+  --color-canvas: #08090a;
+  --color-panel: #0f1011;
+  --color-surface: #191a1b;
+  --color-surface-hover: #28282c;
+  --color-surface-active: #2e2e32;
+
+  /* Text */
+  --color-text: #f7f8f8;
+  --color-text-secondary: #d0d6e0;
+  --color-text-muted: #8a8f98;
+  --color-text-quaternary: #62666d;
+
+  /* Brand */
+  --color-brand: #5e6ad2;
+  --color-brand-accent: #7170ff;
+  --color-brand-hover: #828fff;
+  --color-brand-bg: rgba(94, 106, 210, 0.12);
+  --color-brand-border: rgba(94, 106, 210, 0.25);
+
+  /* Status */
+  --color-success: #27a644;
+  --color-success-bg: rgba(39, 166, 68, 0.1);
+  --color-success-border: rgba(39, 166, 68, 0.25);
+  --color-warning: #f5a623;
+  --color-warning-bg: rgba(245, 166, 35, 0.1);
+  --color-warning-border: rgba(245, 166, 35, 0.25);
+  --color-danger: #e5484d;
+  --color-danger-bg: rgba(229, 72, 77, 0.1);
+  --color-danger-border: rgba(229, 72, 77, 0.25);
+
+  /* Borders */
+  --color-border: rgba(255, 255, 255, 0.08);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-border-strong: rgba(255, 255, 255, 0.12);
+
+  /* Sidebar */
+  --color-sidebar-bg: #0f1011;
+  --color-sidebar-border: rgba(255, 255, 255, 0.05);
+  --color-sidebar-text: #62666d;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.04);
+  --color-sidebar-active-bg: rgba(255, 255, 255, 0.06);
+  --color-sidebar-active-text: #f7f8f8;
+
+  /* Light theme overrides */
+  --color-lt-canvas: #f7f8f8;
+  --color-lt-panel: #ffffff;
+  --color-lt-surface: #f3f4f5;
+  --color-lt-surface-hover: #ebedf0;
+  --color-lt-text: #1a1a1a;
+  --color-lt-text-secondary: #5c5c5c;
+  --color-lt-text-muted: #8a8f98;
+  --color-lt-border: #d0d6e0;
+  --color-lt-border-subtle: #e6e6e6;
+  --color-lt-brand-bg: rgba(94, 106, 210, 0.08);
+  --color-lt-brand-border: rgba(94, 106, 210, 0.2);
+}
+
+/* ─── Base ─── */
+
+html {
+  height: 100%;
+  font-size: 15px;
+  color-scheme: dark;
+}
+
+body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--color-text);
+  background: var(--color-canvas);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "cv01", "ss03";
+}
+
+/* ─── Typography Utilities ─── */
+
+.text-display {
+  font-weight: 510;
+  letter-spacing: -0.03em;
+  line-height: 1.0;
+}
+
+.text-heading {
+  font-weight: 510;
+  letter-spacing: -0.02em;
+}
+
+.text-ui {
+  font-weight: 510;
+  letter-spacing: -0.01em;
+}
+
+.text-caption {
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: -0.008em;
+}
+
+/* ─── Scrollbar ─── */
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ─── Selection ─── */
+
+::selection {
+  background: rgba(94, 106, 210, 0.35);
+  color: #fff;
+}
+
+/* ─── Focus ─── */
+
+:focus-visible {
+  outline: 1px solid var(--color-brand-accent);
+  outline-offset: 1px;
+}
+
+/* ─── Native form controls ─── */
+
+select option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+/* ─── Dark/Light Theme Switching ─── */
+
+[data-theme="light"] {
+  color-scheme: light;
+  --color-canvas: var(--color-lt-canvas);
+  --color-panel: var(--color-lt-panel);
+  --color-surface: var(--color-lt-surface);
+  --color-surface-hover: var(--color-lt-surface-hover);
+  --color-surface-active: #d0d6e0;
+  --color-text: var(--color-lt-text);
+  --color-text-secondary: var(--color-lt-text-secondary);
+  --color-text-muted: #7a7f88;
+  --color-text-quaternary: #9ca0a8;
+  --color-brand-bg: var(--color-lt-brand-bg);
+  --color-brand-border: var(--color-lt-brand-border);
+  --color-border: var(--color-lt-border);
+  --color-border-subtle: var(--color-lt-border-subtle);
+  --color-border-strong: #b0b0b0;
+
+  --color-sidebar-bg: #f3f4f5;
+  --color-sidebar-border: #e6e6e6;
+  --color-sidebar-text: #8a8f98;
+  --color-sidebar-hover: rgba(0, 0, 0, 0.03);
+  --color-sidebar-active-bg: rgba(94, 106, 210, 0.08);
+  --color-sidebar-active-text: #5e6ad2;
+
+  --color-success-bg: rgba(39, 166, 68, 0.08);
+  --color-success-border: rgba(39, 166, 68, 0.2);
+  --color-warning-bg: rgba(245, 166, 35, 0.08);
+  --color-warning-border: rgba(245, 166, 35, 0.2);
+  --color-danger-bg: rgba(229, 72, 77, 0.08);
+  --color-danger-border: rgba(229, 72, 77, 0.2);
+}
+
+[data-theme="light"] html,
+[data-theme="light"] body,
+[data-theme="light"] #root {
+  background: var(--color-lt-canvas);
+  color: var(--color-lt-text);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="light"] ::selection {
+  background: rgba(94, 106, 210, 0.25);
+  color: #1a1a1a;
+}

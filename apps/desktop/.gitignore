@@ -1,0 +1,7 @@
+dist/
+dist-ssr/
+*.local
+node_modules/
+src-tauri/target/
+src-tauri/sidecar/
+src-tauri/gen/

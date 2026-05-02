@@ -147,6 +147,10 @@ export function Settings() {
                 <span className="text-text-muted">后端</span>
                 <span className="font-mono text-text-secondary">report-engine</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-text-muted">开发团队</span>
+                <span className="font-mono text-text-secondary font-medium">IDRL</span>
+              </div>
             </div>
           </section>
         </div>

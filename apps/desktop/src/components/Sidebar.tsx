@@ -281,6 +281,13 @@ function AboutContent() {
       <p className="text-[0.8rem] text-text-muted leading-relaxed">
         基于 docx 模板的预算报告生成工具。通过配置映射规则，将 Excel 数据自动填入 Word 模板，快速生成规范的预算报告文档。
       </p>
+
+      <div className="border-t border-border pt-4">
+        <div className="flex justify-between text-[0.8rem]">
+          <span className="text-text-muted">开发团队</span>
+          <span className="font-mono text-text font-medium">IDRL</span>
+        </div>
+      </div>
     </div>
   );
 }

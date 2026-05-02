@@ -18,26 +18,22 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         .resolve("sidecar", tauri::path::BaseDirectory::Resource)
         .map_err(|e: tauri::Error| e.to_string())?;
 
-    // Try bundled python first, fallback to system python in dev mode
-    let bundled_python = if cfg!(windows) {
-        sidecar_dir.join("python").join("python.exe")
+    // Try PyInstaller binary first, then bundled python, then system python (dev mode)
+    let bundled_bin = sidecar_dir.join("budget-sidecar").join("budget-sidecar");
+    let (cmd, args) = if bundled_bin.exists() {
+        // Production: PyInstaller binary
+        (bundled_bin.as_os_str().to_owned(), vec![])
     } else {
-        sidecar_dir.join("python").join("bin").join("python")
-    };
-    let (python_cmd, main_py) = if bundled_python.exists() {
-        (bundled_python.as_os_str().to_owned(), sidecar_dir.join("main.py"))
-    } else {
-        // Dev mode: use system python3 and find main.py next to src-tauri
+        // Dev mode: system python3
         let main_py = sidecar_dir.join("main.py");
-        if main_py.exists() {
-            (std::ffi::OsString::from("python3"), main_py)
-        } else {
+        if !main_py.exists() {
             return Err("Sidecar main.py not found".to_string());
         }
+        (std::ffi::OsString::from("python3"), vec![main_py])
     };
 
-    let mut child = Command::new(&python_cmd)
-        .arg(main_py)
+    let mut child = Command::new(&cmd)
+        .args(&args)
         .env("SIDECAR_PORT", port.to_string())
         .env("PYTHONPATH", sidecar_dir.to_string_lossy().to_string())
         .stdout(Stdio::piped())

@@ -1,5 +1,3 @@
-use tauri::Manager;
-
 mod commands;
 mod sidecar;
 
@@ -17,6 +15,11 @@ pub fn run() {
                 }
             });
             Ok(())
+        })
+        .on_window_event(|_window, event| {
+            if let tauri::WindowEvent::Destroyed = event {
+                crate::sidecar::stop();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_sidecar_port,

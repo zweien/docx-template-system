@@ -10,7 +10,7 @@ import { detectSidecarPortBrowser } from "./services/api";
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export default function App() {
-  const { currentView, sidecarReady, setSidecarReady, setSidecarPort, setTemplates, addLog } = useAppStore();
+  const { currentView, sidecarReady, setSidecarReady, setSidecarPort, setTemplates, addLog, logs, clearLogs } = useAppStore();
 
   useEffect(() => {
     const checkTauri = async () => {
@@ -59,7 +59,7 @@ export default function App() {
         )}
         {currentView === "wizard" && <Wizard />}
         {currentView === "templates" && <TemplateManager />}
-        <LogPanel logs={useAppStore.getState().logs} />
+        <LogPanel logs={logs} onClear={clearLogs} />
       </div>
     </div>
   );

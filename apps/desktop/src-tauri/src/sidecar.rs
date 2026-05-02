@@ -19,7 +19,8 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         .map_err(|e: tauri::Error| e.to_string())?;
 
     // Try PyInstaller binary first, then bundled python, then system python (dev mode)
-    let bundled_bin = sidecar_dir.join("budget-sidecar").join("budget-sidecar");
+    let bin_name = format!("budget-sidecar{}", std::env::consts::EXE_SUFFIX);
+    let bundled_bin = sidecar_dir.join("budget-sidecar").join(bin_name);
     let (cmd, args) = if bundled_bin.exists() {
         // Production: PyInstaller binary
         (bundled_bin.as_os_str().to_owned(), vec![])

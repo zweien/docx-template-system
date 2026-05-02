@@ -1,0 +1,109 @@
+name: Build Desktop App
+
+on:
+  push:
+    tags:
+      - 'desktop-v*'
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create GitHub Release?'
+        type: boolean
+        default: true
+
+jobs:
+  build-windows:
+    permissions:
+      contents: write
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+
+      - name: Install Node dependencies
+        working-directory: apps/desktop
+        run: npm install
+
+      - name: Install Python dependencies
+        working-directory: apps/desktop/sidecar
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller
+
+      - name: Build Python sidecar
+        working-directory: apps/desktop/sidecar
+        shell: pwsh
+        run: |
+          $sidecarDir = Resolve-Path "../src-tauri/sidecar"
+          if (Test-Path $sidecarDir) { Remove-Item -Recurse -Force $sidecarDir }
+
+          pyinstaller `
+            --name budget-sidecar `
+            --onedir --clean --noconfirm `
+            --distpath $sidecarDir `
+            --workpath "$env:RUNNER_TEMP\sidecar-build-work" `
+            --specpath "$env:RUNNER_TEMP\sidecar-build-work" `
+            --add-data "api;api" `
+            --add-data "scripts;scripts" `
+            --add-data "report_engine;report_engine" `
+            --hidden-import report_engine `
+            --hidden-import report_engine.blocks `
+            --hidden-import report_engine.renderer `
+            --hidden-import report_engine.subdoc `
+            --hidden-import report_engine.template_parser `
+            --hidden-import report_engine.converter `
+            --hidden-import report_engine.prompt_parser `
+            --hidden-import report_engine.schema `
+            --hidden-import docxtpl `
+            --hidden-import docx `
+            --hidden-import openpyxl `
+            --hidden-import latex2mathml `
+            --hidden-import yaml `
+            --collect-data docxtpl `
+            main.py
+
+      - name: Build and Release
+        uses: tauri-apps/tauri-action@v0
+        if: github.event_name == 'push' || inputs.create_release == true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: desktop-v__VERSION__
+          releaseName: 'Desktop v__VERSION__'
+          releaseBody: '预算报告生成器 Desktop v__VERSION__'
+          releaseDraft: true
+          prerelease: false
+
+      - name: Build only (no release)
+        if: github.event_name == 'workflow_dispatch' && inputs.create_release != true
+        working-directory: apps/desktop
+        run: npm run tauri build
+
+      - name: Get version
+        id: version
+        shell: pwsh
+        working-directory: apps/desktop
+        run: |
+          $json = Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json
+          echo "version=$($json.version)" >> $env:GITHUB_OUTPUT
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: budget-report-desktop-${{ steps.version.outputs.version }}-windows-x64
+          path: apps/desktop/src-tauri/target/release/bundle/msi/*.msi
+          retention-days: 30

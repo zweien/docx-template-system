@@ -139,3 +139,43 @@ npm run release:minor     # minor bump
 npm run release:major     # major bump
 git push --follow-tags    # 推送代码和 tag
 ```
+
+**发版时务必同步更新 README.md 中的版本号徽章**（如 `> **v0.4.0**`）。
+
+## Desktop App 发布
+
+桌面应用（`apps/desktop/`）有独立的版本号，与主 Web 应用互不影响。
+
+### 版本文件（三处必须同步更新）
+
+- `apps/desktop/package.json` — `version` 字段
+- `apps/desktop/src-tauri/tauri.conf.json` — `version` 字段
+- `apps/desktop/src-tauri/Cargo.toml` — `version` 字段
+
+同时更新 `apps/desktop/README.md` 版本号和版本历史。
+
+### 发布流程
+
+```bash
+# 1. 同步更新上述三处版本号 + README
+
+# 2. 提交并打 desktop-v* tag
+git commit -am "chore(desktop): bump version to X.Y.Z"
+git tag desktop-vX.Y.Z
+
+# 3. 推送（触发 GitHub Actions 构建 Windows MSI）
+git push origin <branch> --tags
+```
+
+- `desktop-v*` tag → 触发 `.github/workflows/build-desktop.yml`（构建 MSI + 创建 Release 草稿）
+- `v*` tag → 触发 `.github/workflows/deploy.yml`（Web 应用部署），互不影响
+- Release 以草稿形式创建，需在 GitHub Releases 页面手动发布
+
+### 本地开发
+
+```bash
+cd apps/desktop
+npm install                    # 安装前端依赖
+cd sidecar && pip install -r requirements.txt  # 安装 sidecar Python 依赖
+npm run tauri:dev              # 启动开发模式（自动启动 sidecar）
+```

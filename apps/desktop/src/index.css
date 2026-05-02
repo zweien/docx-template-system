@@ -71,6 +71,7 @@
 html {
   height: 100%;
   font-size: 15px;
+  color-scheme: dark;
 }
 
 body, #root {
@@ -139,9 +140,17 @@ body, #root {
   outline-offset: 1px;
 }
 
+/* ─── Native form controls ─── */
+
+select option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
 /* ─── Dark/Light Theme Switching ─── */
 
 [data-theme="light"] {
+  color-scheme: light;
   --color-canvas: var(--color-lt-canvas);
   --color-panel: var(--color-lt-panel);
   --color-surface: var(--color-lt-surface);

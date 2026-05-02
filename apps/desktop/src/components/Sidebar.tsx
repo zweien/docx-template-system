@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { useAppStore, AppView, ThemeMode } from "../stores/app-store";
 
+type ModalType = "help" | "changelog" | "about" | null;
+
 export function Sidebar() {
   const { currentView, setCurrentView, settings, updateSettings } = useAppStore();
   const [collapsed, setCollapsed] = useState(false);
+  const [modal, setModal] = useState<ModalType>(null);
 
   const items: { view: AppView; icon: string; label: string; desc: string }[] = [
     { view: "wizard", icon: "◆", label: "生成报告", desc: "四步向导" },
@@ -18,7 +21,7 @@ export function Sidebar() {
 
   const renderNavItem = (item: { view: AppView; icon: string; label: string; desc: string }) => {
     const active = currentView === item.view;
-    const btn = (
+    return (
       <button
         key={item.view}
         onClick={() => setCurrentView(item.view)}
@@ -42,80 +45,242 @@ export function Sidebar() {
         )}
       </button>
     );
-    return btn;
+  };
+
+  const renderFooterLink = (icon: string, label: string, onClick: () => void) => (
+    <button
+      onClick={onClick}
+      className="text-text-quaternary hover:text-text-secondary transition-colors"
+      style={{ fontSize: "0.667em" }}
+      title={collapsed ? label : undefined}
+    >
+      {collapsed ? icon : <>{icon} {label}</>}
+    </button>
+  );
+
+  return (
+    <>
+      <aside
+        className={`bg-sidebar-bg border-r border-sidebar-border flex flex-col shrink-0 select-none transition-all duration-200 ${
+          collapsed ? "w-12" : "w-52"
+        }`}
+      >
+        {/* Logo */}
+        <div className={`flex items-center ${collapsed ? "justify-center px-0" : "gap-2.5 px-4"} pt-5 pb-4`}>
+          <div className="w-7 h-7 rounded-md bg-brand flex items-center justify-center text-white font-semibold shrink-0" style={{ fontSize: "0.8em" }}>
+            R
+          </div>
+          {!collapsed && (
+            <div>
+              <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.3.0</p>
+            </div>
+          )}
+        </div>
+
+        {/* Collapse toggle */}
+        <div className={`flex ${collapsed ? "justify-center" : "justify-end"} ${collapsed ? "px-0" : "px-3"} -mt-1 mb-1`}>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="w-5 h-5 rounded flex items-center justify-center text-text-quaternary hover:text-text-secondary hover:bg-sidebar-hover transition-all duration-100"
+            title={collapsed ? "展开侧边栏" : "收起侧边栏"}
+          >
+            <span className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}>◂</span>
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className={`flex-1 ${collapsed ? "px-1.5" : "px-2.5"} space-y-px`}>
+          {!collapsed && (
+            <div className="font-medium text-text-quaternary uppercase tracking-wider px-2.5 py-3" style={{ fontSize: "0.667em" }}>
+              功能
+            </div>
+          )}
+          {items.map(renderNavItem)}
+        </nav>
+
+        {/* Bottom */}
+        <div className={`${collapsed ? "px-1.5" : "px-2.5"} pb-2`}>
+          <div className="border-t border-sidebar-border pt-2 space-y-px">
+            <button
+              onClick={toggleTheme}
+              className={`w-full flex items-center rounded-md text-sidebar-text hover:bg-sidebar-hover hover:text-text-secondary transition-all duration-150 ${
+                collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-2.5 py-1.5 text-left"
+              }`}
+              title={collapsed ? (settings.theme === "dark" ? "切换浅色" : "切换深色") : undefined}
+            >
+              <span className={`shrink-0 ${collapsed ? "" : "w-5 text-center"}`} style={{ fontSize: "0.93em" }}>
+                {settings.theme === "dark" ? "☀" : "☽"}
+              </span>
+              {!collapsed && (
+                <div className="min-w-0">
+                  <div className="font-medium leading-tight" style={{ fontSize: "0.867em" }}>{settings.theme === "dark" ? "浅色模式" : "深色模式"}</div>
+                </div>
+              )}
+            </button>
+            {renderNavItem({ view: "settings", icon: "⚙", label: "设置", desc: "外观与偏好" })}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className={`border-t border-sidebar-border py-2 ${collapsed ? "px-1.5 flex flex-col items-center gap-1" : "px-4 flex items-center gap-3 justify-center"}`}>
+          {renderFooterLink("?", "帮助", () => setModal("help"))}
+          {!collapsed && <span className="text-sidebar-border">·</span>}
+          {renderFooterLink("♣", "更新", () => setModal("changelog"))}
+          {!collapsed && <span className="text-sidebar-border">·</span>}
+          {renderFooterLink("i", "关于", () => setModal("about"))}
+        </div>
+      </aside>
+
+      {/* Modals */}
+      {modal && <SidebarModal type={modal} onClose={() => setModal(null)} />}
+    </>
+  );
+}
+
+function SidebarModal({ type, onClose }: { type: ModalType; onClose: () => void }) {
+  const titles: Record<string, string> = { help: "帮助文档", changelog: "更新日志", about: "关于" };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
+      <div
+        className="bg-panel rounded-lg border border-border shadow-2xl w-[520px] max-h-[70vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="px-5 py-3.5 border-b border-border flex justify-between items-center">
+          <h3 className="text-ui text-[0.933rem] text-text">{titles[type!]}</h3>
+          <button onClick={onClose} className="w-6 h-6 rounded-md hover:bg-surface-hover flex items-center justify-center text-text-quaternary hover:text-text transition-colors text-lg">&times;</button>
+        </div>
+        <div className="flex-1 overflow-auto p-5">
+          {type === "help" && <HelpContent />}
+          {type === "changelog" && <ChangelogContent />}
+          {type === "about" && <AboutContent />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HelpContent() {
+  const steps = [
+    { title: "1. 选择模板", desc: "导入或选择一个 .docx 模板文件，模板中包含 {{ 占位符 }}" },
+    { title: "2. 导入 Excel", desc: "选择包含预算数据的 Excel 文件，系统会根据配置方案解析数据" },
+    { title: "3. 配置预览", desc: "查看配置方案、数据映射和解析结果，确认无误后继续" },
+    { title: "4. 生成报告", desc: "点击生成按钮，系统将数据填入模板并输出 .docx 报告" },
+  ];
+
+  return (
+    <div className="space-y-4">
+      <p className="text-[0.867rem] text-text-secondary">预算报告生成器通过四步向导完成报告生成：</p>
+      <div className="space-y-3">
+        {steps.map((s) => (
+          <div key={s.title} className="flex gap-3">
+            <div className="w-5 h-5 rounded-sm bg-brand-bg text-brand-accent text-[0.6rem] font-bold flex items-center justify-center shrink-0 mt-0.5">{s.title[0]}</div>
+            <div>
+              <div className="font-medium text-[0.867rem] text-text">{s.title}</div>
+              <div className="text-[0.8rem] text-text-muted mt-0.5">{s.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t border-border-subtle pt-4 space-y-2">
+        <h4 className="text-ui text-[0.8rem] text-text">配置方案</h4>
+        <p className="text-[0.8rem] text-text-muted">配置方案定义了 Excel 数据到报告模板的映射规则，包括汇总页配置、Sheet 映射、列映射等。可以保存多套配置，在不同场景下切换使用。</p>
+      </div>
+
+      <div className="border-t border-border-subtle pt-4 space-y-2">
+        <h4 className="text-ui text-[0.8rem] text-text">快捷键</h4>
+        <div className="grid grid-cols-2 gap-2 text-[0.8rem]">
+          <span className="text-text-muted">侧边栏收缩</span>
+          <span className="text-text font-mono text-right">◂ 按钮</span>
+          <span className="text-text-muted">主题切换</span>
+          <span className="text-text font-mono text-right">侧边栏 ☀/☽ 按钮</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ChangelogContent() {
+  const versions = [
+    { ver: "0.3.0", date: "2026-05-02", changes: [
+      { type: "feat", text: "Linear 风格深色优先设计系统，Inter 字体" },
+      { type: "feat", text: "设置视图：字体大小控制（12-28px 快捷选项 + 滑块）" },
+      { type: "feat", text: "深色/浅色主题切换，侧边栏快捷按钮" },
+      { type: "feat", text: "可收缩侧边栏，图标模式" },
+      { type: "feat", text: "配置管理持久化，完整可视化编辑器" },
+      { type: "feat", text: "导入/导出配置方案" },
+    ]},
+    { ver: "0.2.0", date: "2026-05-01", changes: [
+      { type: "feat", text: "初始桌面应用，Tauri 2.0 + React" },
+      { type: "feat", text: "四步向导：选模板 → 导数据 → 配置 → 生成" },
+      { type: "feat", text: "模板管理：导入、重命名、删除 .docx 模板" },
+      { type: "feat", text: "Python sidecar 后端服务" },
+    ]},
+  ];
+
+  const typeColor: Record<string, string> = {
+    feat: "text-brand-accent",
+    fix: "text-success",
+    perf: "text-warning",
   };
 
   return (
-    <aside
-      className={`bg-sidebar-bg border-r border-sidebar-border flex flex-col shrink-0 select-none transition-all duration-200 ${
-        collapsed ? "w-12" : "w-52"
-      }`}
-    >
-      {/* Logo */}
-      <div className={`flex items-center ${collapsed ? "justify-center px-0" : "gap-2.5 px-4"} pt-5 pb-4`}>
-        <div className="w-7 h-7 rounded-md bg-brand flex items-center justify-center text-white font-semibold shrink-0" style={{ fontSize: "0.8em" }}>
-          R
-        </div>
-        {!collapsed && (
-          <div>
-            <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-            <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.3.0</p>
+    <div className="space-y-6">
+      {versions.map((v) => (
+        <div key={v.ver}>
+          <div className="flex items-baseline gap-2 mb-2">
+            <span className="font-mono font-medium text-[0.933rem] text-text">{v.ver}</span>
+            <span className="text-[0.733rem] text-text-quaternary">{v.date}</span>
           </div>
-        )}
-      </div>
+          <ul className="space-y-1.5 pl-1">
+            {v.changes.map((c, i) => (
+              <li key={i} className="flex gap-2 text-[0.8rem]">
+                <span className={`font-mono font-bold ${typeColor[c.type] || "text-text-muted"}`}>{c.type}</span>
+                <span className="text-text-secondary">{c.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-      {/* Collapse toggle */}
-      <div className={`flex ${collapsed ? "justify-center" : "justify-end"} ${collapsed ? "px-0" : "px-3"} -mt-1 mb-1`}>
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="w-5 h-5 rounded flex items-center justify-center text-text-quaternary hover:text-text-secondary hover:bg-sidebar-hover transition-all duration-100"
-          title={collapsed ? "展开侧边栏" : "收起侧边栏"}
-        >
-          <span className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}>◂</span>
-        </button>
-      </div>
-
-      {/* Nav */}
-      <nav className={`flex-1 ${collapsed ? "px-1.5" : "px-2.5"} space-y-px`}>
-        {!collapsed && (
-          <div className="font-medium text-text-quaternary uppercase tracking-wider px-2.5 py-3" style={{ fontSize: "0.667em" }}>
-            功能
-          </div>
-        )}
-        {items.map(renderNavItem)}
-      </nav>
-
-      {/* Bottom */}
-      <div className={`${collapsed ? "px-1.5" : "px-2.5"} pb-2`}>
-        <div className="border-t border-sidebar-border pt-2 space-y-px">
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            className={`w-full flex items-center rounded-md text-sidebar-text hover:bg-sidebar-hover hover:text-text-secondary transition-all duration-150 ${
-              collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-2.5 py-1.5 text-left"
-            }`}
-            title={collapsed ? (settings.theme === "dark" ? "切换浅色" : "切换深色") : undefined}
-          >
-            <span className={`shrink-0 ${collapsed ? "" : "w-5 text-center"}`} style={{ fontSize: "0.93em" }}>
-              {settings.theme === "dark" ? "☀" : "☽"}
-            </span>
-            {!collapsed && (
-              <div className="min-w-0">
-                <div className="font-medium leading-tight" style={{ fontSize: "0.867em" }}>{settings.theme === "dark" ? "浅色模式" : "深色模式"}</div>
-              </div>
-            )}
-          </button>
-          {/* Settings */}
-          {renderNavItem({ view: "settings", icon: "⚙", label: "设置", desc: "外观与偏好" })}
+function AboutContent() {
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-brand flex items-center justify-center text-white text-lg font-bold">R</div>
+        <div>
+          <h4 className="text-[1rem] font-medium text-text">预算报告生成器</h4>
+          <p className="font-mono text-[0.8rem] text-text-quaternary mt-0.5">Budget Report Generator</p>
         </div>
       </div>
 
-      {/* Footer */}
-      {!collapsed && (
-        <div className="px-4 py-2.5 border-t border-sidebar-border">
-          <p className="text-text-quaternary font-mono" style={{ fontSize: "0.667em" }}>Tauri 2.0 · report-engine</p>
+      <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
+        <div className="flex justify-between">
+          <span className="text-text-muted">版本</span>
+          <span className="font-mono text-text">0.3.0</span>
         </div>
-      )}
-    </aside>
+        <div className="flex justify-between">
+          <span className="text-text-muted">前端引擎</span>
+          <span className="font-mono text-text">Tauri 2.0 + React 18</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-text-muted">后端服务</span>
+          <span className="font-mono text-text">report-engine (Python)</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-text-muted">UI 框架</span>
+          <span className="font-mono text-text">Tailwind CSS v4</span>
+        </div>
+      </div>
+
+      <p className="text-[0.8rem] text-text-muted leading-relaxed">
+        基于 docx 模板的预算报告生成工具。通过配置映射规则，将 Excel 数据自动填入 Word 模板，快速生成规范的预算报告文档。
+      </p>
+    </div>
   );
 }

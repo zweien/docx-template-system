@@ -60,7 +60,7 @@ export const useEditorAIStore = create<EditorAIState>((set) => ({
     })),
   clearPinnedSelections: () => set({ pinnedSelections: [] }),
 
-  selectedModel: "gpt-4o",
+  selectedModel: "",
   setSelectedModel: (model) => set({ selectedModel: model }),
 
   sectionContent: "",

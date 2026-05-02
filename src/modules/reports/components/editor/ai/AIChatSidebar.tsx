@@ -22,14 +22,11 @@ import { useAIActions } from "./useAIActions";
 import { SelectionAttachment } from "./SelectionAttachment";
 import type { PinnedSelection } from "@/types/editor-ai";
 
-// ---------- Model list ----------
-const MODEL_OPTIONS = [
-  { value: "gpt-4o", label: "GPT-4o" },
-  { value: "gpt-4o-mini", label: "GPT-4o Mini" },
-  { value: "deepseek-chat", label: "DeepSeek Chat" },
-  { value: "deepseek-reasoner", label: "DeepSeek Reasoner" },
-  { value: "kimi-k2", label: "Kimi K2" },
-];
+// ---------- Model type ----------
+interface ModelOption {
+  id: string;
+  name: string;
+}
 
 // ---------- Props ----------
 interface AIChatSidebarProps {
@@ -55,9 +52,27 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
 
   const [input, setInput] = useState("");
   const [streaming, setStreaming] = useState(false);
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Load available models from Agent2
+  useEffect(() => {
+    let active = true;
+    fetch("/api/agent2/models")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!active || !data?.success) return;
+        setModelOptions(data.data);
+        // Set default model if none selected
+        if (!useEditorAIStore.getState().selectedModel && data.data.length > 0) {
+          setSelectedModel(data.data[0].id);
+        }
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [setSelectedModel]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -108,6 +123,9 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    // Timeout after 60s of no response
+    const timeoutId = setTimeout(() => controller.abort(), 60_000);
+
     // Add placeholder assistant message
     addMessage({ role: "assistant", content: "" });
 
@@ -155,6 +173,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
 
       setStreaming(false);
       abortRef.current = null;
+      clearTimeout(timeoutId);
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") {
         updateLastAssistantMessage((prev) => {
@@ -163,6 +182,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
         });
         setStreaming(false);
         abortRef.current = null;
+        clearTimeout(timeoutId);
         return;
       }
       updateLastAssistantMessage(
@@ -170,6 +190,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
       );
       setStreaming(false);
       abortRef.current = null;
+      clearTimeout(timeoutId);
     }
   }, [
     input,
@@ -296,9 +317,9 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
           onChange={(e) => setSelectedModel(e.target.value)}
           className="h-6 rounded border bg-transparent px-1.5 text-xs outline-none focus:border-ring"
         >
-          {MODEL_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+          {modelOptions.map((opt) => (
+            <option key={opt.id} value={opt.id}>
+              {opt.name}
             </option>
           ))}
         </select>

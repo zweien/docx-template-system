@@ -14,9 +14,10 @@ import { DefaultChatTransport } from "ai";
 import {
   AIExtension,
   AIMenuController,
-  AIToolbarButton,
   getAISlashMenuItems,
 } from "@blocknote/xl-ai";
+import { AIActionButton } from "./ai/AIActionButton";
+import type { EditorAIActionItem } from "@/types/editor-ai";
 import { en as coreDictionary } from "@blocknote/core/locales";
 import { en as aiDictionary } from "@blocknote/xl-ai/locales";
 import {
@@ -35,6 +36,9 @@ interface SectionEditorProps {
   collabFragment?: Y.XmlFragment | null;
   collabProvider?: WebsocketProvider | null;
   onEditorMount?: (editor: any) => void;
+  onOpenAISidebar?: () => void;
+  onEditAIAction?: (action: EditorAIActionItem) => void;
+  onCreateAIAction?: () => void;
 }
 
 function isBlockNoteBlocks(blocks: EngineBlock[]): boolean {
@@ -104,20 +108,7 @@ function prepareBlocks(blocks: any[]): BlockLike[] {
 
 const aiTransport = new DefaultChatTransport({ api: "/api/reports/chat" });
 
-// AIToolbarButton crashes when editor.getSelection() returns empty blocks.
-// This wrapper only renders it when a valid selection exists.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function AIToolbarButtonSafe({ editor }: { editor: any }) {
-  try {
-    const sel = editor.getSelection();
-    if (!sel || sel.blocks.length === 0) return null;
-  } catch {
-    return null;
-  }
-  return <AIToolbarButton />;
-}
-
-export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, collabFragment, collabProvider, onEditorMount }: SectionEditorProps) {
+export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, collabFragment, collabProvider, onEditorMount, onOpenAISidebar, onEditAIAction, onCreateAIAction }: SectionEditorProps) {
   const { resolvedTheme } = useTheme();
   const { data: session } = useSession();
   const onChangeRef = useRef(onChange);
@@ -410,7 +401,12 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
           formattingToolbar={() => (
             <FormattingToolbar>
               {getFormattingToolbarItems()}
-              <AIToolbarButtonSafe key="ai" editor={editor} />
+              <AIActionButton
+                editor={editor}
+                onOpenSidebar={onOpenAISidebar ?? (() => {})}
+                onEditAction={onEditAIAction ?? (() => {})}
+                onCreateAction={onCreateAIAction ?? (() => {})}
+              />
             </FormattingToolbar>
           )}
         />

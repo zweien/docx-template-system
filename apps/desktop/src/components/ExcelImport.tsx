@@ -1,48 +1,23 @@
 import { useState } from "react";
 import { parseExcel } from "../services/api";
 import { selectExcel } from "../services/tauri-commands";
-import { ReportContent, BudgetConfig } from "../types";
+import { ReportContent } from "../types";
+import { useAppStore } from "../stores/app-store";
 import { WarningList } from "./WarningList";
+import { ConfigEditor } from "./ConfigEditor";
 
 interface Props {
   onParsed: (content: ReportContent) => void;
   addLog: (msg: string) => void;
 }
 
-const DEFAULT_CONFIG: BudgetConfig = {
-  title: "预算报告",
-  summary: {
-    sheet_name: "汇总页",
-    mode: "table",
-    header_row: 1,
-    key_column: "科目",
-    value_column: "金额（元）",
-    prefix: "SUMMARY_",
-  },
-  sheets: [
-    {
-      name: "设备费明细",
-      sheet_name: "设备费",
-      id: "equipment_fee",
-      columns: {
-        name: "名称",
-        spec: "规格",
-        unit_price: "单价",
-        quantity: "数量",
-        amount: "经费",
-        reason: "购置理由",
-        basis: "测算依据",
-      },
-      image_columns: ["报价截图"],
-    },
-  ],
-};
-
 export function ExcelImport({ onParsed, addLog }: Props) {
+  const { config, setConfig } = useAppStore();
   const [filePath, setFilePath] = useState("");
   const [loading, setLoading] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [showConfig, setShowConfig] = useState(false);
 
   const handleSelectFile = async () => {
     const path = await selectExcel();
@@ -61,7 +36,7 @@ export function ExcelImport({ onParsed, addLog }: Props) {
     try {
       const res = await parseExcel({
         input_path: filePath,
-        config: DEFAULT_CONFIG,
+        config,
       });
       if (res.success && res.content) {
         setWarnings(res.warnings);
@@ -89,11 +64,31 @@ export function ExcelImport({ onParsed, addLog }: Props) {
         <input value={filePath} placeholder="选择 Excel 文件..." className="flex-1 px-3 py-2 border rounded bg-gray-50" readOnly />
         <button onClick={handleSelectFile} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">浏览...</button>
       </div>
+
+      <div className="bg-white rounded-lg border p-3 flex items-center justify-between">
+        <div>
+          <span className="text-sm text-gray-500">配置方案: </span>
+          <span className="font-medium">{config.title}</span>
+          <span className="text-xs text-gray-400 ml-2">({config.sheets.length} 个 Sheet 映射)</span>
+        </div>
+        <button onClick={() => setShowConfig(true)} className="text-sm text-blue-600 hover:underline">
+          编辑配置
+        </button>
+      </div>
+
       {error && <div className="p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>}
       <WarningList warnings={warnings} />
       <button onClick={handleParse} disabled={!filePath || loading} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
         {loading ? "解析中..." : "下一步：解析 Excel"}
       </button>
+
+      {showConfig && (
+        <ConfigEditor
+          config={config}
+          onChange={setConfig}
+          onClose={() => setShowConfig(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
+import { ConfigEditor } from "../ConfigEditor";
 
 export function StepConfigure() {
-  const { excelContent, templates, selectedTemplateId, config, setWizardStep, addLog } =
+  const { excelContent, templates, selectedTemplateId, config, setConfig, setWizardStep, addLog } =
     useAppStore();
 
   const template = templates.find((t) => t.id === selectedTemplateId);
+  const [showConfig, setShowConfig] = useState(false);
 
   const handleNext = () => {
     addLog("配置确认，准备生成报告");
@@ -30,8 +33,15 @@ export function StepConfigure() {
           <p className="text-gray-800">{template?.name || "未选择"}</p>
         </div>
         <div className="bg-white rounded-lg border p-4">
-          <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">配置方案</h3>
-          <p className="text-gray-800">{config?.title || "默认配置"}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">配置方案</h3>
+              <p className="text-gray-800">{config.title}</p>
+            </div>
+            <button onClick={() => setShowConfig(true)} className="text-sm text-blue-600 hover:underline">
+              编辑
+            </button>
+          </div>
         </div>
       </div>
 
@@ -67,6 +77,14 @@ export function StepConfigure() {
           下一步：生成报告
         </button>
       </div>
+
+      {showConfig && (
+        <ConfigEditor
+          config={config}
+          onChange={setConfig}
+          onClose={() => setShowConfig(false)}
+        />
+      )}
     </div>
   );
 }

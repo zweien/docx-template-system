@@ -59,7 +59,7 @@ export function Sidebar() {
         {!collapsed && (
           <div>
             <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-            <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.2.0</p>
+            <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.3.0</p>
           </div>
         )}
       </div>

@@ -17,7 +17,7 @@ export function StepIndicator({ steps, current }: Props) {
               : "border-gray-200 bg-white"
           }`}
         >
-          <div className="text-xs text-gray-500">步骤 {idx + 1}/3</div>
+          <div className="text-xs text-gray-500">步骤 {idx + 1}/{steps.length}</div>
           <div className="font-bold mt-1">{step}</div>
         </div>
       ))}

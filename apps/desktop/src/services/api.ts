@@ -1,9 +1,27 @@
 import { invoke } from "@tauri-apps/api/core";
 import { ParseRequest, ParseResponse, RenderRequest, RenderResponse, BudgetConfig } from "../types";
+import { useAppStore } from "../stores/app-store";
+
+const SIDECAR_PORT_RANGE = [50000, 60000];
 
 async function getBaseUrl(): Promise<string> {
+  const store = useAppStore.getState();
+  if (store.sidecarPort) {
+    return `http://127.0.0.1:${store.sidecarPort}`;
+  }
   const info = (await invoke("get_sidecar_port")) as { port: number };
+  store.setSidecarPort(info.port);
   return `http://127.0.0.1:${info.port}`;
+}
+
+export async function detectSidecarPortBrowser(): Promise<number | null> {
+  for (let port = SIDECAR_PORT_RANGE[0]; port <= SIDECAR_PORT_RANGE[1]; port += 100) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(500) });
+      if (res.ok) return port;
+    } catch { /* next */ }
+  }
+  return null;
 }
 
 export async function parseExcel(req: ParseRequest): Promise<ParseResponse> {

@@ -38,6 +38,8 @@ interface AppState {
   // Sidecar
   sidecarReady: boolean;
   setSidecarReady: (ready: boolean) => void;
+  sidecarPort: number | null;
+  setSidecarPort: (port: number | null) => void;
 
   // Logs
   logs: string[];
@@ -66,6 +68,8 @@ export const useAppStore = create<AppState>((set) => ({
 
   sidecarReady: false,
   setSidecarReady: (ready) => set({ sidecarReady: ready }),
+  sidecarPort: null,
+  setSidecarPort: (port) => set({ sidecarPort: port }),
 
   logs: [],
   addLog: (msg) =>

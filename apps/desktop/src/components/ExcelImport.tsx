@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import { parseExcel } from "../services/api";
+import { selectExcel } from "../services/tauri-commands";
 import { ReportContent, BudgetConfig } from "../types";
 import { WarningList } from "./WarningList";
 
@@ -45,7 +45,7 @@ export function ExcelImport({ onParsed, addLog }: Props) {
   const [error, setError] = useState("");
 
   const handleSelectFile = async () => {
-    const path = await invoke<string | null>("select_excel");
+    const path = await selectExcel();
     if (path) {
       setFilePath(path);
       setError("");

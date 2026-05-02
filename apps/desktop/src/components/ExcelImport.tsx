@@ -57,24 +57,49 @@ export function ExcelImport({ onParsed, addLog }: Props) {
     }
   };
 
+  const fileName = filePath ? filePath.split("/").pop() || filePath : "";
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">导入 Excel 数据源</h2>
-      <div className="flex gap-2 items-center">
-        <input value={filePath} placeholder="选择 Excel 文件..." className="flex-1 px-3 py-2 border rounded bg-gray-50" readOnly />
-        <button onClick={handleSelectFile} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">浏览...</button>
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-heading text-lg text-text">导入 Excel 数据源</h2>
+        <p className="text-caption text-text-muted mt-1">选择包含预算数据的 Excel 文件，配置映射规则后解析</p>
+      </div>
+
+      {/* File picker */}
+      <div className="flex gap-3 items-center">
+        <button
+          onClick={handleSelectFile}
+          className="shrink-0 px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[13px] font-medium transition-colors"
+        >
+          选择文件
+        </button>
+        <div className={`flex-1 px-3 py-2 rounded-md border text-[13px] truncate ${
+          filePath ? "border-border bg-surface text-text" : "border-dashed border-border text-text-quaternary bg-surface/50"
+        }`}>
+          {fileName || "点击选择 Excel 文件..."}
+        </div>
       </div>
 
       <ConfigSelector />
 
-      {error && <div className="p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>}
+      {error && (
+        <div className="p-3 bg-danger-bg border border-danger-border rounded-md text-[13px] text-danger">
+          {error}
+        </div>
+      )}
       <WarningList warnings={warnings} />
-      <div className="flex gap-3">
-        <button onClick={() => setWizardStep(0)} className="px-4 py-2 border border-gray-300 text-gray-600 rounded hover:bg-gray-50">
-          上一步
+
+      <div className="flex gap-3 pt-1">
+        <button onClick={() => setWizardStep(0)} className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[13px] transition-colors">
+          ← 上一步
         </button>
-        <button onClick={handleParse} disabled={!filePath || loading} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
-          {loading ? "解析中..." : "解析并继续"}
+        <button
+          onClick={handleParse}
+          disabled={!filePath || loading}
+          className="px-5 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[13px] font-medium disabled:bg-surface disabled:text-text-quaternary disabled:border disabled:border-border transition-colors"
+        >
+          {loading ? "解析中..." : "解析并继续 →"}
         </button>
       </div>
     </div>

@@ -3,6 +3,7 @@ import { Sidebar } from "./components/Sidebar";
 import { Wizard } from "./components/Wizard";
 import { LogPanel } from "./components/LogPanel";
 import { TemplateManager } from "./components/TemplateManager";
+import { Settings } from "./components/Settings";
 import { useAppStore } from "./stores/app-store";
 import { listTemplates } from "./services/tauri-commands";
 import { detectSidecarPortBrowser } from "./services/api";
@@ -10,7 +11,7 @@ import { detectSidecarPortBrowser } from "./services/api";
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export default function App() {
-  const { currentView, sidecarReady, setSidecarReady, setSidecarPort, setTemplates, loadConfigs, addLog, logs, clearLogs } = useAppStore();
+  const { currentView, sidecarReady, setSidecarReady, setSidecarPort, setTemplates, loadConfigs, addLog, logs, clearLogs, settings } = useAppStore();
 
   useEffect(() => {
     const checkTauri = async () => {
@@ -47,19 +48,25 @@ export default function App() {
 
     listTemplates().then(setTemplates).catch(() => {});
     loadConfigs();
-  }, [setSidecarReady, setSidecarPort, setTemplates, loadConfigs, addLog]);
+
+    // Apply saved settings
+    document.documentElement.style.fontSize = `${settings.fontSize}px`;
+    document.documentElement.setAttribute("data-theme", settings.theme);
+  }, [setSidecarReady, setSidecarPort, setTemplates, loadConfigs, addLog, settings.fontSize, settings.theme]);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-canvas">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0">
         {!sidecarReady && (
-          <div className="bg-yellow-50 text-yellow-700 text-sm px-4 py-2 text-center">
+          <div className="bg-warning-bg text-warning text-xs px-4 py-1.5 flex items-center gap-2 border-b border-warning-border">
+            <span className="animate-pulse">●</span>
             正在启动后端服务...
           </div>
         )}
         {currentView === "wizard" && <Wizard />}
         {currentView === "templates" && <TemplateManager />}
+        {currentView === "settings" && <Settings />}
         <LogPanel logs={logs} onClear={clearLogs} />
       </div>
     </div>

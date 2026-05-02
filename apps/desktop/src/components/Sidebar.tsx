@@ -3,32 +3,71 @@ import { useAppStore, AppView } from "../stores/app-store";
 export function Sidebar() {
   const { currentView, setCurrentView } = useAppStore();
 
-  const navItem = (view: AppView, icon: string, label: string) => (
-    <div
-      onClick={() => setCurrentView(view)}
-      className={`px-3 py-2 rounded cursor-pointer text-sm flex items-center gap-2 ${
-        currentView === view
-          ? "bg-blue-50 text-blue-700 font-medium"
-          : "text-gray-600 hover:bg-gray-50"
-      }`}
-    >
-      <span>{icon}</span>
-      <span>{label}</span>
-    </div>
-  );
+  const items: { view: AppView; icon: string; label: string; desc: string }[] = [
+    { view: "wizard", icon: "◆", label: "生成报告", desc: "四步向导" },
+    { view: "templates", icon: "⊞", label: "模板管理", desc: "导入与管理" },
+  ];
+
+  const bottomItems: { view: AppView; icon: string; label: string; desc: string }[] = [
+    { view: "settings", icon: "⚙", label: "设置", desc: "外观与偏好" },
+  ];
+
+  const renderNav = (item: { view: AppView; icon: string; label: string; desc: string }) => {
+    const active = currentView === item.view;
+    return (
+      <button
+        key={item.view}
+        onClick={() => setCurrentView(item.view)}
+        className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-left transition-all duration-100 ${
+          active
+            ? "bg-sidebar-active-bg text-sidebar-active-text"
+            : "text-sidebar-text hover:bg-sidebar-hover hover:text-text-secondary"
+        }`}
+      >
+        <span className="w-5 text-center" style={{ fontSize: "0.93em" }}>
+          <span className={active ? "text-brand-accent" : ""}>{item.icon}</span>
+        </span>
+        <div className="min-w-0">
+          <div className="font-medium leading-tight truncate" style={{ fontSize: "0.867em" }}>{item.label}</div>
+          <div className="text-text-quaternary leading-tight mt-px truncate" style={{ fontSize: "0.667em" }}>{item.desc}</div>
+        </div>
+      </button>
+    );
+  };
 
   return (
-    <aside className="w-56 bg-white border-r border-gray-200 flex flex-col">
-      <div className="p-4 border-b border-gray-200">
-        <h1 className="font-bold text-gray-800 text-lg">预算报告生成器</h1>
+    <aside className="w-52 bg-sidebar-bg border-r border-sidebar-border flex flex-col shrink-0 select-none">
+      {/* Logo */}
+      <div className="px-4 pt-5 pb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-md bg-brand flex items-center justify-center text-white font-semibold" style={{ fontSize: "0.8em" }}>
+            R
+          </div>
+          <div>
+            <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
+            <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.2.0</p>
+          </div>
+        </div>
       </div>
-      <nav className="flex-1 p-2 space-y-1">
-        <div className="text-xs font-semibold text-gray-400 uppercase px-3 py-2">功能</div>
-        {navItem("wizard", "🪄", "生成报告")}
-        {navItem("templates", "📄", "模板管理")}
+
+      {/* Nav */}
+      <nav className="flex-1 px-2.5 space-y-px">
+        <div className="font-medium text-text-quaternary uppercase tracking-wider px-2.5 py-3" style={{ fontSize: "0.667em" }}>
+          功能
+        </div>
+        {items.map(renderNav)}
       </nav>
-      <div className="p-3 border-t border-gray-200">
-        <p className="text-xs text-gray-400">v0.1.0</p>
+
+      {/* Bottom */}
+      <div className="px-2.5 pb-2">
+        <div className="border-t border-sidebar-border pt-2">
+          {bottomItems.map(renderNav)}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="px-4 py-2.5 border-t border-sidebar-border">
+        <p className="text-text-quaternary font-mono" style={{ fontSize: "0.667em" }}>Tauri 2.0 · report-engine</p>
       </div>
     </aside>
   );

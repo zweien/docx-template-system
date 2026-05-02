@@ -6,25 +6,45 @@ interface Props {
 
 export function StepIndicator({ steps, current, onChange }: Props) {
   return (
-    <div className="flex gap-2 mb-6">
+    <div className="flex items-center gap-0 mb-8">
       {steps.map((step, idx) => {
         const isPast = idx < current;
         const isCurrent = idx === current;
         const clickable = isPast && onChange;
+
         return (
-          <div
-            key={step}
-            onClick={() => clickable && onChange(idx)}
-            className={`flex-1 p-3 rounded-lg border-2 transition-colors ${
-              isCurrent
-                ? "border-blue-500 bg-blue-50"
-                : isPast
-                ? "border-green-500 bg-green-50 cursor-pointer hover:bg-green-100"
-                : "border-gray-200 bg-white"
-            }`}
-          >
-            <div className="text-xs text-gray-500">步骤 {idx + 1}/{steps.length}</div>
-            <div className={`font-bold mt-0.5 ${isPast ? "text-green-700" : ""}`}>{step}</div>
+          <div key={step} className="flex items-center flex-1 last:flex-none">
+            <button
+              onClick={() => clickable && onChange(idx)}
+              disabled={!clickable}
+              className="flex items-center gap-2.5 group"
+            >
+              <div
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-medium shrink-0 transition-all duration-150 ${
+                  isCurrent
+                    ? "bg-brand text-white"
+                    : isPast
+                    ? "bg-success text-white cursor-pointer"
+                    : "bg-surface border border-border text-text-quaternary"
+                }`}
+              >
+                {isPast ? "✓" : idx + 1}
+              </div>
+              <span className={`text-[12px] leading-tight ${
+                isCurrent
+                  ? "text-brand-accent font-medium"
+                  : isPast
+                  ? "text-success font-medium"
+                  : "text-text-quaternary"
+              }`}>
+                {step}
+              </span>
+            </button>
+            {idx < steps.length - 1 && (
+              <div className={`flex-1 h-px mx-3 transition-colors duration-300 ${
+                idx < current ? "bg-success/30" : "bg-border"
+              }`} />
+            )}
           </div>
         );
       })}

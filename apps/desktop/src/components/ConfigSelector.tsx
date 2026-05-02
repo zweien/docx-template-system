@@ -102,37 +102,38 @@ export function ConfigSelector() {
 
   return (
     <>
-      <div className="bg-white rounded-lg border p-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1">
-          <span className="text-sm text-gray-500 shrink-0">配置方案:</span>
+      <div className="bg-surface rounded-lg border border-border p-2.5 flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <span className="text-[10px] text-text-quaternary shrink-0 uppercase tracking-wider">配置方案</span>
           <select
             value={selectedConfigId || ""}
             onChange={(e) => handleSelect(e.target.value || null)}
-            className="flex-1 px-3 py-1.5 border rounded text-sm bg-white"
+            className="flex-1 max-w-[200px] px-2 py-1.5 border border-border rounded-md text-[13px] bg-surface text-text focus:border-brand-accent focus:outline-none"
           >
             <option value="">默认配置</option>
             {configs.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.title}
-              </option>
+              <option key={c.id} value={c.id}>{c.title}</option>
             ))}
           </select>
-          <span className="text-xs text-gray-400">({config.sheets.length} 个 Sheet)</span>
+          <span className="text-[10px] text-text-quaternary shrink-0 font-mono">{config.sheets.length} 个 Sheet</span>
         </div>
-        <div className="flex items-center gap-1">
-          <button onClick={handleSave} disabled={saving} className="text-sm text-blue-600 hover:underline disabled:opacity-50">
-            {saving ? "保存中..." : "保存"}
+        <div className="flex items-center gap-1 text-[12px] border-l border-border pl-3">
+          <button onClick={handleSave} disabled={saving} className="text-brand-accent hover:text-brand-hover font-medium disabled:opacity-40 transition-colors">
+            {saving ? "..." : "保存"}
           </button>
-          {selectedConfigId && (
-            <button onClick={handleDelete} className="text-sm text-red-500 hover:underline ml-2">删除</button>
-          )}
-          <span className="text-gray-300 mx-1">|</span>
-          <button onClick={handleExport} className="text-sm text-gray-600 hover:underline">导出</button>
-          <button onClick={handleImport} className="text-sm text-gray-600 hover:underline">导入</button>
-          <span className="text-gray-300 mx-1">|</span>
-          <button onClick={() => setShowEditor(true)} className="text-sm text-blue-600 hover:underline">
+          <span className="text-border">|</span>
+          <button onClick={() => setShowEditor(true)} className="text-text-muted hover:text-text transition-colors">
             编辑
           </button>
+          {selectedConfigId && (
+            <>
+              <span className="text-border">|</span>
+              <button onClick={handleDelete} className="text-text-quaternary hover:text-danger transition-colors">删除</button>
+            </>
+          )}
+          <span className="text-border">|</span>
+          <button onClick={handleExport} className="text-text-quaternary hover:text-text transition-colors">导出</button>
+          <button onClick={handleImport} className="text-text-quaternary hover:text-text transition-colors">导入</button>
         </div>
       </div>
 

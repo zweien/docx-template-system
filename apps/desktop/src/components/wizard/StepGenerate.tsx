@@ -31,7 +31,6 @@ export function StepGenerate() {
     addLog("开始生成报告...");
 
     try {
-      // Re-parse Excel with current config to reflect any config changes
       let content = excelContent;
       if (excelFilePath) {
         addLog("使用当前配置重新解析数据...");
@@ -108,36 +107,37 @@ export function StepGenerate() {
   const displayPath = savedPath || tempPath;
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-xl font-bold">生成报告</h2>
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-heading text-lg text-text">生成报告</h2>
+        <p className="text-caption text-text-muted mt-1">确认信息后生成 Word 文档报告</p>
+      </div>
 
-      <div className="bg-white rounded-lg border p-4 space-y-3">
-        <div className="flex justify-between">
-          <span className="text-gray-500">模板</span>
-          <span className="text-gray-800">{template?.name || "未选择"}</span>
+      {/* Summary */}
+      <div className="bg-surface rounded-lg border border-border divide-y divide-border-subtle">
+        <div className="px-4 py-2.5 flex items-center justify-between">
+          <span className="text-[11px] text-text-quaternary">模板</span>
+          <span className="text-[13px] text-text font-medium">{template?.name || "未选择"}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-gray-500">配置</span>
-          <span className="text-gray-800">{config?.title || "默认"}</span>
+        <div className="px-4 py-2.5 flex items-center justify-between">
+          <span className="text-[11px] text-text-quaternary">配置</span>
+          <span className="text-[13px] text-text font-medium">{config?.title || "默认"}</span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-gray-500">数据章节</span>
-          <span className="text-gray-800">{excelContent?.sections?.length || 0} 个</span>
+        <div className="px-4 py-2.5 flex items-center justify-between">
+          <span className="text-[11px] text-text-quaternary">数据章节</span>
+          <span className="text-[13px] text-text font-medium font-mono">{excelContent?.sections?.length || 0} 个</span>
         </div>
       </div>
 
       {!done && !generating && (
         <div className="flex gap-3">
-          <button
-            onClick={() => setWizardStep(2)}
-            className="px-4 py-3 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50"
-          >
-            上一步
+          <button onClick={() => setWizardStep(2)} className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[13px] transition-colors">
+            ← 上一步
           </button>
           <button
             onClick={handleGenerate}
             disabled={!excelContent || !template}
-            className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+            className="flex-1 py-2 bg-brand text-white rounded-md hover:bg-brand-hover font-medium text-[13px] disabled:bg-surface disabled:text-text-quaternary disabled:border disabled:border-border transition-colors"
           >
             生成 .docx 报告
           </button>
@@ -145,54 +145,47 @@ export function StepGenerate() {
       )}
 
       {generating && (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mb-3" />
-          <p className="text-gray-600">正在生成报告...</p>
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-7 w-7 border-2 border-brand-accent border-t-transparent mb-3" />
+          <p className="text-[13px] text-text-muted">正在生成报告...</p>
         </div>
       )}
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-4 rounded-lg text-sm">{error}</div>
+        <div className="p-3.5 bg-danger-bg border border-danger-border rounded-lg text-[13px] text-danger">
+          {error}
+        </div>
       )}
 
       {done && displayPath && (
-        <div className="bg-green-50 rounded-lg p-4 space-y-3">
-          <p className="text-green-700 font-medium">
-            {savedPath ? "报告已保存" : "报告生成成功"}
-          </p>
-          <p className="text-sm text-gray-600 break-all">{displayPath}</p>
-          <div className="flex gap-3 flex-wrap">
+        <div className="bg-success-bg border border-success-border rounded-lg p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="w-5 h-5 rounded-full bg-success text-white flex items-center justify-center text-[10px]">✓</div>
+            <span className="text-ui text-[13px] text-text">
+              {savedPath ? "报告已保存" : "报告生成成功"}
+            </span>
+          </div>
+          <p className="text-[11px] text-text-quaternary break-all pl-7 font-mono">{displayPath}</p>
+          <div className="flex gap-2 flex-wrap pl-7 pt-1">
             {!savedPath && (
-              <button
-                onClick={handleSaveAs}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-              >
+              <button onClick={handleSaveAs} className="px-3 py-1.5 bg-brand text-white rounded-md hover:bg-brand-hover text-[12px] font-medium transition-colors">
                 另存为...
               </button>
             )}
             {savedPath && (
-              <button
-                onClick={handleOpen}
-                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-              >
+              <button onClick={handleOpen} className="px-3 py-1.5 bg-success text-white rounded-md hover:brightness-110 text-[12px] font-medium transition-colors">
                 打开报告
               </button>
             )}
-            <button
-              onClick={handleSaveAs}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
-            >
+            <button onClick={handleSaveAs} className="px-3 py-1.5 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[12px] transition-colors">
               {savedPath ? "另存一份" : "保存到其他位置"}
             </button>
-            <button
-              onClick={() => setWizardStep(0)}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
-            >
+            <button onClick={() => setWizardStep(0)} className="px-3 py-1.5 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[12px] transition-colors">
               重新开始
             </button>
           </div>
           {!savedPath && (
-            <p className="text-xs text-gray-400">提示：请先"另存为"选择保存位置，然后打开报告</p>
+            <p className="text-[10px] text-text-quaternary pl-7">提示：请先"另存为"选择保存位置，然后打开报告</p>
           )}
         </div>
       )}

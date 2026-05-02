@@ -2,7 +2,13 @@ import { create } from "zustand";
 import type { BudgetConfig, ConfigMeta, ReportContent } from "../types";
 import { listConfigs as listConfigsCmd } from "../services/tauri-commands";
 
-export type AppView = "wizard" | "templates" | "configs";
+export type AppView = "wizard" | "templates" | "configs" | "settings";
+export type ThemeMode = "light" | "dark";
+
+export interface AppSettings {
+  fontSize: number;
+  theme: ThemeMode;
+}
 
 export const DEFAULT_CONFIG: BudgetConfig = {
   title: "预算报告",
@@ -78,10 +84,24 @@ interface AppState {
   sidecarPort: number | null;
   setSidecarPort: (port: number | null) => void;
 
+  // Settings
+  settings: AppSettings;
+  updateSettings: (partial: Partial<AppSettings>) => void;
+
   // Logs
   logs: string[];
   addLog: (msg: string) => void;
   clearLogs: () => void;
+}
+
+const SETTINGS_KEY = "app-settings";
+
+function loadSettings(): AppSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) return JSON.parse(raw) as AppSettings;
+  } catch { /* ignore */ }
+  return { fontSize: 15, theme: "dark" };
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -119,6 +139,14 @@ export const useAppStore = create<AppState>((set) => ({
   setSidecarReady: (ready) => set({ sidecarReady: ready }),
   sidecarPort: null,
   setSidecarPort: (port) => set({ sidecarPort: port }),
+
+  settings: loadSettings(),
+  updateSettings: (partial) =>
+    set((state) => {
+      const settings = { ...state.settings, ...partial };
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      return { settings };
+    }),
 
   logs: [],
   addLog: (msg) =>

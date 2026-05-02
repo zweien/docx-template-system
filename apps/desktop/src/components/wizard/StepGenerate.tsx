@@ -103,13 +103,21 @@ export function StepGenerate() {
       </div>
 
       {!done && !generating && (
-        <button
-          onClick={handleGenerate}
-          disabled={!excelContent || !template}
-          className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
-        >
-          生成 .docx 报告
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setWizardStep(2)}
+            className="px-4 py-3 border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50"
+          >
+            上一步
+          </button>
+          <button
+            onClick={handleGenerate}
+            disabled={!excelContent || !template}
+            className="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium"
+          >
+            生成 .docx 报告
+          </button>
+        </div>
       )}
 
       {generating && (

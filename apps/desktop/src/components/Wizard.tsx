@@ -10,9 +10,17 @@ const STEPS = ["选择模板", "导入 Excel", "配置预览", "生成报告"];
 export function Wizard() {
   const { wizardStep, setWizardStep, addLog, setExcelContent } = useAppStore();
 
+  const handleStepClick = (step: number) => {
+    // Going back clears data from steps after the target
+    if (step < wizardStep && step <= 1) {
+      setExcelContent(null);
+    }
+    setWizardStep(step);
+  };
+
   return (
     <main className="flex-1 p-6 overflow-auto">
-      <StepIndicator steps={STEPS} current={wizardStep} />
+      <StepIndicator steps={STEPS} current={wizardStep} onChange={handleStepClick} />
 
       {wizardStep === 0 && <StepTemplateSelect />}
       {wizardStep === 1 && (

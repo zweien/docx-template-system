@@ -12,7 +12,7 @@ interface Props {
 }
 
 export function ExcelImport({ onParsed, addLog }: Props) {
-  const { config, setConfig } = useAppStore();
+  const { config, setConfig, setWizardStep } = useAppStore();
   const [filePath, setFilePath] = useState("");
   const [loading, setLoading] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -78,9 +78,14 @@ export function ExcelImport({ onParsed, addLog }: Props) {
 
       {error && <div className="p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>}
       <WarningList warnings={warnings} />
-      <button onClick={handleParse} disabled={!filePath || loading} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
-        {loading ? "解析中..." : "下一步：解析 Excel"}
-      </button>
+      <div className="flex gap-3">
+        <button onClick={() => setWizardStep(0)} className="px-4 py-2 border border-gray-300 text-gray-600 rounded hover:bg-gray-50">
+          上一步
+        </button>
+        <button onClick={handleParse} disabled={!filePath || loading} className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50">
+          {loading ? "解析中..." : "解析并继续"}
+        </button>
+      </div>
 
       {showConfig && (
         <ConfigEditor

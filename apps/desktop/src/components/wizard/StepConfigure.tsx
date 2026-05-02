@@ -69,7 +69,13 @@ export function StepConfigure() {
         )}
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-between">
+        <button
+          onClick={() => setWizardStep(1)}
+          className="px-4 py-2 border border-gray-300 text-gray-600 rounded hover:bg-gray-50"
+        >
+          上一步
+        </button>
         <button
           onClick={handleNext}
           className="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700"

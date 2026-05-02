@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import type { BudgetConfig, ReportContent } from "../types";
+import type { BudgetConfig, ConfigMeta, ReportContent } from "../types";
+import { listConfigs as listConfigsCmd } from "../services/tauri-commands";
 
 export type AppView = "wizard" | "templates" | "configs";
 
@@ -59,8 +60,15 @@ interface AppState {
   // Data
   config: BudgetConfig;
   setConfig: (config: BudgetConfig) => void;
+  configs: ConfigMeta[];
+  selectedConfigId: string | null;
+  setConfigs: (configs: ConfigMeta[]) => void;
+  selectConfigId: (id: string | null) => void;
+  loadConfigs: () => Promise<void>;
   excelContent: ReportContent | null;
   setExcelContent: (content: ReportContent | null) => void;
+  excelFilePath: string | null;
+  setExcelFilePath: (path: string | null) => void;
   outputReportPath: string | null;
   setOutputReportPath: (path: string | null) => void;
 
@@ -90,8 +98,20 @@ export const useAppStore = create<AppState>((set) => ({
 
   config: DEFAULT_CONFIG,
   setConfig: (config) => set({ config }),
+  configs: [],
+  selectedConfigId: null,
+  setConfigs: (configs) => set({ configs }),
+  selectConfigId: (id) => set({ selectedConfigId: id }),
+  loadConfigs: async () => {
+    try {
+      const configs = await listConfigsCmd();
+      set({ configs });
+    } catch { /* ignore */ }
+  },
   excelContent: null,
   setExcelContent: (content) => set({ excelContent: content }),
+  excelFilePath: null,
+  setExcelFilePath: (path) => set({ excelFilePath: path }),
   outputReportPath: null,
   setOutputReportPath: (path) => set({ outputReportPath: path }),
 

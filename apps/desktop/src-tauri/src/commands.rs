@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU16, Ordering};
@@ -9,6 +10,42 @@ static SIDECAR_PORT: AtomicU16 = AtomicU16::new(0);
 #[derive(Serialize)]
 pub struct SidecarInfo {
     pub port: u16,
+}
+
+// ── Config types ──
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SummaryConfigRust {
+    pub sheet_name: String,
+    pub mode: String,
+    pub header_row: Option<u32>,
+    pub key_column: Option<String>,
+    pub value_column: Option<String>,
+    pub prefix: Option<String>,
+    pub mappings: Option<HashMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SheetConfigRust {
+    pub name: String,
+    pub sheet_name: String,
+    pub id: String,
+    pub columns: HashMap<String, String>,
+    pub image_columns: Option<Vec<String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct BudgetConfigRust {
+    pub title: String,
+    pub summary: Option<SummaryConfigRust>,
+    pub sheets: Vec<SheetConfigRust>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ConfigMeta {
+    pub id: String,
+    pub title: String,
+    pub updated_at: String,
 }
 
 #[tauri::command]
@@ -273,4 +310,110 @@ pub fn get_app_data_dir(app: AppHandle) -> Result<String, String> {
         .map_err(|e: tauri::Error| e.to_string())?;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     Ok(dir.to_string_lossy().to_string())
+}
+
+// ── Config management ──
+
+fn configs_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e: tauri::Error| e.to_string())?
+        .join("configs");
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir)
+}
+
+#[tauri::command]
+pub fn list_configs(app: AppHandle) -> Result<Vec<ConfigMeta>, String> {
+    let dir = configs_dir(&app)?;
+    let mut configs = Vec::new();
+    let entries = fs::read_dir(&dir).map_err(|e| e.to_string())?;
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|e| e.to_str()) == Some("json") {
+            if let Ok(data) = fs::read_to_string(&path) {
+                if let Ok(cfg) = serde_json::from_str::<BudgetConfigRust>(&data) {
+                    let id = path
+                        .file_stem()
+                        .and_then(|n| n.to_str())
+                        .unwrap_or_default()
+                        .to_string();
+                    let updated_at = fs::metadata(&path)
+                        .ok()
+                        .and_then(|m| m.modified().ok())
+                        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+                        .map(|d| d.as_secs().to_string())
+                        .unwrap_or_default();
+                    configs.push(ConfigMeta {
+                        id,
+                        title: cfg.title,
+                        updated_at,
+                    });
+                }
+            }
+        }
+    }
+    configs.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+    Ok(configs)
+}
+
+#[tauri::command]
+pub fn save_config(
+    app: AppHandle,
+    id: Option<String>,
+    config_json: String,
+) -> Result<ConfigMeta, String> {
+    let dir = configs_dir(&app)?;
+    // Validate it's valid JSON and extract title
+    let val: serde_json::Value =
+        serde_json::from_str(&config_json).map_err(|e| format!("JSON 解析失败: {}", e))?;
+    let title = val
+        .get("title")
+        .and_then(|v| v.as_str())
+        .unwrap_or("未命名")
+        .to_string();
+    let config_id = id.unwrap_or_else(|| uuid::Uuid::new_v4().to_string());
+    let path = dir.join(format!("{}.json", config_id));
+    let pretty = serde_json::to_string_pretty(&val).map_err(|e| e.to_string())?;
+    fs::write(&path, pretty).map_err(|e| e.to_string())?;
+    let updated_at = fs::metadata(&path)
+        .ok()
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs().to_string())
+        .unwrap_or_default();
+    Ok(ConfigMeta {
+        id: config_id,
+        title,
+        updated_at,
+    })
+}
+
+#[tauri::command]
+pub fn delete_config(app: AppHandle, id: String) -> Result<(), String> {
+    let dir = configs_dir(&app)?;
+    let path = dir.join(format!("{}.json", id));
+    if path.exists() {
+        fs::remove_file(path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub fn export_config(app: AppHandle, id: String) -> Result<String, String> {
+    let dir = configs_dir(&app)?;
+    let path = dir.join(format!("{}.json", id));
+    if !path.exists() {
+        return Err("配置不存在".to_string());
+    }
+    fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn import_config(app: AppHandle, config_json: String) -> Result<ConfigMeta, String> {
+    // Validate JSON, then save as-is preserving all fields
+    let _: serde_json::Value =
+        serde_json::from_str(&config_json).map_err(|e| format!("JSON 解析失败: {}", e))?;
+    save_config(app, None, config_json)
 }

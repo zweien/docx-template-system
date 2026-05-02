@@ -34,6 +34,11 @@ pub fn run() {
             commands::delete_template,
             commands::rename_template,
             commands::get_app_data_dir,
+            commands::list_configs,
+            commands::save_config,
+            commands::delete_config,
+            commands::export_config,
+            commands::import_config,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

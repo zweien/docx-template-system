@@ -33,6 +33,12 @@ export interface BudgetConfig {
   sheets: SheetConfig[];
 }
 
+export interface ConfigMeta {
+  id: string;
+  title: string;
+  updated_at: string;
+}
+
 export interface SummaryConfig {
   sheet_name: string;
   mode: "table" | "cell_map";
@@ -43,12 +49,21 @@ export interface SummaryConfig {
   mappings?: Record<string, string>;
 }
 
+export interface DetailField {
+  field: string;
+  label: string;
+}
+
 export interface SheetConfig {
   name: string;
   sheet_name: string;
   id: string;
   columns: Record<string, string>;
+  table_columns?: string[];
+  detail_fields?: DetailField[];
   image_columns?: string[];
+  heading_level?: number;
+  item_heading_level?: number;
 }
 
 export interface ApiError {

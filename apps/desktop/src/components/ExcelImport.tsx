@@ -4,7 +4,7 @@ import { selectExcel } from "../services/tauri-commands";
 import { ReportContent } from "../types";
 import { useAppStore } from "../stores/app-store";
 import { WarningList } from "./WarningList";
-import { ConfigEditor } from "./ConfigEditor";
+import { ConfigSelector } from "./ConfigSelector";
 
 interface Props {
   onParsed: (content: ReportContent) => void;
@@ -12,17 +12,17 @@ interface Props {
 }
 
 export function ExcelImport({ onParsed, addLog }: Props) {
-  const { config, setConfig, setWizardStep } = useAppStore();
+  const { config, setWizardStep, setExcelFilePath } = useAppStore();
   const [filePath, setFilePath] = useState("");
   const [loading, setLoading] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState("");
-  const [showConfig, setShowConfig] = useState(false);
 
   const handleSelectFile = async () => {
     const path = await selectExcel();
     if (path) {
       setFilePath(path);
+      setExcelFilePath(path);
       setError("");
       addLog(`选择文件: ${path}`);
     }
@@ -65,16 +65,7 @@ export function ExcelImport({ onParsed, addLog }: Props) {
         <button onClick={handleSelectFile} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">浏览...</button>
       </div>
 
-      <div className="bg-white rounded-lg border p-3 flex items-center justify-between">
-        <div>
-          <span className="text-sm text-gray-500">配置方案: </span>
-          <span className="font-medium">{config.title}</span>
-          <span className="text-xs text-gray-400 ml-2">({config.sheets.length} 个 Sheet 映射)</span>
-        </div>
-        <button onClick={() => setShowConfig(true)} className="text-sm text-blue-600 hover:underline">
-          编辑配置
-        </button>
-      </div>
+      <ConfigSelector />
 
       {error && <div className="p-3 bg-red-50 text-red-700 rounded text-sm">{error}</div>}
       <WarningList warnings={warnings} />
@@ -86,14 +77,6 @@ export function ExcelImport({ onParsed, addLog }: Props) {
           {loading ? "解析中..." : "解析并继续"}
         </button>
       </div>
-
-      {showConfig && (
-        <ConfigEditor
-          config={config}
-          onChange={setConfig}
-          onClose={() => setShowConfig(false)}
-        />
-      )}
     </div>
   );
 }

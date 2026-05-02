@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
-import { renderReport } from "../../services/api";
+import { parseExcel, renderReport } from "../../services/api";
 import { openReport, saveReportAs, getAppDataDir } from "../../services/tauri-commands";
 
 export function StepGenerate() {
   const {
     excelContent,
+    excelFilePath,
     templates,
     selectedTemplateId,
     config,
+    setExcelContent,
     setOutputReportPath,
     addLog,
     setWizardStep,
@@ -23,15 +25,37 @@ export function StepGenerate() {
   const template = templates.find((t) => t.id === selectedTemplateId);
 
   const handleGenerate = async () => {
-    if (!excelContent || !template) return;
+    if (!template) return;
     setGenerating(true);
     setError(null);
     addLog("开始生成报告...");
 
     try {
+      // Re-parse Excel with current config to reflect any config changes
+      let content = excelContent;
+      if (excelFilePath) {
+        addLog("使用当前配置重新解析数据...");
+        const parseRes = await parseExcel({
+          input_path: excelFilePath,
+          config,
+        });
+        if (parseRes.success && parseRes.content) {
+          content = parseRes.content;
+          setExcelContent(content);
+          addLog(`重新解析完成: ${content.sections?.length || 0} 个章节`);
+        } else {
+          addLog(`重新解析失败，使用缓存数据: ${parseRes.error?.message}`);
+        }
+      }
+
+      if (!content) {
+        setError("没有可用的报告数据");
+        return;
+      }
+
       const appDir = await getAppDataDir();
       const res = await renderReport({
-        content: excelContent,
+        content,
         template_path: template.path,
         output_dir: `${appDir}/temp-${Date.now()}`,
       });

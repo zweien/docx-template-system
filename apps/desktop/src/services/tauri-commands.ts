@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { TemplateMeta } from "../stores/app-store";
+import type { BudgetConfig, ConfigMeta } from "../types";
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
@@ -65,4 +66,27 @@ export async function saveReportAs(sourcePath: string, suggestedName: string): P
 export async function getAppDataDir(): Promise<string> {
   if (!isTauri) return "/tmp/desktop-app-data";
   return invoke("get_app_data_dir");
+}
+
+// ── Config management ──
+
+export async function listConfigs(): Promise<ConfigMeta[]> {
+  if (!isTauri) return [];
+  return invoke("list_configs");
+}
+
+export async function saveConfig(id: string | null, config: BudgetConfig): Promise<ConfigMeta> {
+  return invoke("save_config", { id: id ?? null, configJson: JSON.stringify(config) });
+}
+
+export async function deleteConfig(id: string): Promise<void> {
+  return invoke("delete_config", { id });
+}
+
+export async function exportConfig(id: string): Promise<string> {
+  return invoke("export_config", { id });
+}
+
+export async function importConfigFromJson(configJson: string): Promise<ConfigMeta> {
+  return invoke("import_config", { configJson });
 }

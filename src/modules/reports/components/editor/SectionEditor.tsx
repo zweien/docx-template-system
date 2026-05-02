@@ -17,6 +17,7 @@ import {
   getAISlashMenuItems,
 } from "@blocknote/xl-ai";
 import { AIActionButton } from "./ai/AIActionButton";
+import { AIActionDialog } from "./ai/AIActionDialog";
 import type { EditorAIActionItem } from "@/types/editor-ai";
 import { en as coreDictionary } from "@blocknote/core/locales";
 import { en as aiDictionary } from "@blocknote/xl-ai/locales";
@@ -403,9 +404,6 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
               {getFormattingToolbarItems()}
               <AIActionButton
                 editor={editor}
-                onOpenSidebar={onOpenAISidebar ?? (() => {})}
-                onEditAction={onEditAIAction ?? (() => {})}
-                onCreateAction={onCreateAIAction ?? (() => {})}
               />
             </FormattingToolbar>
           )}
@@ -416,6 +414,12 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
           getItems={getSlashMenuItems}
         />
       </BlockNoteView>
+      <AIActionDialog
+        editor={editor}
+        onOpenSidebar={onOpenAISidebar ?? (() => {})}
+        onEditAction={onEditAIAction ?? (() => {})}
+        onCreateAction={onCreateAIAction ?? (() => {})}
+      />
     </div>
   );
 }

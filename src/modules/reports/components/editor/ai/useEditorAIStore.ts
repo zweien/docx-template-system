@@ -21,6 +21,13 @@ interface EditorAIState {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
 
+  actionDialogOpen: boolean;
+  actionDialogSelection: string;
+  actionDialogBlockIds: string[];
+  actionDialogContext: string;
+  openActionDialog: (selection: string, blockIds: string[], context: string) => void;
+  closeActionDialog: () => void;
+
   messages: ChatMessage[];
   addMessage: (msg: Omit<ChatMessage, "id" | "timestamp">) => void;
   clearMessages: () => void;
@@ -40,6 +47,15 @@ interface EditorAIState {
 export const useEditorAIStore = create<EditorAIState>((set) => ({
   sidebarOpen: false,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
+
+  actionDialogOpen: false,
+  actionDialogSelection: "",
+  actionDialogBlockIds: [],
+  actionDialogContext: "",
+  openActionDialog: (selection, blockIds, context) =>
+    set({ actionDialogOpen: true, actionDialogSelection: selection, actionDialogBlockIds: blockIds, actionDialogContext: context }),
+  closeActionDialog: () =>
+    set({ actionDialogOpen: false, actionDialogSelection: "", actionDialogBlockIds: [], actionDialogContext: "" }),
 
   messages: [],
   addMessage: (msg) =>

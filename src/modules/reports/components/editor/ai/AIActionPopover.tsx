@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Send, Settings, ChevronDown } from "lucide-react";
+import { Send, Settings, ChevronDown, Copy, ArrowRightLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PopoverDescription, PopoverHeader, PopoverTitle } from "@/components/ui/popover";
 import type { EditorAIActionItem } from "@/types/editor-ai";
 import { executeAIAction } from "./AIActionExecutor";
 
@@ -11,7 +10,11 @@ interface AIActionPopoverProps {
   globalActions: EditorAIActionItem[];
   userActions: EditorAIActionItem[];
   selection: string;
+  selectedBlockIds: string[];
   context: string;
+  editor: any;
+  executing: boolean;
+  onExecutingChange: (v: boolean) => void;
   onOpenSidebar: () => void;
   onEditAction: (action: EditorAIActionItem) => void;
   onCreateAction: () => void;
@@ -21,12 +24,15 @@ export function AIActionPopover({
   globalActions,
   userActions,
   selection,
+  selectedBlockIds,
   context,
+  editor,
+  executing,
+  onExecutingChange,
   onOpenSidebar,
   onEditAction,
   onCreateAction,
 }: AIActionPopoverProps) {
-  const [executing, setExecuting] = useState(false);
   const [result, setResult] = useState("");
   const [input, setInput] = useState("");
   const abortRef = useRef<AbortController | null>(null);
@@ -36,7 +42,7 @@ export function AIActionPopover({
       if (executing) return;
 
       setResult("");
-      setExecuting(true);
+      onExecutingChange(true);
 
       const controller = new AbortController();
       abortRef.current = controller;
@@ -48,12 +54,12 @@ export function AIActionPopover({
         onChunk: (text) => setResult(text),
         onDone: (text) => {
           setResult(text);
-          setExecuting(false);
+          onExecutingChange(false);
           abortRef.current = null;
         },
         onError: (message) => {
           setResult(`错误: ${message}`);
-          setExecuting(false);
+          onExecutingChange(false);
           abortRef.current = null;
         },
         signal: controller.signal,
@@ -66,7 +72,7 @@ export function AIActionPopover({
     if (!input.trim() || executing) return;
 
     setResult("");
-    setExecuting(true);
+    onExecutingChange(true);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -78,12 +84,12 @@ export function AIActionPopover({
       onChunk: (text) => setResult(text),
       onDone: (text) => {
         setResult(text);
-        setExecuting(false);
+        onExecutingChange(false);
         abortRef.current = null;
       },
       onError: (message) => {
         setResult(`错误: ${message}`);
-        setExecuting(false);
+        onExecutingChange(false);
         abortRef.current = null;
       },
       signal: controller.signal,
@@ -95,17 +101,60 @@ export function AIActionPopover({
   const handleCancel = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
-    setExecuting(false);
+    onExecutingChange(false);
   }, []);
+
+  const handleReplace = useCallback(() => {
+    if (!result || !editor) return;
+    try {
+      const newBlocks = editor.tryParseMarkdownToBlocks?.(result);
+      if (!newBlocks?.length) return;
+
+      if (selectedBlockIds.length > 0) {
+        const blocksToReplace = editor.topLevelBlocks.filter((b: any) =>
+          selectedBlockIds.includes(b.id),
+        );
+        if (blocksToReplace.length > 0) {
+          editor.replaceBlocks(blocksToReplace, newBlocks);
+          return;
+        }
+      }
+
+      // Fallback: insert after focused block
+      const focused = editor.focusBlock;
+      if (focused) {
+        editor.insertBlocks(newBlocks, focused, "after");
+      }
+    } catch {}
+  }, [result, editor, selectedBlockIds]);
+
+  const handleInsert = useCallback(() => {
+    if (!result || !editor) return;
+    try {
+      const newBlocks = editor.tryParseMarkdownToBlocks?.(result);
+      if (!newBlocks?.length) return;
+      const focused = editor.focusBlock;
+      if (focused) {
+        editor.insertBlocks(newBlocks, focused, "after");
+      }
+    } catch {}
+  }, [result, editor]);
+
+  const handleCopy = useCallback(async () => {
+    if (!result) return;
+    try {
+      await navigator.clipboard.writeText(result);
+    } catch {}
+  }, [result]);
 
   return (
     <div className="flex w-80 flex-col gap-3">
-      <PopoverHeader>
-        <PopoverTitle>✨ AI 助手</PopoverTitle>
-        <PopoverDescription>
+      <div className="flex flex-col gap-0.5">
+        <span className="font-medium">✨ AI 助手</span>
+        <span className="text-xs text-muted-foreground">
           {executing ? "正在生成..." : "选择操作或输入指令"}
-        </PopoverDescription>
-      </PopoverHeader>
+        </span>
+      </div>
 
       {/* Preset actions */}
       {globalActions.length > 0 && (
@@ -163,9 +212,47 @@ export function AIActionPopover({
 
       {/* Result preview */}
       {result && (
-        <div className="max-h-40 overflow-y-auto rounded-md border bg-muted/50 p-2 text-xs">
-          <pre className="whitespace-pre-wrap font-sentence">{result}</pre>
-          {executing && <span className="ml-0.5 inline-block animate-pulse">▌</span>}
+        <div className="flex flex-col gap-1.5">
+          <div className="max-h-40 overflow-y-auto rounded-md border bg-muted/50 p-2 text-xs">
+            <pre className="whitespace-pre-wrap font-sentence">{result}</pre>
+            {executing && <span className="ml-0.5 inline-block animate-pulse">▌</span>}
+          </div>
+          {/* Action buttons */}
+          {!executing && (
+            <div className="flex items-center gap-1">
+              {selection && (
+                <Button
+                  variant="default"
+                  size="xs"
+                  className="h-6 gap-1 text-xs"
+                  onClick={handleReplace}
+                  title="替换选中的原文"
+                >
+                  <ArrowRightLeft className="size-3" />
+                  替换原文
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="xs"
+                className="h-6 gap-1 text-xs"
+                onClick={handleInsert}
+                title="插入到光标后"
+              >
+                插入
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
+                className="h-6 gap-1 text-xs"
+                onClick={handleCopy}
+                title="复制到剪贴板"
+              >
+                <Copy className="size-3" />
+                复制
+              </Button>
+            </div>
+          )}
         </div>
       )}
 

@@ -72,15 +72,17 @@ jobs:
           if (Test-Path $sidecarDir) { Remove-Item -Recurse -Force $sidecarDir }
           New-Item -ItemType Directory -Path $sidecarDir -Force | Out-Null
 
+          $srcDir = Join-Path $env:GITHUB_WORKSPACE "apps/desktop/sidecar"
+
           pyinstaller `
             --name budget-sidecar `
             --onedir --clean --noconfirm `
             --distpath $sidecarDir `
             --workpath "$env:RUNNER_TEMP\sidecar-build-work" `
             --specpath "$env:RUNNER_TEMP\sidecar-build-work" `
-            --add-data "api;api" `
-            --add-data "scripts;scripts" `
-            --add-data "report_engine;report_engine" `
+            --add-data "$srcDir\api;api" `
+            --add-data "$srcDir\scripts;scripts" `
+            --add-data "$srcDir\report_engine;report_engine" `
             --hidden-import report_engine `
             --hidden-import report_engine.blocks `
             --hidden-import report_engine.renderer `

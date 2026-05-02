@@ -20,7 +20,7 @@ export function StepIndicator({ steps, current, onChange }: Props) {
               className="flex items-center gap-2.5 group"
             >
               <div
-                className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-medium shrink-0 transition-all duration-150 ${
+                className={`w-6 h-6 rounded-full flex items-center justify-center text-[0.733rem] font-medium shrink-0 transition-all duration-150 ${
                   isCurrent
                     ? "bg-brand text-white"
                     : isPast
@@ -30,7 +30,7 @@ export function StepIndicator({ steps, current, onChange }: Props) {
               >
                 {isPast ? "✓" : idx + 1}
               </div>
-              <span className={`text-[12px] leading-tight ${
+              <span className={`text-[0.8rem] leading-tight ${
                 isCurrent
                   ? "text-brand-accent font-medium"
                   : isPast

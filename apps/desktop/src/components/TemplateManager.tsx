@@ -47,7 +47,7 @@ export function TemplateManager() {
           </div>
           <button
             onClick={handleImport}
-            className="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[13px] font-medium transition-colors"
+            className="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[0.867rem] font-medium transition-colors"
           >
             + 导入模板
           </button>
@@ -58,8 +58,8 @@ export function TemplateManager() {
             <div className="w-12 h-12 rounded-xl bg-brand-bg text-brand-accent flex items-center justify-center mx-auto mb-4 text-xl">
               ⊞
             </div>
-            <p className="text-text-secondary font-medium text-[13px]">还没有导入模板</p>
-            <p className="text-[11px] text-text-quaternary mt-1">点击上方按钮导入 .docx 模板文件</p>
+            <p className="text-text-secondary font-medium text-[0.867rem]">还没有导入模板</p>
+            <p className="text-[0.733rem] text-text-quaternary mt-1">点击上方按钮导入 .docx 模板文件</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -98,7 +98,7 @@ function TemplateCard({
   return (
     <div className="bg-surface rounded-lg border border-border p-4 hover:border-border-strong transition-all duration-100 group">
       <div className="flex items-start gap-3">
-        <div className="w-8 h-8 rounded-md bg-brand-bg text-brand-accent flex items-center justify-center text-[11px] font-bold shrink-0">
+        <div className="w-8 h-8 rounded-md bg-brand-bg text-brand-accent flex items-center justify-center text-[0.733rem] font-bold shrink-0">
           D
         </div>
         <div className="flex-1 min-w-0">
@@ -109,22 +109,22 @@ function TemplateCard({
               onBlur={handleSaveName}
               onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
               autoFocus
-              className="text-ui text-[13px] text-text w-full border-b border-brand-accent outline-none bg-transparent py-0.5"
+              className="text-ui text-[0.867rem] text-text w-full border-b border-brand-accent outline-none bg-transparent py-0.5"
             />
           ) : (
             <h3
-              className="text-ui text-[13px] text-text truncate cursor-pointer hover:text-brand-accent transition-colors"
+              className="text-ui text-[0.867rem] text-text truncate cursor-pointer hover:text-brand-accent transition-colors"
               onDoubleClick={() => setEditing(true)}
               title="双击编辑名称"
             >
               {template.name}
             </h3>
           )}
-          <p className="text-[10px] text-text-quaternary mt-0.5 font-mono">{sizeKb} KB · .docx</p>
+          <p className="text-[0.667rem] text-text-quaternary mt-0.5 font-mono">{sizeKb} KB · .docx</p>
         </div>
         <button
           onClick={() => onDelete(template.id)}
-          className="text-text-quaternary/30 hover:text-danger text-[11px] opacity-0 group-hover:opacity-100 transition-opacity"
+          className="text-text-quaternary/30 hover:text-danger text-[0.733rem] opacity-0 group-hover:opacity-100 transition-opacity"
         >
           ✕
         </button>
@@ -132,13 +132,13 @@ function TemplateCard({
       <div className="mt-3 flex gap-2">
         <button
           onClick={() => onUse(template)}
-          className="px-3 py-1.5 bg-brand text-white rounded-md text-[12px] font-medium hover:bg-brand-hover transition-colors"
+          className="px-3 py-1.5 bg-brand text-white rounded-md text-[0.8rem] font-medium hover:bg-brand-hover transition-colors"
         >
           使用此模板
         </button>
         <button
           onClick={() => setEditing(true)}
-          className="px-3 py-1.5 bg-surface-hover border border-border text-text-secondary rounded-md text-[12px] hover:bg-surface-active transition-colors"
+          className="px-3 py-1.5 bg-surface-hover border border-border text-text-secondary rounded-md text-[0.8rem] hover:bg-surface-active transition-colors"
         >
           重命名
         </button>

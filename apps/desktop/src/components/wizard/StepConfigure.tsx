@@ -31,12 +31,12 @@ export function StepConfigure() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-2">
         <div className="px-3.5 py-2.5 bg-surface rounded-lg border border-border">
-          <div className="text-[10px] text-text-quaternary uppercase tracking-wider">模板</div>
-          <div className="text-[13px] font-medium text-text mt-0.5">{template?.name || "未选择"}</div>
+          <div className="text-[0.667rem] text-text-quaternary uppercase tracking-wider">模板</div>
+          <div className="text-[0.867rem] font-medium text-text mt-0.5">{template?.name || "未选择"}</div>
         </div>
         <div className="px-3.5 py-2.5 bg-surface rounded-lg border border-border">
-          <div className="text-[10px] text-text-quaternary uppercase tracking-wider">报告标题</div>
-          <div className="text-[13px] font-medium text-text mt-0.5">{config.title}</div>
+          <div className="text-[0.667rem] text-text-quaternary uppercase tracking-wider">报告标题</div>
+          <div className="text-[0.867rem] font-medium text-text mt-0.5">{config.title}</div>
         </div>
       </div>
 
@@ -45,8 +45,8 @@ export function StepConfigure() {
       {/* Summary config */}
       {config.summary && (
         <div className="bg-brand-bg rounded-lg border border-brand-border p-3.5">
-          <div className="text-ui text-[11px] text-brand-accent mb-2">汇总页</div>
-          <div className="flex gap-5 text-[12px] text-text-secondary">
+          <div className="text-ui text-[0.733rem] text-brand-accent mb-2">汇总页</div>
+          <div className="flex gap-5 text-[0.8rem] text-text-secondary">
             <span>Sheet: <span className="text-text font-medium">{config.summary.sheet_name}</span></span>
             <span>模式: <span className="text-text font-medium">{config.summary.mode === "table" ? "表格" : "单元格映射"}</span></span>
             {config.summary.mode === "table" && (
@@ -62,7 +62,7 @@ export function StepConfigure() {
       {/* Sheet configs */}
       <div className="bg-surface rounded-lg border border-border overflow-hidden">
         <div className="px-3.5 py-2 border-b border-border-subtle">
-          <span className="text-ui text-[11px] text-text-quaternary">
+          <span className="text-ui text-[0.733rem] text-text-quaternary">
             Sheet 配置 ({config.sheets.length})
           </span>
         </div>
@@ -80,18 +80,18 @@ export function StepConfigure() {
               <div key={idx} className="px-3.5 py-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-sm bg-surface-hover text-text-quaternary text-[9px] font-mono font-bold flex items-center justify-center">{idx + 1}</span>
-                    <span className="font-medium text-[13px] text-text">{sheet.name}</span>
-                    <span className="text-[10px] text-text-quaternary bg-surface-hover px-1.5 py-px rounded-sm font-mono">{sheet.sheet_name}</span>
+                    <span className="w-4 h-4 rounded-sm bg-surface-hover text-text-quaternary text-[0.6rem] font-mono font-bold flex items-center justify-center">{idx + 1}</span>
+                    <span className="font-medium text-[0.867rem] text-text">{sheet.name}</span>
+                    <span className="text-[0.667rem] text-text-quaternary bg-surface-hover px-1.5 py-px rounded-sm font-mono">{sheet.sheet_name}</span>
                   </div>
                   {section && (
-                    <span className="text-[10px] text-text-quaternary font-mono">
+                    <span className="text-[0.667rem] text-text-quaternary font-mono">
                       {section.blocks?.length || 0} 块
                     </span>
                   )}
                 </div>
                 <div className="overflow-x-auto">
-                  <table className="w-full text-[11px]">
+                  <table className="w-full text-[0.733rem]">
                     <thead>
                       <tr className="text-text-quaternary">
                         <th className="text-left font-normal pb-1 w-6">#</th>
@@ -119,7 +119,7 @@ export function StepConfigure() {
                   </table>
                 </div>
                 {(imgCols.length > 0 || sheet.heading_level != null) && (
-                  <div className="flex gap-4 text-[10px] text-text-quaternary">
+                  <div className="flex gap-4 text-[0.667rem] text-text-quaternary">
                     {imgCols.length > 0 && <span>图片列: {imgCols.join(", ")}</span>}
                     {sheet.heading_level != null && <span>标题级别: {sheet.heading_level}</span>}
                   </div>
@@ -133,10 +133,10 @@ export function StepConfigure() {
       {/* Extra context */}
       {excelContent.extra_context && Object.keys(excelContent.extra_context).length > 0 && (
         <div className="bg-surface rounded-lg border border-border p-3.5">
-          <div className="text-ui text-[11px] text-text-quaternary mb-2">附加上下文变量</div>
+          <div className="text-ui text-[0.733rem] text-text-quaternary mb-2">附加上下文变量</div>
           <div className="flex flex-wrap gap-1.5">
             {Object.entries(excelContent.extra_context).map(([k, v]) => (
-              <span key={k} className="text-[10px] bg-surface-hover text-text-secondary px-2 py-1 rounded-sm border border-border-subtle font-mono">
+              <span key={k} className="text-[0.667rem] bg-surface-hover text-text-secondary px-2 py-1 rounded-sm border border-border-subtle font-mono">
                 {k}: {String(v).slice(0, 40)}
               </span>
             ))}
@@ -145,10 +145,10 @@ export function StepConfigure() {
       )}
 
       <div className="flex justify-between pt-1">
-        <button onClick={() => setWizardStep(1)} className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[13px] transition-colors">
+        <button onClick={() => setWizardStep(1)} className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[0.867rem] transition-colors">
           ← 上一步
         </button>
-        <button onClick={handleNext} className="px-5 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[13px] font-medium transition-colors">
+        <button onClick={handleNext} className="px-5 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[0.867rem] font-medium transition-colors">
           下一步：生成报告 →
         </button>
       </div>

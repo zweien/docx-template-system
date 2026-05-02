@@ -57,11 +57,11 @@ export function StepTemplateSelect() {
           <div className="w-10 h-10 rounded-lg bg-brand-bg text-brand-accent flex items-center justify-center mx-auto mb-4 text-lg">
             ⊞
           </div>
-          <p className="text-text-secondary font-medium text-[13px]">还没有导入模板</p>
-          <p className="text-[11px] text-text-quaternary mt-1">点击下方按钮导入 .docx 模板文件</p>
+          <p className="text-text-secondary font-medium text-[0.867rem]">还没有导入模板</p>
+          <p className="text-[0.733rem] text-text-quaternary mt-1">点击下方按钮导入 .docx 模板文件</p>
           <button
             onClick={handleImport}
-            className="mt-5 px-5 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[13px] font-medium transition-colors"
+            className="mt-5 px-5 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[0.867rem] font-medium transition-colors"
           >
             导入模板文件
           </button>
@@ -84,18 +84,18 @@ export function StepTemplateSelect() {
               className="p-4 rounded-lg border border-dashed border-border hover:border-brand-border hover:bg-brand-bg flex items-center justify-center gap-2 text-text-quaternary hover:text-brand-accent transition-all duration-100 min-h-[68px]"
             >
               <span className="text-base">+</span>
-              <span className="text-[13px] font-medium">导入新模板</span>
+              <span className="text-[0.867rem] font-medium">导入新模板</span>
             </button>
           </div>
 
           {selected && (
             <div className="flex items-center justify-between pt-2">
-              <p className="text-[13px] text-text-secondary">
+              <p className="text-[0.867rem] text-text-secondary">
                 已选择: <span className="font-medium text-text">{selected.name}</span>
               </p>
               <button
                 onClick={handleNext}
-                className="px-5 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[13px] font-medium transition-colors"
+                className="px-5 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[0.867rem] font-medium transition-colors"
               >
                 下一步：导入数据 →
               </button>
@@ -139,12 +139,12 @@ function TemplateCard({
     >
       <button
         onClick={(e) => { e.stopPropagation(); onDelete(template.id); }}
-        className="absolute top-2.5 right-2.5 text-text-quaternary/50 hover:text-danger text-[11px] opacity-0 group-hover:opacity-100 transition-opacity"
+        className="absolute top-2.5 right-2.5 text-text-quaternary/50 hover:text-danger text-[0.733rem] opacity-0 group-hover:opacity-100 transition-opacity"
       >
         ✕
       </button>
       <div className="flex items-start gap-2.5">
-        <div className={`w-8 h-8 rounded-md flex items-center justify-center text-[11px] shrink-0 ${
+        <div className={`w-8 h-8 rounded-md flex items-center justify-center text-[0.733rem] shrink-0 ${
           selected ? "bg-brand text-white" : "bg-surface-hover text-text-muted"
         }`}>
           {selected ? "✓" : "D"}
@@ -158,17 +158,17 @@ function TemplateCard({
               onKeyDown={(e) => e.key === "Enter" && handleSave()}
               onClick={(e) => e.stopPropagation()}
               autoFocus
-              className="font-medium text-[13px] w-full border-b border-brand-accent outline-none bg-transparent py-0.5 text-text"
+              className="font-medium text-[0.867rem] w-full border-b border-brand-accent outline-none bg-transparent py-0.5 text-text"
             />
           ) : (
             <p
-              className="font-medium text-[13px] truncate pr-4 text-text"
+              className="font-medium text-[0.867rem] truncate pr-4 text-text"
               onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
             >
               {template.name}
             </p>
           )}
-          <p className="text-[10px] text-text-quaternary mt-0.5 font-mono">{(template.size / 1024).toFixed(1)} KB · .docx</p>
+          <p className="text-[0.667rem] text-text-quaternary mt-0.5 font-mono">{(template.size / 1024).toFixed(1)} KB · .docx</p>
         </div>
       </div>
     </div>

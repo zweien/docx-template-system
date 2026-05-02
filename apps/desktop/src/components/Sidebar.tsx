@@ -1,16 +1,18 @@
-import { useAppStore, AppView } from "../stores/app-store";
+import { useAppStore, AppView, ThemeMode } from "../stores/app-store";
 
 export function Sidebar() {
-  const { currentView, setCurrentView } = useAppStore();
+  const { currentView, setCurrentView, settings, updateSettings } = useAppStore();
 
   const items: { view: AppView; icon: string; label: string; desc: string }[] = [
     { view: "wizard", icon: "◆", label: "生成报告", desc: "四步向导" },
     { view: "templates", icon: "⊞", label: "模板管理", desc: "导入与管理" },
   ];
 
-  const bottomItems: { view: AppView; icon: string; label: string; desc: string }[] = [
-    { view: "settings", icon: "⚙", label: "设置", desc: "外观与偏好" },
-  ];
+  const toggleTheme = () => {
+    const next: ThemeMode = settings.theme === "dark" ? "light" : "dark";
+    updateSettings({ theme: next });
+    document.documentElement.setAttribute("data-theme", next);
+  };
 
   const renderNav = (item: { view: AppView; icon: string; label: string; desc: string }) => {
     const active = currentView === item.view;
@@ -61,7 +63,24 @@ export function Sidebar() {
       {/* Bottom */}
       <div className="px-2.5 pb-2">
         <div className="border-t border-sidebar-border pt-2">
-          {bottomItems.map(renderNav)}
+          {/* Theme toggle */}
+          <button
+            onClick={toggleTheme}
+            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-left text-sidebar-text hover:bg-sidebar-hover hover:text-text-secondary transition-all duration-100"
+            title={`切换到${settings.theme === "dark" ? "浅色" : "深色"}主题`}
+          >
+            <span className="w-5 text-center" style={{ fontSize: "0.93em" }}>
+              {settings.theme === "dark" ? "☀" : "☽"}
+            </span>
+            <div className="min-w-0">
+              <div className="font-medium leading-tight" style={{ fontSize: "0.867em" }}>{settings.theme === "dark" ? "浅色模式" : "深色模式"}</div>
+            </div>
+          </button>
+          {/* Settings */}
+          {(() => {
+            const item = { view: "settings" as AppView, icon: "⚙", label: "设置", desc: "外观与偏好" };
+            return renderNav(item);
+          })()}
         </div>
       </div>
 

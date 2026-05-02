@@ -9,9 +9,9 @@ interface Props {
 
 type Tab = "basic" | "summary" | "sheets";
 
-const inputCls = "w-full px-3 py-2 border border-border rounded-md text-[13px] bg-surface text-text focus:border-brand-accent focus:outline-none transition-colors";
-const smallInputCls = "px-2 py-1 border border-border rounded-md text-[12px] bg-surface text-text focus:border-brand-accent focus:outline-none";
-const labelCls = "block text-[11px] text-text-quaternary mb-1";
+const inputCls = "w-full px-3 py-2 border border-border rounded-md text-[0.867rem] bg-surface text-text focus:border-brand-accent focus:outline-none transition-colors";
+const smallInputCls = "px-2 py-1 border border-border rounded-md text-[0.8rem] bg-surface text-text focus:border-brand-accent focus:outline-none";
+const labelCls = "block text-[0.733rem] text-text-quaternary mb-1";
 
 export function ConfigEditor({ config, onChange, onClose }: Props) {
   const [local, setLocal] = useState<BudgetConfig>(JSON.parse(JSON.stringify(config)));
@@ -188,7 +188,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-panel rounded-lg w-[860px] max-h-[85vh] flex flex-col border border-border shadow-2xl">
         <div className="px-5 py-3.5 border-b border-border flex justify-between items-center">
-          <h3 className="text-ui text-[14px] text-text">编辑配置</h3>
+          <h3 className="text-ui text-[0.933rem] text-text">编辑配置</h3>
           <button onClick={onClose} className="w-6 h-6 rounded-md hover:bg-surface-hover flex items-center justify-center text-text-quaternary hover:text-text transition-colors text-lg">&times;</button>
         </div>
 
@@ -198,7 +198,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-3.5 py-2 text-[12px] font-medium border-b-2 transition-colors -mb-px ${
+              className={`px-3.5 py-2 text-[0.8rem] font-medium border-b-2 transition-colors -mb-px ${
                 tab === t.key
                   ? "border-brand-accent text-brand-accent"
                   : "border-transparent text-text-quaternary hover:text-text-secondary"
@@ -213,7 +213,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
           {/* ── Basic Tab ── */}
           {tab === "basic" && (
             <div>
-              <label className="block text-[11px] text-text-quaternary mb-1.5">报告标题</label>
+              <label className="block text-[0.733rem] text-text-quaternary mb-1.5">报告标题</label>
               <input
                 value={local.title}
                 onChange={(e) => setLocal({ ...local, title: e.target.value })}
@@ -239,7 +239,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                   }
                   className="rounded accent-brand"
                 />
-                <span className="text-[13px] font-medium text-text">启用汇总页</span>
+                <span className="text-[0.867rem] font-medium text-text">启用汇总页</span>
               </label>
 
               {local.summary && (
@@ -268,7 +268,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
 
                   {local.summary.mode === "table" && (
                     <div className="bg-surface rounded-md border border-border-subtle p-4 space-y-3">
-                      <h4 className="text-ui text-[12px] text-text-muted">表格模式配置</h4>
+                      <h4 className="text-ui text-[0.8rem] text-text-muted">表格模式配置</h4>
                       <div className="grid grid-cols-3 gap-3">
                         <div>
                           <label className={labelCls}>表头行号</label>
@@ -311,10 +311,10 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                   {local.summary.mode === "cell_map" && (
                     <div className="bg-surface rounded-md border border-border-subtle p-4 space-y-3">
                       <div className="flex justify-between items-center">
-                        <h4 className="text-ui text-[12px] text-text-muted">单元格映射</h4>
-                        <button onClick={addMapping} className="text-[12px] text-brand-accent hover:text-brand-hover transition-colors">+ 添加映射</button>
+                        <h4 className="text-ui text-[0.8rem] text-text-muted">单元格映射</h4>
+                        <button onClick={addMapping} className="text-[0.8rem] text-brand-accent hover:text-brand-hover transition-colors">+ 添加映射</button>
                       </div>
-                      <table className="w-full text-[12px]">
+                      <table className="w-full text-[0.8rem]">
                         <thead>
                           <tr className="text-text-quaternary">
                             <th className="px-2 py-1 text-left font-normal">键 (Key)</th>
@@ -360,8 +360,8 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                 <div key={sheetIdx} className="bg-surface rounded-md border border-border p-4 space-y-3">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <span className="w-4 h-4 rounded-sm bg-surface-hover text-text-quaternary text-[9px] font-mono font-bold flex items-center justify-center">{sheetIdx + 1}</span>
-                      <h4 className="text-ui text-[13px] text-text">
+                      <span className="w-4 h-4 rounded-sm bg-surface-hover text-text-quaternary text-[0.6rem] font-mono font-bold flex items-center justify-center">{sheetIdx + 1}</span>
+                      <h4 className="text-ui text-[0.867rem] text-text">
                         {sheet.name || "(未命名)"}
                       </h4>
                     </div>
@@ -369,16 +369,16 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       <button
                         onClick={() => moveSheet(sheetIdx, -1)}
                         disabled={sheetIdx === 0}
-                        className="text-text-quaternary hover:text-text disabled:opacity-20 text-[10px]"
+                        className="text-text-quaternary hover:text-text disabled:opacity-20 text-[0.667rem]"
                         title="上移"
                       >▲</button>
                       <button
                         onClick={() => moveSheet(sheetIdx, 1)}
                         disabled={sheetIdx === local.sheets.length - 1}
-                        className="text-text-quaternary hover:text-text disabled:opacity-20 text-[10px]"
+                        className="text-text-quaternary hover:text-text disabled:opacity-20 text-[0.667rem]"
                         title="下移"
                       >▼</button>
-                      <button onClick={() => removeSheet(sheetIdx)} className="text-danger/60 hover:text-danger text-[12px] ml-1">
+                      <button onClick={() => removeSheet(sheetIdx)} className="text-danger/60 hover:text-danger text-[0.8rem] ml-1">
                         删除
                       </button>
                     </div>
@@ -413,16 +413,16 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                   {/* Column mappings */}
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-ui text-[11px] text-text-quaternary">列映射</span>
-                      <button onClick={() => addColumnMapping(sheetIdx)} className="text-[11px] text-brand-accent hover:text-brand-hover transition-colors">
+                      <span className="text-ui text-[0.733rem] text-text-quaternary">列映射</span>
+                      <button onClick={() => addColumnMapping(sheetIdx)} className="text-[0.733rem] text-brand-accent hover:text-brand-hover transition-colors">
                         + 添加列
                       </button>
                     </div>
                     <div className="grid grid-cols-[1fr_1fr_36px_36px_20px_20px_20px] gap-1 mb-1 px-1">
-                      <span className="text-[9px] text-text-quaternary uppercase">字段名</span>
-                      <span className="text-[9px] text-text-quaternary uppercase">Excel 列名</span>
-                      <span className="text-[9px] text-text-quaternary uppercase text-center" title="表格列">表格</span>
-                      <span className="text-[9px] text-text-quaternary uppercase text-center" title="详情字段">详情</span>
+                      <span className="text-[0.6rem] text-text-quaternary uppercase">字段名</span>
+                      <span className="text-[0.6rem] text-text-quaternary uppercase">Excel 列名</span>
+                      <span className="text-[0.6rem] text-text-quaternary uppercase text-center" title="表格列">表格</span>
+                      <span className="text-[0.6rem] text-text-quaternary uppercase text-center" title="详情字段">详情</span>
                       <span></span><span></span><span></span>
                     </div>
                     {Object.entries(sheet.columns).map(([key, value], colIdx) => (
@@ -460,28 +460,28 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                         <button
                           onClick={() => moveColumn(sheetIdx, colIdx, -1)}
                           disabled={colIdx === 0}
-                          className="text-text-quaternary hover:text-text disabled:opacity-20 text-[9px] text-center"
+                          className="text-text-quaternary hover:text-text disabled:opacity-20 text-[0.6rem] text-center"
                           title="上移"
                         >▲</button>
                         <button
                           onClick={() => moveColumn(sheetIdx, colIdx, 1)}
                           disabled={colIdx === Object.keys(sheet.columns).length - 1}
-                          className="text-text-quaternary hover:text-text disabled:opacity-20 text-[9px] text-center"
+                          className="text-text-quaternary hover:text-text disabled:opacity-20 text-[0.6rem] text-center"
                           title="下移"
                         >▼</button>
-                        <button onClick={() => removeColumn(sheetIdx, key)} className="text-danger/60 hover:text-danger text-center text-[12px]">&times;</button>
+                        <button onClick={() => removeColumn(sheetIdx, key)} className="text-danger/60 hover:text-danger text-center text-[0.8rem]">&times;</button>
                       </div>
                     ))}
                     {Object.keys(sheet.columns).length === 0 && (
-                      <p className="text-[11px] text-text-quaternary py-1">暂无列映射</p>
+                      <p className="text-[0.733rem] text-text-quaternary py-1">暂无列映射</p>
                     )}
                   </div>
 
                   {/* Image columns */}
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-ui text-[11px] text-text-quaternary">图片列</span>
-                      <button onClick={() => addImageColumn(sheetIdx)} className="text-[11px] text-brand-accent hover:text-brand-hover transition-colors">
+                      <span className="text-ui text-[0.733rem] text-text-quaternary">图片列</span>
+                      <button onClick={() => addImageColumn(sheetIdx)} className="text-[0.733rem] text-brand-accent hover:text-brand-hover transition-colors">
                         + 添加
                       </button>
                     </div>
@@ -491,16 +491,16 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                           <input
                             value={col}
                             onChange={(e) => updateImageColumn(sheetIdx, colIdx, e.target.value)}
-                            className="px-2 py-1 border border-border rounded-md text-[12px] bg-surface text-text w-28 focus:border-brand-accent focus:outline-none"
+                            className="px-2 py-1 border border-border rounded-md text-[0.8rem] bg-surface text-text w-28 focus:border-brand-accent focus:outline-none"
                           />
-                          <button onClick={() => removeImageColumn(sheetIdx, colIdx)} className="text-danger/60 hover:text-danger text-[12px]">&times;</button>
+                          <button onClick={() => removeImageColumn(sheetIdx, colIdx)} className="text-danger/60 hover:text-danger text-[0.8rem]">&times;</button>
                         </div>
                       ))}
                     </div>
                   </div>
                 </div>
               ))}
-              <button onClick={addSheet} className="w-full py-2 border border-dashed border-border rounded-md text-text-quaternary hover:border-brand-border hover:text-brand-accent transition-colors text-[13px]">
+              <button onClick={addSheet} className="w-full py-2 border border-dashed border-border rounded-md text-text-quaternary hover:border-brand-border hover:text-brand-accent transition-colors text-[0.867rem]">
                 + 添加 Sheet
               </button>
             </div>
@@ -508,8 +508,8 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
         </div>
 
         <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[13px] transition-colors">取消</button>
-          <button onClick={handleSave} className="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[13px] font-medium transition-colors">保存</button>
+          <button onClick={onClose} className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[0.867rem] transition-colors">取消</button>
+          <button onClick={handleSave} className="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[0.867rem] font-medium transition-colors">保存</button>
         </div>
       </div>
     </div>

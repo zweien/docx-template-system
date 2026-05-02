@@ -146,9 +146,11 @@ body, #root {
   --color-panel: var(--color-lt-panel);
   --color-surface: var(--color-lt-surface);
   --color-surface-hover: var(--color-lt-surface-hover);
+  --color-surface-active: #d0d6e0;
   --color-text: var(--color-lt-text);
   --color-text-secondary: var(--color-lt-text-secondary);
-  --color-text-muted: var(--color-lt-text-muted);
+  --color-text-muted: #7a7f88;
+  --color-text-quaternary: #9ca0a8;
   --color-brand-bg: var(--color-lt-brand-bg);
   --color-brand-border: var(--color-lt-brand-border);
   --color-border: var(--color-lt-border);
@@ -157,7 +159,7 @@ body, #root {
 
   --color-sidebar-bg: #f3f4f5;
   --color-sidebar-border: #e6e6e6;
-  --color-sidebar-text: #62666d;
+  --color-sidebar-text: #8a8f98;
   --color-sidebar-hover: rgba(0, 0, 0, 0.03);
   --color-sidebar-active-bg: rgba(94, 106, 210, 0.08);
   --color-sidebar-active-text: #5e6ad2;

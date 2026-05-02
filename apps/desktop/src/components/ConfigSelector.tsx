@@ -104,20 +104,20 @@ export function ConfigSelector() {
     <>
       <div className="bg-surface rounded-lg border border-border p-2.5 flex items-center gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <span className="text-[10px] text-text-quaternary shrink-0 uppercase tracking-wider">配置方案</span>
+          <span className="text-[0.667rem] text-text-quaternary shrink-0 uppercase tracking-wider">配置方案</span>
           <select
             value={selectedConfigId || ""}
             onChange={(e) => handleSelect(e.target.value || null)}
-            className="flex-1 max-w-[200px] px-2 py-1.5 border border-border rounded-md text-[13px] bg-surface text-text focus:border-brand-accent focus:outline-none"
+            className="flex-1 max-w-[200px] px-2 py-1.5 border border-border rounded-md text-[0.867rem] bg-surface text-text focus:border-brand-accent focus:outline-none"
           >
             <option value="">默认配置</option>
             {configs.map((c) => (
               <option key={c.id} value={c.id}>{c.title}</option>
             ))}
           </select>
-          <span className="text-[10px] text-text-quaternary shrink-0 font-mono">{config.sheets.length} 个 Sheet</span>
+          <span className="text-[0.667rem] text-text-quaternary shrink-0 font-mono">{config.sheets.length} 个 Sheet</span>
         </div>
-        <div className="flex items-center gap-1 text-[12px] border-l border-border pl-3">
+        <div className="flex items-center gap-1 text-[0.8rem] border-l border-border pl-3">
           <button onClick={handleSave} disabled={saving} className="text-brand-accent hover:text-brand-hover font-medium disabled:opacity-40 transition-colors">
             {saving ? "..." : "保存"}
           </button>

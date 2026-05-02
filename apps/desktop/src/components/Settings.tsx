@@ -26,9 +26,9 @@ export function Settings() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-ui text-sm text-text">字体大小</h3>
-                <p className="text-[11px] text-text-quaternary mt-0.5">调整界面文字大小</p>
+                <p className="text-[0.733rem] text-text-quaternary mt-0.5">调整界面文字大小</p>
               </div>
-              <span className="text-[11px] font-mono text-brand-accent bg-brand-bg px-2 py-0.5 rounded">
+              <span className="text-[0.733rem] font-mono text-brand-accent bg-brand-bg px-2 py-0.5 rounded">
                 {fontSize}px
               </span>
             </div>
@@ -50,12 +50,12 @@ export function Settings() {
                   }`}
                 >
                   <span className="block font-medium" style={{ fontSize: `${Math.min(opt.size, 14)}px` }}>{opt.label}</span>
-                  <span className="block text-[9px] font-mono mt-px opacity-60">{opt.size}px</span>
+                  <span className="block text-[0.6rem] font-mono mt-px opacity-60">{opt.size}px</span>
                 </button>
               ))}
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-[10px] text-text-quaternary">A</span>
+              <span className="text-[0.667rem] text-text-quaternary">A</span>
               <input
                 type="range"
                 min={12}
@@ -80,7 +80,7 @@ export function Settings() {
           {/* Theme */}
           <section className="bg-surface rounded-lg border border-border p-5">
             <h3 className="text-ui text-sm text-text mb-1">主题</h3>
-            <p className="text-[11px] text-text-quaternary mb-4">选择界面配色方案</p>
+            <p className="text-[0.733rem] text-text-quaternary mb-4">选择界面配色方案</p>
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => handleTheme("dark")}
@@ -95,12 +95,12 @@ export function Settings() {
                     ☽
                   </div>
                   <div className="text-left">
-                    <div className="text-[13px] font-medium text-text">深色</div>
-                    <div className="text-[10px] text-text-quaternary">默认</div>
+                    <div className="text-[0.867rem] font-medium text-text">深色</div>
+                    <div className="text-[0.667rem] text-text-quaternary">默认</div>
                   </div>
                 </div>
                 {theme === "dark" && (
-                  <span className="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-brand rounded-full flex items-center justify-center text-white text-[8px]">
+                  <span className="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-brand rounded-full flex items-center justify-center text-white text-[0.533rem]">
                     ✓
                   </span>
                 )}
@@ -118,12 +118,12 @@ export function Settings() {
                     ☀
                   </div>
                   <div className="text-left">
-                    <div className="text-[13px] font-medium text-text">浅色</div>
-                    <div className="text-[10px] text-text-quaternary">明亮</div>
+                    <div className="text-[0.867rem] font-medium text-text">浅色</div>
+                    <div className="text-[0.667rem] text-text-quaternary">明亮</div>
                   </div>
                 </div>
                 {theme === "light" && (
-                  <span className="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-brand rounded-full flex items-center justify-center text-white text-[8px]">
+                  <span className="absolute top-2.5 right-2.5 w-3.5 h-3.5 bg-brand rounded-full flex items-center justify-center text-white text-[0.533rem]">
                     ✓
                   </span>
                 )}
@@ -134,7 +134,7 @@ export function Settings() {
           {/* About */}
           <section className="bg-surface rounded-lg border border-border p-5">
             <h3 className="text-ui text-sm text-text mb-3">关于</h3>
-            <div className="space-y-2 text-[12px]">
+            <div className="space-y-2 text-[0.8rem]">
               <div className="flex justify-between">
                 <span className="text-text-muted">版本</span>
                 <span className="font-mono text-text-secondary">0.2.0</span>

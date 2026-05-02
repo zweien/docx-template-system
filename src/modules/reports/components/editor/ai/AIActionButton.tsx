@@ -29,6 +29,10 @@ function captureSelection(editor: any): SelectionSnapshot {
     const focused = editor.focusBlock;
     const blocks = editor.topLevelBlocks ?? [];
 
+    let blockIds: string[] = [];
+    let text = selectedText || "";
+
+    // Try to resolve block IDs from BlockNote selection state
     if (selectionState) {
       const fromBlock = selectionState.from?.block ?? selectionState.block;
       const toBlock = selectionState.to?.block ?? selectionState.end ?? fromBlock;
@@ -48,22 +52,23 @@ function captureSelection(editor: any): SelectionSnapshot {
           }
         }
         if (matched.length > 0) {
-          return {
-            text: selectedText || matched.map(extractBlockText).filter(Boolean).join("\n"),
-            blockIds: matched.map((b: any) => b.id),
-          };
+          blockIds = matched.map((b: any) => b.id);
+          if (!text) {
+            text = matched.map(extractBlockText).filter(Boolean).join("\n");
+          }
         }
       }
     }
 
-    if (focused) {
-      return {
-        text: selectedText || extractBlockText(focused),
-        blockIds: [focused.id],
-      };
+    // Always use focused block as fallback for block IDs
+    if (blockIds.length === 0 && focused) {
+      blockIds = [focused.id];
+      if (!text) {
+        text = extractBlockText(focused);
+      }
     }
 
-    return { text: selectedText || "", blockIds: [] };
+    return { text, blockIds };
   } catch {
     return { text: "", blockIds: [] };
   }

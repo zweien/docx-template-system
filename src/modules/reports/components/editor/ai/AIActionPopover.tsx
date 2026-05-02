@@ -5,6 +5,15 @@ import { Send, Settings, ChevronDown, Copy, ArrowRightLeft } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import type { EditorAIActionItem } from "@/types/editor-ai";
 import { executeAIAction } from "./AIActionExecutor";
+import { useEditorAIStore } from "./useEditorAIStore";
+
+function extractBlockText(block: any): string {
+  if (!block?.content) return "";
+  return block.content
+    .filter((c: any) => c.type === "text")
+    .map((c: any) => c.text)
+    .join("");
+}
 
 interface AIActionPopoverProps {
   globalActions: EditorAIActionItem[];
@@ -33,9 +42,11 @@ export function AIActionPopover({
   onEditAction,
   onCreateAction,
 }: AIActionPopoverProps) {
-  const [result, setResult] = useState("");
-  const [input, setInput] = useState("");
+  const result = useEditorAIStore((s) => s.actionDialogResult);
+  const setResult = useEditorAIStore((s) => s.setActionDialogResult);
+  const resetResult = useEditorAIStore((s) => s.resetActionDialogResult);
   const abortRef = useRef<AbortController | null>(null);
+  const [input, setInput] = useState("");
 
   const handleExecute = useCallback(
     (action: EditorAIActionItem) => {
@@ -110,8 +121,10 @@ export function AIActionPopover({
       const newBlocks = editor.tryParseMarkdownToBlocks?.(result);
       if (!newBlocks?.length) return;
 
+      // Strategy 1: Replace by block IDs directly using the stored snapshot
       if (selectedBlockIds.length > 0) {
-        const blocksToReplace = editor.topLevelBlocks.filter((b: any) =>
+        const docBlocks = editor.document ?? editor.topLevelBlocks ?? [];
+        const blocksToReplace = docBlocks.filter((b: any) =>
           selectedBlockIds.includes(b.id),
         );
         if (blocksToReplace.length > 0) {
@@ -120,13 +133,28 @@ export function AIActionPopover({
         }
       }
 
-      // Fallback: insert after focused block
+      // Strategy 2: Find block containing the selection text
+      if (selection) {
+        const docBlocks = editor.document ?? editor.topLevelBlocks ?? [];
+        const match = docBlocks.find((b: any) => {
+          const text = extractBlockText(b);
+          return text && selection && text.includes(selection.trim());
+        });
+        if (match) {
+          editor.replaceBlocks([match], newBlocks);
+          return;
+        }
+      }
+
+      // Strategy 3: Use focused block
       const focused = editor.focusBlock;
       if (focused) {
-        editor.insertBlocks(newBlocks, focused, "after");
+        editor.replaceBlocks([focused], newBlocks);
       }
-    } catch {}
-  }, [result, editor, selectedBlockIds]);
+    } catch (err) {
+      console.error("[AIActionPopover] replace error:", err);
+    }
+  }, [result, editor, selectedBlockIds, selection]);
 
   const handleInsert = useCallback(() => {
     if (!result || !editor) return;
@@ -225,7 +253,7 @@ export function AIActionPopover({
                   variant="default"
                   size="xs"
                   className="h-6 gap-1 text-xs"
-                  onClick={handleReplace}
+                  onClick={(e) => { e.stopPropagation(); handleReplace(); }}
                   title="替换选中的原文"
                 >
                   <ArrowRightLeft className="size-3" />
@@ -236,7 +264,7 @@ export function AIActionPopover({
                 variant="outline"
                 size="xs"
                 className="h-6 gap-1 text-xs"
-                onClick={handleInsert}
+                onClick={(e) => { e.stopPropagation(); handleInsert(); }}
                 title="插入到光标后"
               >
                 插入
@@ -245,7 +273,7 @@ export function AIActionPopover({
                 variant="ghost"
                 size="xs"
                 className="h-6 gap-1 text-xs"
-                onClick={handleCopy}
+                onClick={(e) => { e.stopPropagation(); handleCopy(); }}
                 title="复制到剪贴板"
               >
                 <Copy className="size-3" />

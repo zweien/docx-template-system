@@ -3,8 +3,8 @@ import type { PinnedSelection } from "@/types/editor-ai";
 
 let _idCounter = 0;
 function generateId(): string {
-  if (typeof crypto !== "undefined" && crypto.randomUUID) {
-    return generateId();
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
   }
   return `id-${Date.now()}-${++_idCounter}`;
 }
@@ -27,6 +27,12 @@ interface EditorAIState {
   actionDialogContext: string;
   openActionDialog: (selection: string, blockIds: string[], context: string) => void;
   closeActionDialog: () => void;
+
+  actionDialogResult: string;
+  actionDialogExecuting: boolean;
+  setActionDialogResult: (result: string) => void;
+  setActionDialogExecuting: (executing: boolean) => void;
+  resetActionDialogResult: () => void;
 
   messages: ChatMessage[];
   addMessage: (msg: Omit<ChatMessage, "id" | "timestamp">) => void;
@@ -56,6 +62,12 @@ export const useEditorAIStore = create<EditorAIState>((set) => ({
     set({ actionDialogOpen: true, actionDialogSelection: selection, actionDialogBlockIds: blockIds, actionDialogContext: context }),
   closeActionDialog: () =>
     set({ actionDialogOpen: false, actionDialogSelection: "", actionDialogBlockIds: [], actionDialogContext: "" }),
+
+  actionDialogResult: "",
+  actionDialogExecuting: false,
+  setActionDialogResult: (result) => set({ actionDialogResult: result }),
+  setActionDialogExecuting: (executing) => set({ actionDialogExecuting: executing }),
+  resetActionDialogResult: () => set({ actionDialogResult: "", actionDialogExecuting: false }),
 
   messages: [],
   addMessage: (msg) =>

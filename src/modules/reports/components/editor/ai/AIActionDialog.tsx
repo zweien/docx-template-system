@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -27,18 +27,19 @@ export function AIActionDialog({
     actionDialogSelection,
     actionDialogBlockIds,
     actionDialogContext,
+    actionDialogExecuting,
     closeActionDialog,
+    setActionDialogExecuting,
   } = useEditorAIStore();
 
   const { globalActions, userActions } = useAIActions();
-  const [executing, setExecuting] = useState(false);
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      if (!open && executing) return;
+      if (!open && actionDialogExecuting) return;
       if (!open) closeActionDialog();
     },
-    [executing, closeActionDialog],
+    [actionDialogExecuting, closeActionDialog],
   );
 
   const handleOpenSidebar = useCallback(() => {
@@ -59,15 +60,14 @@ export function AIActionDialog({
     onCreateAction();
   }, [closeActionDialog, onCreateAction]);
 
-  // Reset executing when dialog closes
   const handleClose = useCallback(
     (open: boolean) => {
       if (!open) {
-        setExecuting(false);
+        setActionDialogExecuting(false);
       }
       handleOpenChange(open);
     },
-    [handleOpenChange],
+    [handleOpenChange, setActionDialogExecuting],
   );
 
   return (
@@ -80,8 +80,8 @@ export function AIActionDialog({
           selectedBlockIds={actionDialogBlockIds}
           context={actionDialogContext}
           editor={editor}
-          executing={executing}
-          onExecutingChange={setExecuting}
+          executing={actionDialogExecuting}
+          onExecutingChange={setActionDialogExecuting}
           onOpenSidebar={handleOpenSidebar}
           onEditAction={handleEditAction}
           onCreateAction={handleCreateAction}

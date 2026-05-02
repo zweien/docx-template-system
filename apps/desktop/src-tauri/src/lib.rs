@@ -32,6 +32,7 @@ pub fn run() {
             commands::list_templates,
             commands::import_template,
             commands::delete_template,
+            commands::rename_template,
             commands::get_app_data_dir,
         ])
         .run(tauri::generate_context!())

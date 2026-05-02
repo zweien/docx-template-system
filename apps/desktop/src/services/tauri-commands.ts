@@ -30,6 +30,10 @@ export async function deleteTemplate(id: string): Promise<void> {
   return invoke("delete_template", { id });
 }
 
+export async function renameTemplate(id: string, newName: string): Promise<void> {
+  return invoke("rename_template", { id, newName });
+}
+
 export async function selectExcel(): Promise<string | null> {
   if (!isTauri) return pickFileBrowser(".xlsx,.xls");
   return invoke("select_excel");

@@ -167,7 +167,16 @@ pub fn list_templates(app: AppHandle) -> Result<Vec<TemplateMeta>, String> {
                 .and_then(|n| n.to_str())
                 .unwrap_or_default()
                 .to_string();
-            let name = id.replace('_', " ");
+            let name = {
+                let meta_path = dir.join(format!("{}.meta.json", id));
+                if meta_path.exists() {
+                    if let Ok(data) = fs::read_to_string(&meta_path) {
+                        if let Ok(obj) = serde_json::from_str::<serde_json::Value>(&data) {
+                            obj.get("name").and_then(|v| v.as_str()).unwrap_or(&id).to_string()
+                        } else { id.clone() }
+                    } else { id.clone() }
+                } else { id.clone() }
+            };
             templates.push(TemplateMeta {
                 id,
                 name,
@@ -203,6 +212,17 @@ pub fn import_template(app: AppHandle, source_path: String) -> Result<TemplateMe
         .and_then(|n| n.to_str())
         .unwrap_or("Template")
         .to_string();
+    let imported_at = metadata
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs().to_string())
+        .unwrap_or_default();
+    // Save meta file for name persistence
+    let meta = serde_json::json!({ "name": &name, "imported_at": &imported_at });
+    let meta_path = dir.join(format!("{}.meta.json", id));
+    fs::write(&meta_path, meta.to_string()).map_err(|e| e.to_string())?;
+
     Ok(TemplateMeta {
         id,
         name,
@@ -213,12 +233,7 @@ pub fn import_template(app: AppHandle, source_path: String) -> Result<TemplateMe
             .to_string(),
         path: dest.to_string_lossy().to_string(),
         size: metadata.len(),
-        imported_at: metadata
-            .modified()
-            .ok()
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|d| d.as_secs().to_string())
-            .unwrap_or_default(),
+        imported_at,
     })
 }
 
@@ -229,7 +244,25 @@ pub fn delete_template(app: AppHandle, id: String) -> Result<(), String> {
     if path.exists() {
         fs::remove_file(path).map_err(|e| e.to_string())?;
     }
+    let meta = dir.join(format!("{}.meta.json", id));
+    if meta.exists() {
+        fs::remove_file(meta).map_err(|e| e.to_string())?;
+    }
     Ok(())
+}
+
+#[tauri::command]
+pub fn rename_template(app: AppHandle, id: String, new_name: String) -> Result<(), String> {
+    let dir = templates_dir(&app)?;
+    let meta_path = dir.join(format!("{}.meta.json", id));
+    let imported_at = fs::metadata(&meta_path)
+        .ok()
+        .and_then(|m| m.modified().ok())
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs().to_string())
+        .unwrap_or_default();
+    let meta = serde_json::json!({ "name": &new_name, "imported_at": &imported_at });
+    fs::write(&meta_path, meta.to_string()).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
-import { listTemplates, selectDocx, importTemplate } from "../../services/tauri-commands";
+import { listTemplates, selectDocx, importTemplate, deleteTemplate, renameTemplate } from "../../services/tauri-commands";
 import { useEffect } from "react";
 
 export function StepTemplateSelect() {
@@ -22,6 +23,18 @@ export function StepTemplateSelect() {
     } catch (e) {
       addLog(`导入失败: ${e}`);
     }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("确定删除此模板？")) return;
+    await deleteTemplate(id);
+    setTemplates(templates.filter((t) => t.id !== id));
+    if (selectedTemplateId === id) selectTemplate(null);
+  };
+
+  const handleRename = async (id: string, newName: string) => {
+    await renameTemplate(id, newName);
+    setTemplates(templates.map((t) => (t.id === id ? { ...t, name: newName } : t)));
   };
 
   const handleNext = () => {
@@ -51,18 +64,14 @@ export function StepTemplateSelect() {
         <>
           <div className="grid grid-cols-2 gap-3">
             {templates.map((t) => (
-              <div
+              <TemplateCard
                 key={t.id}
-                onClick={() => selectTemplate(t.id)}
-                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selectedTemplateId === t.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
-              >
-                <p className="font-medium text-sm truncate">{t.name}</p>
-                <p className="text-xs text-gray-400 mt-1">{(t.size / 1024).toFixed(1)} KB</p>
-              </div>
+                template={t}
+                selected={selectedTemplateId === t.id}
+                onSelect={() => selectTemplate(t.id)}
+                onDelete={handleDelete}
+                onRename={handleRename}
+              />
             ))}
             <div
               onClick={handleImport}
@@ -87,6 +96,65 @@ export function StepTemplateSelect() {
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function TemplateCard({
+  template,
+  selected,
+  onSelect,
+  onDelete,
+  onRename,
+}: {
+  template: { id: string; name: string; size: number };
+  selected: boolean;
+  onSelect: () => void;
+  onDelete: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(template.name);
+
+  const handleSave = () => {
+    if (name.trim() && name !== template.name) onRename(template.id, name.trim());
+    setEditing(false);
+  };
+
+  return (
+    <div
+      onClick={() => !editing && onSelect()}
+      className={`p-3 rounded-lg border cursor-pointer transition-colors relative ${
+        selected
+          ? "border-blue-500 bg-blue-50"
+          : "border-gray-200 bg-white hover:border-gray-300"
+      }`}
+    >
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(template.id); }}
+        className="absolute top-2 right-2 text-gray-300 hover:text-red-500 text-xs"
+      >
+        ✕
+      </button>
+      {editing ? (
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={handleSave}
+          onKeyDown={(e) => e.key === "Enter" && handleSave()}
+          onClick={(e) => e.stopPropagation()}
+          autoFocus
+          className="font-medium text-sm w-full border-b border-blue-400 outline-none bg-transparent"
+        />
+      ) : (
+        <p
+          className="font-medium text-sm truncate pr-5"
+          onDoubleClick={(e) => { e.stopPropagation(); setEditing(true); }}
+        >
+          {template.name}
+        </p>
+      )}
+      <p className="text-xs text-gray-400 mt-1">{(template.size / 1024).toFixed(1)} KB</p>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { renderReport } from "../../services/api";
-import { openReport, saveReportAs } from "../../services/tauri-commands";
+import { openReport, saveReportAs, getAppDataDir } from "../../services/tauri-commands";
 
 export function StepGenerate() {
   const {
@@ -29,10 +29,11 @@ export function StepGenerate() {
     addLog("开始生成报告...");
 
     try {
+      const appDir = await getAppDataDir();
       const res = await renderReport({
         content: excelContent,
         template_path: template.path,
-        output_dir: `/tmp/budget-report-${Date.now()}`,
+        output_dir: `${appDir}/temp-${Date.now()}`,
       });
 
       if (res.success && res.output_path) {

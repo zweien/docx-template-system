@@ -68,8 +68,9 @@ jobs:
         working-directory: apps/desktop/sidecar
         shell: pwsh
         run: |
-          $sidecarDir = Resolve-Path "../src-tauri/sidecar"
+          $sidecarDir = Join-Path $env:GITHUB_WORKSPACE "apps/desktop/src-tauri/sidecar"
           if (Test-Path $sidecarDir) { Remove-Item -Recurse -Force $sidecarDir }
+          New-Item -ItemType Directory -Path $sidecarDir -Force | Out-Null
 
           pyinstaller `
             --name budget-sidecar `

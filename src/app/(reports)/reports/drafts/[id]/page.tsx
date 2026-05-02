@@ -9,6 +9,10 @@ import { OutlinePanel } from "@/modules/reports/components/editor/OutlinePanel";
 import { CollaborationProvider, useCollaboration } from "@/modules/reports/components/editor/CollaborationProvider";
 import { OnlineUsers } from "@/modules/reports/components/editor/OnlineUsers";
 import { ShareDialog } from "@/modules/reports/components/editor/ShareDialog";
+import { AIChatSidebar } from "@/modules/reports/components/editor/ai/AIChatSidebar";
+import { useEditorAIStore } from "@/modules/reports/components/editor/ai/useEditorAIStore";
+import { AIActionForm } from "@/modules/reports/components/editor/ai/AIActionForm";
+import type { EditorAIActionItem } from "@/types/editor-ai";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Streamdown } from "streamdown";
@@ -53,6 +57,9 @@ function EditorContent() {
   const editorRef = useRef<any>(null);
   const [editedPrompt, setEditedPrompt] = useState("");
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [rightTab, setRightTab] = useState<"outline" | "ai">("outline");
+  const [aiFormOpen, setAIFormOpen] = useState(false);
+  const [editingAction, setEditingAction] = useState<EditorAIActionItem | null>(null);
 
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -511,20 +518,33 @@ function EditorContent() {
           collabFragment={provider ? getFragment(activeSection) : null}
           collabProvider={provider}
           onEditorMount={(editor) => { editorRef.current = editor; }}
+          onOpenAISidebar={() => { setRightTab("ai"); setRightCollapsed(false); }}
+          onEditAIAction={(action) => { setEditingAction(action); setAIFormOpen(true); }}
+          onCreateAIAction={() => { setEditingAction(null); setAIFormOpen(true); }}
         />
       </div>
 
-      {/* 右侧：大纲面板 */}
+      {/* 右侧：大纲/AI面板 */}
       <div
-        className={`shrink-0 border-l border-border bg-card overflow-y-auto overflow-x-hidden transition-[width] duration-200 flex flex-col ${rightCollapsed ? "w-0 border-l-0" : "w-48"}`}
+        className={`shrink-0 border-l border-border bg-card overflow-y-auto overflow-x-hidden transition-[width] duration-200 flex flex-col ${rightCollapsed ? "w-0 border-l-0" : "w-72"}`}
       >
-        <div className="w-48 flex flex-col flex-1">
-          <div className="flex items-center justify-end px-3 pt-3 pb-2">
-            <button onClick={() => setRightCollapsed(true)} className="p-0.5 rounded hover:bg-muted text-muted-foreground" title="折叠">
+        <div className="w-72 flex flex-col flex-1">
+          <div className="flex items-center border-b border-border">
+            <button onClick={() => setRightTab("outline")} className={`flex-1 px-3 py-2 text-xs font-medium ${
+              rightTab === "outline" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+            }`}>大纲</button>
+            <button onClick={() => { setRightTab("ai"); }} className={`flex-1 px-3 py-2 text-xs font-medium ${
+              rightTab === "ai" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+            }`}>✨ AI 助手</button>
+            <button onClick={() => setRightCollapsed(true)} className="p-0.5 px-2 rounded hover:bg-muted text-muted-foreground" title="折叠">
               <PanelRightClose width="14" height="14" />
             </button>
           </div>
-          <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} activeSection={activeSection} onNavigateHeading={handleNavigateHeading} collapsed={rightCollapsed} />
+          {rightTab === "outline" ? (
+            <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} activeSection={activeSection} onNavigateHeading={handleNavigateHeading} collapsed={rightCollapsed} />
+          ) : (
+            <AIChatSidebar editorRef={editorRef} />
+          )}
         </div>
       </div>
 
@@ -545,6 +565,13 @@ function EditorContent() {
         collaboratorIds={collaboratorIds}
         collaborators={collaborators}
         onCollaboratorsChange={setCollaborators}
+      />
+
+      <AIActionForm
+        open={aiFormOpen}
+        onOpenChange={setAIFormOpen}
+        action={editingAction}
+        onSuccess={() => { setAIFormOpen(false); }}
       />
     </div>
   );

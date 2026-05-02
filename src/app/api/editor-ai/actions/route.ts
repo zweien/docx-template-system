@@ -3,12 +3,14 @@ import { auth } from "@/lib/auth";
 import { ZodError } from "zod";
 import {
   listAvailableActions,
+  listAllActions,
   createUserAction,
+  createGlobalAction,
 } from "@/lib/services/editor-ai-action.service";
 import { createActionSchema } from "@/validators/editor-ai";
 
-// GET /api/editor-ai/actions - List available actions for current user
-export async function GET() {
+// GET /api/editor-ai/actions - List actions (admin: all global actions; user: available actions)
+export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
     return NextResponse.json(
@@ -18,6 +20,17 @@ export async function GET() {
   }
 
   try {
+    const { searchParams } = new URL(request.url);
+    const isAdmin = session.user.role === "ADMIN";
+
+    if (isAdmin && searchParams.get("admin") === "true") {
+      const result = await listAllActions();
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      return NextResponse.json({ success: true, data: result.data });
+    }
+
     const result = await listAvailableActions(session.user.id);
 
     if (!result.success) {
@@ -38,7 +51,7 @@ export async function GET() {
   }
 }
 
-// POST /api/editor-ai/actions - Create a user action
+// POST /api/editor-ai/actions - Create action (admin: global; user: personal)
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
@@ -51,6 +64,19 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const parsed = createActionSchema.parse(body);
+    const isAdmin = session.user.role === "ADMIN";
+
+    const { searchParams } = new URL(request.url);
+    const isGlobal = isAdmin && searchParams.get("admin") === "true";
+
+    if (isGlobal) {
+      const result = await createGlobalAction(parsed);
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 400 });
+      }
+      return NextResponse.json({ success: true, data: result.data }, { status: 201 });
+    }
+
     const result = await createUserAction(session.user.id, parsed);
 
     if (!result.success) {

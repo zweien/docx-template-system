@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const parsed = chatSchema.parse(body);
 
-    const { model } = await resolveModel(parsed.model, session.user.id);
+    const { model, providerName, extraParams } = await resolveModel(parsed.model, session.user.id);
 
     let systemPrompt = "你是一个专业的报告写作助手。用户正在撰写报告，你可以帮助润色、改写、扩展、分析文本。\n\n";
 
@@ -37,6 +37,9 @@ export async function POST(req: Request) {
         role: m.role as "user" | "assistant",
         content: m.content,
       })),
+      providerOptions: extraParams
+        ? { [providerName]: extraParams } as Record<string, unknown> as import("@ai-sdk/provider").SharedV3ProviderOptions
+        : undefined,
     });
 
     return result.toTextStreamResponse();

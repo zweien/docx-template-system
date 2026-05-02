@@ -1,6 +1,14 @@
 import { create } from "zustand";
 import type { PinnedSelection } from "@/types/editor-ai";
 
+let _idCounter = 0;
+function generateId(): string {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return generateId();
+  }
+  return `id-${Date.now()}-${++_idCounter}`;
+}
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
@@ -38,7 +46,7 @@ export const useEditorAIStore = create<EditorAIState>((set) => ({
     set((state) => ({
       messages: [
         ...state.messages,
-        { ...msg, id: crypto.randomUUID(), timestamp: Date.now() },
+        { ...msg, id: generateId(), timestamp: Date.now() },
       ],
     })),
   clearMessages: () => set({ messages: [] }),
@@ -50,7 +58,7 @@ export const useEditorAIStore = create<EditorAIState>((set) => ({
       return {
         pinnedSelections: [
           ...state.pinnedSelections,
-          { ...sel, id: crypto.randomUUID(), timestamp: Date.now() },
+          { ...sel, id: generateId(), timestamp: Date.now() },
         ],
       };
     }),

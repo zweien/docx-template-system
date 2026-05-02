@@ -21,38 +21,49 @@ interface AIActionButtonProps {
 
 function getSelection(editor: any): string {
   try {
+    // Try BlockNote's getSelectedText first
+    const selectedText = editor.getSelectedText?.();
+    if (selectedText) return selectedText;
+
     const selectionState = editor.getSelection();
-    if (!selectionState) return "";
-
-    const blocks = editor.topLevelBlocks;
-    const selectedBlocks = blocks.filter(
-      (block: any) =>
-        block.id === selectionState.block ||
-        (selectionState.block &&
-          selectionState.end &&
-          block.id >= selectionState.block &&
-          block.id <= selectionState.end),
-    );
-
-    // Fallback: if no blocks matched by ID range, collect text from focused block
-    if (selectedBlocks.length === 0) {
+    if (!selectionState) {
+      // Fallback: get focused block text
       const focused = editor.focusBlock;
       if (focused) {
-        const content = focused.content?.find((c: any) => c.type === "text");
-        return content?.text ?? "";
+        return extractBlockText(focused);
       }
       return "";
     }
 
-    return selectedBlocks
-      .map((block: any) => {
-        const textContent = block.content?.filter((c: any) => c.type === "text");
-        return textContent?.map((c: any) => c.text).join("") ?? "";
-      })
-      .join("\n");
+    const blocks = editor.topLevelBlocks;
+    const fromBlock = selectionState.from?.block ?? selectionState.block;
+    const toBlock = selectionState.to?.block ?? selectionState.end ?? fromBlock;
+    if (!fromBlock) {
+      const focused = editor.focusBlock;
+      return focused ? extractBlockText(focused) : "";
+    }
+
+    const selectedBlocks = blocks.filter(
+      (block: any) => block.id === fromBlock || (toBlock && block.id === toBlock),
+    );
+
+    if (selectedBlocks.length === 0) {
+      const focused = editor.focusBlock;
+      return focused ? extractBlockText(focused) : "";
+    }
+
+    return selectedBlocks.map(extractBlockText).filter(Boolean).join("\n");
   } catch {
     return "";
   }
+}
+
+function extractBlockText(block: any): string {
+  if (!block?.content) return "";
+  return block.content
+    .filter((c: any) => c.type === "text")
+    .map((c: any) => c.text)
+    .join("");
 }
 
 function getContext(editor: any): string {
@@ -60,10 +71,7 @@ function getContext(editor: any): string {
     const blocks = editor.topLevelBlocks ?? [];
     const text = blocks
       .slice(0, 5)
-      .map((block: any) => {
-        const textContent = block.content?.filter((c: any) => c.type === "text");
-        return textContent?.map((c: any) => c.text).join("") ?? "";
-      })
+      .map(extractBlockText)
       .filter(Boolean)
       .join("\n");
     return text.slice(0, 1000);
@@ -80,9 +88,20 @@ export function AIActionButton({
 }: AIActionButtonProps) {
   const { globalActions, userActions, loading } = useAIActions();
   const [open, setOpen] = useState(false);
+  const [selection, setSelection] = useState("");
+  const [context, setContext] = useState("");
 
-  const selection = getSelection(editor);
-  const context = getContext(editor);
+  const handleOpenChange = useCallback(
+    (nextOpen: boolean) => {
+      if (nextOpen) {
+        // Capture selection BEFORE the popover opens (focus shifts)
+        setSelection(getSelection(editor));
+        setContext(getContext(editor));
+      }
+      setOpen(nextOpen);
+    },
+    [editor],
+  );
 
   const handleOpenSidebar = useCallback(() => {
     setOpen(false);
@@ -103,7 +122,7 @@ export function AIActionButton({
   }, [onCreateAction]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
           <Button

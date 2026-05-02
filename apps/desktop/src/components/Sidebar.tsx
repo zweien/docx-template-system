@@ -67,9 +67,7 @@ export function Sidebar() {
       >
         {/* Logo */}
         <div className={`flex items-center ${collapsed ? "justify-center px-0" : "gap-2.5 px-4"} pt-5 pb-4`}>
-          <div className="w-7 h-7 rounded-md bg-brand flex items-center justify-center text-white font-semibold shrink-0" style={{ fontSize: "0.8em" }}>
-            R
-          </div>
+          <img src="/favicon.png" alt="Logo" className="w-7 h-7 rounded-md shrink-0" />
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
@@ -252,7 +250,7 @@ function AboutContent() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-brand flex items-center justify-center text-white text-lg font-bold">R</div>
+        <img src="/favicon.png" alt="Logo" className="w-12 h-12 rounded-xl" />
         <div>
           <h4 className="text-[1rem] font-medium text-text">预算报告生成器</h4>
           <p className="font-mono text-[0.8rem] text-text-quaternary mt-0.5">Budget Report Generator</p>

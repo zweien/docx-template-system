@@ -51,11 +51,11 @@ export async function saveFileAs(suggestedName: string): Promise<string | null> 
 }
 
 export async function openReport(path: string): Promise<void> {
-  if (!isTauri) {
-    window.open(`file://${path}`, "_blank");
-    return;
-  }
   return invoke("open_report", { path });
+}
+
+export async function saveReportAs(sourcePath: string, suggestedName: string): Promise<string | null> {
+  return invoke("save_report_as", { sourcePath, suggestedName });
 }
 
 export async function getAppDataDir(): Promise<string> {

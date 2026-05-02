@@ -45,12 +45,56 @@ pub async fn select_output_dir(app: AppHandle) -> Result<Option<String>, String>
 }
 
 #[tauri::command]
-pub async fn open_report(app: AppHandle, path: String) -> Result<(), String> {
-    use tauri_plugin_shell::ShellExt;
-    app.shell()
-        .open(&path, None)
-        .map_err(|e| format!("Failed to open report: {}", e))?;
+pub async fn open_report(_app: AppHandle, path: String) -> Result<(), String> {
+    let path = PathBuf::from(&path);
+    if !path.exists() {
+        return Err(format!("文件不存在: {}", path.display()));
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open: {}", e))?;
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| format!("Failed to open: {}", e))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", &path.to_string_lossy()])
+            .spawn()
+            .map_err(|e| format!("Failed to open: {}", e))?;
+    }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn save_report_as(app: AppHandle, source_path: String, suggested_name: String) -> Result<Option<String>, String> {
+    let source = PathBuf::from(&source_path);
+    if !source.exists() {
+        return Err(format!("源文件不存在: {}", source.display()));
+    }
+    use tauri_plugin_dialog::DialogExt;
+    let dest = app
+        .dialog()
+        .file()
+        .add_filter("Word Document", &["docx"])
+        .set_file_name(&suggested_name)
+        .blocking_save_file();
+    match dest {
+        Some(dest_path) => {
+            let dest_str = dest_path.into_path().map_err(|e| format!("无效路径: {}", e))?;
+            fs::copy(&source, &dest_str).map_err(|e| format!("复制失败: {}", e))?;
+            Ok(Some(dest_str.to_string_lossy().to_string()))
+        }
+        None => Ok(None),
+    }
 }
 
 #[tauri::command]
@@ -72,8 +116,14 @@ pub async fn save_file_as(app: AppHandle, suggested_name: String) -> Result<Opti
         .file()
         .add_filter("Word Document", &["docx"])
         .set_file_name(&suggested_name)
-        .blocking_pick_file();
-    Ok(file_path.map(|p| p.to_string()))
+        .blocking_save_file();
+    match file_path {
+        Some(fp) => {
+            let path = fp.into_path().map_err(|e| format!("无效路径: {}", e))?;
+            Ok(Some(path.to_string_lossy().to_string()))
+        }
+        None => Ok(None),
+    }
 }
 
 // ── Template management ──

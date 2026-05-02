@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { renderReport } from "../../services/api";
-import { openReport } from "../../services/tauri-commands";
+import { openReport, saveReportAs } from "../../services/tauri-commands";
 
 export function StepGenerate() {
   const {
@@ -16,7 +16,8 @@ export function StepGenerate() {
 
   const [generating, setGenerating] = useState(false);
   const [done, setDone] = useState(false);
-  const [outputPath, setOutputPath] = useState<string | null>(null);
+  const [tempPath, setTempPath] = useState<string | null>(null);
+  const [savedPath, setSavedPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const template = templates.find((t) => t.id === selectedTemplateId);
@@ -35,7 +36,7 @@ export function StepGenerate() {
       });
 
       if (res.success && res.output_path) {
-        setOutputPath(res.output_path);
+        setTempPath(res.output_path);
         setOutputReportPath(res.output_path);
         setDone(true);
         addLog(`报告生成成功: ${res.output_path}`);
@@ -51,9 +52,35 @@ export function StepGenerate() {
     }
   };
 
-  const handleOpen = async () => {
-    if (outputPath) await openReport(outputPath);
+  const handleSaveAs = async () => {
+    if (!tempPath) return;
+    try {
+      const name = `${template?.name || "报告"}_${new Date().toISOString().slice(0, 10)}.docx`;
+      addLog("选择保存位置...");
+      const dest = await saveReportAs(tempPath, name);
+      if (dest) {
+        setSavedPath(dest);
+        setOutputReportPath(dest);
+        addLog(`报告已保存到: ${dest}`);
+      }
+    } catch (e) {
+      addLog(`保存失败: ${e}`);
+      setError(`保存失败: ${e}`);
+    }
   };
+
+  const handleOpen = async () => {
+    const path = savedPath || tempPath;
+    if (!path) return;
+    try {
+      await openReport(path);
+    } catch (e) {
+      addLog(`打开失败: ${e}`);
+      setError(`打开报告失败: ${e}`);
+    }
+  };
+
+  const displayPath = savedPath || tempPath;
 
   return (
     <div className="space-y-4">
@@ -95,16 +122,34 @@ export function StepGenerate() {
         <div className="bg-red-50 text-red-700 p-4 rounded-lg text-sm">{error}</div>
       )}
 
-      {done && outputPath && (
+      {done && displayPath && (
         <div className="bg-green-50 rounded-lg p-4 space-y-3">
-          <p className="text-green-700 font-medium">报告生成成功!</p>
-          <p className="text-sm text-gray-600 break-all">{outputPath}</p>
-          <div className="flex gap-3">
+          <p className="text-green-700 font-medium">
+            {savedPath ? "报告已保存" : "报告生成成功"}
+          </p>
+          <p className="text-sm text-gray-600 break-all">{displayPath}</p>
+          <div className="flex gap-3 flex-wrap">
+            {!savedPath && (
+              <button
+                onClick={handleSaveAs}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+              >
+                另存为...
+              </button>
+            )}
+            {savedPath && (
+              <button
+                onClick={handleOpen}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+              >
+                打开报告
+              </button>
+            )}
             <button
-              onClick={handleOpen}
-              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+              onClick={handleSaveAs}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
             >
-              打开报告
+              {savedPath ? "另存一份" : "保存到其他位置"}
             </button>
             <button
               onClick={() => setWizardStep(0)}
@@ -113,6 +158,9 @@ export function StepGenerate() {
               重新开始
             </button>
           </div>
+          {!savedPath && (
+            <p className="text-xs text-gray-400">提示：请先"另存为"选择保存位置，然后打开报告</p>
+          )}
         </div>
       )}
     </div>

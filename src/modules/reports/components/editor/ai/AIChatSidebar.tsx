@@ -246,12 +246,26 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
   }, []);
 
   // ---------- Quick action ----------
+  // Replace template variables in prompt: {{selection}}, {{context}}, {{instruction}}
+  const resolvePromptTemplate = useCallback(
+    (template: string) => {
+      let resolved = template;
+      const selectionText = pinnedSelections.map((s) => s.text).join("\n---\n");
+      resolved = resolved.replace(/\{\{selection\}\}/g, selectionText || "(未选中文本)");
+      resolved = resolved.replace(/\{\{context\}\}/g, sectionContent || "(无章节内容)");
+      // {{instruction}} is left as-is for user to fill in
+      return resolved;
+    },
+    [pinnedSelections, sectionContent],
+  );
+
   const handleQuickAction = useCallback(
     (prompt: string) => {
-      setInput(prompt);
+      const resolved = resolvePromptTemplate(prompt);
+      setInput(resolved);
       textareaRef.current?.focus();
     },
-    [],
+    [resolvePromptTemplate],
   );
 
   // ---------- Keyboard ----------
@@ -406,7 +420,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
       {globalActions.length > 0 && (
         <div className="border-t px-3 py-2">
           <div className="flex gap-1.5 overflow-x-auto scrollbar-none">
-            {globalActions.slice(0, 6).map((action) => (
+            {globalActions.map((action) => (
               <button
                 key={action.id}
                 type="button"

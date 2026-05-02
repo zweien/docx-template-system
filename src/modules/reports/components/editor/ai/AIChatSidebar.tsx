@@ -284,10 +284,8 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
   );
 
   // ---------- Render ----------
-  if (!sidebarOpen) return null;
-
   return (
-    <div className="flex h-full w-80 shrink-0 flex-col border-l bg-background">
+    <div className="flex h-full flex-col bg-background overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <Sparkles className="size-4 text-primary" />

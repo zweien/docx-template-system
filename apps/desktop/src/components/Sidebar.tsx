@@ -71,7 +71,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.3.0</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.4.0</p>
             </div>
           )}
         </div>
@@ -202,6 +202,14 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.4.0", date: "2026-05-02", changes: [
+      { type: "feat", text: "GitHub Actions CI/CD：desktop-v* tag 自动构建 Windows MSI" },
+      { type: "feat", text: "应用图标：使用 favicon.png 作为 Logo" },
+      { type: "feat", text: "关于信息：显示 IDRL 开发团队" },
+      { type: "feat", text: "帮助文档、更新日志、关于弹窗" },
+      { type: "feat", text: "可拖拽调整大小的日志面板" },
+      { type: "fix", text: "修复 sidecar 在 Windows 上的可执行文件兼容性" },
+    ]},
     { ver: "0.3.0", date: "2026-05-02", changes: [
       { type: "feat", text: "Linear 风格深色优先设计系统，Inter 字体" },
       { type: "feat", text: "设置视图：字体大小控制（12-28px 快捷选项 + 滑块）" },
@@ -260,7 +268,7 @@ function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.3.0</span>
+          <span className="font-mono text-text">0.4.0</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

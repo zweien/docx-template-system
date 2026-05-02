@@ -137,7 +137,7 @@ export function Settings() {
             <div className="space-y-2 text-[0.8rem]">
               <div className="flex justify-between">
                 <span className="text-text-muted">版本</span>
-                <span className="font-mono text-text-secondary">0.3.0</span>
+                <span className="font-mono text-text-secondary">0.4.0</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted">引擎</span>

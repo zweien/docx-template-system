@@ -1,6 +1,6 @@
 # 预算报告生成器 — 桌面版
 
-> **v0.3.0**
+> **v0.4.0**
 
 基于 Tauri 2.0 的离线预算报告生成桌面应用。将 report-engine 的 DOCX 模板渲染能力打包为独立桌面工具，无需联网即可使用。
 
@@ -105,6 +105,13 @@ apps/desktop/
 - **导入导出** — JSON 文件导入导出，方便团队共享
 
 ## 版本历史
+
+### v0.4.0
+
+- GitHub Actions CI/CD：desktop-v* tag 自动构建 Windows MSI
+- 应用图标：使用 favicon.png 作为 Logo
+- 关于信息：显示 IDRL 开发团队
+- 修复 sidecar 在 Windows 上的可执行文件兼容性
 
 ### v0.3.0
 

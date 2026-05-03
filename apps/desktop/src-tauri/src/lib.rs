@@ -29,6 +29,7 @@ pub fn run() {
             commands::select_docx,
             commands::save_file_as,
             commands::save_report_as,
+            commands::save_data_as,
             commands::list_templates,
             commands::import_template,
             commands::delete_template,

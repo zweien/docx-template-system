@@ -5,10 +5,33 @@ import { ReportContent } from "../types";
 import { useAppStore } from "../stores/app-store";
 import { WarningList } from "./WarningList";
 import { ConfigSelector } from "./ConfigSelector";
+import { saveDataAs } from "../services/tauri-commands";
 
 interface Props {
   onParsed: (content: ReportContent) => void;
   addLog: (msg: string) => void;
+}
+
+async function fetchAndSave(url: string, filename: string) {
+  const res = await fetch(`http://localhost:1420${url}`);
+  const blob = await res.blob();
+  const reader = new FileReader();
+  const base64 = await new Promise<string>((resolve) => {
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      resolve(dataUrl.split(",", 2)[1]);
+    };
+    reader.readAsDataURL(blob);
+  });
+  await saveDataAs(filename, base64, true);
+}
+
+async function downloadSampleXlsx() {
+  await fetchAndSave("/samples/sample-budget.xlsx", "sample-budget.xlsx");
+}
+
+async function downloadSampleConfig() {
+  await fetchAndSave("/samples/sample-config.json", "sample-config.json");
 }
 
 export function ExcelImport({ onParsed, addLog }: Props) {
@@ -79,6 +102,24 @@ export function ExcelImport({ onParsed, addLog }: Props) {
         }`}>
           {fileName || "点击选择 Excel 文件..."}
         </div>
+      </div>
+
+      {/* Sample downloads */}
+      <div className="flex items-center gap-3 px-3 py-2 bg-surface/60 rounded-md border border-dashed border-border text-[0.8rem]">
+        <span className="text-text-quaternary">首次使用？下载示例文件了解格式要求：</span>
+        <button
+          onClick={downloadSampleXlsx}
+          className="text-brand-accent hover:text-brand-hover font-medium transition-colors"
+        >
+          示例 Excel
+        </button>
+        <span className="text-border">|</span>
+        <button
+          onClick={downloadSampleConfig}
+          className="text-brand-accent hover:text-brand-hover font-medium transition-colors"
+        >
+          示例配置
+        </button>
       </div>
 
       <ConfigSelector />

@@ -1,3 +1,4 @@
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -159,6 +160,42 @@ pub async fn save_file_as(app: AppHandle, suggested_name: String) -> Result<Opti
     match file_path {
         Some(fp) => {
             let path = fp.into_path().map_err(|e| format!("无效路径: {}", e))?;
+            Ok(Some(path.to_string_lossy().to_string()))
+        }
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
+pub async fn save_data_as(
+    app: AppHandle,
+    suggested_name: String,
+    data: String,
+    is_base64: bool,
+) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let ext = PathBuf::from(&suggested_name)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("bin")
+        .to_string();
+    let file_path = app
+        .dialog()
+        .file()
+        .add_filter(&format!("{} File", ext.to_uppercase()), &[ext.as_str()])
+        .set_file_name(&suggested_name)
+        .blocking_save_file();
+    match file_path {
+        Some(fp) => {
+            let path = fp.into_path().map_err(|e| format!("无效路径: {}", e))?;
+            if is_base64 {
+                let bytes = base64::engine::general_purpose::STANDARD
+                    .decode(&data)
+                    .map_err(|e| format!("Base64 解码失败: {}", e))?;
+                fs::write(&path, bytes).map_err(|e| format!("写入失败: {}", e))?;
+            } else {
+                fs::write(&path, data).map_err(|e| format!("写入失败: {}", e))?;
+            }
             Ok(Some(path.to_string_lossy().to_string()))
         }
         None => Ok(None),

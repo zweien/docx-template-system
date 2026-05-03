@@ -1,0 +1,32 @@
+{
+  "_comment": "这是示例配置文件，用于解析示例 Excel（sample-budget.xlsx）。导入后可修改以适配自己的 Excel 格式。",
+  "title": "预算报告",
+  "summary": {
+    "_comment_sheet_name": "汇总数据所在的 Sheet 名称",
+    "sheet_name": "汇总页",
+    "_comment_mode": "table 模式：从表格读取键值对；cell_map 模式：直接映射单元格",
+    "mode": "table",
+    "header_row": 1,
+    "key_column": "科目",
+    "value_column": "金额（元）",
+    "prefix": "SUMMARY_"
+  },
+  "sheets": [
+    {
+      "_comment": "每个 sheet 对应 Excel 中的一个工作表，定义列名映射",
+      "name": "设备费明细",
+      "sheet_name": "设备费",
+      "id": "equipment_fee",
+      "columns": {
+        "name": "名称",
+        "spec": "规格",
+        "unit_price": "单价",
+        "quantity": "数量",
+        "amount": "经费",
+        "reason": "购置理由",
+        "basis": "测算依据"
+      },
+      "image_columns": ["报价截图"]
+    }
+  ]
+}

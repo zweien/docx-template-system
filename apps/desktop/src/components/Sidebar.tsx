@@ -71,7 +71,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.4.0</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.5.0</p>
             </div>
           )}
         </div>
@@ -202,6 +202,13 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.5.0", date: "2026-05-03", changes: [
+      { type: "fix", text: "Sidecar 生命周期优化：健康检查通过后才设置端口" },
+      { type: "feat", text: "进程存活检测与自动重启：sidecar 崩溃后自动恢复" },
+      { type: "feat", text: "API 请求重试机制：最多 3 次重试，共享 HTTP 客户端" },
+      { type: "fix", text: "生产模式移除 PYTHONPATH，修复 PyInstaller 导入冲突" },
+      { type: "feat", text: "Windows NSIS 单文件安装包支持" },
+    ]},
     { ver: "0.4.0", date: "2026-05-02", changes: [
       { type: "feat", text: "GitHub Actions CI/CD：desktop-v* tag 自动构建 Windows MSI" },
       { type: "feat", text: "应用图标：使用 favicon.png 作为 Logo" },
@@ -268,7 +275,7 @@ function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.4.0</span>
+          <span className="font-mono text-text">0.5.0</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

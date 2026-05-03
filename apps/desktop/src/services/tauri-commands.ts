@@ -91,6 +91,10 @@ export async function importConfigFromJson(configJson: string): Promise<ConfigMe
   return invoke("import_config", { configJson });
 }
 
+export async function readFileBase64(path: string): Promise<string> {
+  return invoke("read_file_base64", { path });
+}
+
 export async function saveDataAs(
   suggestedName: string,
   data: string,

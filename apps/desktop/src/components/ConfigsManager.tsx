@@ -1,4 +1,5 @@
 import { useState } from "react";
+import JSZip from "jszip";
 import { useAppStore } from "../stores/app-store";
 import {
   listConfigs,
@@ -7,6 +8,7 @@ import {
   exportConfig,
   importConfigFromJson,
   selectExcel,
+  readFileBase64,
 } from "../services/tauri-commands";
 import { BudgetConfig, ConfigMeta } from "../types";
 import { ConfigEditor } from "./ConfigEditor";
@@ -78,17 +80,21 @@ export function ConfigsManager() {
     }
   };
 
-  const handleExport = async (id: string, title: string) => {
+  const handleExport = async (meta: ConfigMeta) => {
     try {
-      const json = await exportConfig(id);
-      const blob = new Blob([json], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${title}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      addLog("配置已导出");
+      const json = await exportConfig(meta.id);
+      const config = JSON.parse(json);
+      const zip = new JSZip();
+      zip.file(`${meta.title}.json`, json);
+      if (config.excel_path) {
+        const base64 = await readFileBase64(config.excel_path);
+        const xlsxName = config.excel_path.split("/").pop() || "data.xlsx";
+        zip.file(xlsxName, base64, { base64: true });
+      }
+      const blob = await zip.generateAsync({ type: "base64" });
+      const { saveDataAs } = await import("../services/tauri-commands");
+      await saveDataAs(`${meta.title}.zip`, blob, true);
+      addLog("已导出为 ZIP");
     } catch (e) {
       addLog(`导出失败: ${e}`);
     }
@@ -111,11 +117,24 @@ export function ConfigsManager() {
       const json = await exportConfig(meta.id);
       const config = JSON.parse(json);
       config.excel_path = path;
-      await saveConfig(meta.id, JSON.stringify(config));
+      await saveConfig(meta.id, config);
       setConfigs(await listConfigs());
       addLog(`已绑定 Excel: ${path.split("/").pop()}`);
     } catch (e) {
       addLog(`绑定失败: ${e}`);
+    }
+  };
+
+  const handleRename = async (id: string, newName: string) => {
+    try {
+      const json = await exportConfig(id);
+      const config = JSON.parse(json);
+      config.title = newName;
+      await saveConfig(id, config);
+      setConfigs(await listConfigs());
+      addLog(`已重命名: ${newName}`);
+    } catch (e) {
+      addLog(`重命名失败: ${e}`);
     }
   };
 
@@ -183,6 +202,7 @@ export function ConfigsManager() {
                 onDelete={handleDelete}
                 onExport={handleExport}
                 onBindExcel={handleBindExcel}
+                onRename={handleRename}
               />
             ))}
           </div>
@@ -194,7 +214,7 @@ export function ConfigsManager() {
           config={editingConfig}
           onChange={(c) => {
             setEditingConfig(c);
-            saveConfig(editingId, JSON.stringify(c)).then((meta) => {
+            saveConfig(editingId, c).then((meta) => {
               listConfigs().then(setConfigs);
               selectConfigId(meta.id);
               addLog(`配置已保存: ${meta.title}`);
@@ -217,14 +237,27 @@ function ConfigCard({
   onDelete,
   onExport,
   onBindExcel,
+  onRename,
 }: {
   meta: ConfigMeta;
   onSelect: (meta: ConfigMeta) => void;
   onEdit: (meta: ConfigMeta) => void;
   onDelete: (id: string) => void;
-  onExport: (id: string, title: string) => void;
+  onExport: (meta: ConfigMeta) => void;
   onBindExcel: (meta: ConfigMeta) => void;
+  onRename: (id: string, newName: string) => void;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(meta.title);
+  const sizeKb = (meta.size / 1024).toFixed(1);
+
+  const handleSaveName = () => {
+    if (name.trim() && name !== meta.title) {
+      onRename(meta.id, name.trim());
+    }
+    setEditing(false);
+  };
+
   return (
     <div className="bg-surface rounded-lg border border-border p-4 hover:border-border-strong transition-all duration-100 group">
       <div className="flex items-start gap-3">
@@ -232,18 +265,32 @@ function ConfigCard({
           ▤
         </div>
         <div className="flex-1 min-w-0">
-          <h3
-            className="text-ui text-[0.867rem] text-text truncate cursor-pointer hover:text-brand-accent transition-colors"
-            onClick={() => onSelect(meta)}
-            title="点击使用此配置"
-          >
-            {meta.title}
-          </h3>
+          {editing ? (
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onBlur={handleSaveName}
+              onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+              autoFocus
+              className="text-ui text-[0.867rem] text-text w-full border-b border-brand-accent outline-none bg-transparent py-0.5"
+            />
+          ) : (
+            <h3
+              className="text-ui text-[0.867rem] text-text truncate cursor-pointer hover:text-brand-accent transition-colors"
+              onDoubleClick={() => setEditing(true)}
+              title="双击编辑名称"
+            >
+              {meta.title}
+            </h3>
+          )}
           <p className="text-[0.667rem] text-text-quaternary mt-0.5 font-mono">
-            {meta.updated_at
-              ? new Date(parseInt(meta.updated_at) * 1000).toLocaleDateString()
-              : ""}
+            {sizeKb} KB · .json · {meta.updated_at ? new Date(parseInt(meta.updated_at) * 1000).toLocaleDateString() : ""}
           </p>
+          {meta.excel_path && (
+            <p className="text-[0.667rem] text-brand-accent mt-0.5 truncate" title={meta.excel_path}>
+              📊 {meta.excel_path.split("/").pop()}
+            </p>
+          )}
         </div>
         <button
           onClick={() => onDelete(meta.id)}
@@ -252,28 +299,29 @@ function ConfigCard({
           ✕
         </button>
       </div>
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      <div className="mt-3 flex items-center gap-2">
         <button
           onClick={() => onSelect(meta)}
           className="px-3 py-1.5 bg-brand text-white rounded-md text-[0.8rem] font-medium hover:bg-brand-hover transition-colors"
         >
           使用
         </button>
+        <span className="text-border">|</span>
         <button
           onClick={() => onEdit(meta)}
-          className="px-3 py-1.5 bg-surface-hover border border-border text-text-secondary rounded-md text-[0.8rem] hover:bg-surface-active transition-colors"
+          className="text-text-muted hover:text-text text-[0.8rem] transition-colors"
         >
           编辑
         </button>
         <button
           onClick={() => onBindExcel(meta)}
-          className="px-3 py-1.5 bg-surface-hover border border-border text-text-secondary rounded-md text-[0.8rem] hover:bg-surface-active transition-colors"
+          className="text-text-muted hover:text-text text-[0.8rem] transition-colors"
         >
           绑定 Excel
         </button>
         <button
-          onClick={() => onExport(meta.id, meta.title)}
-          className="px-3 py-1.5 bg-surface-hover border border-border text-text-secondary rounded-md text-[0.8rem] hover:bg-surface-active transition-colors"
+          onClick={() => onExport(meta)}
+          className="text-text-muted hover:text-text text-[0.8rem] transition-colors"
         >
           导出
         </button>

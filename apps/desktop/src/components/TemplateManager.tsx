@@ -120,7 +120,9 @@ function TemplateCard({
               {template.name}
             </h3>
           )}
-          <p className="text-[0.667rem] text-text-quaternary mt-0.5 font-mono">{sizeKb} KB · .docx</p>
+          <p className="text-[0.667rem] text-text-quaternary mt-0.5 font-mono">
+            {sizeKb} KB · .docx · {template.imported_at ? new Date(parseInt(template.imported_at) * 1000).toLocaleDateString() : ""}
+          </p>
         </div>
         <button
           onClick={() => onDelete(template.id)}

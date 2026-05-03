@@ -114,7 +114,7 @@ function TemplateCard({
   onDelete,
   onRename,
 }: {
-  template: { id: string; name: string; size: number };
+  template: { id: string; name: string; size: number; imported_at: string };
   selected: boolean;
   onSelect: () => void;
   onDelete: (id: string) => void;
@@ -122,6 +122,8 @@ function TemplateCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(template.name);
+  const sizeKb = (template.size / 1024).toFixed(1);
+  const date = template.imported_at ? new Date(parseInt(template.imported_at) * 1000).toLocaleDateString() : "";
 
   const handleSave = () => {
     if (name.trim() && name !== template.name) onRename(template.id, name.trim());
@@ -168,7 +170,7 @@ function TemplateCard({
               {template.name}
             </p>
           )}
-          <p className="text-[0.667rem] text-text-quaternary mt-0.5 font-mono">{(template.size / 1024).toFixed(1)} KB · .docx</p>
+          <p className="text-[0.667rem] text-text-quaternary mt-0.5 font-mono">{sizeKb} KB · .docx · {date}</p>
         </div>
       </div>
     </div>

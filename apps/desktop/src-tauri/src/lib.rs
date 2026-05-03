@@ -42,6 +42,7 @@ pub fn run() {
             commands::import_config,
             commands::sidecar_post,
             commands::sidecar_get,
+            commands::read_file_base64,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

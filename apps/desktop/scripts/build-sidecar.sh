@@ -10,7 +10,13 @@ echo "Sidecar source: $SIDECAR_DIR"
 echo "Output: $BUILD_DIR"
 
 # Install PyInstaller if not present
-pip install pyinstaller --quiet 2>/dev/null || pip3 install pyinstaller --quiet 2>/dev/null
+PYINSTALLER="pyinstaller"
+if [ -d "$SCRIPT_DIR/../.venv" ]; then
+    PYINSTALLER="$SCRIPT_DIR/../.venv/bin/pyinstaller"
+fi
+if ! command -v "$PYINSTALLER" &>/dev/null; then
+    pip install pyinstaller --quiet 2>/dev/null || pip3 install pyinstaller --quiet 2>/dev/null
+fi
 
 # Clean previous build
 rm -rf "$BUILD_DIR"
@@ -24,7 +30,7 @@ echo "Synced report_engine (including budget module)"
 
 # Build
 cd "$SIDECAR_DIR"
-pyinstaller \
+"$PYINSTALLER" \
     --name budget-sidecar \
     --onedir \
     --clean \
@@ -32,9 +38,9 @@ pyinstaller \
     --distpath "$BUILD_DIR" \
     --workpath /tmp/sidecar-build-work \
     --specpath /tmp/sidecar-build-work \
-    --add-data "api:api" \
-    --add-data "scripts:scripts" \
-    --add-data "report_engine:report_engine" \
+    --add-data "$SIDECAR_DIR/api:api" \
+    --add-data "$SIDECAR_DIR/scripts:scripts" \
+    --add-data "$SIDECAR_DIR/report_engine:report_engine" \
     --hidden-import report_engine \
     --hidden-import report_engine.blocks \
     --hidden-import report_engine.renderer \

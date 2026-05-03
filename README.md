@@ -10,7 +10,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-> **v0.7.5**
+> **v0.8.0**
 
 模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。
 
@@ -257,7 +257,7 @@ docker compose -f docker-compose.offline.yml --env-file .env.offline run --rm --
 ### 增量升级建议
 
 - 推荐在内网搭私有 Registry（Harbor/registry:2），镜像按层增量传输
-- 版本升级时仅更新镜像 tag（如 `v0.7.5`），再执行：
+- 版本升级时仅更新镜像 tag（如 `v0.8.0`），再执行：
 
 ```bash
 docker compose -f docker-compose.offline.yml --env-file .env.offline up -d --remove-orphans

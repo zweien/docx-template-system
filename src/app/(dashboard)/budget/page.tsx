@@ -167,6 +167,12 @@ export default function BudgetWizardPage() {
         if (pResult.success) {
           // Auto-advance to step 3
           setStep(3);
+        } else {
+          setValidationError(
+            pResult.error
+              ? `解析失败: ${pResult.error.message}`
+              : "解析失败，请检查 Excel 文件格式"
+          );
         }
       } catch (err) {
         if (!cancelled) {

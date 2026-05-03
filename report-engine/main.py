@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import shutil
 import tempfile
 import uuid
@@ -9,6 +10,7 @@ from typing import Any
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from pydantic import BaseModel
 
 import sys
@@ -39,6 +41,8 @@ BUDGET_TEMPLATES_DIR = os.environ.get(
     "BUDGET_TEMPLATES_DIR",
     str(Path(__file__).parent.parent / "public" / "budget-templates"),
 )
+
+_SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
 
 def _resolve_budget_template(template_path: str) -> str:
@@ -95,7 +99,7 @@ async def render_endpoint(req: RenderRequest):
     try:
         render_report(req.template_path, output_path, req.payload, check_template=False)
         filename = req.output_filename or "report.docx"
-        return FileResponse(output_path, filename=filename, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        return FileResponse(output_path, filename=filename, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", background=BackgroundTask(Path(output_path).unlink, missing_ok=True))
     except Exception as e:
         if Path(output_path).exists():
             Path(output_path).unlink()
@@ -134,6 +138,8 @@ async def parse_excel_endpoint(
     config: str = Form(...),
     session_id: str = Form(...),
 ):
+    if not _SESSION_ID_RE.match(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session_id")
     try:
         config_dict = json.loads(config)
     except json.JSONDecodeError as e:
@@ -180,6 +186,8 @@ async def upload_template_endpoint(file: UploadFile = File(...)):
 
 @app.post("/render-budget")
 async def render_budget_endpoint(req: RenderBudgetRequest):
+    if req.session_id and not _SESSION_ID_RE.match(req.session_id):
+        raise HTTPException(status_code=400, detail="Invalid session_id")
     template_path = _resolve_budget_template(req.template_path)
     if not Path(template_path).exists():
         raise HTTPException(status_code=404, detail=f"Template not found: {template_path}")
@@ -198,6 +206,7 @@ async def render_budget_endpoint(req: RenderBudgetRequest):
             output_path,
             filename=req.output_filename,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            background=BackgroundTask(Path(output_path).unlink, missing_ok=True),
         )
     except Exception as e:
         if Path(output_path).exists():

@@ -100,7 +100,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.0</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.1</p>
             </div>
           )}
         </div>
@@ -231,6 +231,9 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.7.1", date: "2026-05-03", changes: [
+      { type: "feat", text: "更新应用图标为全新紫色 Lab Logo" },
+    ]},
     { ver: "0.7.0", date: "2026-05-03", changes: [
       { type: "feat", text: "独立数据校验功能：根据配置校验 Excel 数据完整性" },
       { type: "feat", text: "校验报告：缺失 sheet/列、空单元格、数值违规、填充率统计" },
@@ -317,7 +320,7 @@ function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.7.0</span>
+          <span className="font-mono text-text">0.7.1</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

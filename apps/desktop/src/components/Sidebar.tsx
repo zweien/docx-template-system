@@ -99,7 +99,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.6.0</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.6.1</p>
             </div>
           )}
         </div>
@@ -230,7 +230,7 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
-    { ver: "0.6.0", date: "2026-05-03", changes: [
+    { ver: "0.6.1", date: "2026-05-03", changes: [
       { type: "feat", text: "响应式布局增强：窄窗口自适应侧边栏、卡片网格、模态框" },
       { type: "feat", text: "配置方案管理页面：卡片管理、绑定 xlsx、ZIP 导出" },
       { type: "feat", text: "示例文件下载（Excel/配置），原生保存对话框" },
@@ -310,7 +310,7 @@ function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.6.0</span>
+          <span className="font-mono text-text">0.6.1</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

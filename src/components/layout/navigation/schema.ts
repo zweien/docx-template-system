@@ -1,8 +1,8 @@
 import type { ComponentType } from "react";
-import { Bot, Database, FilePenLine, FileText, FolderHeart, GitBranch, House, LayoutGrid, Settings2, ShieldCheck, Users, WandSparkles } from "lucide-react";
+import { Bot, Database, FilePenLine, FileText, FolderHeart, GitBranch, House, Info, LayoutGrid, Settings2, ShieldCheck, Users, WandSparkles } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 
-export type NavSection = "main" | "reports" | "admin";
+export type NavSection = "main" | "reports" | "admin" | "footer";
 
 export type NavItem = {
   readonly id: string;
@@ -53,6 +53,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
     order: 10,
     roles: ["ADMIN"],
   },
+  { id: "about", icon: Info, href: "/about", label: "关于", section: "footer", order: 99 },
 ] as const satisfies readonly NavItem[];
 
 /**

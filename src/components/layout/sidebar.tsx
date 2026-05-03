@@ -64,6 +64,7 @@ export function Sidebar() {
   const mainItems = navItems.filter((item) => item.section === "main");
   const reportItems = navItems.filter((item) => item.section === "reports");
   const adminItems = navItems.filter((item) => item.section === "admin");
+  const footerItems = navItems.filter((item) => item.section === "footer");
 
   return (
     <aside
@@ -124,8 +125,17 @@ export function Sidebar() {
         ) : null}
       </nav>
 
-      <div className="shrink-0 px-3 py-2 text-xs text-[#62666d]">
-        {!collapsed ? "IDRL填表系统 " : ""}v{process.env.NEXT_PUBLIC_APP_VERSION}
+      <div className="shrink-0 px-3 py-2">
+        <div className="text-xs text-[#62666d]">
+          {!collapsed ? "IDRL填表系统 " : ""}v{process.env.NEXT_PUBLIC_APP_VERSION}
+        </div>
+        {footerItems.length > 0 && (
+          <div className="mt-1 space-y-1">
+            {footerItems.map((item) => (
+              <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="shrink-0 border-t border-[rgb(255_255_255_/_0.05)]">

@@ -9,6 +9,10 @@ import { OutlinePanel } from "@/modules/reports/components/editor/OutlinePanel";
 import { CollaborationProvider, useCollaboration } from "@/modules/reports/components/editor/CollaborationProvider";
 import { OnlineUsers } from "@/modules/reports/components/editor/OnlineUsers";
 import { ShareDialog } from "@/modules/reports/components/editor/ShareDialog";
+import { AIChatSidebar } from "@/modules/reports/components/editor/ai/AIChatSidebar";
+import { useEditorAIStore } from "@/modules/reports/components/editor/ai/useEditorAIStore";
+import { AIActionForm } from "@/modules/reports/components/editor/ai/AIActionForm";
+import type { EditorAIActionItem } from "@/types/editor-ai";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Streamdown } from "streamdown";
@@ -43,6 +47,7 @@ function EditorContent() {
   const [scrollTargetBlockId, setScrollTargetBlockId] = useState<string | undefined>();
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [rightWidth, setRightWidth] = useState(288);
   const [shareOpen, setShareOpen] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -53,6 +58,9 @@ function EditorContent() {
   const editorRef = useRef<any>(null);
   const [editedPrompt, setEditedPrompt] = useState("");
   const [isEditingPrompt, setIsEditingPrompt] = useState(false);
+  const [rightTab, setRightTab] = useState<"outline" | "ai">("outline");
+  const [aiFormOpen, setAIFormOpen] = useState(false);
+  const [editingAction, setEditingAction] = useState<EditorAIActionItem | null>(null);
 
   const scheduleAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -284,6 +292,22 @@ function EditorContent() {
     setIsGenerating(false);
   }, [activeSection]);
 
+  // Sync section text to AI store for context
+  useEffect(() => {
+    const blocks = draft.sections[activeSection] || [];
+    const text = blocks
+      .map((b: any) => {
+        if (!b.content || !Array.isArray(b.content)) return "";
+        return b.content
+          .filter((s: any) => s.type === "text")
+          .map((s: any) => s.text)
+          .join("");
+      })
+      .filter(Boolean)
+      .join("\n");
+    useEditorAIStore.getState().setSectionContent(text.slice(0, 4000));
+  }, [activeSection, draft.sections]);
+
   useEffect(() => {
     setEditedPrompt(activePrompt?.prompt || "");
     setIsEditingPrompt(false);
@@ -511,22 +535,65 @@ function EditorContent() {
           collabFragment={provider ? getFragment(activeSection) : null}
           collabProvider={provider}
           onEditorMount={(editor) => { editorRef.current = editor; }}
+          onOpenAISidebar={() => { setRightTab("ai"); setRightCollapsed(false); }}
+          onEditAIAction={(action) => { setEditingAction(action); setAIFormOpen(true); }}
+          onCreateAIAction={() => { setEditingAction(null); setAIFormOpen(true); }}
         />
       </div>
 
-      {/* 右侧：大纲面板 */}
-      <div
-        className={`shrink-0 border-l border-border bg-card overflow-y-auto overflow-x-hidden transition-[width] duration-200 flex flex-col ${rightCollapsed ? "w-0 border-l-0" : "w-48"}`}
-      >
-        <div className="w-48 flex flex-col flex-1">
-          <div className="flex items-center justify-end px-3 pt-3 pb-2">
-            <button onClick={() => setRightCollapsed(true)} className="p-0.5 rounded hover:bg-muted text-muted-foreground" title="折叠">
-              <PanelRightClose width="14" height="14" />
-            </button>
+      {/* 右侧：大纲/AI面板 */}
+      {!rightCollapsed && (
+        <div
+          className="shrink-0 border-l border-border bg-card flex flex-col relative"
+          style={{ width: rightWidth }}
+        >
+          {/* Drag handle on left edge */}
+          <div
+            className="absolute top-0 bottom-0 -left-1 z-10 w-2 cursor-col-resize group"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const startX = e.clientX;
+              const startW = rightWidth;
+              document.body.style.cursor = "col-resize";
+              document.body.style.userSelect = "none";
+              const onMove = (ev: MouseEvent) => {
+                const delta = startX - ev.clientX;
+                setRightWidth(Math.min(640, Math.max(220, startW + delta)));
+              };
+              const cleanup = () => {
+                document.body.style.cursor = "";
+                document.body.style.userSelect = "";
+                document.removeEventListener("mousemove", onMove);
+                document.removeEventListener("mouseup", cleanup);
+                window.removeEventListener("blur", cleanup);
+              };
+              document.addEventListener("mousemove", onMove);
+              document.addEventListener("mouseup", cleanup);
+              window.addEventListener("blur", cleanup);
+            }}
+          >
+            <div className="h-full w-0.5 mx-auto bg-transparent group-hover:bg-primary/40 transition-colors" />
           </div>
-          <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} activeSection={activeSection} onNavigateHeading={handleNavigateHeading} collapsed={rightCollapsed} />
+          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="flex items-center border-b border-border">
+              <button onClick={() => setRightTab("outline")} className={`flex-1 px-3 py-2 text-xs font-medium ${
+                rightTab === "outline" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+              }`}>大纲</button>
+              <button onClick={() => { setRightTab("ai"); }} className={`flex-1 px-3 py-2 text-xs font-medium ${
+                rightTab === "ai" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+              }`}>✨ AI 助手</button>
+              <button onClick={() => setRightCollapsed(true)} className="p-0.5 px-2 rounded hover:bg-muted text-muted-foreground" title="折叠">
+                <PanelRightClose width="14" height="14" />
+              </button>
+            </div>
+            {rightTab === "outline" ? (
+              <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} activeSection={activeSection} onNavigateHeading={handleNavigateHeading} collapsed={rightCollapsed} />
+            ) : (
+              <AIChatSidebar editorRef={editorRef} />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 底部操作栏 */}
       <div className="fixed bottom-0 right-0 flex items-center gap-2 border-t border-border bg-card px-6 py-3"
@@ -545,6 +612,13 @@ function EditorContent() {
         collaboratorIds={collaboratorIds}
         collaborators={collaborators}
         onCollaboratorsChange={setCollaborators}
+      />
+
+      <AIActionForm
+        open={aiFormOpen}
+        onOpenChange={setAIFormOpen}
+        action={editingAction}
+        onSuccess={() => { setAIFormOpen(false); }}
       />
     </div>
   );

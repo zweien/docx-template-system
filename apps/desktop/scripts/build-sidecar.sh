@@ -15,6 +15,13 @@ pip install pyinstaller --quiet 2>/dev/null || pip3 install pyinstaller --quiet 
 # Clean previous build
 rm -rf "$BUILD_DIR"
 
+# 同步 report_engine 从主项目（确保 Desktop 用最新代码）
+echo "Syncing report_engine from main project..."
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+rm -rf "$SIDECAR_DIR/report_engine"
+cp -r "$REPO_ROOT/report-engine/src/report_engine" "$SIDECAR_DIR/report_engine"
+echo "Synced report_engine (including budget module)"
+
 # Build
 cd "$SIDECAR_DIR"
 pyinstaller \
@@ -36,6 +43,11 @@ pyinstaller \
     --hidden-import report_engine.converter \
     --hidden-import report_engine.prompt_parser \
     --hidden-import report_engine.schema \
+    --hidden-import report_engine.budget \
+    --hidden-import report_engine.budget.parse_excel \
+    --hidden-import report_engine.budget.validate_excel \
+    --hidden-import report_engine.budget.build_payload \
+    --hidden-import report_engine.budget.models \
     --hidden-import docxtpl \
     --hidden-import docx \
     --hidden-import openpyxl \

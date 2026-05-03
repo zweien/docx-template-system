@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { parseExcel, renderReport } from "../../services/api";
 import { openReport, saveReportAs, getAppDataDir } from "../../services/tauri-commands";
+import { crossValidate } from "../../services/validation";
+import { ValidationResult } from "../../types";
+import { ValidationPanel } from "../ValidationPanel";
 
 export function StepGenerate() {
   const {
@@ -21,6 +24,7 @@ export function StepGenerate() {
   const [tempPath, setTempPath] = useState<string | null>(null);
   const [savedPath, setSavedPath] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
   const template = templates.find((t) => t.id === selectedTemplateId);
 
@@ -28,9 +32,25 @@ export function StepGenerate() {
     if (!template) return;
     setGenerating(true);
     setError(null);
+    setValidationResult(null);
     addLog("开始生成报告...");
 
     try {
+      // Cross-validate all inputs
+      if (excelFilePath && template) {
+        addLog("校验文件...");
+        const crossVal = await crossValidate(template.path, excelFilePath, config);
+        setValidationResult(crossVal);
+        if (!crossVal.canProceed) {
+          setError(`校验失败: ${crossVal.summary.errors} 个错误`);
+          addLog(`校验失败: ${crossVal.summary.errors} 个错误, ${crossVal.summary.warnings} 个警告`);
+          setGenerating(false);
+          return;
+        }
+        if (crossVal.issues.length > 0) {
+          addLog(`校验通过，有 ${crossVal.summary.warnings} 个警告`);
+        }
+      }
       let content = excelContent;
       if (excelFilePath) {
         addLog("使用当前配置重新解析数据...");
@@ -156,6 +176,8 @@ export function StepGenerate() {
           {error}
         </div>
       )}
+
+      <ValidationPanel result={validationResult} />
 
       {done && displayPath && (
         <div className="bg-success-bg border border-success-border rounded-lg p-5 space-y-3">

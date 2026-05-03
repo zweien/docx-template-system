@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { parseExcel } from "../services/api";
 import { selectExcel } from "../services/tauri-commands";
-import { ReportContent } from "../types";
+import { ReportContent, ValidationResult } from "../types";
 import { useAppStore } from "../stores/app-store";
 import { WarningList } from "./WarningList";
+import { ValidationPanel } from "./ValidationPanel";
 import { ConfigSelector } from "./ConfigSelector";
 import { saveDataAs } from "../services/tauri-commands";
+import { validateExcel } from "../services/validation";
 
 interface Props {
   onParsed: (content: ReportContent) => void;
@@ -40,6 +42,7 @@ export function ExcelImport({ onParsed, addLog }: Props) {
   const [loading, setLoading] = useState(false);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [error, setError] = useState("");
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
   const handleSelectFile = async () => {
     const path = await selectExcel();
@@ -56,7 +59,18 @@ export function ExcelImport({ onParsed, addLog }: Props) {
     setLoading(true);
     setWarnings([]);
     setError("");
+    setValidationResult(null);
     try {
+      // Pre-flight validation
+      const preCheck = await validateExcel(filePath, config);
+      setValidationResult(preCheck);
+      if (!preCheck.canProceed) {
+        setError(`Excel 校验失败: ${preCheck.summary.errors} 个错误`);
+        addLog(`Excel 校验失败: ${preCheck.summary.errors} 个错误, ${preCheck.summary.warnings} 个警告`);
+        setLoading(false);
+        return;
+      }
+
       const res = await parseExcel({
         input_path: filePath,
         config,
@@ -130,6 +144,7 @@ export function ExcelImport({ onParsed, addLog }: Props) {
         </div>
       )}
       <WarningList warnings={warnings} />
+      <ValidationPanel result={validationResult} onProceed={() => setValidationResult(null)} />
 
       <div className="flex gap-3 pt-1">
         <button onClick={() => setWizardStep(0)} className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[0.867rem] transition-colors">

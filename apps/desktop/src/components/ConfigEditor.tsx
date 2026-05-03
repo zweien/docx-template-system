@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { BudgetConfig, SheetConfig, SummaryConfig } from "../types";
+import { validateConfigLocal } from "../services/validation";
+import { ValidationPanel } from "./ValidationPanel";
 
 interface Props {
   config: BudgetConfig;
@@ -507,9 +509,12 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
           )}
         </div>
 
-        <div className="px-5 py-3 border-t border-border flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[0.867rem] transition-colors">取消</button>
-          <button onClick={handleSave} className="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[0.867rem] font-medium transition-colors">保存</button>
+        <div className="px-5 py-3 border-t border-border">
+          <ValidationPanel result={validateConfigLocal(local)} />
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={onClose} className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[0.867rem] transition-colors">取消</button>
+            <button onClick={handleSave} className="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[0.867rem] font-medium transition-colors">保存</button>
+          </div>
         </div>
       </div>
     </div>

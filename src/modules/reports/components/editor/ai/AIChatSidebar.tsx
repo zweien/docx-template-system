@@ -14,6 +14,7 @@ import {
   ArrowDownToLine,
   ChevronDown,
   Sparkles,
+  Paperclip,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -42,6 +43,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
     addMessage,
     clearMessages,
     pinnedSelections,
+    addPinnedSelection,
     removePinnedSelection,
     selectedModel,
     setSelectedModel,
@@ -243,16 +245,62 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
     (content: string) => {
       try {
         const editor = editorRef.current;
-        if (!editor?.tryParseMarkdownToBlocks || !editor?.insertBlocks) {
+        if (!editor?.tryParseMarkdownToBlocks || !editor?.insertBlocks) return;
+        const blocks = editor.tryParseMarkdownToBlocks(content);
+        if (!blocks || blocks.length === 0) return;
+
+        const docBlocks: any[] = editor.document ?? editor.topLevelBlocks ?? [];
+
+        const findAndInsert = (blockId: string): boolean => {
+          const findBlock = (list: any[]): any => {
+            for (const b of list) {
+              if (b.id === blockId) return b;
+              if (b.children?.length) {
+                const child = findBlock(b.children);
+                if (child) return child;
+              }
+            }
+            return null;
+          };
+          const match = findBlock(docBlocks);
+          if (match) {
+            editor.insertBlocks(blocks, match, "after");
+            return true;
+          }
+          return false;
+        };
+
+        // 1. Try focused block (editor still has focus)
+        const focused = editor.focusBlock;
+        if (focused) {
+          editor.insertBlocks(blocks, focused, "after");
           return;
         }
-        const blocks = editor.tryParseMarkdownToBlocks(content);
-        if (blocks && blocks.length > 0) {
-          editor.insertBlocks(blocks);
-        }
-      } catch {
-        // Silently fail — the editor API might not be available
-      }
+
+        // 2. Use tracked last focused block ID from SectionEditor
+        const lastFocusedId = (editor as any).__lastFocusedBlockId;
+        if (lastFocusedId && findAndInsert(lastFocusedId)) return;
+
+        // 3. Read block ID from ProseMirror's DOM selection (persists after blur)
+        try {
+          const pm = (editor as any)?._tiptapEditor?.view?.dom as HTMLElement | undefined;
+          if (pm) {
+            const sel = (pm.getRootNode() as Document).getSelection();
+            if (sel && sel.rangeCount > 0) {
+              let node: Node | null = sel.anchorNode;
+              while (node && node !== pm) {
+                const dataId = (node as Element).getAttribute?.("data-id");
+                if (dataId && findAndInsert(dataId)) return;
+                node = node.parentElement;
+              }
+            }
+          }
+        } catch {}
+
+        // 4. Fallback: end of document
+        const lastBlock = docBlocks[docBlocks.length - 1];
+        if (lastBlock) editor.insertBlocks(blocks, lastBlock, "after");
+      } catch {}
     },
     [editorRef],
   );
@@ -341,7 +389,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
       )}
 
       {/* Messages area */}
-      <ScrollArea className="flex-1" ref={scrollRef}>
+      <ScrollArea className="min-h-0 flex-1" ref={scrollRef}>
         <div className="flex flex-col gap-3 p-3">
           {messages.length === 0 && (
             <div className="py-8 text-center text-xs text-muted-foreground">
@@ -468,6 +516,27 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
 
       {/* Input area */}
       <div className="border-t p-3">
+        {/* Quote selection button */}
+        <div className="mb-2 flex items-center gap-1.5">
+          <Button
+            variant="outline"
+            size="xs"
+            className="h-6 gap-1 text-xs"
+            onClick={() => {
+              const editor = editorRef.current;
+              if (!editor) return;
+              const text = editor.getSelectedText?.();
+              if (!text?.trim()) return;
+              const focused = editor.focusBlock;
+              const blockIds = focused ? [focused.id] : [];
+              addPinnedSelection({ text: text.trim(), blockIds });
+            }}
+            title="引用编辑器中选中的文字"
+          >
+            <Paperclip className="size-3" />
+            引用选中文本
+          </Button>
+        </div>
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}

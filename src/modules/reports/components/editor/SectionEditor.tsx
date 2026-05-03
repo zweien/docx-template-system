@@ -169,6 +169,28 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
+  // Track last focused block ID so sidebar insertions go to the right place
+  useEffect(() => {
+    const pmView = (editor as any)?._tiptapEditor?.view;
+    if (!pmView?.updateState) return;
+    const origUpdateState = pmView.updateState.bind(pmView);
+    pmView.updateState = (state: any) => {
+      origUpdateState(state);
+      const pos = state.selection?.$anchor;
+      if (pos) {
+        for (let d = pos.depth; d > 0; d--) {
+          const node = pos.node(d);
+          if (node.attrs?.id) {
+            (editor as any).__lastFocusedBlockId = node.attrs.id;
+            return;
+          }
+        }
+      }
+    };
+    return () => { pmView.updateState = origUpdateState; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
+
 
   // Load content after mount via replaceBlocks so errors can be caught.
   // In collab mode: wait until the Yjs provider has synced so we know whether

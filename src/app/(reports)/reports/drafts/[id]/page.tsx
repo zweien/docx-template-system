@@ -47,6 +47,7 @@ function EditorContent() {
   const [scrollTargetBlockId, setScrollTargetBlockId] = useState<string | undefined>();
   const [leftCollapsed, setLeftCollapsed] = useState(false);
   const [rightCollapsed, setRightCollapsed] = useState(false);
+  const [rightWidth, setRightWidth] = useState(288);
   const [shareOpen, setShareOpen] = useState(false);
 
   const [isGenerating, setIsGenerating] = useState(false);
@@ -525,28 +526,58 @@ function EditorContent() {
       </div>
 
       {/* 右侧：大纲/AI面板 */}
-      <div
-        className={`shrink-0 border-l border-border bg-card overflow-y-auto overflow-x-hidden transition-[width] duration-200 flex flex-col ${rightCollapsed ? "w-0 border-l-0" : "w-72"}`}
-      >
-        <div className="w-72 flex flex-col flex-1">
-          <div className="flex items-center border-b border-border">
-            <button onClick={() => setRightTab("outline")} className={`flex-1 px-3 py-2 text-xs font-medium ${
-              rightTab === "outline" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
-            }`}>大纲</button>
-            <button onClick={() => { setRightTab("ai"); }} className={`flex-1 px-3 py-2 text-xs font-medium ${
-              rightTab === "ai" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
-            }`}>✨ AI 助手</button>
-            <button onClick={() => setRightCollapsed(true)} className="p-0.5 px-2 rounded hover:bg-muted text-muted-foreground" title="折叠">
-              <PanelRightClose width="14" height="14" />
-            </button>
+      {!rightCollapsed && (
+        <div
+          className="shrink-0 border-l border-border bg-card flex flex-col relative"
+          style={{ width: rightWidth }}
+        >
+          {/* Drag handle on left edge */}
+          <div
+            className="absolute top-0 bottom-0 -left-1 z-10 w-2 cursor-col-resize group"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              const startX = e.clientX;
+              const startW = rightWidth;
+              document.body.style.cursor = "col-resize";
+              document.body.style.userSelect = "none";
+              const onMove = (ev: MouseEvent) => {
+                const delta = startX - ev.clientX;
+                setRightWidth(Math.min(640, Math.max(220, startW + delta)));
+              };
+              const cleanup = () => {
+                document.body.style.cursor = "";
+                document.body.style.userSelect = "";
+                document.removeEventListener("mousemove", onMove);
+                document.removeEventListener("mouseup", cleanup);
+                window.removeEventListener("blur", cleanup);
+              };
+              document.addEventListener("mousemove", onMove);
+              document.addEventListener("mouseup", cleanup);
+              window.addEventListener("blur", cleanup);
+            }}
+          >
+            <div className="h-full w-0.5 mx-auto bg-transparent group-hover:bg-primary/40 transition-colors" />
           </div>
-          {rightTab === "outline" ? (
-            <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} activeSection={activeSection} onNavigateHeading={handleNavigateHeading} collapsed={rightCollapsed} />
-          ) : (
-            <AIChatSidebar editorRef={editorRef} />
-          )}
+          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+            <div className="flex items-center border-b border-border">
+              <button onClick={() => setRightTab("outline")} className={`flex-1 px-3 py-2 text-xs font-medium ${
+                rightTab === "outline" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+              }`}>大纲</button>
+              <button onClick={() => { setRightTab("ai"); }} className={`flex-1 px-3 py-2 text-xs font-medium ${
+                rightTab === "ai" ? "text-primary border-b-2 border-primary" : "text-muted-foreground hover:text-foreground"
+              }`}>✨ AI 助手</button>
+              <button onClick={() => setRightCollapsed(true)} className="p-0.5 px-2 rounded hover:bg-muted text-muted-foreground" title="折叠">
+                <PanelRightClose width="14" height="14" />
+              </button>
+            </div>
+            {rightTab === "outline" ? (
+              <OutlinePanel sections={draft.sections} sectionEnabled={draft.sectionEnabled} activeSection={activeSection} onNavigateHeading={handleNavigateHeading} collapsed={rightCollapsed} />
+            ) : (
+              <AIChatSidebar editorRef={editorRef} />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 底部操作栏 */}
       <div className="fixed bottom-0 right-0 flex items-center gap-2 border-t border-border bg-card px-6 py-3"

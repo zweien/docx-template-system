@@ -34,6 +34,21 @@ app.add_middleware(
 )
 
 BUDGET_TEMP_DIR = Path(tempfile.gettempdir()) / "report-engine-budget"
+BUDGET_TEMPLATES_DIR = os.environ.get(
+    "BUDGET_TEMPLATES_DIR",
+    str(Path(__file__).parent.parent / "public" / "budget-templates"),
+)
+
+
+def _resolve_budget_template(template_path: str) -> str:
+    """将模板名解析为绝对路径。如果已是绝对路径且存在则直接返回，否则在 BUDGET_TEMPLATES_DIR 中查找。"""
+    p = Path(template_path)
+    if p.is_absolute() and p.exists():
+        return str(p)
+    resolved = Path(BUDGET_TEMPLATES_DIR) / p.name
+    if resolved.exists():
+        return str(resolved)
+    return template_path
 
 
 class ParseRequest(BaseModel):
@@ -149,13 +164,14 @@ async def parse_excel_endpoint(
 
 @app.post("/render-budget")
 async def render_budget_endpoint(req: RenderBudgetRequest):
-    if not Path(req.template_path).exists():
-        raise HTTPException(status_code=404, detail="Template file not found")
+    template_path = _resolve_budget_template(req.template_path)
+    if not Path(template_path).exists():
+        raise HTTPException(status_code=404, detail=f"Template not found: {template_path}")
 
     output_path = tempfile.mktemp(suffix=".docx")
     try:
-        payload = build_payload(req.content, template_path=req.template_path)
-        render_report(req.template_path, output_path, payload, check_template=False)
+        payload = build_payload(req.content, template_path=template_path)
+        render_report(template_path, output_path, payload, check_template=False)
 
         if req.session_id:
             session_dir = BUDGET_TEMP_DIR / req.session_id

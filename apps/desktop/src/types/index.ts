@@ -31,12 +31,15 @@ export interface BudgetConfig {
   title: string;
   summary?: SummaryConfig;
   sheets: SheetConfig[];
+  excel_path?: string;
 }
 
 export interface ConfigMeta {
   id: string;
   title: string;
   updated_at: string;
+  size: number;
+  excel_path?: string;
 }
 
 export interface SummaryConfig {

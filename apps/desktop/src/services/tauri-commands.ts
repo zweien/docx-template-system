@@ -90,3 +90,34 @@ export async function exportConfig(id: string): Promise<string> {
 export async function importConfigFromJson(configJson: string): Promise<ConfigMeta> {
   return invoke("import_config", { configJson });
 }
+
+export async function readFileBase64(path: string): Promise<string> {
+  return invoke("read_file_base64", { path });
+}
+
+export async function saveDataAs(
+  suggestedName: string,
+  data: string,
+  isBase64: boolean,
+): Promise<string | null> {
+  if (!isTauri) {
+    // Browser fallback: download via blob
+    let blob: Blob;
+    if (isBase64) {
+      const binary = atob(data);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      blob = new Blob([bytes]);
+    } else {
+      blob = new Blob([data], { type: "application/json" });
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = suggestedName;
+    a.click();
+    URL.revokeObjectURL(url);
+    return suggestedName;
+  }
+  return invoke("save_data_as", { suggestedName, data, isBase64 });
+}

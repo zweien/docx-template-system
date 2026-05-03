@@ -1,16 +1,36 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore, AppView, ThemeMode } from "../stores/app-store";
 
 type ModalType = "help" | "changelog" | "about" | null;
+
+const NARROW_BREAKPOINT = 768;
 
 export function Sidebar() {
   const { currentView, setCurrentView, settings, updateSettings } = useAppStore();
   const [collapsed, setCollapsed] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      const narrow = window.innerWidth < NARROW_BREAKPOINT;
+      setIsNarrow(narrow);
+      if (narrow) setCollapsed(true);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const handleNavClick = (view: AppView) => {
+    setCurrentView(view);
+    if (isNarrow) setCollapsed(true);
+  };
 
   const items: { view: AppView; icon: string; label: string; desc: string }[] = [
     { view: "wizard", icon: "◆", label: "生成报告", desc: "四步向导" },
     { view: "templates", icon: "⊞", label: "模板管理", desc: "导入与管理" },
+    { view: "configs", icon: "▤", label: "配置方案", desc: "管理与编辑" },
   ];
 
   const toggleTheme = () => {
@@ -24,7 +44,7 @@ export function Sidebar() {
     return (
       <button
         key={item.view}
-        onClick={() => setCurrentView(item.view)}
+        onClick={() => handleNavClick(item.view)}
         className={`w-full flex items-center rounded-md transition-all duration-150 ${
           collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-2.5 py-1.5 text-left"
         } ${
@@ -60,10 +80,18 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Overlay backdrop for narrow screens when sidebar is expanded */}
+      {isNarrow && !collapsed && (
+        <div className="sidebar-collapsed-overlay" onClick={() => setCollapsed(true)} />
+      )}
       <aside
-        className={`bg-sidebar-bg border-r border-sidebar-border flex flex-col shrink-0 select-none transition-all duration-200 ${
-          collapsed ? "w-12" : "w-52"
-        }`}
+        className={`bg-sidebar-bg border-r border-sidebar-border flex flex-col shrink-0 select-none sidebar-transition ${
+          isNarrow && collapsed
+            ? "w-12"
+            : collapsed
+            ? "w-12"
+            : "w-52"
+        } ${isNarrow && !collapsed ? "fixed left-0 top-0 bottom-0 z-50" : "relative"}`}
       >
         {/* Logo */}
         <div className={`flex items-center ${collapsed ? "justify-center px-0" : "gap-2.5 px-4"} pt-5 pb-4`}>
@@ -71,7 +99,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.5.0</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.6.0</p>
             </div>
           )}
         </div>
@@ -142,7 +170,7 @@ function SidebarModal({ type, onClose }: { type: ModalType; onClose: () => void 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-panel rounded-lg border border-border shadow-2xl w-[520px] max-h-[70vh] flex flex-col"
+        className="modal-panel bg-panel rounded-lg border border-border shadow-2xl w-[520px] max-h-[70vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-3.5 border-b border-border flex justify-between items-center">
@@ -202,6 +230,13 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.6.0", date: "2026-05-03", changes: [
+      { type: "feat", text: "响应式布局增强：窄窗口自适应侧边栏、卡片网格、模态框" },
+      { type: "feat", text: "配置方案管理页面：卡片管理、绑定 xlsx、ZIP 导出" },
+      { type: "feat", text: "示例文件下载（Excel/配置），原生保存对话框" },
+      { type: "feat", text: "卡片信息统一：文件大小、日期、双击重命名" },
+      { type: "fix", text: "修复配置编辑器双重 JSON 序列化导致内容消失" },
+    ]},
     { ver: "0.5.0", date: "2026-05-03", changes: [
       { type: "fix", text: "Sidecar 生命周期优化：健康检查通过后才设置端口" },
       { type: "feat", text: "进程存活检测与自动重启：sidecar 崩溃后自动恢复" },
@@ -275,7 +310,7 @@ function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.5.0</span>
+          <span className="font-mono text-text">0.6.0</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

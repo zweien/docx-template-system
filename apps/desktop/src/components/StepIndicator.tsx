@@ -6,7 +6,7 @@ interface Props {
 
 export function StepIndicator({ steps, current, onChange }: Props) {
   return (
-    <div className="flex items-center gap-0 mb-8">
+    <div className="step-indicator flex items-center gap-0 mb-8">
       {steps.map((step, idx) => {
         const isPast = idx < current;
         const isCurrent = idx === current;
@@ -41,7 +41,7 @@ export function StepIndicator({ steps, current, onChange }: Props) {
               </span>
             </button>
             {idx < steps.length - 1 && (
-              <div className={`flex-1 h-px mx-3 transition-colors duration-300 ${
+              <div className={`step-connector flex-1 h-px mx-3 transition-colors duration-300 ${
                 idx < current ? "bg-success/30" : "bg-border"
               }`} />
             )}

@@ -1,6 +1,6 @@
 {
   "productName": "Budget Report Generator",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "identifier": "com.example.budget-report",
   "build": {
     "beforeDevCommand": "npm run dev",

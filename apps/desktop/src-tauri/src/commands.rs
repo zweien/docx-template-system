@@ -1,3 +1,4 @@
+use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -17,37 +18,12 @@ pub struct SidecarInfo {
 // ── Config types ──
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SummaryConfigRust {
-    pub sheet_name: String,
-    pub mode: String,
-    pub header_row: Option<u32>,
-    pub key_column: Option<String>,
-    pub value_column: Option<String>,
-    pub prefix: Option<String>,
-    pub mappings: Option<HashMap<String, String>>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SheetConfigRust {
-    pub name: String,
-    pub sheet_name: String,
-    pub id: String,
-    pub columns: HashMap<String, String>,
-    pub image_columns: Option<Vec<String>>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct BudgetConfigRust {
-    pub title: String,
-    pub summary: Option<SummaryConfigRust>,
-    pub sheets: Vec<SheetConfigRust>,
-}
-
-#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct ConfigMeta {
     pub id: String,
     pub title: String,
     pub updated_at: String,
+    pub size: u64,
+    pub excel_path: Option<String>,
 }
 
 #[tauri::command]
@@ -159,6 +135,42 @@ pub async fn save_file_as(app: AppHandle, suggested_name: String) -> Result<Opti
     match file_path {
         Some(fp) => {
             let path = fp.into_path().map_err(|e| format!("无效路径: {}", e))?;
+            Ok(Some(path.to_string_lossy().to_string()))
+        }
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
+pub async fn save_data_as(
+    app: AppHandle,
+    suggested_name: String,
+    data: String,
+    is_base64: bool,
+) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let ext = PathBuf::from(&suggested_name)
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("bin")
+        .to_string();
+    let file_path = app
+        .dialog()
+        .file()
+        .add_filter(&format!("{} File", ext.to_uppercase()), &[ext.as_str()])
+        .set_file_name(&suggested_name)
+        .blocking_save_file();
+    match file_path {
+        Some(fp) => {
+            let path = fp.into_path().map_err(|e| format!("无效路径: {}", e))?;
+            if is_base64 {
+                let bytes = base64::engine::general_purpose::STANDARD
+                    .decode(&data)
+                    .map_err(|e| format!("Base64 解码失败: {}", e))?;
+                fs::write(&path, bytes).map_err(|e| format!("写入失败: {}", e))?;
+            } else {
+                fs::write(&path, data).map_err(|e| format!("写入失败: {}", e))?;
+            }
             Ok(Some(path.to_string_lossy().to_string()))
         }
         None => Ok(None),
@@ -335,7 +347,9 @@ pub fn list_configs(app: AppHandle) -> Result<Vec<ConfigMeta>, String> {
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) == Some("json") {
             if let Ok(data) = fs::read_to_string(&path) {
-                if let Ok(cfg) = serde_json::from_str::<BudgetConfigRust>(&data) {
+                if let Ok(val) = serde_json::from_str::<serde_json::Value>(&data) {
+                    let title = val.get("title").and_then(|v| v.as_str()).unwrap_or("未命名").to_string();
+                    let excel_path = val.get("excel_path").and_then(|v| v.as_str()).map(|s| s.to_string());
                     let id = path
                         .file_stem()
                         .and_then(|n| n.to_str())
@@ -347,10 +361,15 @@ pub fn list_configs(app: AppHandle) -> Result<Vec<ConfigMeta>, String> {
                         .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
                         .map(|d| d.as_secs().to_string())
                         .unwrap_or_default();
+                    let size = fs::metadata(&path)
+                        .map(|m| m.len())
+                        .unwrap_or(0);
                     configs.push(ConfigMeta {
                         id,
-                        title: cfg.title,
+                        title,
                         updated_at,
+                        size,
+                        excel_path,
                     });
                 }
             }
@@ -389,6 +408,8 @@ pub fn save_config(
         id: config_id,
         title,
         updated_at,
+        size: fs::metadata(&path).map(|m| m.len()).unwrap_or(0),
+        excel_path: val.get("excel_path").and_then(|v| v.as_str()).map(|s| s.to_string()),
     })
 }
 
@@ -410,6 +431,16 @@ pub fn export_config(app: AppHandle, id: String) -> Result<String, String> {
         return Err("配置不存在".to_string());
     }
     fs::read_to_string(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn read_file_base64(path: String) -> Result<String, String> {
+    let path = PathBuf::from(&path);
+    if !path.exists() {
+        return Err(format!("文件不存在: {}", path.display()));
+    }
+    let bytes = fs::read(&path).map_err(|e| format!("读取失败: {}", e))?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(&bytes))
 }
 
 #[tauri::command]

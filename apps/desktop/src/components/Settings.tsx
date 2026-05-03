@@ -15,8 +15,8 @@ export function Settings() {
   };
 
   return (
-    <div className="flex-1 p-8 overflow-auto">
-      <div className="max-w-xl">
+    <div className="content-page flex-1 overflow-auto">
+      <div className="max-w-xl mx-auto">
         <h2 className="text-heading text-lg text-text">设置</h2>
         <p className="text-caption text-text-muted mt-1">应用外观与偏好</p>
 
@@ -137,7 +137,7 @@ export function Settings() {
             <div className="space-y-2 text-[0.8rem]">
               <div className="flex justify-between">
                 <span className="text-text-muted">版本</span>
-                <span className="font-mono text-text-secondary">0.4.0</span>
+                <span className="font-mono text-text-secondary">0.6.0</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-text-muted">引擎</span>

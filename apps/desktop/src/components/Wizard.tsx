@@ -19,7 +19,7 @@ export function Wizard() {
 
   return (
     <main className="flex-1 overflow-auto">
-      <div className="max-w-4xl mx-auto px-8 py-8">
+      <div className="max-w-4xl mx-auto px-4 py-4 md:px-8 md:py-8">
         <StepIndicator steps={STEPS} current={wizardStep} onChange={handleStepClick} />
 
         {wizardStep === 0 && <StepTemplateSelect />}

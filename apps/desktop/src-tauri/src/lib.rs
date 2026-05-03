@@ -29,6 +29,7 @@ pub fn run() {
             commands::select_docx,
             commands::save_file_as,
             commands::save_report_as,
+            commands::save_data_as,
             commands::list_templates,
             commands::import_template,
             commands::delete_template,
@@ -41,6 +42,7 @@ pub fn run() {
             commands::import_config,
             commands::sidecar_post,
             commands::sidecar_get,
+            commands::read_file_base64,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

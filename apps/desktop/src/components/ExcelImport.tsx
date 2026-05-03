@@ -105,7 +105,7 @@ export function ExcelImport({ onParsed, addLog }: Props) {
       </div>
 
       {/* Sample downloads */}
-      <div className="flex items-center gap-3 px-3 py-2 bg-surface/60 rounded-md border border-dashed border-border text-[0.8rem]">
+      <div className="sample-bar flex items-center gap-3 px-3 py-2 bg-surface/60 rounded-md border border-dashed border-border text-[0.8rem]">
         <span className="text-text-quaternary">首次使用？下载示例文件了解格式要求：</span>
         <button
           onClick={downloadSampleXlsx}

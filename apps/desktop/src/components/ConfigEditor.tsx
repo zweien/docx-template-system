@@ -186,7 +186,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-panel rounded-lg w-[860px] max-h-[85vh] flex flex-col border border-border shadow-2xl">
+      <div className="modal-panel bg-panel rounded-lg w-[860px] max-h-[85vh] flex flex-col border border-border shadow-2xl">
         <div className="px-5 py-3.5 border-b border-border flex justify-between items-center">
           <h3 className="text-ui text-[0.933rem] text-text">编辑配置</h3>
           <button onClick={onClose} className="w-6 h-6 rounded-md hover:bg-surface-hover flex items-center justify-center text-text-quaternary hover:text-text transition-colors text-lg">&times;</button>
@@ -244,7 +244,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
 
               {local.summary && (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="form-grid-2 grid grid-cols-2 gap-3">
                     <div>
                       <label className={labelCls}>Excel Sheet</label>
                       <input
@@ -269,7 +269,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                   {local.summary.mode === "table" && (
                     <div className="bg-surface rounded-md border border-border-subtle p-4 space-y-3">
                       <h4 className="text-ui text-[0.8rem] text-text-muted">表格模式配置</h4>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="form-grid-3 grid grid-cols-3 gap-3">
                         <div>
                           <label className={labelCls}>表头行号</label>
                           <input
@@ -383,7 +383,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       </button>
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="form-grid-3 grid grid-cols-3 gap-3">
                     <div>
                       <label className={labelCls}>章节名称</label>
                       <input

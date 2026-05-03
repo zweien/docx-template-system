@@ -199,3 +199,90 @@ select option {
   background: rgba(94, 106, 210, 0.25);
   color: #1a1a1a;
 }
+
+/* ─── Responsive Utilities ─── */
+
+/* Narrow window: compact padding for content areas */
+@media (max-width: 768px) {
+  .content-page {
+    padding: 1rem;
+  }
+  .content-page .max-w-3xl,
+  .content-page .max-w-4xl,
+  .content-page .max-w-xl {
+    max-width: 100%;
+  }
+  /* Responsive modal */
+  .modal-panel {
+    width: calc(100vw - 2rem) !important;
+    max-width: 100% !important;
+    max-height: 90vh !important;
+  }
+  /* Responsive form grids inside modals */
+  .form-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+  .form-grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+  /* Step indicator: allow wrapping */
+  .step-indicator {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .step-indicator .step-connector {
+    display: none;
+  }
+  /* Sample download area wrap */
+  .sample-bar {
+    flex-wrap: wrap;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .content-page {
+    padding: 1.5rem;
+  }
+  .modal-panel {
+    width: calc(100vw - 4rem) !important;
+  }
+  .form-grid-3 {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (min-width: 1025px) {
+  .content-page {
+    padding: 2rem;
+  }
+}
+
+/* Very narrow: force single-column cards */
+@media (max-width: 480px) {
+  .card-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Small screens: show 2-column cards even below Tailwind's md breakpoint */
+@media (min-width: 481px) and (max-width: 767px) {
+  .card-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Smooth transitions for layout shifts */
+.sidebar-transition {
+  transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Collapsed sidebar overlay for narrow windows */
+@media (max-width: 640px) {
+  .sidebar-collapsed-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+  }
+}

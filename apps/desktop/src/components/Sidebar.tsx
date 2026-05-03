@@ -1,12 +1,31 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppStore, AppView, ThemeMode } from "../stores/app-store";
 
 type ModalType = "help" | "changelog" | "about" | null;
+
+const NARROW_BREAKPOINT = 768;
 
 export function Sidebar() {
   const { currentView, setCurrentView, settings, updateSettings } = useAppStore();
   const [collapsed, setCollapsed] = useState(false);
   const [modal, setModal] = useState<ModalType>(null);
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    const check = () => {
+      const narrow = window.innerWidth < NARROW_BREAKPOINT;
+      setIsNarrow(narrow);
+      if (narrow) setCollapsed(true);
+    };
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const handleNavClick = (view: AppView) => {
+    setCurrentView(view);
+    if (isNarrow) setCollapsed(true);
+  };
 
   const items: { view: AppView; icon: string; label: string; desc: string }[] = [
     { view: "wizard", icon: "◆", label: "生成报告", desc: "四步向导" },
@@ -25,7 +44,7 @@ export function Sidebar() {
     return (
       <button
         key={item.view}
-        onClick={() => setCurrentView(item.view)}
+        onClick={() => handleNavClick(item.view)}
         className={`w-full flex items-center rounded-md transition-all duration-150 ${
           collapsed ? "justify-center px-0 py-2" : "gap-2.5 px-2.5 py-1.5 text-left"
         } ${
@@ -61,10 +80,18 @@ export function Sidebar() {
 
   return (
     <>
+      {/* Overlay backdrop for narrow screens when sidebar is expanded */}
+      {isNarrow && !collapsed && (
+        <div className="sidebar-collapsed-overlay" onClick={() => setCollapsed(true)} />
+      )}
       <aside
-        className={`bg-sidebar-bg border-r border-sidebar-border flex flex-col shrink-0 select-none transition-all duration-200 ${
-          collapsed ? "w-12" : "w-52"
-        }`}
+        className={`bg-sidebar-bg border-r border-sidebar-border flex flex-col shrink-0 select-none sidebar-transition ${
+          isNarrow && collapsed
+            ? "w-12"
+            : collapsed
+            ? "w-12"
+            : "w-52"
+        } ${isNarrow && !collapsed ? "fixed left-0 top-0 bottom-0 z-50" : "relative"}`}
       >
         {/* Logo */}
         <div className={`flex items-center ${collapsed ? "justify-center px-0" : "gap-2.5 px-4"} pt-5 pb-4`}>
@@ -143,7 +170,7 @@ function SidebarModal({ type, onClose }: { type: ModalType; onClose: () => void 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50" onClick={onClose}>
       <div
-        className="bg-panel rounded-lg border border-border shadow-2xl w-[520px] max-h-[70vh] flex flex-col"
+        className="modal-panel bg-panel rounded-lg border border-border shadow-2xl w-[520px] max-h-[70vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-3.5 border-b border-border flex justify-between items-center">

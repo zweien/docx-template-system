@@ -154,8 +154,8 @@ export function ConfigsManager() {
   };
 
   return (
-    <div className="flex-1 p-8 overflow-auto">
-      <div className="max-w-3xl">
+    <div className="content-page flex-1 overflow-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-heading text-lg text-text">配置方案</h2>
@@ -192,7 +192,7 @@ export function ConfigsManager() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 card-grid">
             {configs.map((c) => (
               <ConfigCard
                 key={c.id}

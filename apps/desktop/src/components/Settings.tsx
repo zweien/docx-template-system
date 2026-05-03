@@ -15,8 +15,8 @@ export function Settings() {
   };
 
   return (
-    <div className="flex-1 p-8 overflow-auto">
-      <div className="max-w-xl">
+    <div className="content-page flex-1 overflow-auto">
+      <div className="max-w-xl mx-auto">
         <h2 className="text-heading text-lg text-text">设置</h2>
         <p className="text-caption text-text-muted mt-1">应用外观与偏好</p>
 

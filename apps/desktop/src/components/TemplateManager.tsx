@@ -38,8 +38,8 @@ export function TemplateManager() {
   };
 
   return (
-    <div className="flex-1 p-8 overflow-auto">
-      <div className="max-w-3xl">
+    <div className="content-page flex-1 overflow-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h2 className="text-heading text-lg text-text">模板管理</h2>
@@ -62,7 +62,7 @@ export function TemplateManager() {
             <p className="text-[0.733rem] text-text-quaternary mt-1">点击上方按钮导入 .docx 模板文件</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 card-grid">
             {templates.map((t) => (
               <TemplateCard key={t.id} template={t} onUse={handleUse} onDelete={handleDelete} onRename={handleRename} />
             ))}

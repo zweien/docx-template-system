@@ -31,6 +31,7 @@ export interface BudgetConfig {
   title: string;
   summary?: SummaryConfig;
   sheets: SheetConfig[];
+  excel_path?: string;
 }
 
 export interface ConfigMeta {

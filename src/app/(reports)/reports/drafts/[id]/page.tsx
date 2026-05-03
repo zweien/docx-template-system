@@ -297,7 +297,7 @@ function EditorContent() {
     const blocks = draft.sections[activeSection] || [];
     const text = blocks
       .map((b: any) => {
-        if (!b.content) return "";
+        if (!b.content || !Array.isArray(b.content)) return "";
         return b.content
           .filter((s: any) => s.type === "text")
           .map((s: any) => s.text)

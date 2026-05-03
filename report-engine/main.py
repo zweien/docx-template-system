@@ -1,16 +1,30 @@
+import json
 import os
+import re
+import shutil
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
 from pydantic import BaseModel
 
 import sys
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 from report_engine.renderer import render_report
 from report_engine.template_parser import parse_template
+from report_engine.budget.parse_excel import parse_excel_budget
+from report_engine.budget.validate_excel import validate_excel_data
+from report_engine.budget.build_payload import build_payload
+from report_engine.budget.models import (
+    ExcelValidationResponse,
+    ParseResponse,
+    RenderBudgetRequest,
+)
 
 app = FastAPI(title="Report Engine", version="1.0.0")
 
@@ -22,6 +36,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+BUDGET_TEMP_DIR = Path(tempfile.gettempdir()) / "report-engine-budget"
+BUDGET_TEMPLATES_DIR = os.environ.get(
+    "BUDGET_TEMPLATES_DIR",
+    str(Path(__file__).parent.parent / "public" / "budget-templates"),
+)
+
+_SESSION_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
+def _resolve_budget_template(template_path: str) -> str:
+    """将模板名解析为绝对路径。如果已是绝对路径且存在则直接返回，否则在 BUDGET_TEMPLATES_DIR 中查找。"""
+    p = Path(template_path)
+    if p.is_absolute() and p.exists():
+        return str(p)
+    resolved = Path(BUDGET_TEMPLATES_DIR) / p.name
+    if resolved.exists():
+        return str(resolved)
+    return template_path
+
 
 class ParseRequest(BaseModel):
     template_path: str
@@ -31,6 +64,17 @@ class RenderRequest(BaseModel):
     template_path: str
     payload: dict[str, Any]
     output_filename: str = "report.docx"
+
+
+@app.on_event("startup")
+async def _cleanup_old_sessions():
+    if not BUDGET_TEMP_DIR.exists():
+        return
+    import time
+    cutoff = time.time() - 86400
+    for d in BUDGET_TEMP_DIR.iterdir():
+        if d.is_dir() and d.stat().st_mtime < cutoff:
+            shutil.rmtree(d, ignore_errors=True)
 
 
 @app.get("/health")
@@ -48,8 +92,6 @@ async def parse_template_endpoint(req: ParseRequest):
 
 @app.post("/render")
 async def render_endpoint(req: RenderRequest):
-    from fastapi.responses import FileResponse
-
     if not Path(req.template_path).exists():
         raise HTTPException(status_code=404, detail="Template file not found")
 
@@ -57,7 +99,115 @@ async def render_endpoint(req: RenderRequest):
     try:
         render_report(req.template_path, output_path, req.payload, check_template=False)
         filename = req.output_filename or "report.docx"
-        return FileResponse(output_path, filename=filename, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+        return FileResponse(output_path, filename=filename, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", background=BackgroundTask(Path(output_path).unlink, missing_ok=True))
+    except Exception as e:
+        if Path(output_path).exists():
+            Path(output_path).unlink()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Budget report endpoints ──
+
+
+@app.post("/validate-excel", response_model=ExcelValidationResponse)
+async def validate_excel_endpoint(
+    file: UploadFile = File(...),
+    config: str = Form(...),
+):
+    try:
+        config_dict = json.loads(config)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid config JSON: {e}")
+
+    tmp_path = Path(tempfile.mktemp(suffix=".xlsx"))
+    try:
+        tmp_path.write_bytes(await file.read())
+        return validate_excel_data(str(tmp_path), config_dict)
+    except Exception as e:
+        return ExcelValidationResponse(
+            success=False,
+            error={"code": "VALIDATE_ERROR", "message": str(e)},
+        )
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@app.post("/parse-excel", response_model=ParseResponse)
+async def parse_excel_endpoint(
+    file: UploadFile = File(...),
+    config: str = Form(...),
+    session_id: str = Form(...),
+):
+    if not _SESSION_ID_RE.match(session_id):
+        raise HTTPException(status_code=400, detail="Invalid session_id")
+    try:
+        config_dict = json.loads(config)
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid config JSON: {e}")
+
+    tmp_path = Path(tempfile.mktemp(suffix=".xlsx"))
+    output_dir = BUDGET_TEMP_DIR / session_id
+    try:
+        tmp_path.write_bytes(await file.read())
+        output_dir.mkdir(parents=True, exist_ok=True)
+        content_dict, warnings = parse_excel_budget(
+            str(tmp_path), str(output_dir), config_dict
+        )
+        for section in content_dict.get("sections", []):
+            for block in section.get("blocks", []):
+                if block.get("type") == "image":
+                    path = block.get("path", "")
+                    if path and not os.path.isabs(path):
+                        block["path"] = os.path.abspath(path)
+        return ParseResponse(success=True, content=content_dict, warnings=warnings)
+    except Exception as e:
+        return ParseResponse(
+            success=False,
+            error={"code": "PARSE_ERROR", "message": str(e)},
+        )
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+
+@app.post("/upload-template")
+async def upload_template_endpoint(file: UploadFile = File(...)):
+    """上传模板文件，返回服务器端路径供后续 render-budget 使用。"""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename")
+    if not file.filename.endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Only .docx files accepted")
+
+    dest_dir = BUDGET_TEMP_DIR / "templates"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir / f"{uuid.uuid4().hex}_{file.filename}"
+    dest_path.write_bytes(await file.read())
+    return {"path": str(dest_path)}
+
+
+@app.post("/render-budget")
+async def render_budget_endpoint(req: RenderBudgetRequest):
+    if req.session_id and not _SESSION_ID_RE.match(req.session_id):
+        raise HTTPException(status_code=400, detail="Invalid session_id")
+    template_path = _resolve_budget_template(req.template_path)
+    if not Path(template_path).exists():
+        raise HTTPException(status_code=404, detail=f"Template not found: {template_path}")
+
+    output_path = tempfile.mktemp(suffix=".docx")
+    try:
+        payload = build_payload(req.content, template_path=template_path)
+        render_report(template_path, output_path, payload, check_template=False)
+
+        if req.session_id:
+            session_dir = BUDGET_TEMP_DIR / req.session_id
+            if session_dir.exists():
+                shutil.rmtree(session_dir, ignore_errors=True)
+
+        return FileResponse(
+            output_path,
+            filename=req.output_filename,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            background=BackgroundTask(Path(output_path).unlink, missing_ok=True),
+        )
     except Exception as e:
         if Path(output_path).exists():
             Path(output_path).unlink()

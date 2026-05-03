@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from build_payload import build_payload
+from report_engine.budget.build_payload import build_payload
 from report_engine.renderer import render_report as _render_report
 
 router = APIRouter()

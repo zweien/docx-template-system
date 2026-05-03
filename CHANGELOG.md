@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.9.0](https://github.com/zweien/docx-template-system/compare/v0.8.0...v0.9.0) (2026-05-03)
+
+
+### Features
+
+* **budget:** add budget report wizard page with 3-step flow ([1416bfe](https://github.com/zweien/docx-template-system/commit/1416bfebd8425c11ae3048d448f9a66adabe2944))
+* **budget:** add dedicated data validation tab ([828d150](https://github.com/zweien/docx-template-system/commit/828d15034f3246f778fbd2615df0a75b4b290d41))
+* **budget:** add report-engine API client ([78db1be](https://github.com/zweien/docx-template-system/commit/78db1be24da16a9f30e997d3dcee51cc334ee7c8))
+* **budget:** support uploading custom templates and config files ([0888476](https://github.com/zweien/docx-template-system/commit/0888476b245401753e336fa227d2bec5c7fdc0ef))
+* **desktop:** add comprehensive file validation system ([55acf70](https://github.com/zweien/docx-template-system/commit/55acf702dde24e2ab166abc2f01cd205696139d5))
+* **desktop:** add config management page with xlsx binding ([8d3a46f](https://github.com/zweien/docx-template-system/commit/8d3a46f544c20cce45db914813d634cafe18c832))
+* **desktop:** add sample file downloads to Excel import page ([98fac21](https://github.com/zweien/docx-template-system/commit/98fac2150fd5c5afa973634bcfcc0777f5251e67))
+* **desktop:** auto-sync report_engine budget module in build ([d61d3a0](https://github.com/zweien/docx-template-system/commit/d61d3a02fba159d5b7a5604dcb136f69a8e89a95))
+* **desktop:** enhance responsive layout for narrow windows ([93e2bd2](https://github.com/zweien/docx-template-system/commit/93e2bd27be893507982ad6328f1de499fc23ad17))
+* **desktop:** replace default icons with project logo ([63c4f8e](https://github.com/zweien/docx-template-system/commit/63c4f8efeb707943652be3aed75cbae3f1d06b4c))
+* **desktop:** unify card info, add xlsx binding display and zip export ([ab26fa8](https://github.com/zweien/docx-template-system/commit/ab26fa8230ab5fca6ab48045677deb4c6ccde15d))
+* **nav:** add budget report sidebar entry ([f0ca68b](https://github.com/zweien/docx-template-system/commit/f0ca68b57ab8a93b018f4df87d791b8fbe7661a4))
+* **report-engine:** add budget HTTP endpoints and update module imports ([c2b46c4](https://github.com/zweien/docx-template-system/commit/c2b46c47b4f958c1bafdf26db0407ed7c0132e30))
+* **report-engine:** add budget module with models ([bc3663e](https://github.com/zweien/docx-template-system/commit/bc3663eecb31ef3ebee128424749a204d13acb4f))
+* **report-engine:** migrate build_payload from desktop sidecar ([381eb24](https://github.com/zweien/docx-template-system/commit/381eb2459e50ce77806c72033b712cce3dddb7d9))
+* **report-engine:** migrate parse_excel_budget from desktop sidecar ([1cc1fcd](https://github.com/zweien/docx-template-system/commit/1cc1fcdaad95db6442019b0fe324cdc4169800a7))
+* **report-engine:** migrate validate_excel from desktop sidecar ([11bbc54](https://github.com/zweien/docx-template-system/commit/11bbc54e7f1015f05f443a33bab46adda2354316))
+
+
+### Bug Fixes
+
+* **budget:** address PR review security and usability issues ([b986c66](https://github.com/zweien/docx-template-system/commit/b986c6656f52627caca43ac9f7b810f43abf457c))
+* **desktop:** add missing jszip dependency for CI build ([7424d3f](https://github.com/zweien/docx-template-system/commit/7424d3fff4ab57750ed5be5fbc6ce51328684a8c))
+* **desktop:** ensure icons are square RGBA for Tauri compatibility ([31b15b1](https://github.com/zweien/docx-template-system/commit/31b15b1357ef0d3ec816b4a4c25dd9cc11a06a3a))
+* **desktop:** hide sidecar console window on Windows ([35d2133](https://github.com/zweien/docx-template-system/commit/35d2133062ee73f4cb99c57170e54d8510b2ecc3))
+* **desktop:** regenerate app icons with full Tauri icon set ([03fdc96](https://github.com/zweien/docx-template-system/commit/03fdc96507f75656c83e56996ded3f6f6e547901))
+* **desktop:** remove MSI target, build NSIS only ([06bc30c](https://github.com/zweien/docx-template-system/commit/06bc30cb91e589c3c52b2b05f8d916ded5f74747))
+* **desktop:** use absolute paths and venv pyinstaller in build script ([296def3](https://github.com/zweien/docx-template-system/commit/296def3642b0054ac67f862cc16250b2475cacf9))
+* **nav:** move budget report to reports section ([76ad506](https://github.com/zweien/docx-template-system/commit/76ad5067c354366ce6e561d5a3ff7e6b54826615))
+* **report-engine:** resolve budget template path from filename ([4355dcf](https://github.com/zweien/docx-template-system/commit/4355dcfb5ce42f744cd2e62bd77f56d85879d7c5))
+* **ui:** resolve Button hydration mismatch for disabled prop ([6472cb7](https://github.com/zweien/docx-template-system/commit/6472cb798ec83be1657270386c8b2ea0391f38ac))
+
 ## [0.8.0](https://github.com/zweien/docx-template-system/compare/v0.7.5...v0.8.0) (2026-05-03)
 
 

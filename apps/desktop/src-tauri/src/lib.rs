@@ -39,6 +39,8 @@ pub fn run() {
             commands::delete_config,
             commands::export_config,
             commands::import_config,
+            commands::sidecar_post,
+            commands::sidecar_get,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

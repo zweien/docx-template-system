@@ -1,31 +1,23 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ParseRequest, ParseResponse, RenderRequest, RenderResponse, BudgetConfig } from "../types";
+import { ParseRequest, ParseResponse, RenderRequest, RenderResponse } from "../types";
 import { useAppStore } from "../stores/app-store";
 
-const SIDECAR_PORT_RANGE = [50000, 60000];
-
-async function getBaseUrl(): Promise<string> {
-  const store = useAppStore.getState();
-  if (store.sidecarPort) {
-    return `http://127.0.0.1:${store.sidecarPort}`;
-  }
-  const info = (await invoke("get_sidecar_port")) as { port: number };
-  store.setSidecarPort(info.port);
-  return `http://127.0.0.1:${info.port}`;
-}
-
-export async function detectSidecarPortBrowser(): Promise<number | null> {
-  for (let port = SIDECAR_PORT_RANGE[0]; port <= SIDECAR_PORT_RANGE[1]; port += 100) {
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(500) });
-      if (res.ok) return port;
-    } catch { /* next */ }
-  }
-  return null;
-}
+const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 
 export async function parseExcel(req: ParseRequest): Promise<ParseResponse> {
-  const base = await getBaseUrl();
+  if (isTauri) {
+    try {
+      const result = await invoke<string>("sidecar_post", {
+        path: "/api/parse-excel",
+        body: JSON.stringify(req),
+      });
+      return JSON.parse(result);
+    } catch (e) {
+      return { success: false, content: undefined, warnings: [], error: { code: "FETCH_ERROR", message: String(e) } };
+    }
+  }
+  // Browser fallback
+  const base = await getBaseUrlBrowser();
   const res = await fetch(`${base}/api/parse-excel`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -35,18 +27,23 @@ export async function parseExcel(req: ParseRequest): Promise<ParseResponse> {
 }
 
 export async function renderReport(req: RenderRequest): Promise<RenderResponse> {
-  const base = await getBaseUrl();
+  if (isTauri) {
+    try {
+      const result = await invoke<string>("sidecar_post", {
+        path: "/api/render",
+        body: JSON.stringify(req),
+      });
+      return JSON.parse(result);
+    } catch (e) {
+      return { success: false, error: { code: "FETCH_ERROR", message: String(e) } };
+    }
+  }
+  const base = await getBaseUrlBrowser();
   const res = await fetch(`${base}/api/render`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),
   });
-  return res.json();
-}
-
-export async function listConfigs(): Promise<{ configs: BudgetConfig[] }> {
-  const base = await getBaseUrl();
-  const res = await fetch(`${base}/api/configs`);
   return res.json();
 }
 
@@ -58,11 +55,43 @@ export async function parseTemplate(templatePath: string): Promise<{
   };
   warnings: string[];
 }> {
-  const base = await getBaseUrl();
+  if (isTauri) {
+    const result = await invoke<string>("sidecar_post", {
+      path: "/api/parse-template",
+      body: JSON.stringify({ template_path: templatePath }),
+    });
+    return JSON.parse(result);
+  }
+  const base = await getBaseUrlBrowser();
   const res = await fetch(`${base}/api/parse-template`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ template_path: templatePath }),
   });
   return res.json();
+}
+
+const SIDECAR_PORT_RANGE = [50000, 60000];
+
+async function getBaseUrlBrowser(): Promise<string> {
+  const store = useAppStore.getState();
+  if (store.sidecarPort) {
+    return `http://127.0.0.1:${store.sidecarPort}`;
+  }
+  const port = await detectSidecarPortBrowser();
+  if (port) {
+    store.setSidecarPort(port);
+    return `http://127.0.0.1:${port}`;
+  }
+  throw new Error("Sidecar not detected");
+}
+
+export async function detectSidecarPortBrowser(): Promise<number | null> {
+  for (let port = SIDECAR_PORT_RANGE[0]; port <= SIDECAR_PORT_RANGE[1]; port += 100) {
+    try {
+      const res = await fetch(`http://127.0.0.1:${port}/health`, { signal: AbortSignal.timeout(500) });
+      if (res.ok) return port;
+    } catch { /* next */ }
+  }
+  return null;
 }

@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::OnceLock;
 use tauri::{AppHandle, Manager};
+use tokio::time::{sleep, Duration};
 
 static SIDECAR_PORT: AtomicU16 = AtomicU16::new(0);
 
@@ -416,4 +418,104 @@ pub fn import_config(app: AppHandle, config_json: String) -> Result<ConfigMeta, 
     let _: serde_json::Value =
         serde_json::from_str(&config_json).map_err(|e| format!("JSON 解析失败: {}", e))?;
     save_config(app, None, config_json)
+}
+
+// ── Sidecar API proxy ──
+
+static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+fn http_client() -> &'static reqwest::Client {
+    HTTP_CLIENT.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(5))
+            .timeout(Duration::from_secs(120))
+            .build()
+            .expect("Failed to create HTTP client")
+    })
+}
+
+async fn sidecar_request_inner(
+    app: &AppHandle,
+    method: &str,
+    path: &str,
+    body: Option<&str>,
+) -> Result<String, String> {
+    let client = http_client();
+    let mut last_error = String::new();
+
+    for attempt in 0..3 {
+        if attempt > 0 {
+            sleep(Duration::from_millis(1000)).await;
+        }
+
+        // Restart sidecar if dead
+        if !crate::sidecar::is_alive() {
+            eprintln!("[sidecar] Process dead, restarting...");
+            if let Err(e) = crate::sidecar::start(app).await {
+                last_error = format!("重启 sidecar 失败: {}", e);
+                continue;
+            }
+        }
+
+        let port = SIDECAR_PORT.load(Ordering::SeqCst);
+        if port == 0 {
+            last_error = "Sidecar 未就绪（端口为 0）".to_string();
+            continue;
+        }
+
+        let url = format!("http://127.0.0.1:{}{}", port, path);
+
+        let result = match method {
+            "POST" => {
+                client
+                    .post(&url)
+                    .header("Content-Type", "application/json")
+                    .body(body.unwrap_or_default().to_string())
+                    .send()
+                    .await
+            }
+            "GET" => client.get(&url).send().await,
+            _ => return Err(format!("不支持的方法: {}", method)),
+        };
+
+        match result {
+            Ok(res) => {
+                let status = res.status();
+                let text = res
+                    .text()
+                    .await
+                    .map_err(|e| format!("读取响应失败: {}", e))?;
+                if !status.is_success() {
+                    return Err(format!("HTTP {}: {}", status, text));
+                }
+                return Ok(text);
+            }
+            Err(e) => {
+                eprintln!(
+                    "[sidecar] {} {} attempt {} failed: {}",
+                    method,
+                    path,
+                    attempt + 1,
+                    e
+                );
+                last_error = e.to_string();
+            }
+        }
+    }
+
+    Err(format!("请求失败（已重试3次）: {}", last_error))
+}
+
+#[tauri::command]
+pub async fn sidecar_post(
+    app: AppHandle,
+    path: String,
+    body: String,
+) -> Result<String, String> {
+    sidecar_request_inner(&app, "POST", &path, Some(&body)).await
+}
+
+#[tauri::command]
+pub async fn sidecar_get(app: AppHandle, path: String) -> Result<String, String> {
+    sidecar_request_inner(&app, "GET", &path, None).await
 }

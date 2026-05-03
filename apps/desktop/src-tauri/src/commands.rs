@@ -1,12 +1,61 @@
 use base64::Engine;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::fs;
+use std::io::Read;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::OnceLock;
 use tauri::{AppHandle, Manager};
 use tokio::time::{sleep, Duration};
+
+// ── Validation helpers ──
+
+fn validate_docx_basic(path: &PathBuf) -> Result<(), String> {
+    match path.extension().and_then(|e| e.to_str()) {
+        Some("docx") | Some("DOCX") => {}
+        Some(ext) => return Err(format!("文件扩展名应为 .docx，实际为 .{}", ext)),
+        None => return Err("文件没有扩展名，期望 .docx".to_string()),
+    }
+    let metadata = fs::metadata(path).map_err(|e| format!("无法读取文件信息: {}", e))?;
+    if metadata.len() == 0 {
+        return Err("文件为空（0 字节）".to_string());
+    }
+    if metadata.len() > 50 * 1024 * 1024 {
+        return Err(format!("文件过大（{} MB，上限 50 MB）", metadata.len() / 1024 / 1024));
+    }
+    let mut file = fs::File::open(path).map_err(|e| format!("无法打开文件: {}", e))?;
+    let mut magic = [0u8; 4];
+    if file.read_exact(&mut magic).is_err() || magic != [0x50, 0x4B, 0x03, 0x04] {
+        return Err("文件不是有效的 DOCX（ZIP 格式校验失败）".to_string());
+    }
+    Ok(())
+}
+
+fn validate_config_structure(val: &serde_json::Value) -> Result<(), String> {
+    let obj = val.as_object().ok_or("配置必须是 JSON 对象")?;
+    if !obj.contains_key("title") {
+        return Err("配置缺少必填字段: title".to_string());
+    }
+    if let Some(sheets) = obj.get("sheets") {
+        if !sheets.is_array() {
+            return Err("sheets 字段必须是数组".to_string());
+        }
+        let mut seen_ids = std::collections::HashSet::new();
+        for (i, sheet) in sheets.as_array().unwrap().iter().enumerate() {
+            let s = sheet.as_object().ok_or_else(|| format!("sheets[{}] 必须是对象", i))?;
+            for field in &["name", "sheet_name", "id"] {
+                if !s.contains_key(*field) || s[*field].as_str().map_or(true, |v| v.is_empty()) {
+                    return Err(format!("sheets[{}] 缺少必填字段: {}", i, field));
+                }
+            }
+            let id = s["id"].as_str().unwrap();
+            if !seen_ids.insert(id.to_string()) {
+                return Err(format!("重复的 sheet id: {}", id));
+            }
+        }
+    }
+    Ok(())
+}
 
 static SIDECAR_PORT: AtomicU16 = AtomicU16::new(0);
 
@@ -252,8 +301,9 @@ pub fn import_template(app: AppHandle, source_path: String) -> Result<TemplateMe
     let dir = templates_dir(&app)?;
     let source = PathBuf::from(&source_path);
     if !source.exists() {
-        return Err("Source file not found".to_string());
+        return Err("源文件不存在".to_string());
     }
+    validate_docx_basic(&source)?;
     let id = uuid::Uuid::new_v4().to_string();
     let dest = dir.join(format!("{}.docx", id));
     fs::copy(&source, &dest).map_err(|e| e.to_string())?;
@@ -389,6 +439,7 @@ pub fn save_config(
     // Validate it's valid JSON and extract title
     let val: serde_json::Value =
         serde_json::from_str(&config_json).map_err(|e| format!("JSON 解析失败: {}", e))?;
+    validate_config_structure(&val)?;
     let title = val
         .get("title")
         .and_then(|v| v.as_str())

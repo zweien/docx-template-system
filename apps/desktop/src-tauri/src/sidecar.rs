@@ -44,6 +44,14 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
+    // On Windows, hide the console window of the child process
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        // CREATE_NO_WINDOW = 0x08000000
+        command.creation_flags(0x08000000);
+    }
+
     // Only set PYTHONPATH in dev mode — PyInstaller handles its own imports
     if !is_prod {
         command.env("PYTHONPATH", sidecar_dir.to_string_lossy().to_string());

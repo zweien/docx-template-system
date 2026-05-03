@@ -630,21 +630,29 @@ def _read_sheet_data(sheet, formula_sheet, config: dict, output_dir: Path) -> Tu
 # ── 内容生成 ─────────────────────────────────────────
 
 
-def _build_table_rows(data_rows: List[Dict], columns_config: dict) -> Tuple[List[str], List[List[str]]]:
+def _build_table_rows(
+    data_rows: List[Dict],
+    columns_config: dict,
+    table_columns: Optional[List[str]] = None,
+) -> Tuple[List[str], List[List[str]]]:
     """构建明细表的 headers 和 rows。
 
-    表格列：名称、规格、单价、数量、经费（不含 reason/basis/image）
+    表格列由 table_columns 参数指定（默认：名称、规格、单价、数量、经费）
     """
-    table_col_keys = ["name", "spec", "unit_price", "quantity", "amount"]
+    if table_columns is None:
+        table_columns = ["name", "spec", "unit_price", "quantity", "amount"]
+
     headers = []
-    for key in table_col_keys:
+    for key in table_columns:
         if key in columns_config:
             headers.append(columns_config[key])
+        else:
+            logger.warning("table_columns 包含未映射的字段 '%s'，可用: %s", key, list(columns_config.keys()))
 
     rows = []
     for row_data in data_rows:
         row_values = []
-        for key in table_col_keys:
+        for key in table_columns:
             if key in columns_config:
                 value = row_data.get(key, "")
                 if key == "amount":
@@ -665,29 +673,46 @@ def _build_table_rows(data_rows: List[Dict], columns_config: dict) -> Tuple[List
                 pass
 
     if has_amount:
-        total_row = ["合计"] + [""] * (len(headers) - 2) + [_fmt_amount(total)]
-        if len(total_row) < len(headers):
-            total_row = ["合计"] + [""] * (len(headers) - 2) + [_fmt_amount(total)]
-            # 确保长度匹配
-            while len(total_row) < len(headers):
-                total_row.insert(1, "")
+        total_row = ["合计"] + [""] * (len(headers) - 1)
+        total_row[-1] = _fmt_amount(total)
         rows.append(total_row)
 
     return headers, rows
 
 
-def _build_section(data_rows: List[Dict], config: dict, columns_config: dict) -> Dict[str, Any]:
+def _build_section(
+    data_rows: List[Dict],
+    config: dict,
+    columns_config: dict,
+    table_columns: Optional[List[str]] = None,
+    detail_fields: Optional[List[Dict[str, str]]] = None,
+    image_columns: Optional[List[str]] = None,
+) -> Dict[str, Any]:
     """构建一个 sheet 对应的 section（简化内容描述格式）。"""
     sheet_name = config.get("name", config.get("sheet_name", "明细"))
     section_id = config.get("id") or _snake_case(sheet_name)
 
+    if detail_fields is None:
+        detail_fields = [
+            {"field": "reason", "label": "购置理由"},
+            {"field": "basis", "label": "测算依据"},
+        ]
+    if image_columns is None:
+        image_columns = ["报价截图"]
+
+    heading_level = config.get("heading_level", 2)
+    item_heading_level = config.get("item_heading_level", 3)
+
     blocks = []
 
-    # 1. 科目标题
-    blocks.append({"type": "heading", "text": sheet_name, "level": 2})
+    # 1. 科目标题（level=0 时用正文段落）
+    if heading_level == 0:
+        blocks.append({"type": "paragraph", "text": sheet_name})
+    else:
+        blocks.append({"type": "heading", "text": sheet_name, "level": heading_level})
 
     # 2. 明细表
-    headers, rows = _build_table_rows(data_rows, columns_config)
+    headers, rows = _build_table_rows(data_rows, columns_config, table_columns)
     if headers:
         blocks.append({
             "type": "table",
@@ -699,40 +724,40 @@ def _build_section(data_rows: List[Dict], config: dict, columns_config: dict) ->
     # 3. 逐条详情
     for idx, row_data in enumerate(data_rows, start=1):
         name = row_data.get("name", f"项目{idx}")
-        reason = row_data.get("reason", "")
-        basis = row_data.get("basis", "")
         image_paths = row_data.get("__image_paths__", [])
 
-        # 设备名称（三级标题）
-        blocks.append({"type": "heading", "text": f"{idx}. {name}", "level": 3})
-
-        # 购置理由
-        if _is_empty(reason):
-            blocks.append({"type": "paragraph", "text": "购置理由：[未填写]"})
+        # 明细条目标题（level=0 时用正文段落，带编号；heading 由模板样式自动编号）
+        if item_heading_level == 0:
+            blocks.append({"type": "paragraph", "text": f"{idx}. {name}"})
         else:
-            blocks.append({"type": "paragraph", "text": f"购置理由：{reason}"})
+            blocks.append({"type": "heading", "text": name, "level": item_heading_level})
 
-        # 测算依据
-        if _is_empty(basis):
-            blocks.append({"type": "paragraph", "text": "测算依据：[未填写]"})
-        else:
-            blocks.append({"type": "paragraph", "text": f"测算依据：{basis}"})
+        # 动态字段段落
+        for field_def in detail_fields:
+            field_key = field_def["field"]
+            label = field_def["label"]
+            value = row_data.get(field_key, "")
+            if _is_empty(value):
+                blocks.append({"type": "paragraph", "text": f"{label}：[未填写]"})
+            else:
+                blocks.append({"type": "paragraph", "text": f"{label}：{value}"})
 
         # 报价截图（按顺序插入多张）
-        if image_paths:
-            for img_idx, img_path in enumerate(image_paths, start=1):
-                caption = f"报价截图 {img_idx}" if len(image_paths) > 1 else "报价截图"
+        if image_columns:
+            if image_paths:
+                for img_idx, img_path in enumerate(image_paths, start=1):
+                    caption = f"报价截图 {img_idx}" if len(image_paths) > 1 else "报价截图"
+                    blocks.append({
+                        "type": "image",
+                        "path": img_path,
+                        "caption": caption,
+                        "width_cm": 14,
+                    })
+            else:
                 blocks.append({
-                    "type": "image",
-                    "path": img_path,
-                    "caption": caption,
-                    "width_cm": 14,
+                    "type": "paragraph",
+                    "text": "报价截图：[未上传]",
                 })
-        else:
-            blocks.append({
-                "type": "paragraph",
-                "text": "报价截图：[未上传]",
-            })
 
     return {
         "name": sheet_name,
@@ -777,7 +802,14 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
             logger.warning("Sheet '%s' 未读取到数据", sheet_name)
             continue
 
-        section = _build_section(data_rows, sheet_config, sheet_config.get("columns", {}))
+        section = _build_section(
+            data_rows,
+            sheet_config,
+            sheet_config.get("columns", {}),
+            table_columns=sheet_config.get("table_columns"),
+            detail_fields=sheet_config.get("detail_fields"),
+            image_columns=sheet_config.get("image_columns"),
+        )
         sections.append(section)
 
         logger.info("Sheet '%s' 读取 %d 行数据，%d 张图片", sheet_name, len(data_rows),

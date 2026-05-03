@@ -9,6 +9,7 @@ const updateModelSchema = z.object({
   modelId: z.string().min(1).optional(),
   baseUrl: z.string().url().optional(),
   apiKey: z.string().optional(),
+  extraParams: z.record(z.string(), z.unknown()).optional(),
 });
 
 interface RouteContext {

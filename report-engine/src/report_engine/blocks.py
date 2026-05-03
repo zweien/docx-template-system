@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import base64
 import logging
-import os
+import re
 import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
-from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_BREAK, WD_LINE_SPACING
@@ -38,53 +37,12 @@ DEFAULT_STYLE_MAP = {
     "appendix_table": "AppendixTable",
     "checklist": "Checklist",
     "code_block": "CodeBlock",
+    "auto_number_captions": True,
 }
 
 
 class BlockRenderError(ValueError):
     pass
-
-
-def _resolve_image_path(path: str) -> Optional[Path]:
-    """将图片路径解析为本地文件系统路径。
-
-    支持三种路径格式：
-    1. HTTP/HTTPS URL：下载到临时文件
-    2. Web 相对路径（如 /uploads/...）：通过 PUBLIC_DIR 环境变量映射到本地
-    3. 本地绝对/相对路径：直接使用
-    """
-    parsed = urlparse(path)
-    if parsed.scheme in ("http", "https"):
-        try:
-            suffix = Path(parsed.path).suffix or ".tmp"
-            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                tmp.write(urlopen(path, timeout=30).read())
-                return Path(tmp.name)
-        except Exception as e:
-            logger.warning("Failed to download image %s: %s", path, e)
-            return None
-
-    p = Path(path)
-    if p.exists():
-        return p
-
-    # Web 相对路径：尝试通过 PUBLIC_DIR 映射
-    if path.startswith("/"):
-        public_dir = os.environ.get("PUBLIC_DIR")
-        if public_dir:
-            resolved = Path(public_dir) / path.lstrip("/")
-            if resolved.exists():
-                return resolved
-        # 尝试从 report-engine 所在位置推断 public 目录
-        # blocks.py -> report_engine -> src -> report-engine -> project-root
-        engine_dir = Path(__file__).resolve().parent.parent.parent.parent
-        inferred_public = engine_dir / "public"
-        if inferred_public.exists():
-            resolved = inferred_public / path.lstrip("/")
-            if resolved.exists():
-                return resolved
-
-    return None
 
 
 class BlockRegistry:
@@ -108,11 +66,71 @@ def _get_style_name(doc: Any, preferred: str, fallback: str) -> str:
     except AttributeError:
         # doc 可能是 _Cell 等不支持 styles 的对象
         return fallback
-    if preferred in style_names:
-        return preferred
-    if fallback in style_names:
-        return fallback
-    return "Normal"
+    return preferred if preferred in style_names else fallback
+
+
+def _strip_seq_prefix(text: str, label: str) -> str:
+    """去除标题文本中已有的序号前缀，如 '表1 标题' -> '标题'。"""
+    pattern = rf"^{re.escape(label)}\s*\d+\s*"
+    return re.sub(pattern, "", text).strip()
+
+
+def _add_caption_paragraph(
+    doc: Any,
+    label: str,
+    seq_id: str,
+    text: str,
+    style_name: str,
+    alignment: Optional[int] = None,
+    auto_number: bool = True,
+) -> None:
+    """添加带 SEQ 域自动编号的标题段落。
+
+    Args:
+        doc: Document 或 _Cell 对象
+        label: 显示标签前缀，如 "表" 或 "图"
+        seq_id: SEQ 域标识符，如 "表" 或 "图"
+        text: 标题描述文字
+        style_name: 段落样式名
+        alignment: 可选对齐方式
+        auto_number: 是否使用 SEQ 域自动编号，False 时输出纯文本
+    """
+    p = doc.add_paragraph(style=style_name)
+
+    if auto_number:
+        p.add_run(f"{label} ")
+
+        run_begin = p.add_run()
+        fld_begin = OxmlElement("w:fldChar")
+        fld_begin.set(qn("w:fldCharType"), "begin")
+        run_begin._element.append(fld_begin)
+
+        run_instr = p.add_run()
+        instr = OxmlElement("w:instrText")
+        instr.set(qn("xml:space"), "preserve")
+        instr.text = f" SEQ {seq_id} \\* ARABIC "
+        run_instr._element.append(instr)
+
+        run_sep = p.add_run()
+        fld_sep = OxmlElement("w:fldChar")
+        fld_sep.set(qn("w:fldCharType"), "separate")
+        run_sep._element.append(fld_sep)
+
+        p.add_run("1")
+
+        run_end = p.add_run()
+        fld_end = OxmlElement("w:fldChar")
+        fld_end.set(qn("w:fldCharType"), "end")
+        run_end._element.append(fld_end)
+
+        cleaned = _strip_seq_prefix(text, label) if text else ""
+        if cleaned:
+            p.add_run(f" {cleaned}")
+    else:
+        p.add_run(str(text) if text else "")
+
+    if alignment is not None:
+        p.alignment = alignment
 
 
 def _set_table_borders(table: Any) -> None:
@@ -266,7 +284,8 @@ def _add_table_block_impl(
 ) -> None:
     if block.get("title"):
         caption_style = _get_style_name(doc, style_map.get("table_caption", "TableCaption"), "TableCaption")
-        doc.add_paragraph(str(block["title"]), style=caption_style)
+        auto_num = style_map.get("auto_number_captions", True)
+        _add_caption_paragraph(doc, "表", "表", str(block["title"]), caption_style, auto_number=auto_num)
 
     headers = block["headers"]
     rows = block["rows"]
@@ -342,9 +361,10 @@ def add_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) 
 
 
 def add_three_line_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
+    auto_num = style_map.get("auto_number_captions", True)
     if block.get("title"):
         caption_style = _get_style_name(doc, style_map.get("table_caption", "TableCaption"), "TableCaption")
-        doc.add_paragraph(str(block["title"]), style=caption_style)
+        _add_caption_paragraph(doc, "表", "表", str(block["title"]), caption_style, auto_number=auto_num)
 
     headers = block["headers"]
     rows = block["rows"]
@@ -381,38 +401,26 @@ def add_three_line_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[
 
 
 def add_image_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
-    raw_path = block["path"]
-    image_path = _resolve_image_path(raw_path)
-    is_temp = image_path is not None and raw_path.startswith(("http://", "https://"))
+    auto_num = style_map.get("auto_number_captions", True)
+    image_path = Path(block["path"])
 
     figure_style = _get_style_name(doc, style_map["figure_paragraph"], style_map["body"])
     p = doc.add_paragraph(style=figure_style)
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    if image_path and image_path.exists():
+    if image_path.exists():
         run = p.add_run()
         width_cm = block.get("width_cm")
-        try:
-            if width_cm is not None:
-                run.add_picture(str(image_path), width=Cm(float(width_cm)))
-            else:
-                run.add_picture(str(image_path))
-        except Exception as e:
-            logger.warning("Failed to insert image %s: %s", raw_path, e)
-            p.add_run(f"[图片插入失败：{raw_path}]")
-        finally:
-            if is_temp:
-                try:
-                    image_path.unlink()
-                except OSError:
-                    pass
+        if width_cm is not None:
+            run.add_picture(str(image_path), width=Cm(float(width_cm)))
+        else:
+            run.add_picture(str(image_path))
     else:
-        p.add_run(f"[图片缺失：{raw_path}]")
+        p.add_run(f"[图片缺失：{image_path}]")
 
     if block.get("caption"):
         caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-        cp = doc.add_paragraph(str(block["caption"]), style=caption_style)
-        cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
     if block.get("legend"):
         legend_style = _get_style_name(doc, style_map["legend"], style_map["body"])
@@ -462,6 +470,7 @@ def add_quote_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) 
 
 
 def add_two_images_row_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
+    auto_num = style_map.get("auto_number_captions", True)
     images = block["images"]
     if len(images) != 2:
         raise BlockRenderError(f"two_images_row requires exactly 2 images, got {len(images)}")
@@ -492,34 +501,20 @@ def add_two_images_row_block(doc: Any, block: Dict[str, Any], style_map: Dict[st
         p.style = doc.styles[figure_style_name]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-        raw_path = img["path"]
-        image_path = _resolve_image_path(raw_path)
-        is_temp = image_path is not None and raw_path.startswith(("http://", "https://"))
-        if image_path and image_path.exists():
+        image_path = Path(img["path"])
+        if image_path.exists():
             run = p.add_run()
             width_cm = img.get("width_cm")
-            try:
-                if width_cm is not None:
-                    run.add_picture(str(image_path), width=Cm(float(width_cm)))
-                else:
-                    run.add_picture(str(image_path))
-            except Exception as e:
-                logger.warning("Failed to insert image %s: %s", raw_path, e)
-                p.add_run(f"[图片插入失败：{raw_path}]")
-            finally:
-                if is_temp:
-                    try:
-                        image_path.unlink()
-                    except OSError:
-                        pass
+            if width_cm is not None:
+                run.add_picture(str(image_path), width=Cm(float(width_cm)))
+            else:
+                run.add_picture(str(image_path))
         else:
-            p.add_run(f"[图片缺失：{raw_path}]")
+            p.add_run(f"[图片缺失：{image_path}]")
 
         if img.get("caption"):
-            cp = cell.add_paragraph(str(img["caption"]))
             caption_style_name = _get_style_name(doc, caption_style, style_map["body"])
-            cp.style = doc.styles[caption_style_name]
-            cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            _add_caption_paragraph(cell, "图", "图", str(img["caption"]), caption_style_name, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
     body_style = _get_style_name(doc, style_map["body"], "Normal")
     doc.add_paragraph("", style=body_style)
@@ -614,6 +609,7 @@ def add_code_block_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, s
 
 
 def add_formula_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
+    auto_num = style_map.get("auto_number_captions", True)
     latex = str(block["latex"])
 
     # 方案 1: LaTeX → MathML → OMML
@@ -671,8 +667,7 @@ def add_formula_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]
     # caption（可选）
     if block.get("caption"):
         caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-        cp = doc.add_paragraph(str(block["caption"]), style=caption_style)
-        cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
 
 def _has_cjk(text: str) -> bool:
@@ -693,6 +688,7 @@ def _has_cjk(text: str) -> bool:
 
 
 def add_ascii_diagram_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
+    auto_num = style_map.get("auto_number_captions", True)
     """将 ASCII 文本渲染为图片插入文档。
 
     策略：
@@ -800,8 +796,7 @@ def add_ascii_diagram_block(doc: Any, block: Dict[str, Any], style_map: Dict[str
             # caption
             if block.get("caption"):
                 caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-                cp = doc.add_paragraph(str(block["caption"]), style=caption_style)
-                cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
             body_style = _get_style_name(doc, style_map["body"], "Normal")
             doc.add_paragraph("", style=body_style)
@@ -915,8 +910,7 @@ def add_ascii_diagram_block(doc: Any, block: Dict[str, Any], style_map: Dict[str
 
         if block.get("caption"):
             caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-            cp = doc.add_paragraph(str(block["caption"]), style=caption_style)
-            cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
         body_style = _get_style_name(doc, style_map["body"], "Normal")
         doc.add_paragraph("", style=body_style)
@@ -1008,8 +1002,7 @@ def _render_ascii_as_text(
     # caption（可选）
     if block.get("caption"):
         caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
-        cp = doc.add_paragraph(str(block["caption"]), style=caption_style)
-        cp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
     body_style = _get_style_name(doc, style_map["body"], "Normal")
     doc.add_paragraph("", style=body_style)

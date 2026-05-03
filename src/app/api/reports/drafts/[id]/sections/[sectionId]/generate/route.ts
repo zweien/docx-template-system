@@ -71,7 +71,7 @@ export async function POST(
     const body = await req.json();
 
     const modelId = process.env.AI_MODEL || "gpt-4o";
-    const model = await resolveModel(modelId, session.user.id);
+    const { model, providerName, extraParams } = await resolveModel(modelId, session.user.id);
 
     const userMessage = buildUserMessage({
       prompt: body.prompt,
@@ -85,6 +85,7 @@ export async function POST(
       model,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMessage }],
+      providerOptions: extraParams ? { [providerName]: extraParams } as Record<string, unknown> as import("@ai-sdk/provider").SharedV3ProviderOptions : undefined,
     });
 
     return result.toTextStreamResponse();

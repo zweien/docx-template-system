@@ -76,6 +76,7 @@ export async function POST(request: NextRequest) {
       modelId: parsed.modelId,
       baseUrl: parsed.baseUrl,
       apiKey: parsed.apiKey,
+      extraParams: parsed.extraParams,
     });
 
     if (!result.success) {

@@ -2,6 +2,102 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.8.0](https://github.com/zweien/docx-template-system/compare/v0.7.5...v0.8.0) (2026-05-03)
+
+
+### Features
+
+* add About page and sidebar footer navigation ([86b4769](https://github.com/zweien/docx-template-system/commit/86b4769ea36d090b6260b819ac42fc67d5418a6a))
+* **desktop:** add back navigation to all wizard steps ([faf60c5](https://github.com/zweien/docx-template-system/commit/faf60c58246db7d2cd05434c601d88632fdc6fea))
+* **desktop:** add build scripts for PyInstaller + Tauri bundling ([322dd56](https://github.com/zweien/docx-template-system/commit/322dd560e56323788b33dfd40dfd5758c9d328f8))
+* **desktop:** add ExcelImport, WarningList, and ConfigEditor components ([acda7cc](https://github.com/zweien/docx-template-system/commit/acda7cc6f2413198126553ba36b7084986d76e74))
+* **desktop:** add frontend types, API service, and main layout components ([a07e913](https://github.com/zweien/docx-template-system/commit/a07e91347eb60b4f8aab9f0aab6dfa6451ac9eb0))
+* **desktop:** add help, changelog, about modals to sidebar ([4d48cf0](https://github.com/zweien/docx-template-system/commit/4d48cf01f14b54f074b65e79737b55bca60020ce))
+* **desktop:** add IDRL team credit to About sections ([186f123](https://github.com/zweien/docx-template-system/commit/186f123bb78b5e050fd5d2125851e599b752cc9c))
+* **desktop:** add NSIS target for single .exe installer ([2ecfa7e](https://github.com/zweien/docx-template-system/commit/2ecfa7e06f320f01f2b129d755d1e8599b9eb0e4))
+* **desktop:** add Python sidecar skeleton with FastAPI ([916978f](https://github.com/zweien/docx-template-system/commit/916978fc9b8d3e63920366e5400c4b7dee843ad1))
+* **desktop:** add Rust sidecar lifecycle manager and Tauri commands ([b08956f](https://github.com/zweien/docx-template-system/commit/b08956f3f3a8fab7cb6653cfe1cf8b2b460d5e98))
+* **desktop:** collapsible sidebar with icon-only mode ([f36c27f](https://github.com/zweien/docx-template-system/commit/f36c27f3186cd75b1ba8ba044459abbf894673b0))
+* **desktop:** config management system with visual editor and persistence ([c46ca83](https://github.com/zweien/docx-template-system/commit/c46ca838b146d2107f3ca7e31e08995fa940a5fa))
+* **desktop:** implement parse-excel and render API endpoints ([1172a16](https://github.com/zweien/docx-template-system/commit/1172a1673265164182fd56fc898336215fe3f93a))
+* **desktop:** Linear design system, settings view, theme switching ([d8229bc](https://github.com/zweien/docx-template-system/commit/d8229bc61e3c79cd3108f3d7425620ac4b5ed850))
+* **desktop:** make config editable in wizard ([c9ac50b](https://github.com/zweien/docx-template-system/commit/c9ac50b454e3870962dcc36ff0aae2579dace425))
+* **desktop:** resizable log panel with drag handle ([aeff20c](https://github.com/zweien/docx-template-system/commit/aeff20c50f9ab1c4915aca60631fb76aad53b195))
+* **desktop:** self-contained sidecar, template management, 4-step wizard ([af3938a](https://github.com/zweien/docx-template-system/commit/af3938ac125aa6ba28126f62a3b252cdfd58bac3))
+* **desktop:** use favicon.png as logo in sidebar and about modal ([287c4d9](https://github.com/zweien/docx-template-system/commit/287c4d938cbfb0b56b3b0e2e14a5c1b13cdd6505))
+* **editor-ai:** add /execute endpoint for running AI actions ([d43fc3c](https://github.com/zweien/docx-template-system/commit/d43fc3c0d2534faef92284e99b7c8fa9d78d62e9))
+* **editor-ai:** add admin page for managing global AI actions ([fad102c](https://github.com/zweien/docx-template-system/commit/fad102cb7e2c7a84cbc58b8b2c3ebb0ff9ed8a59))
+* **editor-ai:** add AI action CRUD API routes ([8353dc6](https://github.com/zweien/docx-template-system/commit/8353dc6595f6d86a39203498de6323f6e9ba6770))
+* **editor-ai:** add AI action CRUD service ([5667d55](https://github.com/zweien/docx-template-system/commit/5667d55d2676bd13685566461353fa27a793efa5))
+* **editor-ai:** add AIActionButton, AIActionPopover, and AIActionExecutor ([f1dcdd6](https://github.com/zweien/docx-template-system/commit/f1dcdd6a0e71a5891fa06dcd88c5702c8fd41c7f))
+* **editor-ai:** add AIActionForm for creating/editing prompt templates ([4b7efd7](https://github.com/zweien/docx-template-system/commit/4b7efd719b755076f79e7b24da41ae49a9b28c95))
+* **editor-ai:** add AIChatSidebar and SelectionAttachment components ([076acd3](https://github.com/zweien/docx-template-system/commit/076acd399cf12549f090c884a69828dcf25c92de))
+* **editor-ai:** add EditorAIAction model to Prisma schema ([0b38743](https://github.com/zweien/docx-template-system/commit/0b387438d51e1185366da2266f4b8483dc7d1210))
+* **editor-ai:** add replace/copy actions to AI popover, use Dialog for stability ([27c25fd](https://github.com/zweien/docx-template-system/commit/27c25fd46ccdd79e156dba3e3f6901810fd1b692))
+* **editor-ai:** add seed data for built-in AI actions ([3fe595b](https://github.com/zweien/docx-template-system/commit/3fe595b7c052b306c1ca584b954e63f3124a85c0))
+* **editor-ai:** add type definitions for editor AI actions ([88f959c](https://github.com/zweien/docx-template-system/commit/88f959ce18fb159bdcddc1977e8ebbe584016cde))
+* **editor-ai:** add useAIActions hook ([a318268](https://github.com/zweien/docx-template-system/commit/a3182686a8960bf3b1cb11876a1ad6529dc8ef23))
+* **editor-ai:** add Zod validation schemas ([66807a8](https://github.com/zweien/docx-template-system/commit/66807a8cb77dd73f806ca1b3a185bb2ae16fd359))
+* **editor-ai:** add Zustand store for editor AI sidebar state ([d527c11](https://github.com/zweien/docx-template-system/commit/d527c11d03b39d9a5ca73219ae5504604f55b383))
+* **editor-ai:** complete template management wiring and sidebar quick actions ([a7883f1](https://github.com/zweien/docx-template-system/commit/a7883f19d20364f264c00c11b756cef5a2e5904f))
+* **editor-ai:** integrate AI sidebar into report editor page with tab layout ([7bbc888](https://github.com/zweien/docx-template-system/commit/7bbc8882d2cf01c569f6e4c4fae8af82c3e892a5))
+* **editor-ai:** replace AIToolbarButton with AIActionButton in SectionEditor ([061c31a](https://github.com/zweien/docx-template-system/commit/061c31a3db24ff88644f6112bbd79cb5a4fc5470))
+* **editor-ai:** resizable sidebar, quote selection, fix insert-to-focused-position and scroll ([c36b2e5](https://github.com/zweien/docx-template-system/commit/c36b2e52253b0b5e13f63cf520e353206f5acc28))
+
+
+### Bug Fixes
+
+* **auth:** resolve 0.0.0.0 redirect issue in dev mode login ([773c351](https://github.com/zweien/docx-template-system/commit/773c35118b97fcf8587f068b9c46dbbf1a7568e7))
+* **ci:** pin Node.js version to 22 to avoid setup-node LTS alias issue ([037cb8a](https://github.com/zweien/docx-template-system/commit/037cb8af6edcae3404639965d5a8eacaa8254f49))
+* **ci:** use absolute paths for PyInstaller --add-data ([bb5124e](https://github.com/zweien/docx-template-system/commit/bb5124e876131912e7a98ff2fac6532af3f8c7be))
+* **ci:** use Join-Path instead of Resolve-Path for sidecar dir ([eb38d5c](https://github.com/zweien/docx-template-system/commit/eb38d5c85b34bc7d0ea831cb1fa8e71a37874617))
+* **desktop:** add empty PostCSS config to override root config ([af67f6d](https://github.com/zweien/docx-template-system/commit/af67f6d1af7e710098e7edcdf11f62031881f1ac))
+* **desktop:** add Tailwind CSS build config, clean up dependencies ([b2ad1f4](https://github.com/zweien/docx-template-system/commit/b2ad1f4eb5758af04a3e4c372607842be000dfa0))
+* **desktop:** address code review issues (Critical + Important) ([6545145](https://github.com/zweien/docx-template-system/commit/65451457c3defc07373efdc0774598a219446172))
+* **desktop:** browser fallback for sidecar detection + improve sidecar startup ([46163b9](https://github.com/zweien/docx-template-system/commit/46163b9845675f1733d5bc86974f1ba6deb9ecb1))
+* **desktop:** bump tailwindcss to v4 for [@import](https://github.com/import) "tailwindcss" syntax ([abde5c0](https://github.com/zweien/docx-template-system/commit/abde5c0f9c5fd86728b90571f5bf88f43c8ce593))
+* **desktop:** correct step count in StepIndicator (3 → dynamic) ([ce14c89](https://github.com/zweien/docx-template-system/commit/ce14c894be97497b62b9d93b51e0c6244ad3a657))
+* **desktop:** dark theme select dropdown unreadable ([ee47e2d](https://github.com/zweien/docx-template-system/commit/ee47e2d355a7458a52922a3eb6bcb2181fc4ec91))
+* **desktop:** font size scaling, light theme colors, theme toggle shortcut ([1b7220e](https://github.com/zweien/docx-template-system/commit/1b7220e84820fcbee39a55f0b03653b6fb5d3d53))
+* **desktop:** polish UX — log cleanup, graceful sidecar shutdown ([f0d57e7](https://github.com/zweien/docx-template-system/commit/f0d57e7a63fb73a179ae4f88dda0f8a7944fcc85))
+* **desktop:** robust sidecar lifecycle with auto-restart and retry ([1963869](https://github.com/zweien/docx-template-system/commit/196386974a872cc6ad6c68b0cec21ebf7aef2bf9))
+* **desktop:** save-as dialog + open file with system default app ([bde0d9c](https://github.com/zweien/docx-template-system/commit/bde0d9c8d45ef4146ac7cb15bcf90ac25adbac17))
+* **desktop:** Tailwind v4, template names, log panel ([5f96fc8](https://github.com/zweien/docx-template-system/commit/5f96fc8931760b42d1c8e7060ad77714231647a1))
+* **desktop:** template rename/delete in wizard + cross-platform temp path ([de4b360](https://github.com/zweien/docx-template-system/commit/de4b36062877fc5fe0db1a38d58aad93e90fece8))
+* **desktop:** track build.rs for tauri_build ([507de51](https://github.com/zweien/docx-template-system/commit/507de51d94cf3b9e159be4e2951084b30fc0f1a9))
+* **desktop:** track icons directory for Windows resource generation ([7d89160](https://github.com/zweien/docx-template-system/commit/7d891602539aa145a152ef8cd6b433fcc40dc237))
+* **desktop:** use English productName for WiX MSI compatibility ([528a615](https://github.com/zweien/docx-template-system/commit/528a615c6c50e39411ccbf8b96df27b4c5d7065a))
+* **editor-ai:** address PR review — permission check, model guard, section context ([a975940](https://github.com/zweien/docx-template-system/commit/a9759409fd527a3e8e6217d52cd5542eb7fb5c2c))
+* **editor-ai:** guard against non-array block content in section sync ([03a272f](https://github.com/zweien/docx-template-system/commit/03a272f9413b4f3733b4c689a79fb1337375a57b))
+* **editor-ai:** persist result/executing state in store for reliable replace ([0b5fd79](https://github.com/zweien/docx-template-system/commit/0b5fd79e6a5eeccb34d01c2c1e99af51d412d905))
+* **editor-ai:** remove sidebarOpen guard from AIChatSidebar rendering ([a9734f9](https://github.com/zweien/docx-template-system/commit/a9734f909780475fe6e4e3480400cf2e6e6277bd))
+* **editor-ai:** support extraParams, fix randomUUID, improve selection capture ([a657be7](https://github.com/zweien/docx-template-system/commit/a657be7511d6abc95a8143a7c3f56a46b408e781))
+* **editor-ai:** use dynamic model list from Agent2 and add request timeout ([630c855](https://github.com/zweien/docx-template-system/commit/630c8555ec8d890599e64e7e254aa900c6d264b6))
+
+## [0.7.5](https://github.com/zweien/docx-template-system/compare/v0.7.4...v0.7.5) (2026-05-01)
+
+
+### Features
+
+* add auto_number_captions toggle for table/figure caption numbering ([9a840d2](https://github.com/zweien/docx-template-system/commit/9a840d2d97c245b115272898a7553d3568c34371))
+* **agent2:** support extra JSON params per model config ([ad3f448](https://github.com/zweien/docx-template-system/commit/ad3f448f8bb9d9090590df6e388f45cc81896f4b))
+* consolidate report-engine into project with CLI and editable install ([398768e](https://github.com/zweien/docx-template-system/commit/398768e098350be91f6fb7170cdeaa967b7a6ec8))
+* remove manual numbering from heading items (template handles auto-numbering) ([6909c6a](https://github.com/zweien/docx-template-system/commit/6909c6a57483c60363b6898f49d4a1126cc56d2c))
+* **report-generator:** add Excel budget parser for automated report generation ([2a141ce](https://github.com/zweien/docx-template-system/commit/2a141ce38d813f813450a1f088eea3ac1e0cd996))
+* **report-generator:** Excel公式计算回退与中文占位符支持 ([d2b2719](https://github.com/zweien/docx-template-system/commit/d2b27191b19426774d53ff67373bf2d79b5694b2))
+* support configurable heading levels in budget report ([4b1d5f9](https://github.com/zweien/docx-template-system/commit/4b1d5f9d80b92dd84ad1849d2acd89934a173e2f))
+* support custom detail_fields and image_columns in budget report ([55e04a2](https://github.com/zweien/docx-template-system/commit/55e04a25a77afa94dad6b96febacd6d488831dcd))
+* support custom table_columns in budget report ([db8d5a3](https://github.com/zweien/docx-template-system/commit/db8d5a366823e9b204ac33c600aeb3cf7f60e8d8))
+* support level in detail_fields to generate heading + paragraph ([7dfdc11](https://github.com/zweien/docx-template-system/commit/7dfdc11225973b1e98a8223706d86a806b920d47))
+* support level=0 as paragraph for headings ([71eb152](https://github.com/zweien/docx-template-system/commit/71eb152de6b3bf4eaf9541fb3cdff72ca56958cf))
+* use Word SEQ field codes for table/figure auto-numbering ([2860af8](https://github.com/zweien/docx-template-system/commit/2860af881ae0051ced8b9c2f7349cc7c490243cb))
+* wire new config options to section builder ([808d181](https://github.com/zweien/docx-template-system/commit/808d1812fd0ea4f00d499973bdaa612f101aa0af))
+
+
+### Bug Fixes
+
+* **ui:** add expand/collapse toggle for test connection error messages ([c4c189b](https://github.com/zweien/docx-template-system/commit/c4c189b462a0520b49516ccc1eeb81ee5424930c))
+
 ## [0.7.4](https://github.com/zweien/docx-template-system/compare/v0.7.3...v0.7.4) (2026-04-29)
 
 

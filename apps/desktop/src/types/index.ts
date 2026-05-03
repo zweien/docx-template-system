@@ -88,3 +88,40 @@ export interface RenderResponse {
   output_path?: string;
   error?: ApiError;
 }
+
+export interface SheetValidationResult {
+  sheet_name: string;
+  found: boolean;
+  missing_columns: string[];
+  extra_columns: string[];
+  total_rows: number;
+  empty_cells: { row: number; column: string; field: string }[];
+  fill_rate: number;
+  numeric_violations: { row: number; column: string; value: string }[];
+  unique_values: Record<string, string[]>;
+  image_summary: { total_images: number; rows_with_images: number } | null;
+  warnings: string[];
+}
+
+export interface SummaryValidationResult {
+  sheet_name: string;
+  found: boolean;
+  mode: string;
+  key_column_found: boolean | null;
+  value_column_found: boolean | null;
+  mapped_count: number;
+  missing_keys: string[];
+}
+
+export interface ExcelValidationResponse {
+  success: boolean;
+  config_title: string;
+  excel_sheets: string[];
+  missing_sheets: string[];
+  summary: SummaryValidationResult | null;
+  sheets: SheetValidationResult[];
+  overall_pass: boolean;
+  total_errors: number;
+  total_warnings: number;
+  error?: ApiError;
+}

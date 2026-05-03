@@ -44,6 +44,7 @@ export interface Agent2ModelItem {
   baseUrl: string;
   isGlobal: boolean;
   userId?: string | null;
+  extraParams?: Record<string, unknown> | null;
   createdAt: string;
   // apiKey is never sent to client
 }

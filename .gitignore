@@ -1,83 +1,66 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
+/build
+.claude/*
+!.claude/skills/
+.claude/skills/**/__pycache__/
+/coverage
+.data/
+# debug
+debug_*.py
+# Debug scripts
 # dependencies
+docs/deploy.md
+.DS_Store
+.env*
+# env files (can opt-in for committing if needed)
+!.env.offline.example
+# git worktrees
+.gstack/
+# Local agent/runtime state
+# Local debug screenshots
+# misc
+/.next/
+next-env.d.ts
+# next.js
 /node_modules
-/.pnp
+npm-debug.log*
+/out/
+/output
+*.pem
+# Playwright browser automation logs
+.playwright-cli/
+.playwright-mcp/
 .pnp.*
+/.pnp
+.pnpm-debug.log*
+# production
+public/uploads/documents/*
+!public/uploads/documents/.gitkeep
+public/uploads/report-templates/*.docx
+public/uploads/templates/*
+!public/uploads/templates/.gitkeep
+*.pyc
+__pycache__/
+# Python
+python-service/.venv/
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+/sidebar-test.png
+/src/generated/prisma
+.superpowers/
+# testing
+test-results/
+/tool-error.png
+*.tsbuildinfo
+# typescript
+# uploads (keep .gitkeep files)
+# vercel
+.vercel
+verify_*.py
+.worktrees/
 .yarn/*
+yarn-debug.log*
+yarn-error.log*
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-/output
-
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-!.env.offline.example
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-/src/generated/prisma
-
-# uploads (keep .gitkeep files)
-public/uploads/templates/*
-public/uploads/documents/*
-public/uploads/report-templates/*.docx
-!public/uploads/templates/.gitkeep
-!public/uploads/documents/.gitkeep
-
-# git worktrees
-.worktrees/
-
-# Python
-python-service/.venv/
-__pycache__/
-*.pyc
-
-# Playwright browser automation logs
-.playwright-cli/
-.playwright-mcp/
-.gstack/
-
-# Local agent/runtime state
-.claude/*
-!.claude/skills/
-.claude/skills/**/__pycache__/
-.superpowers/
-.superpowers/
-.data/
-test-results/
-
-# Local debug screenshots
-/sidebar-test.png
-/tool-error.png
-docs/deploy.md
-
-# Debug scripts
-debug_*.py
-verify_*.py

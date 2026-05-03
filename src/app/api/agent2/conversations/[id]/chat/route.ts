@@ -66,7 +66,7 @@ export async function POST(
     }
 
     // Resolve model and build prompt/tools
-    const model = await resolveModel(validated.model, session.user.id);
+    const { model, providerName, extraParams } = await resolveModel(validated.model, session.user.id);
     const systemPrompt = await buildSystemPrompt(validated.tableId);
     const messageId = randomUUID();
     const tools = createTools(conversationId, messageId, session.user.id, session.user.role);
@@ -99,6 +99,7 @@ export async function POST(
       system: systemPrompt,
       messages,
       tools: allTools,
+      providerOptions: extraParams ? { [providerName]: extraParams } as Record<string, unknown> as import("@ai-sdk/provider").SharedV3ProviderOptions : undefined,
       stopWhen: ({ steps }) => {
         if (steps.length >= 10) return true;
         const lastStep = steps[steps.length - 1];

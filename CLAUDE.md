@@ -129,9 +129,25 @@ cd python-service && .venv/bin/python main.py   # Start on port 8065
 - **Dependency:** `python-docx` — replaces `{{ key }}` in paragraphs and tables
 - **Configured via:** `PYTHON_SERVICE_URL` env var (default `http://localhost:8065`)
 
+## Report Engine
+
+模板驱动的 DOCX 渲染引擎，位于 `report-engine/`。同时提供 CLI 和 HTTP 服务。
+
+```bash
+cd report-engine && .venv/bin/python main.py   # Start HTTP service on port 8066
+report-engine render --template tpl.docx --payload data.json --output out.docx  # CLI
+```
+
+- **HTTP Port:** 8066（报告撰写页面导出时调用）
+- **HTTP Endpoints:** `GET /health`, `POST /render`, `POST /parse-template`
+- **CLI Commands:** `validate`, `check-template`, `render`
+- **Configured via:** `REPORT_ENGINE_URL` env var (default `http://localhost:8066`)
+
 ## Version Management
 
 使用 `commit-and-tag-version` 管理版本（基于 conventional commits 自动 bump + CHANGELOG + git tag）。版本号显示在登录页和侧边栏。
+
+**发版时务必同步更新 README.md 中的版本号徽章**（如 `> **v0.4.0**`）。
 
 ```bash
 npm run release           # patch bump + CHANGELOG + commit + tag
@@ -139,8 +155,6 @@ npm run release:minor     # minor bump
 npm run release:major     # major bump
 git push --follow-tags    # 推送代码和 tag
 ```
-
-**发版时务必同步更新 README.md 中的版本号徽章**（如 `> **v0.4.0**`）。
 
 ## Desktop App 发布
 

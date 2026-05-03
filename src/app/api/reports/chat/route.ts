@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { messages, toolDefinitions } = body;
     const modelId = process.env.AI_MODEL || "gpt-4o";
-    const model = await resolveModel(modelId, session.user.id);
+    const { model, providerName, extraParams } = await resolveModel(modelId, session.user.id);
     const patchedToolDefs = stripDeleteFromToolDefs(toolDefinitions);
     const injected = injectDocumentStateMessages(messages);
     const modelMessages = await convertToModelMessages(injected);
@@ -105,6 +105,7 @@ export async function POST(req: Request) {
       messages: modelMessages,
       tools,
       toolChoice: "required",
+      providerOptions: extraParams ? { [providerName]: extraParams } as Record<string, unknown> as import("@ai-sdk/provider").SharedV3ProviderOptions : undefined,
     });
     return result.toUIMessageStreamResponse();
   } catch (e: unknown) {

@@ -55,6 +55,7 @@ model User {
   updatedAutomations            Automation[]       @relation("AutomationUpdatedBy")
   reportTemplates               ReportTemplate[]
   reportDrafts                  ReportDraft[]
+  editorAIActions               EditorAIAction[]
 }
 
 enum TemplateStatus {
@@ -748,6 +749,7 @@ model Agent2ModelConfig {
   modelId         String
   baseUrl         String
   apiKeyEncrypted String?
+  extraParams     Json?
   isGlobal        Boolean  @default(false)
   userId          String?
   createdAt       DateTime @default(now())
@@ -974,4 +976,27 @@ model ReportDraft {
   collaboratorIds String[]        @default([])
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
+}
+
+// ========== Editor AI Actions ==========
+
+model EditorAIAction {
+  id          String   @id @default(cuid())
+  name        String
+  icon        String?
+  prompt      String
+  category    String   @default("general")
+  scope       String   @default("selection")
+  sortOrder   Int      @default(0)
+  isBuiltIn   Boolean  @default(false)
+  enabled     Boolean  @default(true)
+
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([category])
 }

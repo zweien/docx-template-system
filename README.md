@@ -10,7 +10,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-> **v0.7.4**
+> **v0.8.0**
 
 模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。
 
@@ -21,7 +21,7 @@
 - **模板管理** — 上传、编辑、发布、归档 Word 模板，支持版本历史
 - **智能解析** — 自动从 DOCX 文件中提取占位符，支持简单字段和动态表格块
 - **动态表单** — 根据模板占位符自动生成填写表单，支持文本、多行文本、明细表
-- **文档生成** — Python 服务替换模板占位符，保留原始格式（含合并单元格）
+- **文档生成** — report-engine CLI 渲染引擎，支持富文本块（标题/列表/表格/公式/图片）、条件段落、子文档引用
 - **批量生成** — 上传 Excel 数据批量生成文档，支持字段自动映射
 - **草稿系统** — 表单数据自动保存，随时恢复编辑
 
@@ -84,7 +84,8 @@
 | UI 组件 | shadcn/ui v4 (Base UI), Tailwind CSS 4 |
 | 数据库 | PostgreSQL + Prisma 7 (Driver Adapter) |
 | 认证 | NextAuth v4 + authentik OIDC |
-| 文档生成 | Python FastAPI + python-docx |
+| 文档生成 | report-engine (Python, python-docx + docxtpl) |
+| 简单文档替换 | python-service (Python FastAPI, python-docx) |
 | 验证 | Zod |
 | 测试 | Vitest + Testing Library |
 
@@ -152,11 +153,21 @@ python -m venv .venv
 .venv/bin/pip install -r requirements.txt
 cd ..
 
-# 4. 启动 Python 文档生成服务
+# 4. 安装 report-engine（HTTP 服务 + CLI）
+cd report-engine
+python -m venv .venv
+.venv/bin/pip install -e .
+cd ..
+
+# 5. 启动 Python 文档生成服务（端口 8065）
 cd python-service && .venv/bin/python main.py &
 cd ..
 
-# 5. 启动 Next.js 开发服务器
+# 6. 启动 report-engine HTTP 服务（端口 8066，报告撰写页面使用）
+cd report-engine && .venv/bin/python main.py &
+cd ..
+
+# 7. 启动 Next.js 开发服务器
 npm run dev
 ```
 
@@ -175,6 +186,11 @@ npx prisma db push   # 同步数据库 schema
 npx prisma generate  # 生成 Prisma Client
 npx prisma studio    # 数据库可视化工具
 npm run release      # 发布新版本 (自动 bump + CHANGELOG + git tag)
+
+# report-engine CLI
+report-engine validate --payload data.json             # 校验 payload
+report-engine check-template --template tpl.docx --payload data.json  # 检查模板契约
+report-engine render --template tpl.docx --payload data.json --output out.docx  # 渲染报告
 ```
 
 ## 内网离线部署
@@ -241,7 +257,7 @@ docker compose -f docker-compose.offline.yml --env-file .env.offline run --rm --
 ### 增量升级建议
 
 - 推荐在内网搭私有 Registry（Harbor/registry:2），镜像按层增量传输
-- 版本升级时仅更新镜像 tag（如 `v0.7.5`），再执行：
+- 版本升级时仅更新镜像 tag（如 `v0.8.0`），再执行：
 
 ```bash
 docker compose -f docker-compose.offline.yml --env-file .env.offline up -d --remove-orphans
@@ -379,7 +395,22 @@ src/
 └── validators/           # Zod schemas
 
 python-service/
-└── main.py               # FastAPI 文档生成服务
+└── main.py               # FastAPI 简单文档替换服务 (端口 8065)
+
+report-engine/
+├── main.py               # FastAPI HTTP 服务 (端口 8066，报告撰写导出)
+├── src/report_engine/    # 模板驱动的 DOCX 渲染引擎
+│   ├── cli.py            # CLI 入口 (validate/check-template/render)
+│   ├── renderer.py       # 核心渲染逻辑
+│   ├── blocks.py         # 富文本块注册表 (标题/列表/表格/图片/公式等)
+│   ├── schema.py         # Payload 数据模型
+│   ├── validator.py      # Payload 校验
+│   ├── template_checker.py  # 模板契约检查
+│   ├── template_parser.py   # 模板占位符解析
+│   ├── style_checker.py  # 样式检查
+│   ├── converter.py      # 前端 BlockNote → report-engine 转换
+│   └── subdoc.py         # 子文档构建
+└── tests/                # 单元测试
 ```
 
 三层后端模式：`types/` → `validators/` → `services/` → API Routes。

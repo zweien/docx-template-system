@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const validated = fillAssistSchema.parse(body);
 
     const modelId = validated.model || process.env.AI_MODEL || "gpt-4o";
-    const model = await resolveModel(modelId, session.user.id);
+    const { model, providerName, extraParams } = await resolveModel(modelId, session.user.id);
 
     // Build context-aware system prompt
     const fieldsDescription = validated.context.fields
@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
       system: systemPrompt,
       messages,
       tools,
+      providerOptions: extraParams ? { [providerName]: extraParams } as Record<string, unknown> as import("@ai-sdk/provider").SharedV3ProviderOptions : undefined,
       stopWhen: ({ steps }) => steps.length >= 5,
     });
 

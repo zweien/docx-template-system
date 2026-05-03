@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ParseRequest, ParseResponse, RenderRequest, RenderResponse } from "../types";
+import { ParseRequest, ParseResponse, RenderRequest, RenderResponse, ExcelValidationResponse, BudgetConfig } from "../types";
 import { useAppStore } from "../stores/app-store";
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -94,4 +94,25 @@ export async function detectSidecarPortBrowser(): Promise<number | null> {
     } catch { /* next */ }
   }
   return null;
+}
+
+export async function validateExcelData(req: { input_path: string; config: BudgetConfig }): Promise<ExcelValidationResponse> {
+  if (isTauri) {
+    try {
+      const result = await invoke<string>("sidecar_post", {
+        path: "/api/validate-excel-data",
+        body: JSON.stringify(req),
+      });
+      return JSON.parse(result);
+    } catch (e) {
+      return { success: false, config_title: "", excel_sheets: [], missing_sheets: [], summary: null, sheets: [], overall_pass: false, total_errors: 0, total_warnings: 0, error: { code: "FETCH_ERROR", message: String(e) } };
+    }
+  }
+  const base = await getBaseUrlBrowser();
+  const res = await fetch(`${base}/api/validate-excel-data`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  return res.json();
 }

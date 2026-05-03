@@ -95,7 +95,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
   // ---------- Send message ----------
   const handleSend = useCallback(async () => {
     const trimmed = input.trim();
-    if (!trimmed || streaming) return;
+    if (!trimmed || streaming || !selectedModel) return;
 
     // Add user message to store
     const userPinnedSelections = pinnedSelections.length > 0 ? [...pinnedSelections] : undefined;

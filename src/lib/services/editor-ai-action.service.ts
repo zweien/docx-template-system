@@ -67,11 +67,18 @@ export async function listAllActions(): Promise<
   };
 }
 
-export async function getAction(
-  id: string
+export async function getActionForUser(
+  id: string,
+  userId: string
 ): Promise<ServiceResult<EditorAIActionItem>> {
   const action = await db.editorAIAction.findFirst({
-    where: { id },
+    where: {
+      id,
+      OR: [
+        { userId: null, enabled: true },
+        { userId },
+      ],
+    },
   });
 
   if (!action) {

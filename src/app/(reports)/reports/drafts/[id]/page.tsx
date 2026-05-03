@@ -292,6 +292,22 @@ function EditorContent() {
     setIsGenerating(false);
   }, [activeSection]);
 
+  // Sync section text to AI store for context
+  useEffect(() => {
+    const blocks = draft.sections[activeSection] || [];
+    const text = blocks
+      .map((b: any) => {
+        if (!b.content) return "";
+        return b.content
+          .filter((s: any) => s.type === "text")
+          .map((s: any) => s.text)
+          .join("");
+      })
+      .filter(Boolean)
+      .join("\n");
+    useEditorAIStore.getState().setSectionContent(text.slice(0, 4000));
+  }, [activeSection, draft.sections]);
+
   useEffect(() => {
     setEditedPrompt(activePrompt?.prompt || "");
     setIsEditingPrompt(false);

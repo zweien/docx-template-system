@@ -1,7 +1,7 @@
 import { streamText } from "ai";
 import { auth } from "@/lib/auth";
 import { resolveModel } from "@/lib/agent2/model-resolver";
-import { getAction, renderPrompt } from "@/lib/services/editor-ai-action.service";
+import { getActionForUser, renderPrompt } from "@/lib/services/editor-ai-action.service";
 import { executeActionSchema } from "@/validators/editor-ai";
 
 export async function POST(req: Request) {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     let userMessage: string;
 
     if (parsed.actionId) {
-      const actionResult = await getAction(parsed.actionId);
+      const actionResult = await getActionForUser(parsed.actionId, session.user.id);
       if (!actionResult.success) {
         return new Response(JSON.stringify({ error: actionResult.error }), {
           status: 404,

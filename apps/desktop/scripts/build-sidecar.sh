@@ -10,14 +10,27 @@ echo "Sidecar source: $SIDECAR_DIR"
 echo "Output: $BUILD_DIR"
 
 # Install PyInstaller if not present
-pip install pyinstaller --quiet 2>/dev/null || pip3 install pyinstaller --quiet 2>/dev/null
+PYINSTALLER="pyinstaller"
+if [ -d "$SCRIPT_DIR/../.venv" ]; then
+    PYINSTALLER="$SCRIPT_DIR/../.venv/bin/pyinstaller"
+fi
+if ! command -v "$PYINSTALLER" &>/dev/null; then
+    pip install pyinstaller --quiet 2>/dev/null || pip3 install pyinstaller --quiet 2>/dev/null
+fi
 
 # Clean previous build
 rm -rf "$BUILD_DIR"
 
+# 同步 report_engine 从主项目（确保 Desktop 用最新代码）
+echo "Syncing report_engine from main project..."
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+rm -rf "$SIDECAR_DIR/report_engine"
+cp -r "$REPO_ROOT/report-engine/src/report_engine" "$SIDECAR_DIR/report_engine"
+echo "Synced report_engine (including budget module)"
+
 # Build
 cd "$SIDECAR_DIR"
-pyinstaller \
+"$PYINSTALLER" \
     --name budget-sidecar \
     --onedir \
     --clean \
@@ -25,9 +38,9 @@ pyinstaller \
     --distpath "$BUILD_DIR" \
     --workpath /tmp/sidecar-build-work \
     --specpath /tmp/sidecar-build-work \
-    --add-data "api:api" \
-    --add-data "scripts:scripts" \
-    --add-data "report_engine:report_engine" \
+    --add-data "$SIDECAR_DIR/api:api" \
+    --add-data "$SIDECAR_DIR/scripts:scripts" \
+    --add-data "$SIDECAR_DIR/report_engine:report_engine" \
     --hidden-import report_engine \
     --hidden-import report_engine.blocks \
     --hidden-import report_engine.renderer \
@@ -36,6 +49,11 @@ pyinstaller \
     --hidden-import report_engine.converter \
     --hidden-import report_engine.prompt_parser \
     --hidden-import report_engine.schema \
+    --hidden-import report_engine.budget \
+    --hidden-import report_engine.budget.parse_excel \
+    --hidden-import report_engine.budget.validate_excel \
+    --hidden-import report_engine.budget.build_payload \
+    --hidden-import report_engine.budget.models \
     --hidden-import docxtpl \
     --hidden-import docx \
     --hidden-import openpyxl \

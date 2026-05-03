@@ -3,7 +3,7 @@ import tempfile
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from parse_excel_budget import parse_excel_budget
+from report_engine.budget.parse_excel import parse_excel_budget
 
 router = APIRouter()
 

@@ -23,6 +23,7 @@ import {
   renderBudgetReport,
   fetchBudgetConfig,
   listBudgetConfigs,
+  uploadBudgetTemplate,
   type ValidationResult,
   type ParseResult,
 } from "@/lib/budget-report-client";
@@ -40,6 +41,13 @@ export default function BudgetWizardPage() {
   const [selectedConfigId, setSelectedConfigId] = useState<string>("default.json");
   const [configLoading, setConfigLoading] = useState(true);
   const [configError, setConfigError] = useState<string | null>(null);
+
+  // Step 1: template & config file upload
+  const [templateFile, setTemplateFile] = useState<File | null>(null);
+  const [templatePath, setTemplatePath] = useState<string>(DEFAULT_TEMPLATE);
+  const [templateUploading, setTemplateUploading] = useState(false);
+  const [configFile, setConfigFile] = useState<File | null>(null);
+  const [customConfig, setCustomConfig] = useState<Record<string, unknown> | null>(null);
 
   // Step 2: Excel upload & validation
   const [excelFile, setExcelFile] = useState<File | null>(null);
@@ -137,8 +145,8 @@ export default function BudgetWizardPage() {
         setValidationResult(null);
         setParseResult(null);
 
-        // Load the selected config
-        const config = await fetchBudgetConfig(selectedConfigId);
+        // Load the selected config (custom upload or from list)
+        const config = customConfig ?? await fetchBudgetConfig(selectedConfigId);
 
         // Validate
         const vResult = await validateBudgetExcel(file, config);
@@ -185,10 +193,6 @@ export default function BudgetWizardPage() {
       setGenerating(true);
       setGenerateError(null);
 
-      const templatePath = process.env.NEXT_PUBLIC_BUDGET_TEMPLATES_DIR
-        ? `${process.env.NEXT_PUBLIC_BUDGET_TEMPLATES_DIR}/${DEFAULT_TEMPLATE}`
-        : DEFAULT_TEMPLATE;
-
       const blob = await renderBudgetReport(
         parseResult.content as unknown as Record<string, unknown>,
         templatePath,
@@ -214,7 +218,7 @@ export default function BudgetWizardPage() {
 
   // --- Step navigation ---
   const canGoNext = () => {
-    if (step === 1) return configList.length > 0;
+    if (step === 1) return true;
     if (step === 2) return parseResult?.success === true;
     return false;
   };
@@ -249,65 +253,134 @@ export default function BudgetWizardPage() {
             <div>
               <h2 className="text-lg font-[590] tracking-tight mb-1">选择模板和配置</h2>
               <p className="text-sm text-muted-foreground">
-                选择报告模板与 Excel 解析配置，然后上传数据文件
+                上传报告模板与解析配置，或使用默认配置
               </p>
             </div>
 
-            {/* Template */}
+            {/* Template upload */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">报告模板</label>
-              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 px-4 py-3">
-                <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="text-sm font-medium">{DEFAULT_TEMPLATE}</p>
-                  <p className="text-xs text-muted-foreground">默认预算报告模板</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Config selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">解析配置</label>
-              {configLoading ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  加载配置列表...
-                </div>
-              ) : configError ? (
-                <div className="flex items-center gap-2 text-sm text-destructive py-3">
-                  <AlertCircle className="h-4 w-4" />
-                  {configError}
+              <label className="text-sm font-medium text-foreground">报告模板 (.docx)</label>
+              {templateFile ? (
+                <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+                  <FileSpreadsheet className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium truncate">{templateFile.name}</span>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    {(templateFile.size / 1024).toFixed(1)} KB
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => { setTemplateFile(null); setTemplatePath(DEFAULT_TEMPLATE); }}
+                    className="text-xs text-muted-foreground hover:text-destructive ml-2"
+                  >
+                    移除
+                  </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-2">
-                  {configList.map((cfg) => (
-                    <button
-                      key={cfg.id}
-                      type="button"
-                      onClick={() => setSelectedConfigId(cfg.id)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors",
-                        selectedConfigId === cfg.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-muted/50 hover:bg-muted"
-                      )}
-                    >
-                      <div
-                        className={cn(
-                          "h-4 w-4 rounded-full border-2 flex items-center justify-center",
-                          selectedConfigId === cfg.id
-                            ? "border-primary bg-primary"
-                            : "border-muted-foreground/30"
-                        )}
-                      >
-                        {selectedConfigId === cfg.id && (
-                          <div className="h-1.5 w-1.5 rounded-full bg-primary-foreground" />
-                        )}
-                      </div>
-                      <span className="text-sm">{cfg.name}</span>
-                    </button>
-                  ))}
+                <label className="flex items-center gap-3 rounded-lg border border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 bg-muted/30 px-4 py-4 cursor-pointer transition-colors">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">点击上传模板文件</span>
+                  <input
+                    type="file"
+                    accept=".docx"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      setTemplateUploading(true);
+                      try {
+                        const result = await uploadBudgetTemplate(f);
+                        setTemplateFile(f);
+                        setTemplatePath(result.path);
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : "上传模板失败");
+                      } finally {
+                        setTemplateUploading(false);
+                      }
+                    }}
+                    disabled={templateUploading}
+                  />
+                  {templateUploading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                </label>
+              )}
+              {!templateFile && (
+                <p className="text-xs text-muted-foreground">不上传则使用默认模板</p>
+              )}
+            </div>
+
+            {/* Config: upload or select */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">解析配置 (.json)</label>
+              {configFile ? (
+                <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+                  <FileSpreadsheet className="h-5 w-5 text-primary" />
+                  <span className="text-sm font-medium truncate">{configFile.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => { setConfigFile(null); setCustomConfig(null); }}
+                    className="text-xs text-muted-foreground hover:text-destructive ml-auto"
+                  >
+                    移除
+                  </button>
                 </div>
+              ) : (
+                <>
+                  <label className="flex items-center gap-3 rounded-lg border border-dashed border-muted-foreground/25 hover:border-muted-foreground/50 bg-muted/30 px-4 py-4 cursor-pointer transition-colors">
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">点击上传配置文件</span>
+                    <input
+                      type="file"
+                      accept=".json"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (!f) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          try {
+                            const json = JSON.parse(reader.result as string);
+                            setConfigFile(f);
+                            setCustomConfig(json);
+                          } catch {
+                            alert("无效的 JSON 文件");
+                          }
+                        };
+                        reader.readAsText(f);
+                      }}
+                    />
+                  </label>
+                  {!customConfig && !configLoading && configList.length > 0 && (
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-xs text-muted-foreground">或选择已有配置：</p>
+                      {configList.map((cfg) => (
+                        <button
+                          key={cfg.id}
+                          type="button"
+                          onClick={() => { setSelectedConfigId(cfg.id); setCustomConfig(null); setConfigFile(null); }}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg border px-4 py-2.5 text-left transition-colors w-full",
+                            selectedConfigId === cfg.id && !customConfig
+                              ? "border-primary bg-primary/5"
+                              : "border-border bg-muted/50 hover:bg-muted"
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              "h-3.5 w-3.5 rounded-full border-2 flex items-center justify-center",
+                              selectedConfigId === cfg.id && !customConfig
+                                ? "border-primary bg-primary"
+                                : "border-muted-foreground/30"
+                            )}
+                          >
+                            {selectedConfigId === cfg.id && !customConfig && (
+                              <div className="h-1 w-1 rounded-full bg-primary-foreground" />
+                            )}
+                          </div>
+                          <span className="text-sm">{cfg.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

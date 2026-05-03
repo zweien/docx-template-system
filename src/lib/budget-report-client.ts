@@ -82,6 +82,19 @@ export async function parseBudgetExcel(
   return res.json();
 }
 
+export async function uploadBudgetTemplate(
+  file: File,
+): Promise<{ path: string }> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch(`${REPORT_ENGINE_URL}/upload-template`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) throw new Error(`Upload template failed: ${res.statusText}`);
+  return res.json();
+}
+
 export async function renderBudgetReport(
   content: Record<string, unknown>,
   templatePath: string,

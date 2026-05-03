@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import tempfile
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -160,6 +161,21 @@ async def parse_excel_endpoint(
         )
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+@app.post("/upload-template")
+async def upload_template_endpoint(file: UploadFile = File(...)):
+    """上传模板文件，返回服务器端路径供后续 render-budget 使用。"""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename")
+    if not file.filename.endswith(".docx"):
+        raise HTTPException(status_code=400, detail="Only .docx files accepted")
+
+    dest_dir = BUDGET_TEMP_DIR / "templates"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest_path = dest_dir / f"{uuid.uuid4().hex}_{file.filename}"
+    dest_path.write_bytes(await file.read())
+    return {"path": str(dest_path)}
 
 
 @app.post("/render-budget")

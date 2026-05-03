@@ -12,6 +12,8 @@ export interface ValidationResult {
     sheet_name: string;
     found: boolean;
     mode: string;
+    key_column_found: boolean | null;
+    value_column_found: boolean | null;
     mapped_count: number;
     missing_keys: string[];
   } | null;
@@ -25,6 +27,7 @@ export interface ValidationResult {
     fill_rate: number;
     numeric_violations: { row: number; column: string; value: string }[];
     image_summary: { total_images: number; rows_with_images: number } | null;
+    unique_values: Record<string, string[]>;
     warnings: string[];
   }[];
   overall_pass: boolean;

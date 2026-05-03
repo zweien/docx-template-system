@@ -15,7 +15,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StepIndicator } from "@/components/batch/step-indicator";
+import { BudgetDataValidationPanel } from "@/components/budget/budget-data-validation-panel";
 import { cn } from "@/lib/utils";
 import {
   validateBudgetExcel,
@@ -238,17 +240,29 @@ export default function BudgetWizardPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">
-          预算报告生成
+          预算报告
         </h1>
         <p className="text-sm text-muted-foreground">
-          上传预算 Excel 数据，自动生成 Word 格式预算报告
+          数据校验与预算报告生成
         </p>
       </div>
 
+      <Tabs defaultValue="wizard">
+        <TabsList>
+          <TabsTrigger value="wizard">报告生成</TabsTrigger>
+          <TabsTrigger value="validation">数据校验</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="validation" className="mt-6">
+          <BudgetDataValidationPanel />
+        </TabsContent>
+
+        <TabsContent value="wizard" className="mt-6">
+        <div className="mx-auto max-w-3xl space-y-6">
       {/* Step Indicator */}
       <StepIndicator current={step} total={3} labels={STEP_LABELS} />
 
@@ -771,6 +785,9 @@ export default function BudgetWizardPage() {
           </Button>
         )}
       </div>
+        </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { Wizard } from "./components/Wizard";
 import { LogPanel } from "./components/LogPanel";
 import { TemplateManager } from "./components/TemplateManager";
 import { ConfigsManager } from "./components/ConfigsManager";
+import { DataValidation } from "./components/DataValidation";
 import { Settings } from "./components/Settings";
 import { useAppStore } from "./stores/app-store";
 import { listTemplates } from "./services/tauri-commands";
@@ -68,6 +69,7 @@ export default function App() {
         {currentView === "wizard" && <Wizard />}
         {currentView === "templates" && <TemplateManager />}
         {currentView === "configs" && <ConfigsManager />}
+        {currentView === "validation" && <DataValidation />}
         {currentView === "settings" && <Settings />}
         <LogPanel logs={logs} onClear={clearLogs} />
       </div>

@@ -31,6 +31,7 @@ export function Sidebar() {
     { view: "wizard", icon: "◆", label: "生成报告", desc: "四步向导" },
     { view: "templates", icon: "⊞", label: "模板管理", desc: "导入与管理" },
     { view: "configs", icon: "▤", label: "配置方案", desc: "管理与编辑" },
+    { view: "validation", icon: "✓", label: "数据校验", desc: "Excel 校验" },
   ];
 
   const toggleTheme = () => {
@@ -99,7 +100,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.6.1</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.0</p>
             </div>
           )}
         </div>
@@ -230,6 +231,12 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.7.0", date: "2026-05-03", changes: [
+      { type: "feat", text: "独立数据校验功能：根据配置校验 Excel 数据完整性" },
+      { type: "feat", text: "校验报告：缺失 sheet/列、空单元格、数值违规、填充率统计" },
+      { type: "feat", text: "支持已保存配置和导入 JSON 两种配置来源" },
+      { type: "feat", text: "文件校验系统：导入前模板/Excel/配置自动校验" },
+    ]},
     { ver: "0.6.1", date: "2026-05-03", changes: [
       { type: "feat", text: "响应式布局增强：窄窗口自适应侧边栏、卡片网格、模态框" },
       { type: "feat", text: "配置方案管理页面：卡片管理、绑定 xlsx、ZIP 导出" },
@@ -310,7 +317,7 @@ function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.6.1</span>
+          <span className="font-mono text-text">0.7.0</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

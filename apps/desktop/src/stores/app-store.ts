@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { BudgetConfig, ConfigMeta, ReportContent } from "../types";
 import { listConfigs as listConfigsCmd } from "../services/tauri-commands";
 
-export type AppView = "wizard" | "templates" | "configs" | "settings";
+export type AppView = "wizard" | "templates" | "configs" | "settings" | "validation";
 export type ThemeMode = "light" | "dark";
 
 export interface AppSettings {

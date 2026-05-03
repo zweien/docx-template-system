@@ -10,7 +10,7 @@ SIDEKICK_DIR = Path(__file__).parent
 sys.path.insert(0, str(SIDEKICK_DIR))            # report_engine 包
 sys.path.insert(0, str(SIDEKICK_DIR / "scripts")) # parse/build 脚本
 
-from api import parse, render, config, progress, validate
+from api import parse, render, config, progress, validate, validate_excel
 
 
 @asynccontextmanager
@@ -34,6 +34,7 @@ app.include_router(render.router, prefix="/api")
 app.include_router(config.router, prefix="/api")
 app.include_router(progress.router, prefix="/api")
 app.include_router(validate.router, prefix="/api")
+app.include_router(validate_excel.router, prefix="/api")
 
 
 @app.get("/health")

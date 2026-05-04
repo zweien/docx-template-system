@@ -17,32 +17,9 @@
 
 ## 界面预览
 
-<table>
-  <tr>
-    <td align="center"><b>工作台</b></td>
-    <td align="center"><b>模板库</b></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/workspace.png" alt="工作台" width="480" /></td>
-    <td><img src="docs/screenshots/templates.png" alt="模板库" width="480" /></td>
-  </tr>
-  <tr>
-    <td align="center"><b>填表生成</b></td>
-    <td align="center"><b>数据表</b></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/generate.png" alt="填表生成" width="480" /></td>
-    <td><img src="docs/screenshots/data-grid.png" alt="数据表" width="480" /></td>
-  </tr>
-  <tr>
-    <td align="center"><b>AI 智能助手</b></td>
-    <td align="center"><b>报告编辑器</b></td>
-  </tr>
-  <tr>
-    <td><img src="docs/screenshots/ai-agent.png" alt="AI 智能助手" width="480" /></td>
-    <td><img src="docs/screenshots/report-editor.png" alt="报告编辑器" width="480" /></td>
-  </tr>
-</table>
+<p align="center">
+  <img src="docs/screenshots/workspace.png" alt="工作台" width="720" />
+</p>
 
 ## 功能特性
 

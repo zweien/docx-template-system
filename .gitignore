@@ -43,10 +43,13 @@ public/uploads/templates/*
 __pycache__/
 # Python
 python-service/.venv/
+apps/desktop/.venv/
+report-engine/src/*.egg-info/
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 /sidebar-test.png
 /src/generated/prisma
 .superpowers/
+docs/superpowers/
 # testing
 test-results/
 /tool-error.png

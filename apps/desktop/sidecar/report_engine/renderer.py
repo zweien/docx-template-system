@@ -171,12 +171,11 @@ def render_report(
 
     # 确保 OMML (m:) 命名空间在 document.xml 根元素上已声明，
     # 否则 formula block 插入的 <m:oMath> 会导致 XML 解析错误。
-    root = tpl.docx._element
-    if "m" not in root.nsmap:
-        root.set(
-            "{http://www.w3.org/2000/xmlns/}m",
-            "http://schemas.openxmlformats.org/officeDocument/2006/math",
-        )
+    # 注意：lxml 的 set("{http://www.w3.org/2000/xmlns/}m", ...) 会产生
+    # xmlns:ns0 错误，所以先 register_namespace 再序列化。
+    from lxml import etree
+    etree.register_namespace("m", "http://schemas.openxmlformats.org/officeDocument/2006/math")
+    etree.register_namespace("a", "http://schemas.openxmlformats.org/drawingml/2006/main")
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     tpl.save(output_path)

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAppStore, AppView, ThemeMode } from "../stores/app-store";
+import { AboutContent } from "./AboutContent";
 
 type ModalType = "help" | "changelog" | "about" | null;
 
@@ -190,10 +191,18 @@ function SidebarModal({ type, onClose }: { type: ModalType; onClose: () => void 
 
 function HelpContent() {
   const steps = [
-    { title: "1. 选择模板", desc: "导入或选择一个 .docx 模板文件，模板中包含 {{ 占位符 }}" },
-    { title: "2. 导入 Excel", desc: "选择包含预算数据的 Excel 文件，系统会根据配置方案解析数据" },
-    { title: "3. 配置预览", desc: "查看配置方案、数据映射和解析结果，确认无误后继续" },
-    { title: "4. 生成报告", desc: "点击生成按钮，系统将数据填入模板并输出 .docx 报告" },
+    { title: "1. 选择模板", desc: "导入或选择一个 .docx 模板文件，模板中包含 {{ 占位符 }}，支持自动校验模板结构" },
+    { title: "2. 导入 Excel", desc: "选择包含预算数据的 Excel 文件，系统会根据配置方案解析数据，禁用章节自动跳过" },
+    { title: "3. 配置预览", desc: "查看配置方案、数据映射和解析结果，可视化编辑器支持列映射、启用开关等" },
+    { title: "4. 生成报告", desc: "点击生成按钮，系统将数据填入模板并输出 .docx 报告，日志面板实时显示进度" },
+  ];
+
+  const features = [
+    { title: "模板管理", desc: "导入、重命名、删除 .docx 模板，自动校验占位符和结构" },
+    { title: "配置方案", desc: "管理多套 Excel 映射配置，支持 JSON 导入导出、绑定 Excel 文件、ZIP 打包导出" },
+    { title: "数据校验", desc: "独立校验 Excel 数据完整性：缺失 sheet/列、空单元格、数值违规、填充率统计" },
+    { title: "配置编辑器", desc: "可视化编辑配置：汇总页映射、Sheet 列映射、标题级别、表头行号、章节启用开关" },
+    { title: "日志面板", desc: "可拖拽调整高度，按类型（信息/成功/警告/错误）分色显示，支持折叠和清空" },
   ];
 
   return (
@@ -212,17 +221,33 @@ function HelpContent() {
       </div>
 
       <div className="border-t border-border-subtle pt-4 space-y-2">
-        <h4 className="text-ui text-[0.8rem] text-text">配置方案</h4>
-        <p className="text-[0.8rem] text-text-muted">配置方案定义了 Excel 数据到报告模板的映射规则，包括汇总页配置、Sheet 映射、列映射等。可以保存多套配置，在不同场景下切换使用。</p>
+        <h4 className="text-ui text-[0.8rem] text-text">功能模块</h4>
+        <div className="space-y-2">
+          {features.map((f) => (
+            <div key={f.title}>
+              <span className="font-medium text-[0.8rem] text-text">{f.title}</span>
+              <span className="text-[0.8rem] text-text-muted"> — {f.desc}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="border-t border-border-subtle pt-4 space-y-2">
-        <h4 className="text-ui text-[0.8rem] text-text">快捷键</h4>
+        <h4 className="text-ui text-[0.8rem] text-text">配置方案</h4>
+        <p className="text-[0.8rem] text-text-muted">配置方案定义了 Excel 数据到报告模板的映射规则，包括汇总页配置、Sheet 映射、列映射、章节启用等。支持中文标识，可保存多套配置在不同场景下切换使用。</p>
+      </div>
+
+      <div className="border-t border-border-subtle pt-4 space-y-2">
+        <h4 className="text-ui text-[0.8rem] text-text">界面操作</h4>
         <div className="grid grid-cols-2 gap-2 text-[0.8rem]">
-          <span className="text-text-muted">侧边栏收缩</span>
+          <span className="text-text-muted">侧边栏收缩/展开</span>
           <span className="text-text font-mono text-right">◂ 按钮</span>
           <span className="text-text-muted">主题切换</span>
           <span className="text-text font-mono text-right">侧边栏 ☀/☽ 按钮</span>
+          <span className="text-text-muted">字体大小</span>
+          <span className="text-text font-mono text-right">设置页面滑块</span>
+          <span className="text-text-muted">重命名</span>
+          <span className="text-text font-mono text-right">双击卡片标题</span>
         </div>
       </div>
     </div>
@@ -318,46 +343,3 @@ function ChangelogContent() {
   );
 }
 
-function AboutContent() {
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-4">
-        <img src="/favicon.png" alt="Logo" className="w-12 h-12 rounded-xl" />
-        <div>
-          <h4 className="text-[1rem] font-medium text-text">预算报告生成器</h4>
-          <p className="font-mono text-[0.8rem] text-text-quaternary mt-0.5">Budget Report Generator</p>
-        </div>
-      </div>
-
-      <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
-        <div className="flex justify-between">
-          <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.7.6</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-text-muted">前端引擎</span>
-          <span className="font-mono text-text">Tauri 2.0 + React 18</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-text-muted">后端服务</span>
-          <span className="font-mono text-text">report-engine (Python)</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-text-muted">UI 框架</span>
-          <span className="font-mono text-text">Tailwind CSS v4</span>
-        </div>
-      </div>
-
-      <p className="text-[0.8rem] text-text-muted leading-relaxed">
-        基于 docx 模板的预算报告生成工具。通过配置映射规则，将 Excel 数据自动填入 Word 模板，快速生成规范的预算报告文档。
-      </p>
-
-      <div className="border-t border-border pt-4">
-        <div className="flex justify-between text-[0.8rem]">
-          <span className="text-text-muted">开发团队</span>
-          <span className="font-mono text-text font-medium">IDRL</span>
-        </div>
-      </div>
-    </div>
-  );
-}

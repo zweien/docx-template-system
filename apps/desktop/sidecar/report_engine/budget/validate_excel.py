@@ -235,6 +235,7 @@ def _validate_summary_sheet(
                     v = _safe_value(row[val_idx]) if val_idx < len(row) else ""
                     if k and v:
                         mapped += 1
+                        result.mapped_values[k] = v
                     elif k and not v:
                         result.missing_keys.append(k)
                 result.mapped_count = mapped
@@ -247,6 +248,7 @@ def _validate_summary_sheet(
                 val = _safe_value(sheet[cell_ref].value)
                 if val:
                     mapped += 1
+                    result.mapped_values[key] = f"{cell_ref} = {val}"
                 else:
                     result.missing_keys.append(key)
             except Exception:

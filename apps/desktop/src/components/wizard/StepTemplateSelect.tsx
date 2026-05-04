@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { listTemplates, selectDocx, importTemplate, deleteTemplate, renameTemplate } from "../../services/tauri-commands";
+import { validateTemplate } from "../../services/validation";
+import { ValidationResult } from "../../types";
+import { ValidationPanel } from "../ValidationPanel";
 import { useEffect } from "react";
 
 export function StepTemplateSelect() {
   const { templates, setTemplates, selectedTemplateId, selectTemplate, setWizardStep, addLog } =
     useAppStore();
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
   useEffect(() => {
     listTemplates().then(setTemplates).catch(console.error);
@@ -20,6 +24,14 @@ export function StepTemplateSelect() {
       setTemplates([meta, ...templates]);
       selectTemplate(meta.id);
       addLog(`模板导入成功: ${meta.name}`);
+
+      const vr = await validateTemplate(meta.path);
+      if (vr.issues.length > 0) {
+        setValidationResult(vr);
+        addLog(`模板校验: ${vr.summary.errors} 个错误, ${vr.summary.warnings} 个警告`);
+      } else {
+        setValidationResult(null);
+      }
     } catch (e) {
       addLog(`导入失败: ${e}`);
     }
@@ -103,6 +115,8 @@ export function StepTemplateSelect() {
           )}
         </>
       )}
+
+      <ValidationPanel result={validationResult} onDismiss={() => setValidationResult(null)} />
     </div>
   );
 }

@@ -9,6 +9,17 @@ from fastapi.middleware.cors import CORSMiddleware
 SIDEKICK_DIR = Path(__file__).parent
 sys.path.insert(0, str(SIDEKICK_DIR))            # report_engine 包
 
+# Dev mode: 向上搜索 report-engine/src，优先从主项目导入
+# 这样编辑主项目代码即可生效，避免维护两份副本
+# 生产模式（PyInstaller）不存在此路径，自动回退到本地 report_engine
+_p = SIDEKICK_DIR
+for _ in range(8):
+    _candidate = _p / "report-engine" / "src"
+    if _candidate.is_dir():
+        sys.path.insert(0, str(_candidate))
+        break
+    _p = _p.parent
+
 from api import parse, render, config, progress, validate, validate_excel
 
 

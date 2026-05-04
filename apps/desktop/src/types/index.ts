@@ -69,6 +69,8 @@ export interface SheetConfig {
   image_columns?: string[];
   heading_level?: number;
   item_heading_level?: number;
+  header_row?: number;
+  enabled?: boolean;
 }
 
 export interface ApiError {
@@ -111,6 +113,7 @@ export interface SummaryValidationResult {
   value_column_found: boolean | null;
   mapped_count: number;
   missing_keys: string[];
+  mapped_values: Record<string, string>;
 }
 
 export interface ExcelValidationResponse {

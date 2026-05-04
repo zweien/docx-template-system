@@ -337,6 +337,29 @@ function SummarySheetCard({ result }: { result: SummaryValidationResult }) {
               <p className="text-[0.8rem] text-text-secondary">
                 成功映射: <span className="font-mono font-medium">{result.mapped_count}</span> 个键值对
               </p>
+
+              {/* Mapped values table */}
+              {Object.keys(result.mapped_values).length > 0 && (
+                <div className="border border-border rounded-md overflow-hidden">
+                  <table className="w-full text-[0.8rem]">
+                    <thead className="bg-canvas">
+                      <tr>
+                        <th className="px-3 py-1.5 text-left text-text-quaternary font-medium">键</th>
+                        <th className="px-3 py-1.5 text-left text-text-quaternary font-medium">值</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(result.mapped_values).map(([key, value]) => (
+                        <tr key={key} className="border-t border-border-subtle">
+                          <td className="px-3 py-1 font-mono text-text-secondary">{key}</td>
+                          <td className="px-3 py-1 text-text">{value}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
               {result.missing_keys.length > 0 && (
                 <div>
                   <p className="text-[0.8rem] text-warning mb-1">缺失值 ({result.missing_keys.length}):</p>

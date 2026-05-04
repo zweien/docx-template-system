@@ -100,7 +100,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.5</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.6</p>
             </div>
           )}
         </div>
@@ -231,6 +231,16 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.7.6", date: "2026-05-04", changes: [
+      { type: "fix", text: "修复生成 DOCX 文档 XML 命名空间损坏问题" },
+      { type: "fix", text: "修复中文占位符无法识别（Word 拆分 run）" },
+      { type: "fix", text: "修复禁用章节仍出现在生成报告中的问题" },
+      { type: "fix", text: "生成标题去除手动编号（适配模板自动编号）" },
+      { type: "feat", text: "数据校验展示汇总页映射值" },
+      { type: "feat", text: "配置编辑器支持标题级别、表头行号、启用开关" },
+      { type: "feat", text: "模板导入自动校验" },
+      { type: "refactor", text: "Dev 模式直接引用主项目 report-engine，统一代码维护" },
+    ]},
     { ver: "0.7.5", date: "2026-05-04", changes: [
       { type: "feat", text: "更新应用图标为全新紫色 Lab Logo" },
       { type: "fix", text: "修复 Windows 打包版 Sidecar 启动失败（report_engine/budget 模块缺失）" },
@@ -322,7 +332,7 @@ function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.7.5</span>
+          <span className="font-mono text-text">0.7.6</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

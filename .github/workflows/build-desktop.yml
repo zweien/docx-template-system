@@ -83,7 +83,23 @@ jobs:
             --add-data "$srcDir\api;api" `
             --add-data "$srcDir\scripts;scripts" `
             --add-data "$srcDir\report_engine;report_engine" `
-            --collect-sub report_engine `
+            --hidden-import report_engine `
+            --hidden-import report_engine.blocks `
+            --hidden-import report_engine.renderer `
+            --hidden-import report_engine.subdoc `
+            --hidden-import report_engine.template_parser `
+            --hidden-import report_engine.converter `
+            --hidden-import report_engine.prompt_parser `
+            --hidden-import report_engine.schema `
+            --hidden-import report_engine.budget `
+            --hidden-import report_engine.budget.parse_excel `
+            --hidden-import report_engine.budget.models `
+            --hidden-import report_engine.budget.validate_excel `
+            --hidden-import report_engine.budget.build_payload `
+            --hidden-import report_engine.validator `
+            --hidden-import report_engine.compat `
+            --hidden-import report_engine.template_checker `
+            --hidden-import report_engine.style_checker `
             --hidden-import docxtpl `
             --hidden-import docx `
             --hidden-import openpyxl `

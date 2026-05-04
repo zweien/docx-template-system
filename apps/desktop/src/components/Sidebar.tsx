@@ -100,7 +100,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.4</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.5</p>
             </div>
           )}
         </div>
@@ -231,6 +231,9 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.7.5", date: "2026-05-04", changes: [
+      { type: "fix", text: "修复 Windows 打包版 Sidecar 启动失败：添加缺失的 report_engine/budget 模块文件" },
+    ]},
     { ver: "0.7.4", date: "2026-05-04", changes: [
       { type: "fix", text: "修复 Windows 打包版 Sidecar 启动失败：补全 report_engine.budget 模块" },
     ]},

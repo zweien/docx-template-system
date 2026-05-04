@@ -5,13 +5,6 @@ import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Table,
   TableBody,
   TableCell,
@@ -19,9 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 import {
-  ArrowLeft,
   Pencil,
   FileText,
   Files,
@@ -29,8 +20,8 @@ import {
   CalendarDays,
   User,
   HardDrive,
-  Download,
 } from "lucide-react";
+import { Breadcrumbs, PageHeader, ContentCard } from "@/components/shared";
 import { DeleteTemplateButton } from "./delete-button";
 import { TemplateDownloadButton } from "./download-button";
 import { DataTableLinkWrapper } from "@/components/template/data-table-link-wrapper";
@@ -101,181 +92,150 @@ export default async function TemplateDetailPage({
 
   return (
     <div className="space-y-6">
-      <LinkButton
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground hover:text-foreground"
-        href="/templates"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        返回模板列表
-      </LinkButton>
+      <Breadcrumbs items={[
+        { label: "模板管理", href: "/templates" },
+        { label: template.name },
+      ]} />
 
-      <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)] sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1 min-w-0">
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">
-              {template.name}
-            </h1>
+      <PageHeader
+        title={template.name}
+        description={template.description || undefined}
+        actions={
+          <>
             <Badge variant={STATUS_VARIANTS[template.status]}>
               {STATUS_LABELS[template.status]}
             </Badge>
             {template.currentVersion && (
               <Badge variant="outline">v{template.currentVersion.version}</Badge>
             )}
-          </div>
-          {template.description && (
-            <p className="text-muted-foreground">{template.description}</p>
-          )}
-          {template.screenshot && (
-            <div className="mt-2 max-w-xs">
-              <ScreenshotViewer src={template.screenshot} alt={template.name} />
-            </div>
-          )}
-        </div>
-
-        {/* Action buttons — icon-only on mobile, icon+text on sm+ */}
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {template.currentVersion && (
-            <VersionHistoryDialogWrapper templateId={template.id} />
-          )}
-          {isAdmin && (
-            <LinkButton
-              variant="outline"
-              size="sm"
-              href={`/templates/${template.id}/edit`}
-            >
-              <Pencil className="h-4 w-4" />
-              <span className="hidden sm:inline">编辑</span>
-            </LinkButton>
-          )}
-          {template.status === "PUBLISHED" && (
-            <>
+            {template.currentVersion && (
+              <VersionHistoryDialogWrapper templateId={template.id} />
+            )}
+            {isAdmin && (
               <LinkButton
                 variant="outline"
                 size="sm"
-                href={`/templates/${template.id}/batch`}
+                href={`/templates/${template.id}/edit`}
               >
-                <Files className="h-4 w-4" />
-                <span className="hidden sm:inline">批量生成</span>
+                <Pencil className="h-4 w-4" />
+                <span className="hidden sm:inline">编辑</span>
               </LinkButton>
-              <LinkButton
-                size="sm"
-                href={`/templates/${template.id}/fill`}
-              >
-                <PenLine className="h-4 w-4" />
-                <span className="hidden sm:inline">填写表单</span>
-              </LinkButton>
-            </>
-          )}
-        </div>
-      </div>
+            )}
+            {template.status === "PUBLISHED" && (
+              <>
+                <LinkButton
+                  variant="outline"
+                  size="sm"
+                  href={`/templates/${template.id}/batch`}
+                >
+                  <Files className="h-4 w-4" />
+                  <span className="hidden sm:inline">批量生成</span>
+                </LinkButton>
+                <LinkButton
+                  size="sm"
+                  href={`/templates/${template.id}/fill`}
+                >
+                  <PenLine className="h-4 w-4" />
+                  <span className="hidden sm:inline">填写表单</span>
+                </LinkButton>
+              </>
+            )}
+          </>
+        }
+      />
 
-      <Separator className="bg-border" />
+      {template.screenshot && (
+        <div className="max-w-xs">
+          <ScreenshotViewer src={template.screenshot} alt={template.name} />
+        </div>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+        <ContentCard>
+          <div className="flex items-center gap-2 mb-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-[510]">文件信息</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-sm font-[510] text-foreground">{template.originalFileName || template.fileName}</p>
+            <span className="text-sm font-medium">文件信息</span>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-foreground">{template.originalFileName || template.fileName}</p>
             <p className="text-xs text-muted-foreground">
               {formatFileSize(template.fileSize)}
             </p>
             <TemplateDownloadButton templateId={template.id} />
-          </CardContent>
-        </Card>
+          </div>
+        </ContentCard>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+        <ContentCard>
+          <div className="flex items-center gap-2 mb-2">
             <User className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-[510]">创建者</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm font-[510] text-foreground">{template.createdBy.name}</p>
-          </CardContent>
-        </Card>
+            <span className="text-sm font-medium">创建者</span>
+          </div>
+          <p className="text-sm font-medium text-foreground">{template.createdBy.name}</p>
+        </ContentCard>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+        <ContentCard>
+          <div className="flex items-center gap-2 mb-2">
             <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-[510]">创建时间</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm font-[510] text-foreground">
-              {template.createdAt.toLocaleDateString("zh-CN", {
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-              })}
-            </p>
-          </CardContent>
-        </Card>
+            <span className="text-sm font-medium">创建时间</span>
+          </div>
+          <p className="text-sm font-medium text-foreground">
+            {template.createdAt.toLocaleDateString("zh-CN", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            })}
+          </p>
+        </ContentCard>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
+        <ContentCard>
+          <div className="flex items-center gap-2 mb-2">
             <HardDrive className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-sm font-[510]">占位符数量</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm font-[510] text-foreground">
-              {template.placeholders.length} 个
-            </p>
-          </CardContent>
-        </Card>
+            <span className="text-sm font-medium">占位符数量</span>
+          </div>
+          <p className="text-sm font-medium text-foreground">
+            {template.placeholders.length} 个
+          </p>
+        </ContentCard>
       </div>
 
       {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>主数据关联</CardTitle>
-            <CardDescription>
-              关联数据表后，批量生成时可自动选择该表并配置字段映射
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DataTableLinkWrapper
-              templateId={template.id}
-              dataTableId={template.dataTableId}
-              dataTable={template.dataTable}
-              fieldMapping={template.fieldMapping as Record<string, string | null> | null}
-              placeholders={template.placeholders.map((ph) => ({
-                key: ph.key,
-                label: ph.label,
-                required: ph.required,
-              }))}
-            />
-          </CardContent>
-        </Card>
+        <ContentCard>
+          <h3 className="text-sm font-medium mb-1">主数据关联</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            关联数据表后，批量生成时可自动选择该表并配置字段映射
+          </p>
+          <DataTableLinkWrapper
+            templateId={template.id}
+            dataTableId={template.dataTableId}
+            dataTable={template.dataTable}
+            fieldMapping={template.fieldMapping as Record<string, string | null> | null}
+            placeholders={template.placeholders.map((ph) => ({
+              key: ph.key,
+              label: ph.label,
+              required: ph.required,
+            }))}
+          />
+        </ContentCard>
       )}
 
       {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>AI 填充助手配置</CardTitle>
-            <CardDescription>
-              为此模板配置专属的 AI 填充提示词，指导 AI 助手在用户填表时生成更精准的建议
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FillAssistPromptEditor
-              templateId={template.id}
-              initialValue={template.fillAssistPrompt}
-            />
-          </CardContent>
-        </Card>
+        <ContentCard>
+          <h3 className="text-sm font-medium mb-1">AI 填充助手配置</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            为此模板配置专属的 AI 填充提示词，指导 AI 助手在用户填表时生成更精准的建议
+          </p>
+          <FillAssistPromptEditor
+            templateId={template.id}
+            initialValue={template.fillAssistPrompt}
+          />
+        </ContentCard>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>占位符列表</CardTitle>
-          <CardDescription>
-            模板中定义的所有占位符字段
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <ContentCard>
+        <h3 className="text-sm font-medium mb-1">占位符列表</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          模板中定义的所有占位符字段
+        </p>
           {template.placeholders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <p className="text-sm">暂无占位符</p>
@@ -333,29 +293,24 @@ export default async function TemplateDetailPage({
               </Table>
             </div>
           )}
-        </CardContent>
-      </Card>
+      </ContentCard>
 
       {isAdmin && (
-        <Card className="border-destructive/45">
-          <CardHeader>
-            <CardTitle className="text-destructive">危险操作</CardTitle>
-            <CardDescription>
-              以下操作不可撤销，请谨慎执行
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">删除模板</p>
-                <p className="text-xs text-muted-foreground">
-                  删除后将同时移除所有关联的占位符、草稿和生成记录
-                </p>
-              </div>
-              <DeleteTemplateButton templateId={template.id} templateName={template.name} />
+        <ContentCard className="border-destructive/45">
+          <h3 className="text-sm font-medium text-destructive mb-1">危险操作</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            以下操作不可撤销，请谨慎执行
+          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">删除模板</p>
+              <p className="text-xs text-muted-foreground">
+                删除后将同时移除所有关联的占位符、草稿和生成记录
+              </p>
             </div>
-          </CardContent>
-        </Card>
+            <DeleteTemplateButton templateId={template.id} templateName={template.name} />
+          </div>
+        </ContentCard>
       )}
     </div>
   );

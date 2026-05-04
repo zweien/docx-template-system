@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { createDefaultAutomationDefinition } from "@/lib/automation-defaults";
 import { AutomationEditor } from "@/components/automations/automation-editor";
 import { listTables } from "@/lib/services/data-table.service";
+import { PageHeader, Breadcrumbs } from "@/components/shared";
 
 export default async function NewAutomationPage() {
   const session = await auth();
@@ -16,17 +17,15 @@ export default async function NewAutomationPage() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-border/80 bg-card/90 p-6">
-        <p className="text-xs font-[520] uppercase tracking-[0.18em] text-muted-foreground">
-          新建自动化
-        </p>
-        <h1 className="mt-2 text-3xl font-[520] tracking-[-0.04em] text-foreground">
-          创建规则
-        </h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          先选择目标数据表，再配置触发器、条件和动作。创建后会跳转到详情页继续编辑。
-        </p>
-      </div>
+      <Breadcrumbs items={[
+        { label: "自动化", href: "/automations" },
+        { label: "创建规则" },
+      ]} />
+
+      <PageHeader
+        title="创建规则"
+        description="先选择目标数据表，再配置触发器、条件和动作。创建后会跳转到详情页继续编辑。"
+      />
 
       <AutomationEditor
         mode="create"

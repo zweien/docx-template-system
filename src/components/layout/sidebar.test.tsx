@@ -49,24 +49,34 @@ describe("Sidebar", () => {
     });
   });
 
-  it("在数据详情页应将主数据标记为当前页面", () => {
+  it("在数据详情页应将数据表标记为当前页面", () => {
     mockUsePathname.mockReturnValue("/data/abc");
 
     render(<Sidebar />);
 
-    expect(screen.getByRole("link", { name: "主数据" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "数据表" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("USER 角色不显示系统设置", () => {
+  it("USER 角色不显示管理后台", () => {
     render(<Sidebar />);
 
-    expect(screen.queryByRole("link", { name: "系统设置" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "管理后台" })).not.toBeInTheDocument();
   });
 
-  it("ADMIN 角色显示系统设置", () => {
+  it("ADMIN 角色展开管理后台后显示系统设置", () => {
     mockUseSession.mockReturnValue({ data: { user: { role: "ADMIN" satisfies Role } } });
 
     render(<Sidebar />);
+
+    // Admin section header should be visible
+    const adminToggle = screen.getByRole("button", { name: "管理后台" });
+    expect(adminToggle).toBeInTheDocument();
+
+    // Admin items are collapsed by default
+    expect(screen.queryByRole("link", { name: "系统设置" })).not.toBeInTheDocument();
+
+    // Click to expand
+    fireEvent.click(adminToggle);
 
     expect(screen.getByRole("link", { name: "系统设置" })).toBeInTheDocument();
   });
@@ -90,6 +100,7 @@ describe("Sidebar", () => {
 
     render(<Sidebar />);
 
+    // "生成记录" is inside the 模板与表单 group which auto-expands when there's no active child
     expect(screen.getByRole("link", { name: "生成记录" })).toHaveClass("border-transparent");
   });
 });

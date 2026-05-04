@@ -19,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PageHeader, EmptyState } from "@/components/shared";
+import { FileText } from "lucide-react";
 
 interface PromptMeta {
   target: string;
@@ -149,15 +151,21 @@ export default function ReportTemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">报告模板</h1>
-        <label className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          上传模板
-          <input type="file" accept=".docx" onChange={handleUpload} className="hidden" />
-        </label>
-      </div>
+      <PageHeader
+        title="报告模板"
+        actions={
+          <label className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            上传模板
+            <input type="file" accept=".docx" onChange={handleUpload} className="hidden" />
+          </label>
+        }
+      />
       {templates.length === 0 ? (
-        <div className="py-12 text-center text-muted-foreground">暂无报告模板，请上传 .docx 模板文件</div>
+        <EmptyState
+          icon={FileText}
+          title="暂无报告模板"
+          description="请上传 .docx 模板文件"
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {templates.map((t) => (

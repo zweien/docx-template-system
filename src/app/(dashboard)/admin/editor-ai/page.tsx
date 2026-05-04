@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { PageHeader, Breadcrumbs, EmptyState } from "@/components/shared";
 import { toast } from "sonner";
 import type { EditorAIActionItem } from "@/types/editor-ai";
 
@@ -259,21 +260,17 @@ export default function EditorAIAdminPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            编辑器 AI 操作管理
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            管理全局 AI 操作模板，所有用户共享
-          </p>
-        </div>
-        <Button onClick={openCreateDialog} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          新建操作
-        </Button>
-      </div>
+      <Breadcrumbs items={[{ label: "管理后台", href: "/admin" }, { label: "AI 配置" }]} />
+      <PageHeader
+        title="编辑器 AI 操作管理"
+        description="管理全局 AI 操作模板，所有用户共享"
+        actions={
+          <Button onClick={openCreateDialog} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            新建操作
+          </Button>
+        }
+      />
 
       {/* Actions Table */}
       <div className="border rounded-lg overflow-hidden">
@@ -282,10 +279,11 @@ export default function EditorAIAdminPage() {
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : actions.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-            <Sparkles className="h-12 w-12 mb-3 opacity-50" />
-            <p>暂无 AI 操作</p>
-          </div>
+          <EmptyState
+            icon={Sparkles}
+            title="暂无 AI 操作"
+            className="h-48 py-0"
+          />
         ) : (
           <>
             {/* Desktop Table */}

@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader, Breadcrumbs } from "@/components/shared";
 
 const actionLabels: Record<string, string> = {
   LOGIN: "登录",
@@ -165,10 +166,12 @@ export default function AuditLogsPage() {
 
   return (
     <div className="container mx-auto py-8 max-w-6xl">
-      <h1 className="text-2xl font-bold mb-2">审计日志</h1>
-      <p className="text-sm text-muted-foreground mb-6">
-        共 {total} 条记录
-      </p>
+      <Breadcrumbs items={[{ label: "管理后台", href: "/admin" }, { label: "审计日志" }]} />
+      <PageHeader
+        title="审计日志"
+        description={`共 ${total} 条记录`}
+        className="mb-6"
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3 mb-4">

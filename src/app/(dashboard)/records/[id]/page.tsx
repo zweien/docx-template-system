@@ -4,13 +4,6 @@ import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { LinkButton } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import {
   Table,
   TableBody,
   TableCell,
@@ -18,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
+import { Breadcrumbs, PageHeader, ContentCard } from "@/components/shared";
 import type { Role, RecordStatus } from "@/generated/prisma/enums";
 import { RetryButton } from "./retry-button";
 import { CopyToDraftButton } from "./copy-to-draft-button";
@@ -80,38 +74,27 @@ export default async function RecordDetailPage({
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <LinkButton
-        variant="ghost"
-        size="sm"
-        className="text-muted-foreground hover:text-foreground"
-        href="/records"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        返回列表
-      </LinkButton>
+      <Breadcrumbs items={[
+        { label: "记录列表", href: "/records" },
+        { label: "记录详情" },
+      ]} />
 
-      <div className="flex items-center justify-between rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
-        <div>
-          <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">记录详情</h1>
-          <p className="text-sm text-muted-foreground">
-            {record.template.name}
-          </p>
-        </div>
-        <Badge
-          variant={STATUS_VARIANTS[record.status as RecordStatus]}
-          className="text-sm px-3 py-1"
-        >
-          {STATUS_LABELS[record.status as RecordStatus]}
-        </Badge>
-      </div>
+      <PageHeader
+        title="记录详情"
+        description={record.template.name}
+        actions={
+          <Badge
+            variant={STATUS_VARIANTS[record.status as RecordStatus]}
+            className="text-sm px-3 py-1"
+          >
+            {STATUS_LABELS[record.status as RecordStatus]}
+          </Badge>
+        }
+      />
 
-      <Separator className="bg-border" />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>基本信息</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
+      <ContentCard>
+        <h3 className="text-sm font-medium mb-3">基本信息</h3>
+        <div className="space-y-2">
           <div className="grid grid-cols-[120px_1fr] gap-2 text-sm">
             <span className="text-muted-foreground">模板名称</span>
             <span className="text-foreground">{record.template.name}</span>
@@ -134,14 +117,11 @@ export default async function RecordDetailPage({
               <span className="text-foreground">{record.fileName}</span>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </ContentCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>表单数据</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <ContentCard>
+        <h3 className="text-sm font-medium mb-3">表单数据</h3>
           {Object.keys(formData).length === 0 ? (
             <p className="text-sm text-muted-foreground">（无表单数据）</p>
           ) : (
@@ -158,7 +138,7 @@ export default async function RecordDetailPage({
 
                 return (
                   <div key={key} className={isTable ? "md:col-span-2" : ""}>
-                    <p className="mb-1 text-xs font-[510] text-muted-foreground">
+                    <p className="mb-1 text-xs font-medium text-muted-foreground">
                       {labelMap.get(key) || key}
                     </p>
                     {isTable ? (
@@ -204,18 +184,15 @@ export default async function RecordDetailPage({
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+      </ContentCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>操作</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <ContentCard>
+        <h3 className="text-sm font-medium mb-3">操作</h3>
+        <div className="space-y-3">
           {record.status === "COMPLETED" && record.fileName && (
             <a
               href={`/api/records/${record.id}/download`}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-[510] text-primary-foreground transition-colors hover:bg-[#828fff]"
+              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#828fff]"
             >
               <Download className="h-4 w-4" />
               下载文档
@@ -237,13 +214,13 @@ export default async function RecordDetailPage({
 
           <a
             href={`/api/records/${record.id}/export`}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-[510] text-secondary-foreground transition-colors hover:bg-accent/70 hover:text-foreground"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-secondary-foreground transition-colors hover:bg-accent/70 hover:text-foreground"
           >
             <FileSpreadsheet className="h-4 w-4" />
             导出 Excel
           </a>
-        </CardContent>
-      </Card>
+        </div>
+      </ContentCard>
     </div>
   );
 }

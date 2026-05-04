@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { ContentCard } from "@/components/shared";
 import { getTable } from "@/lib/services/data-table.service";
 import { TableDetailContent } from "@/components/data/table-detail-content";
 
@@ -19,9 +20,9 @@ export default async function TableDetailPage({ params }: PageProps) {
       notFound();
     }
     return (
-      <div className="rounded-xl border border-[rgb(239_68_68_/_0.35)] bg-[rgb(239_68_68_/_0.1)] p-4 text-red-200">
+      <ContentCard className="border-destructive/45">
         加载失败: {result.error.message}
-      </div>
+      </ContentCard>
     );
   }
 

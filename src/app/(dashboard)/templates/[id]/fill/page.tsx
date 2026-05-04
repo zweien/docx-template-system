@@ -1,9 +1,8 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { LinkButton } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { DynamicForm } from "@/components/forms/dynamic-form";
 import { ScreenshotViewer } from "@/components/templates/screenshot-viewer";
+import { PageHeader, ContentCard, Breadcrumbs } from "@/components/shared";
 
 export default async function FillPage({
   params,
@@ -38,55 +37,49 @@ export default async function FillPage({
 
   return (
     <div className="space-y-6">
-      {/* Back button */}
-      <LinkButton
-        variant="ghost"
-        size="sm"
-        href={`/templates/${id}`}
-      >
-        <ArrowLeft className="h-4 w-4" />
-        返回模板详情
-      </LinkButton>
+      <Breadcrumbs items={[
+        { label: "模板库", href: "/templates" },
+        { label: template.name, href: `/templates/${id}` },
+        { label: "填写表单" },
+      ]} />
 
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          填写表单 — {template.name}
-        </h1>
-        <p className="text-muted-foreground">
-          请填写以下字段，完成后点击「确认生成」来生成文档
-        </p>
-        {template.screenshot && (
-          <div className="mt-4 max-w-xs">
-            <ScreenshotViewer src={template.screenshot} alt={template.name} />
-          </div>
-        )}
-      </div>
-
-      <DynamicForm
-        templateId={id}
-        placeholders={template.placeholders.map((p) => ({
-          id: p.id,
-          key: p.key,
-          label: p.label,
-          inputType: p.inputType as "TEXT" | "TEXTAREA" | "TABLE" | "CHOICE_SINGLE" | "CHOICE_MULTI",
-          required: p.required,
-          defaultValue: p.defaultValue,
-          sortOrder: p.sortOrder,
-          sourceTableId: p.sourceTableId,
-          sourceField: p.sourceField,
-          enablePicker: p.enablePicker,
-          columns: p.columns as Array<{ key: string; label: string }> | undefined,
-          choiceConfig: p.choiceConfig as {
-            mode: "single" | "multiple";
-            options: Array<{ value: string; label: string }>;
-            marker: { template: string; checked: string; unchecked: string };
-          } | null | undefined,
-          description: p.description,
-        }))}
-        initialData={initialData as Record<string, string | string[] | Record<string, string>[]> | undefined}
-        draftId={draftId}
+      <PageHeader
+        title={`填写表单 — ${template.name}`}
+        description="请填写以下字段，完成后点击「确认生成」来生成文档"
       />
+
+      {template.screenshot && (
+        <div className="max-w-xs">
+          <ScreenshotViewer src={template.screenshot} alt={template.name} />
+        </div>
+      )}
+
+      <ContentCard>
+        <DynamicForm
+          templateId={id}
+          placeholders={template.placeholders.map((p) => ({
+            id: p.id,
+            key: p.key,
+            label: p.label,
+            inputType: p.inputType as "TEXT" | "TEXTAREA" | "TABLE" | "CHOICE_SINGLE" | "CHOICE_MULTI",
+            required: p.required,
+            defaultValue: p.defaultValue,
+            sortOrder: p.sortOrder,
+            sourceTableId: p.sourceTableId,
+            sourceField: p.sourceField,
+            enablePicker: p.enablePicker,
+            columns: p.columns as Array<{ key: string; label: string }> | undefined,
+            choiceConfig: p.choiceConfig as {
+              mode: "single" | "multiple";
+              options: Array<{ value: string; label: string }>;
+              marker: { template: string; checked: string; unchecked: string };
+            } | null | undefined,
+            description: p.description,
+          }))}
+          initialData={initialData as Record<string, string | string[] | Record<string, string>[]> | undefined}
+          draftId={draftId}
+        />
+      </ContentCard>
     </div>
   );
 }

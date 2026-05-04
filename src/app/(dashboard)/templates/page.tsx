@@ -15,6 +15,7 @@ import { Upload, ChevronLeft, ChevronRight, Pencil, Eye, FileText } from "lucide
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 import { TemplateListDeleteButton } from "./template-list-delete-button";
 import { CategoryTagManagerButton } from "@/components/templates/category-tag-manager-button";
+import { PageHeader, ContentCard, EmptyState } from "@/components/shared";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
   DRAFT: "草稿",
@@ -110,35 +111,33 @@ export default async function TemplatesPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
-        <div>
-          <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">模板管理</h1>
-          <p className="text-sm text-muted-foreground">
-            共 {total} 个模板
-          </p>
-        </div>
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            <CategoryTagManagerButton />
-            <LinkButton href="/templates/new">
-              <Upload className="h-4 w-4" />
-              上传模板
-            </LinkButton>
-          </div>
-        )}
-      </div>
+      <PageHeader
+        title="模板管理"
+        description={`共 ${total} 个模板`}
+        actions={
+          isAdmin ? (
+            <div className="flex items-center gap-2">
+              <CategoryTagManagerButton />
+              <LinkButton href="/templates/new">
+                <Upload className="h-4 w-4" />
+                上传模板
+              </LinkButton>
+            </div>
+          ) : undefined
+        }
+      />
 
-      <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-card p-1">
         {STATUS_TABS.map((tab) => {
           const isActive = (status || "") === tab.value;
           return (
             <Link
               key={tab.value}
               href={buildUrl(1, tab.value, categoryId)}
-              className={`shrink-0 rounded-md px-4 py-2 text-sm font-[510] transition-colors ${
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-[510] transition-colors ${
                 isActive
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+                  ? "bg-accent/20 text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -148,13 +147,13 @@ export default async function TemplatesPage({
       </div>
 
       {categories.length > 0 && (
-        <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1">
+        <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-card p-1">
           <Link
             href={buildUrl(1, status || "")}
-            className={`shrink-0 rounded-md border px-3 py-1.5 text-sm font-[510] transition-colors ${
+            className={`shrink-0 rounded-full px-3 py-1 text-xs font-[510] transition-colors ${
               !categoryId
-                ? "border-border-hover bg-accent text-accent-foreground"
-                : "border-border text-muted-foreground hover:text-foreground"
+                ? "bg-accent/20 text-foreground"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
             全部
@@ -163,10 +162,10 @@ export default async function TemplatesPage({
             <Link
               key={cat.id}
               href={buildUrl(1, status || "", cat.id)}
-              className={`shrink-0 rounded-md border px-3 py-1.5 text-sm font-[510] transition-colors ${
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-[510] transition-colors ${
                 categoryId === cat.id
-                  ? "border-border-hover bg-accent text-accent-foreground"
-                  : "border-border text-muted-foreground hover:text-foreground"
+                  ? "bg-accent/20 text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {cat.name}
@@ -175,7 +174,7 @@ export default async function TemplatesPage({
         </div>
       )}
 
-      <div>
+      <ContentCard className="!p-0">
         <Table>
           <TableHeader>
             <TableRow>
@@ -192,23 +191,19 @@ export default async function TemplatesPage({
           <TableBody>
             {templates.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={8}
-                  className="h-32"
-                >
-                  <div className="flex flex-col items-center justify-center text-muted-foreground">
-                    <FileText className="h-8 w-8 mb-2" />
-                    <p className="text-sm">暂无模板数据</p>
-                    {isAdmin && (
-                      <LinkButton
-                        variant="link"
-                        size="sm"
-                        href="/templates/new"
-                      >
-                        上传第一个模板
-                      </LinkButton>
-                    )}
-                  </div>
+                <TableCell colSpan={8}>
+                  <EmptyState
+                    icon={FileText}
+                    title="暂无模板数据"
+                    description={isAdmin ? "上传第一个模板来开始管理您的文档" : undefined}
+                    action={
+                      isAdmin ? (
+                        <LinkButton variant="link" size="sm" href="/templates/new">
+                          上传第一个模板
+                        </LinkButton>
+                      ) : undefined
+                    }
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -293,7 +288,7 @@ export default async function TemplatesPage({
             )}
           </TableBody>
         </Table>
-      </div>
+      </ContentCard>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">

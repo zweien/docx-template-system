@@ -1,8 +1,9 @@
 import { auth } from "@/lib/auth";
 import { listDocumentCollectionTasks } from "@/lib/services/document-collection-task.service";
 import { LinkButton } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { CollectionTaskCard } from "@/components/collections/collection-task-card";
+import { PageHeader, EmptyState } from "@/components/shared";
+import { Inbox } from "lucide-react";
 
 export default async function CollectionsPage({
   searchParams,
@@ -25,22 +26,21 @@ export default async function CollectionsPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">文档收集</h1>
-          <p className="text-muted-foreground">跟踪任务进度、查看我的提交状态并进入详情页。</p>
-        </div>
-        <LinkButton href="/collections/new">
-          新建任务
-        </LinkButton>
-      </div>
+      <PageHeader
+        title="文档收集"
+        description="跟踪任务进度、查看我的提交状态并进入详情页。"
+        actions={
+          <LinkButton href="/collections/new">
+            新建任务
+          </LinkButton>
+        }
+      />
 
       {tasks.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center text-sm text-muted-foreground">
-            暂无文档收集任务
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={Inbox}
+          title="暂无文档收集任务"
+        />
       ) : (
         <div className="grid gap-4">
           {tasks.map((task) => (

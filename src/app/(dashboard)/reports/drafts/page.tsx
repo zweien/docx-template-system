@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PageHeader, FilterBar, EmptyState } from "@/components/shared";
+import { FileText } from "lucide-react";
 
 interface ReportDraft {
   id: string;
@@ -13,6 +15,11 @@ interface ReportDraft {
 }
 
 type Tab = "owned" | "shared";
+
+const DRAFT_TABS = [
+  { value: "owned", label: "我所有的" },
+  { value: "shared", label: "别人共享给我的" },
+] as const;
 
 export default function ReportDraftsPage() {
   const router = useRouter();
@@ -59,30 +66,27 @@ export default function ReportDraftsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">报告草稿</h1>
-        <Link href="/reports/templates" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          从模板创建
-        </Link>
-      </div>
-      <div className="flex gap-4 border-b border-border">
-        <button
-          onClick={() => setTab("owned")}
-          className={`pb-2 text-sm font-medium ${tab === "owned" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          我所有的
-        </button>
-        <button
-          onClick={() => setTab("shared")}
-          className={`pb-2 text-sm font-medium ${tab === "shared" ? "border-b-2 border-primary text-primary" : "text-muted-foreground hover:text-foreground"}`}
-        >
-          别人共享给我的
-        </button>
-      </div>
+      <PageHeader
+        title="报告草稿"
+        actions={
+          <Link href="/reports/templates" className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+            从模板创建
+          </Link>
+        }
+      />
+
+      <FilterBar
+        options={DRAFT_TABS}
+        value={tab}
+        onChange={(v) => setTab(v as Tab)}
+      />
+
       {drafts.length === 0 ? (
-        <div className="py-12 text-center text-muted-foreground">
-          {tab === "owned" ? "暂无报告草稿，请从模板创建" : "暂无能查看的共享草稿"}
-        </div>
+        <EmptyState
+          icon={FileText}
+          title={tab === "owned" ? "暂无报告草稿" : "暂无能查看的共享草稿"}
+          description={tab === "owned" ? "请从模板创建" : undefined}
+        />
       ) : (
         <div className="space-y-3">
           {drafts.map((d) => (

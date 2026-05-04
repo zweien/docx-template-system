@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { FileText, FileOutput, Search } from "lucide-react";
+import { PageHeader, EmptyState } from "@/components/shared";
 
 interface TemplateItem {
   id: string;
@@ -61,6 +62,8 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
 
   return (
     <div className="space-y-6">
+      <PageHeader title="我要填表" description="选择模板，填写表单生成文档" />
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -126,16 +129,16 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
 
       {/* Empty state: no templates at all */}
       {templates.length === 0 && !hasActiveFilters ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-16">
-          <FileOutput className="h-12 w-12 text-muted-foreground/50" />
-          <h2 className="mt-4 text-lg font-semibold">暂无可用模板</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            需要先上传并配置模板后才能生成文档
-          </p>
-          <Link href="/templates" className="mt-4 text-sm font-medium text-primary hover:underline">
-            前往模板管理
-          </Link>
-        </div>
+        <EmptyState
+          icon={FileOutput}
+          title="暂无可用模板"
+          description="需要先上传并配置模板后才能生成文档"
+          action={
+            <Link href="/templates" className="text-sm font-[510] text-primary hover:underline">
+              前往模板管理
+            </Link>
+          }
+        />
       ) : filtered.length === 0 ? null : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => (
@@ -146,7 +149,7 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
                   <div className="flex flex-col justify-center min-w-0 flex-1 gap-1.5">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 shrink-0 text-primary" />
-                      <h3 className="text-base font-semibold leading-tight truncate">{t.name}</h3>
+                      <h3 className="text-base font-[510] leading-tight truncate">{t.name}</h3>
                     </div>
                     <div className="flex items-center gap-2">
                       {t.currentVersion && (
@@ -200,16 +203,18 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
 
       {/* Empty results with active filters */}
       {hasActiveFilters && filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed py-12">
-          <Search className="h-10 w-10 text-muted-foreground/50" />
-          <p className="mt-3 text-sm text-muted-foreground">没有找到匹配的模板</p>
-          <button
-            onClick={() => { setSearch(""); setCategoryId(null); setTagIds([]); }}
-            className="mt-2 text-sm font-medium text-primary hover:underline"
-          >
-            清除筛选条件
-          </button>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="没有找到匹配的模板"
+          action={
+            <button
+              onClick={() => { setSearch(""); setCategoryId(null); setTagIds([]); }}
+              className="text-sm font-[510] text-primary hover:underline"
+            >
+              清除筛选条件
+            </button>
+          }
+        />
       )}
 
       {/* Lightbox Modal */}

@@ -12,16 +12,19 @@
   /* Dark-native surfaces */
   --color-background: #08090A;
   --color-background-subtle: #0F1011;
+  --color-sidebar: #0F1011;
   --color-card: rgb(255 255 255 / 0.02);
   --color-card-foreground: #F7F8F8;
   --color-popover: #191A1B;
   --color-popover-foreground: #F7F8F8;
   --color-secondary: rgb(255 255 255 / 0.04);
   --color-secondary-foreground: #D0D6E0;
+  --color-surface-hover: #28282C;
   --color-muted: rgb(255 255 255 / 0.02);
   --color-muted-foreground: #8A8F98;
   --color-accent: rgb(113 112 255 / 0.14);
   --color-accent-foreground: #F7F8F8;
+  --color-accent-hover: #828FFF;
 
   /* Neutral + borders */
   --color-neutral-50: #F7F8F8;
@@ -35,6 +38,7 @@
   --color-neutral-800: #191A1B;
   --color-neutral-900: #0F1011;
   --color-border: rgb(255 255 255 / 0.08);
+  --color-border-subtle: rgb(255 255 255 / 0.05);
   --color-border-hover: rgb(255 255 255 / 0.14);
   --color-input: rgb(255 255 255 / 0.08);
   --color-ring: #7170FF;
@@ -44,6 +48,7 @@
   --color-text-primary: #F7F8F8;
   --color-text-secondary: #D0D6E0;
   --color-text-muted: #8A8F98;
+  --color-text-dim: #62666D;
 
   /* Semantic status */
   --color-success: #10B981;
@@ -77,17 +82,21 @@
 .light {
   --color-background: #F7F8F8;
   --color-background-subtle: #F3F4F5;
+  --color-sidebar: #FFFFFF;
   --color-card: #FFFFFF;
   --color-card-foreground: #101115;
   --color-popover: #FFFFFF;
   --color-popover-foreground: #101115;
   --color-secondary: #F5F6F7;
   --color-secondary-foreground: #1E2026;
+  --color-surface-hover: #E6E6E6;
   --color-muted: #F3F4F5;
   --color-muted-foreground: #62666D;
   --color-accent: #EDEFFF;
   --color-accent-foreground: #1E2026;
+  --color-accent-hover: #5E6AD2;
   --color-border: #D0D6E0;
+  --color-border-subtle: #E6E6E6;
   --color-border-hover: #B9C3D3;
   --color-input: #D0D6E0;
   --color-ring: #5E6AD2;
@@ -95,6 +104,7 @@
   --color-text-primary: #101115;
   --color-text-secondary: #373B45;
   --color-text-muted: #62666D;
+  --color-text-dim: #8A8F98;
   --color-destructive: #DC2626;
   --color-destructive-foreground: #FFFFFF;
 }

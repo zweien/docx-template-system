@@ -99,7 +99,7 @@ export default async function WorkspacePage() {
     recentReports,
   ] = await Promise.all([
     db.template.count({ where: { status: "PUBLISHED" } }),
-    db.record.count({ where: { createdAt: { gte: startOfMonth } } }),
+    db.record.count({ where: { userId, createdAt: { gte: startOfMonth } } }),
     db.draft.count({ where: { userId } }),
     db.documentCollectionAssignee.findMany({
       where: { userId, submittedAt: null },

@@ -109,6 +109,11 @@ pub fn get_sidecar_status() -> Result<SidecarInfo, String> {
     Err("Sidecar 正在启动中...".to_string())
 }
 
+#[tauri::command]
+pub fn get_sidecar_logs() -> Vec<String> {
+    crate::sidecar::get_logs()
+}
+
 // ── File dialogs ──
 
 #[tauri::command]

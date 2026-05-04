@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.9.1](https://github.com/zweien/docx-template-system/compare/v0.9.0...v0.9.1) (2026-05-04)
+
+
+### Features
+
+* **audit:** add report system operations to audit logs ([c06fffc](https://github.com/zweien/docx-template-system/commit/c06fffcd85aacd9fafb164253fcd9083bcb40c69))
+* **desktop:** add comprehensive file validation system ([a2e0d5a](https://github.com/zweien/docx-template-system/commit/a2e0d5a3be051801bc872342decd430aba7ec61f))
+* **desktop:** update app icons to new purple lab logo ([9d5aac2](https://github.com/zweien/docx-template-system/commit/9d5aac2081e3c08839ebe37f71c40b7f636472fb))
+* **editor:** add pin-selection button to bubble menu ([d850268](https://github.com/zweien/docx-template-system/commit/d850268427f95e277cf6332f402dbfb03a75e644))
+
+
+### Bug Fixes
+
+* **desktop:** add missing report_engine/budget module files to sidecar ([55d9907](https://github.com/zweien/docx-template-system/commit/55d9907638738aa0e4588225de8ef513c2e438ec))
+* **desktop:** capture sidecar stderr and show crash details in frontend ([970070c](https://github.com/zweien/docx-template-system/commit/970070c15ef588ad1e2d326b6c8ada420d133643))
+* **desktop:** fix Rust borrow checker error in append_log ([9c6bd0b](https://github.com/zweien/docx-template-system/commit/9c6bd0bdbc21621e50d9748cbf610d1df501c407))
+* **desktop:** fix Windows sidecar ModuleNotFoundError for report_engine.budget ([df532a9](https://github.com/zweien/docx-template-system/commit/df532a970a419a4231a41c4c8a62234f95ec6997))
+* **desktop:** hide sidecar console window on Windows ([638cbd8](https://github.com/zweien/docx-template-system/commit/638cbd8cf1e862520872edaa9d4e7a002793db24))
+* **desktop:** improve sidecar startup diagnostics and error reporting ([5fa1631](https://github.com/zweien/docx-template-system/commit/5fa1631a5e56601bb269efc5e338128e123aba9a))
+* **editor:** add error boundary around BlockNoteView for table crash ([0b579ae](https://github.com/zweien/docx-template-system/commit/0b579aee2a82dfd2f81348e1363853bad9a1da6c))
+* **editor:** auto-clear pinned selections after sending and add clear-all button ([db8c10f](https://github.com/zweien/docx-template-system/commit/db8c10fd019697cba9df3b0b904841fdb45350dd))
+* **editor:** improve AI assistant button UX in formatting toolbar ([259268e](https://github.com/zweien/docx-template-system/commit/259268ecde9dacc4d6f1bfd2ee9e3bd3d59605c9))
+* **editor:** improve AI sidebar pinned selection UX ([72bf6ca](https://github.com/zweien/docx-template-system/commit/72bf6ca0ed1d8bb91b614675dcf55a8865c54125))
+* **editor:** improve remove button visibility on pinned selection attachment ([8df7986](https://github.com/zweien/docx-template-system/commit/8df7986588c246dc716de160698809a19e4492f1))
+* **editor:** restore undo/redo broken by React strict mode remount ([867163e](https://github.com/zweien/docx-template-system/commit/867163e1c09c407451fa1380189bffd3f00f2d16))
+* **editor:** suppress BlockNote table errors from Next.js dev overlay ([3cf714c](https://github.com/zweien/docx-template-system/commit/3cf714c195e44d4872a71eb93a538ba34ebd8297))
+* **export:** resolve DOCX corruption from invalid OMML namespace declaration ([4ea4c4c](https://github.com/zweien/docx-template-system/commit/4ea4c4c84787c8f54d8d4896f0441ba9725314af))
+* **theme:** return fallback instead of throwing when ThemeProvider unavailable ([78148d7](https://github.com/zweien/docx-template-system/commit/78148d76b5f653ee81a1dbdf0759efccfcca18db))
+
 ## [0.9.0](https://github.com/zweien/docx-template-system/compare/v0.8.0...v0.9.0) (2026-05-03)
 
 

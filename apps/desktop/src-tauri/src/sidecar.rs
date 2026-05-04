@@ -8,6 +8,20 @@ use tokio::time::{sleep, Duration};
 use crate::commands;
 
 static SIDECAR_CHILD: Mutex<Option<Child>> = Mutex::new(None);
+static SIDECAR_LOG: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+fn append_log(line: &str) {
+    if let Ok(mut guard) = SIDECAR_LOG.lock() {
+        guard.push(line.to_string());
+        if guard.len() > 100 {
+            guard.drain(0..guard.len() - 100);
+        }
+    }
+}
+
+pub fn get_logs() -> Vec<String> {
+    SIDECAR_LOG.lock().map(|g| g.clone()).unwrap_or_default()
+}
 
 pub async fn start(app: &AppHandle) -> Result<(), String> {
     let sidecar_dir = app
@@ -20,31 +34,39 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
 
     let is_prod = bundled_bin.exists();
 
-    // Log path info for debugging
-    println!("[sidecar] Resource dir: {}", sidecar_dir.display());
-    println!("[sidecar] Looking for: {}", bundled_bin.display());
-    println!("[sidecar] is_prod: {}", is_prod);
+    append_log(&format!("[sidecar] Resource dir: {}", sidecar_dir.display()));
+    append_log(&format!("[sidecar] Looking for: {}", bundled_bin.display()));
+    append_log(&format!("[sidecar] is_prod: {}", is_prod));
+
+    // List directory contents for debugging
+    if let Ok(entries) = std::fs::read_dir(&sidecar_dir) {
+        let names: Vec<String> = entries
+            .filter_map(|e| e.ok())
+            .map(|e| e.path().display().to_string())
+            .collect();
+        append_log(&format!("[sidecar] Dir contents: {:?}", names));
+    }
 
     let (cmd, args) = if is_prod {
-        println!("[sidecar] Using bundled binary: {}", bundled_bin.display());
+        append_log(&format!("[sidecar] Using bundled binary: {}", bundled_bin.display()));
         (bundled_bin.as_os_str().to_owned(), vec![])
     } else {
         let main_py = sidecar_dir.join("main.py");
         if !main_py.exists() {
             let err = format!(
-                "Sidecar 未找到:\n  打包: {}\n  开发: {}\n  目录内容: {:?}",
+                "Sidecar 未找到:\n  打包: {}\n  开发: {}",
                 bundled_bin.display(),
-                main_py.display(),
-                std::fs::read_dir(&sidecar_dir).ok().map(|d| d.filter_map(|e| e.ok()).map(|e| e.path().display().to_string()).collect::<Vec<_>>())
+                main_py.display()
             );
             commands::set_sidecar_error(err.clone());
             return Err(err);
         }
-        println!("[sidecar] Using Python dev mode: {}", main_py.display());
+        append_log(&format!("[sidecar] Using Python dev mode: {}", main_py.display()));
         (std::ffi::OsString::from("python3"), vec![main_py])
     };
 
     let port = find_free_port().ok_or("无可用端口 (50000-60000)")?;
+    append_log(&format!("[sidecar] Using port: {}", port));
 
     let mut command = Command::new(&cmd);
     command
@@ -53,22 +75,23 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
-    // On Windows, hide the console window of the child process
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
-        // CREATE_NO_WINDOW = 0x08000000
         command.creation_flags(0x08000000);
     }
 
-    // Only set PYTHONPATH in dev mode — PyInstaller handles its own imports
     if !is_prod {
         command.env("PYTHONPATH", sidecar_dir.to_string_lossy().to_string());
     }
 
     let mut child = command
         .spawn()
-        .map_err(|e| format!("启动 sidecar 失败: {}", e))?;
+        .map_err(|e| {
+            let msg = format!("启动 sidecar 失败: {}", e);
+            commands::set_sidecar_error(msg.clone());
+            msg
+        })?;
 
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
@@ -81,7 +104,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         tauri::async_runtime::spawn(async move {
             let mut lines = BufReader::new(out).lines();
             while let Ok(Some(line)) = lines.next_line().await {
-                println!("[sidecar] {}", line);
+                append_log(&format!("[sidecar:out] {}", line));
             }
         });
     }
@@ -89,7 +112,7 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         tauri::async_runtime::spawn(async move {
             let mut lines = BufReader::new(err).lines();
             while let Ok(Some(line)) = lines.next_line().await {
-                eprintln!("[sidecar] {}", line);
+                append_log(&format!("[sidecar:err] {}", line));
             }
         });
     }
@@ -100,7 +123,14 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         sleep(Duration::from_millis(500)).await;
 
         if !is_alive() {
-            let err_msg = "Sidecar 进程意外退出，请检查日志".to_string();
+            // Wait a moment for stderr to be captured
+            sleep(Duration::from_millis(500)).await;
+            let logs = get_logs();
+            let recent: Vec<&str> = logs.iter().rev().take(10).map(|s| s.as_str()).collect();
+            let err_msg = format!(
+                "Sidecar 进程意外退出。最近日志:\n{}",
+                recent.into_iter().rev().collect::<Vec<&str>>().join("\n")
+            );
             commands::set_sidecar_error(err_msg.clone());
             return Err(err_msg);
         }
@@ -113,16 +143,13 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         {
             if resp.status().is_success() {
                 commands::set_sidecar_port(port);
-                println!("[sidecar] Ready on port {}", port);
+                append_log(&format!("[sidecar] Ready on port {}", port));
                 return Ok(());
             }
         }
 
         if (i + 1) % 10 == 0 {
-            println!(
-                "[sidecar] Waiting for health check... ({}/40)",
-                i + 1
-            );
+            append_log(&format!("[sidecar] Waiting for health check... ({}/40)", i + 1));
         }
     }
 
@@ -138,12 +165,12 @@ pub fn is_alive() -> bool {
             Some(child) => match child.try_wait() {
                 Ok(None) => true,
                 Ok(Some(status)) => {
-                    eprintln!("[sidecar] Process exited: {}", status);
+                    append_log(&format!("[sidecar] Process exited: {}", status));
                     *guard = None;
                     false
                 }
                 Err(e) => {
-                    eprintln!("[sidecar] Failed to check process: {}", e);
+                    append_log(&format!("[sidecar] Failed to check process: {}", e));
                     false
                 }
             },

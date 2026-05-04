@@ -28,7 +28,7 @@ export function Sidebar() {
   };
 
   const items: { view: AppView; icon: string; label: string; desc: string }[] = [
-    { view: "wizard", icon: "◆", label: "生成报告", desc: "四步向导" },
+    { view: "wizard", icon: "🚀", label: "生成报告", desc: "四步向导" },
     { view: "templates", icon: "⊞", label: "模板管理", desc: "导入与管理" },
     { view: "configs", icon: "▤", label: "配置方案", desc: "管理与编辑" },
     { view: "validation", icon: "✓", label: "数据校验", desc: "Excel 校验" },

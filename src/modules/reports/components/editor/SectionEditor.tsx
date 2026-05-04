@@ -120,6 +120,37 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
 
   const theme = resolvedTheme === "light" ? "light" : "dark";
 
+  // Suppress BlockNote internal crashes (table delete/add).
+  // React 19's onRecoverableError → reportError() → window.error event
+  // reaches Next.js dev overlay before our normal listener. Use capture phase
+  // to intercept first, regardless of registration order.
+  useEffect(() => {
+    const isBlockNoteError = (msg?: string) =>
+      msg?.includes("is undefined") ||
+      msg?.includes("this.state.block");
+
+    const errorHandler = (e: ErrorEvent) => {
+      if (isBlockNoteError(e.message)) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    };
+    const rejectionHandler = (e: PromiseRejectionEvent) => {
+      const msg = typeof e.reason === "string" ? e.reason : e.reason?.message;
+      if (isBlockNoteError(msg)) {
+        e.stopImmediatePropagation();
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("error", errorHandler, true);
+    window.addEventListener("unhandledrejection", rejectionHandler, true);
+    return () => {
+      window.removeEventListener("error", errorHandler, true);
+      window.removeEventListener("unhandledrejection", rejectionHandler, true);
+    };
+  }, []);
+
   // BlockNote caches colorSchemePreference in internal useState and ignores
   // subsequent theme prop changes. Use MutationObserver to keep the DOM
   // attribute in sync with the resolved theme.
@@ -453,18 +484,27 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
 
 class EditorErrorBoundary extends Component<
   { children: React.ReactNode },
-  { hasError: boolean }
+  { hasError: boolean; retryCount: number }
 > {
-  state = { hasError: false };
+  state = { hasError: false, retryCount: 0 };
 
   static getDerivedStateFromError() {
     return { hasError: true };
   }
 
+  componentDidCatch(error: Error) {
+    // Suppress BlockNote internal errors from Next.js dev overlay
+    if (
+      error.message?.includes("is undefined") &&
+      (error.stack?.includes("blocknote") || error.stack?.includes("BlockNote"))
+    ) {
+      return;
+    }
+  }
+
   componentDidUpdate() {
-    if (this.state.hasError) {
-      // Retry on next tick
-      setTimeout(() => this.setState({ hasError: false }), 0);
+    if (this.state.hasError && this.state.retryCount < 3) {
+      setTimeout(() => this.setState({ hasError: false, retryCount: this.state.retryCount + 1 }), 0);
     }
   }
 

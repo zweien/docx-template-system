@@ -1,9 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAppStore, TemplateMeta } from "../stores/app-store";
 import { listTemplates, importTemplate, deleteTemplate, renameTemplate, selectDocx } from "../services/tauri-commands";
+import { validateTemplate } from "../services/validation";
+import { ValidationResult } from "../types";
+import { ValidationPanel } from "./ValidationPanel";
 
 export function TemplateManager() {
   const { templates, setTemplates, setCurrentView, selectTemplate, addLog } = useAppStore();
+  const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
 
   useEffect(() => {
     listTemplates().then(setTemplates).catch(console.error);
@@ -16,6 +20,14 @@ export function TemplateManager() {
       const meta = await importTemplate(path);
       setTemplates([meta, ...templates]);
       addLog(`模板导入成功: ${meta.name}`);
+
+      const vr = await validateTemplate(meta.path);
+      if (vr.issues.length > 0) {
+        setValidationResult(vr);
+        addLog(`模板校验: ${vr.summary.errors} 个错误, ${vr.summary.warnings} 个警告`);
+      } else {
+        setValidationResult(null);
+      }
     } catch (e) {
       addLog(`导入失败: ${e}`);
     }
@@ -68,6 +80,8 @@ export function TemplateManager() {
             ))}
           </div>
         )}
+
+        <ValidationPanel result={validationResult} onDismiss={() => setValidationResult(null)} />
       </div>
     </div>
   );

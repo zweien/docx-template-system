@@ -12,6 +12,7 @@ import {
 } from "../services/tauri-commands";
 import { BudgetConfig, ConfigMeta } from "../types";
 import { ConfigEditor } from "./ConfigEditor";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 export function ConfigsManager() {
   const {
@@ -25,6 +26,7 @@ export function ConfigsManager() {
   } = useAppStore();
   const [editingConfig, setEditingConfig] = useState<BudgetConfig | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const handleCreate = () => {
     setEditingConfig({
@@ -63,21 +65,24 @@ export function ConfigsManager() {
         setConfigs(updated);
         addLog(`导入配置: ${meta.title}`);
       } catch (e) {
-        addLog(`导入失败: ${e}`);
+        addLog(`导入失败: ${e}`, "error");
       }
     };
     input.click();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("确定删除此配置方案？")) return;
+  const handleDelete = (id: string) => setDeleteTarget(id);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteConfig(id);
+      await deleteConfig(deleteTarget);
       setConfigs(await listConfigs());
-      addLog("配置已删除");
+      addLog("配置已删除", "success");
     } catch (e) {
-      addLog(`删除失败: ${e}`);
+      addLog(`删除失败: ${e}`, "error");
     }
+    setDeleteTarget(null);
   };
 
   const handleExport = async (meta: ConfigMeta) => {
@@ -94,9 +99,9 @@ export function ConfigsManager() {
       const blob = await zip.generateAsync({ type: "base64" });
       const { saveDataAs } = await import("../services/tauri-commands");
       await saveDataAs(`${meta.title}.zip`, blob, true);
-      addLog("已导出为 ZIP");
+      addLog("已导出为 ZIP", "success");
     } catch (e) {
-      addLog(`导出失败: ${e}`);
+      addLog(`导出失败: ${e}`, "error");
     }
   };
 
@@ -106,7 +111,7 @@ export function ConfigsManager() {
       setEditingConfig(JSON.parse(json));
       setEditingId(meta.id);
     } catch (e) {
-      addLog(`加载配置失败: ${e}`);
+      addLog(`加载配置失败: ${e}`, "error");
     }
   };
 
@@ -119,9 +124,9 @@ export function ConfigsManager() {
       config.excel_path = path;
       await saveConfig(meta.id, config);
       setConfigs(await listConfigs());
-      addLog(`已绑定 Excel: ${path.split("/").pop()}`);
+      addLog(`已绑定 Excel: ${path.split("/").pop()}`, "success");
     } catch (e) {
-      addLog(`绑定失败: ${e}`);
+      addLog(`绑定失败: ${e}`, "error");
     }
   };
 
@@ -132,9 +137,9 @@ export function ConfigsManager() {
       config.title = newName;
       await saveConfig(id, config);
       setConfigs(await listConfigs());
-      addLog(`已重命名: ${newName}`);
+      addLog(`已重命名: ${newName}`, "success");
     } catch (e) {
-      addLog(`重命名失败: ${e}`);
+      addLog(`重命名失败: ${e}`, "error");
     }
   };
 
@@ -149,7 +154,7 @@ export function ConfigsManager() {
       }
       setCurrentView("wizard");
     } catch (e) {
-      addLog(`加载失败: ${e}`);
+      addLog(`加载失败: ${e}`, "error");
     }
   };
 
@@ -217,13 +222,24 @@ export function ConfigsManager() {
             saveConfig(editingId, c).then((meta) => {
               listConfigs().then(setConfigs);
               selectConfigId(meta.id);
-              addLog(`配置已保存: ${meta.title}`);
+              addLog(`配置已保存: ${meta.title}`, "success");
             });
           }}
           onClose={() => {
             setEditingConfig(null);
             setEditingId(null);
           }}
+        />
+      )}
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="删除配置方案"
+          message="确定删除此配置方案？此操作无法撤销。"
+          confirmLabel="删除"
+          danger
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
         />
       )}
     </div>

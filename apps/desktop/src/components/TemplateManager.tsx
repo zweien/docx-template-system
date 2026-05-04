@@ -4,10 +4,12 @@ import { listTemplates, importTemplate, deleteTemplate, renameTemplate, selectDo
 import { validateTemplate } from "../services/validation";
 import { ValidationResult } from "../types";
 import { ValidationPanel } from "./ValidationPanel";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 export function TemplateManager() {
   const { templates, setTemplates, setCurrentView, selectTemplate, addLog } = useAppStore();
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   useEffect(() => {
     listTemplates().then(setTemplates).catch(console.error);
@@ -19,24 +21,27 @@ export function TemplateManager() {
     try {
       const meta = await importTemplate(path);
       setTemplates([meta, ...templates]);
-      addLog(`模板导入成功: ${meta.name}`);
+      addLog(`模板导入成功: ${meta.name}`, "success");
 
       const vr = await validateTemplate(meta.path);
       if (vr.issues.length > 0) {
         setValidationResult(vr);
-        addLog(`模板校验: ${vr.summary.errors} 个错误, ${vr.summary.warnings} 个警告`);
+        addLog(`模板校验: ${vr.summary.errors} 个错误, ${vr.summary.warnings} 个警告`, "warn");
       } else {
         setValidationResult(null);
       }
     } catch (e) {
-      addLog(`导入失败: ${e}`);
+      addLog(`导入失败: ${e}`, "error");
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("确定删除此模板？")) return;
-    await deleteTemplate(id);
-    setTemplates(templates.filter((t) => t.id !== id));
+  const handleDelete = (id: string) => setDeleteTarget(id);
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await deleteTemplate(deleteTarget);
+    setTemplates(templates.filter((t) => t.id !== deleteTarget));
+    setDeleteTarget(null);
   };
 
   const handleRename = async (id: string, newName: string) => {
@@ -83,6 +88,17 @@ export function TemplateManager() {
 
         <ValidationPanel result={validationResult} onDismiss={() => setValidationResult(null)} />
       </div>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="删除模板"
+          message="确定删除此模板？此操作无法撤销。"
+          confirmLabel="删除"
+          danger
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   );
 }

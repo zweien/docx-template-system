@@ -27,7 +27,7 @@ export function Wizard() {
           <ExcelImport
             onParsed={(c) => {
               setExcelContent(c);
-              addLog(`Excel 解析完成: ${c.sections?.length || 0} 个章节`);
+              addLog(`Excel 解析完成: ${c.sections?.length || 0} 个章节`, "success");
               setWizardStep(2);
             }}
             addLog={addLog}

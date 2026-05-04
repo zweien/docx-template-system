@@ -54,9 +54,9 @@ export function DataValidation() {
           const cfg = JSON.parse(e.target?.result as string) as BudgetConfig;
           setImportedConfig(cfg);
           setImportFileName(file.name);
-          addLog(`配置导入成功: ${cfg.title}`);
+          addLog(`配置导入成功: ${cfg.title}`, "success");
         } catch {
-          addLog("JSON 解析失败");
+          addLog("JSON 解析失败", "error");
         }
       };
       reader.readAsText(file);
@@ -85,13 +85,13 @@ export function DataValidation() {
       const res = await validateExcelData({ input_path: excelPath, config });
       setResults(res);
       if (res.success) {
-        addLog(`校验完成: ${res.overall_pass ? "通过" : "未通过"}, ${res.total_errors} 个错误, ${res.total_warnings} 个警告`);
+        addLog(`校验完成: ${res.overall_pass ? "通过" : "未通过"}, ${res.total_errors} 个错误, ${res.total_warnings} 个警告`, "warn");
       } else {
-        addLog(`校验失败: ${res.error?.message || "未知错误"}`);
+        addLog(`校验失败: ${res.error?.message || "未知错误"}`, "error");
       }
     } catch (e) {
       setError(String(e));
-      addLog(`校验请求失败: ${e}`);
+      addLog(`校验请求失败: ${e}`, "error");
     } finally {
       setLoading(false);
     }

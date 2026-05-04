@@ -14,7 +14,8 @@ fn append_log(line: &str) {
     if let Ok(mut guard) = SIDECAR_LOG.lock() {
         guard.push(line.to_string());
         if guard.len() > 100 {
-            guard.drain(0..guard.len() - 100);
+            let excess = guard.len() - 100;
+            guard.drain(0..excess);
         }
     }
 }

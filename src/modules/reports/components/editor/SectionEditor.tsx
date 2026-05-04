@@ -17,6 +17,7 @@ import {
   getAISlashMenuItems,
 } from "@blocknote/xl-ai";
 import { AIActionButton } from "./ai/AIActionButton";
+import { PinSelectionButton } from "./ai/PinSelectionButton";
 import { AIActionDialog } from "./ai/AIActionDialog";
 import type { EditorAIActionItem } from "@/types/editor-ai";
 import { en as coreDictionary } from "@blocknote/core/locales";
@@ -426,6 +427,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
         <FormattingToolbarController
           formattingToolbar={() => (
             <FormattingToolbar>
+              <PinSelectionButton editor={editor} onOpenSidebar={onOpenAISidebar} />
               <AIActionButton
                 editor={editor}
               />

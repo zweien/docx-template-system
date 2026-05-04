@@ -680,6 +680,11 @@ def _build_table_rows(
     return headers, rows
 
 
+def _strip_chinese_number_prefix(text: str) -> str:
+    """去掉中文数字前缀（如 '一、' '十二、' '1.' '1、' 等），用于模板已有自动编号的场景。"""
+    return re.sub(r"^[一二三四五六七八九十百]+[、．.\s]*", "", text).strip()
+
+
 def _build_section(
     data_rows: List[Dict],
     config: dict,
@@ -703,20 +708,23 @@ def _build_section(
     heading_level = config.get("heading_level", 2)
     item_heading_level = config.get("item_heading_level", 3)
 
+    # 去掉中文编号前缀（模板已自带自动编号）
+    display_name = _strip_chinese_number_prefix(sheet_name)
+
     blocks = []
 
     # 1. 科目标题（level=0 时用正文段落）
     if heading_level == 0:
-        blocks.append({"type": "paragraph", "text": sheet_name})
+        blocks.append({"type": "paragraph", "text": display_name})
     else:
-        blocks.append({"type": "heading", "text": sheet_name, "level": heading_level})
+        blocks.append({"type": "heading", "text": display_name, "level": heading_level})
 
     # 2. 明细表
     headers, rows = _build_table_rows(data_rows, columns_config, table_columns)
     if headers:
         blocks.append({
             "type": "table",
-            "title": f"表1 {sheet_name}一览",
+            "title": f"{display_name}一览",
             "headers": headers,
             "rows": rows,
         })

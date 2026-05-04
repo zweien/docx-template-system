@@ -95,6 +95,16 @@ export async function readFileBase64(path: string): Promise<string> {
   return invoke("read_file_base64", { path });
 }
 
+export async function selectExcelFiles(): Promise<string[] | null> {
+  if (!isTauri) return null;
+  return invoke("select_excel_files");
+}
+
+export async function selectXlsxSave(suggestedName: string): Promise<string | null> {
+  if (!isTauri) return null;
+  return invoke("select_xlsx_save", { suggestedName });
+}
+
 export async function saveDataAs(
   suggestedName: string,
   data: string,

@@ -5,6 +5,7 @@ import { LogPanel } from "./components/LogPanel";
 import { TemplateManager } from "./components/TemplateManager";
 import { ConfigsManager } from "./components/ConfigsManager";
 import { DataValidation } from "./components/DataValidation";
+import { ExcelMerge } from "./components/ExcelMerge";
 import { Settings } from "./components/Settings";
 import { useAppStore } from "./stores/app-store";
 import { listTemplates } from "./services/tauri-commands";
@@ -84,6 +85,7 @@ export default function App() {
         {currentView === "templates" && <TemplateManager />}
         {currentView === "configs" && <ConfigsManager />}
         {currentView === "validation" && <DataValidation />}
+        {currentView === "merge" && <ExcelMerge />}
         {currentView === "settings" && <Settings />}
         <LogPanel logs={logs} onClear={clearLogs} />
       </div>

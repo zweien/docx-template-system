@@ -45,6 +45,8 @@ pub fn run() {
             commands::sidecar_post,
             commands::sidecar_get,
             commands::read_file_base64,
+            commands::select_excel_files,
+            commands::select_xlsx_save,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

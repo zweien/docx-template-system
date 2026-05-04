@@ -128,6 +128,17 @@ pub async fn select_excel(app: AppHandle) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+pub async fn select_excel_files(app: AppHandle) -> Result<Option<Vec<String>>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let file_paths = app
+        .dialog()
+        .file()
+        .add_filter("Excel", &["xlsx", "xls"])
+        .blocking_pick_files();
+    Ok(file_paths.map(|paths| paths.into_iter().map(|p| p.to_string()).collect()))
+}
+
+#[tauri::command]
 pub async fn select_output_dir(app: AppHandle) -> Result<Option<String>, String> {
     use tauri_plugin_dialog::DialogExt;
     let dir_path = app.dialog().file().blocking_pick_folder();
@@ -205,6 +216,24 @@ pub async fn save_file_as(app: AppHandle, suggested_name: String) -> Result<Opti
         .dialog()
         .file()
         .add_filter("Word Document", &["docx"])
+        .set_file_name(&suggested_name)
+        .blocking_save_file();
+    match file_path {
+        Some(fp) => {
+            let path = fp.into_path().map_err(|e| format!("无效路径: {}", e))?;
+            Ok(Some(path.to_string_lossy().to_string()))
+        }
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
+pub async fn select_xlsx_save(app: AppHandle, suggested_name: String) -> Result<Option<String>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let file_path = app
+        .dialog()
+        .file()
+        .add_filter("Excel", &["xlsx"])
         .set_file_name(&suggested_name)
         .blocking_save_file();
     match file_path {

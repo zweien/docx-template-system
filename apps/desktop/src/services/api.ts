@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { ParseRequest, ParseResponse, RenderRequest, RenderResponse, ExcelValidationResponse, BudgetConfig } from "../types";
+import { ParseRequest, ParseResponse, RenderRequest, RenderResponse, ExcelValidationResponse, BudgetConfig, MergeInfoResponse, MergeExcelResponse, MergeExcelRequest } from "../types";
 import { useAppStore } from "../stores/app-store";
 
 const isTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -110,6 +110,48 @@ export async function validateExcelData(req: { input_path: string; config: Budge
   }
   const base = await getBaseUrlBrowser();
   const res = await fetch(`${base}/api/validate-excel-data`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(req),
+  });
+  return res.json();
+}
+
+export async function getMergeInfo(filePaths: string[]): Promise<MergeInfoResponse> {
+  if (isTauri) {
+    try {
+      const result = await invoke<string>("sidecar_post", {
+        path: "/api/merge-excel-info",
+        body: JSON.stringify({ file_paths: filePaths }),
+      });
+      return JSON.parse(result);
+    } catch (e) {
+      return { success: false, files: [], common_sheets: [], error: { code: "FETCH_ERROR", message: String(e) } };
+    }
+  }
+  const base = await getBaseUrlBrowser();
+  const res = await fetch(`${base}/api/merge-excel-info`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ file_paths: filePaths }),
+  });
+  return res.json();
+}
+
+export async function mergeExcel(req: MergeExcelRequest): Promise<MergeExcelResponse> {
+  if (isTauri) {
+    try {
+      const result = await invoke<string>("sidecar_post", {
+        path: "/api/merge-excel",
+        body: JSON.stringify(req),
+      });
+      return JSON.parse(result);
+    } catch (e) {
+      return { success: false, total_rows_added: 0, sheet_summary: {}, mismatches: [], warnings: [], error: { code: "FETCH_ERROR", message: String(e) } };
+    }
+  }
+  const base = await getBaseUrlBrowser();
+  const res = await fetch(`${base}/api/merge-excel`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(req),

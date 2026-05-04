@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Rocket, FileText, Settings2, CheckSquare, Sun, Moon, Settings, CircleHelp, History, Info, PanelLeftClose, PanelLeft, type LucideIcon } from "lucide-react";
+import { Rocket, FileText, Settings2, CheckSquare, Sun, Moon, Settings, CircleHelp, History, Info, PanelLeftClose, PanelLeft, Merge, type LucideIcon } from "lucide-react";
 import { useAppStore, AppView, ThemeMode } from "../stores/app-store";
 import { AboutContent } from "./AboutContent";
 
@@ -34,6 +34,7 @@ export function Sidebar() {
     { view: "templates", icon: FileText, label: "模板管理", desc: "导入与管理" },
     { view: "configs", icon: Settings2, label: "配置方案", desc: "管理与编辑" },
     { view: "validation", icon: CheckSquare, label: "数据校验", desc: "Excel 校验" },
+    { view: "merge", icon: Merge, label: "合并表格", desc: "Excel 合并" },
   ];
 
   const toggleTheme = () => {

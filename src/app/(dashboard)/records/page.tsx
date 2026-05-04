@@ -19,6 +19,7 @@ import {
   History,
 } from "lucide-react";
 import type { Role, RecordStatus } from "@/generated/prisma/enums";
+import { PageHeader, ContentCard, EmptyState } from "@/components/shared";
 
 const STATUS_LABELS: Record<RecordStatus, string> = {
   PENDING: "待生成",
@@ -93,22 +94,22 @@ export default async function RecordsPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03)]">
-        <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">生成记录</h1>
-        <p className="text-sm text-muted-foreground">共 {total} 条记录</p>
-      </div>
+      <PageHeader
+        title="生成记录"
+        description={`共 ${total} 条记录`}
+      />
 
-      <div className="flex gap-1 overflow-x-auto rounded-md border border-border bg-card p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-card p-1">
         {STATUS_TABS.map((tab) => {
           const isActive = (status || "") === tab.value;
           return (
             <Link
               key={tab.value}
               href={buildUrl(1, tab.value)}
-              className={`shrink-0 rounded-md px-4 py-2 text-sm font-[510] transition-colors ${
+              className={`shrink-0 rounded-full px-3 py-1 text-xs font-[510] transition-colors ${
                 isActive
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-accent/70 hover:text-foreground"
+                  ? "bg-accent/20 text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
             >
               {tab.label}
@@ -117,7 +118,7 @@ export default async function RecordsPage({
         })}
       </div>
 
-      <div>
+      <ContentCard className="!p-0">
         <Table>
           <TableHeader>
             <TableRow>
@@ -131,21 +132,17 @@ export default async function RecordsPage({
           <TableBody>
             {records.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="h-32"
-                >
-                  <div className="flex flex-col items-center justify-center text-muted-foreground">
-                    <History className="h-8 w-8 mb-2" />
-                    <p className="text-sm">暂无生成记录</p>
-                    <LinkButton
-                      variant="link"
-                      size="sm"
-                      href="/templates"
-                    >
-                      前往模板列表填写表单
-                    </LinkButton>
-                  </div>
+                <TableCell colSpan={5}>
+                  <EmptyState
+                    icon={History}
+                    title="暂无生成记录"
+                    description="填写模板表单即可生成文档"
+                    action={
+                      <LinkButton variant="link" size="sm" href="/templates">
+                        前往模板列表填写表单
+                      </LinkButton>
+                    }
+                  />
                 </TableCell>
               </TableRow>
             ) : (
@@ -198,7 +195,7 @@ export default async function RecordsPage({
             )}
           </TableBody>
         </Table>
-      </div>
+      </ContentCard>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">

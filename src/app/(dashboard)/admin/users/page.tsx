@@ -44,6 +44,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { PageHeader, EmptyState, ContentCard } from "@/components/shared";
 
 interface UserItem {
   id: string;
@@ -243,19 +244,16 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">用户管理</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            管理本地用户角色映射，登录认证统一交给 authentik
-          </p>
-        </div>
-        <Button onClick={openCreateDialog} className="w-full sm:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          添加用户
-        </Button>
-      </div>
+      <PageHeader
+        title="用户管理"
+        description="管理本地用户角色映射，登录认证统一交给 authentik"
+        actions={
+          <Button onClick={openCreateDialog} className="w-full sm:w-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            添加用户
+          </Button>
+        }
+      />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -281,16 +279,16 @@ export default function UsersPage() {
       </div>
 
       {/* User List */}
-      <div className="border rounded-lg overflow-hidden">
+      <ContentCard className="!p-0 overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center h-48">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : users.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
-            <Users className="h-12 w-12 mb-3 opacity-50" />
-            <p>暂无用户数据</p>
-          </div>
+          <EmptyState
+            icon={Users}
+            title="暂无用户数据"
+          />
         ) : (
           <>
             {/* Desktop Table */}
@@ -438,9 +436,7 @@ export default function UsersPage() {
             </div>
           </>
         )}
-      </div>
-
-      {/* Pagination */}
+      </ContentCard>
       {totalPages > 1 && (
         <div className="flex items-center justify-center gap-2">
           <Button

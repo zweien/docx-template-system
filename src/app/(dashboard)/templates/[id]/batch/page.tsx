@@ -1,8 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { LinkButton } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 import { BatchGenerationWizard } from "./wizard";
+import { PageHeader, Breadcrumbs } from "@/components/shared";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -22,19 +21,16 @@ export default async function BatchGenerationPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6">
-      <LinkButton variant="ghost" size="sm" href={`/templates/${id}`}>
-        <ArrowLeft className="h-4 w-4" />
-        返回模板详情
-      </LinkButton>
+      <Breadcrumbs items={[
+        { label: "模板库", href: "/templates" },
+        { label: template.name, href: `/templates/${id}` },
+        { label: "批量生成" },
+      ]} />
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          批量生成 — {template.name}
-        </h1>
-        <p className="text-muted-foreground">
-          从主数据表选择记录，批量生成文档
-        </p>
-      </div>
+      <PageHeader
+        title={`批量生成 — ${template.name}`}
+        description="从主数据表选择记录，批量生成文档"
+      />
 
       <BatchGenerationWizard templateId={id} linkedDataTableId={template.dataTableId} />
     </div>

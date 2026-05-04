@@ -767,11 +767,18 @@ def _build_section(
                     "text": "报价截图：[未上传]",
                 })
 
-    return {
+    section_result = {
         "name": sheet_name,
         "id": section_id,
         "blocks": blocks,
     }
+    # 透传配置中的 placeholder/flag_name，确保与模板占位符匹配
+    if config.get("placeholder"):
+        section_result["placeholder"] = config["placeholder"]
+    if config.get("flag_name"):
+        section_result["flag_name"] = config["flag_name"]
+
+    return section_result
 
 
 def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[Dict[str, Any], List[str]]:
@@ -801,12 +808,18 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
             display_name = _strip_chinese_number_prefix(
                 sheet_config.get("name", sheet_name)
             )
-            sections.append({
+            disabled_section = {
                 "name": display_name,
                 "id": section_id,
                 "enabled": False,
                 "blocks": [],
-            })
+            }
+            # 透传配置中的 placeholder/flag_name，确保与模板匹配
+            if sheet_config.get("placeholder"):
+                disabled_section["placeholder"] = sheet_config["placeholder"]
+            if sheet_config.get("flag_name"):
+                disabled_section["flag_name"] = sheet_config["flag_name"]
+            sections.append(disabled_section)
             logger.info("跳过已禁用的 Sheet: %s", sheet_name)
             continue
 

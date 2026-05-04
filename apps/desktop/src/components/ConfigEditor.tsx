@@ -20,6 +20,8 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
   const [tab, setTab] = useState<Tab>("basic");
 
   const handleSave = () => {
+    const vr = validateConfigLocal(local);
+    if (!vr.canProceed) return;
     onChange(local);
     onClose();
   };
@@ -409,6 +411,63 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                         onChange={(e) => updateSheet(sheetIdx, { id: e.target.value })}
                         className={smallInputCls + " w-full"}
                       />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={labelCls}>科目标题级别</label>
+                      <select
+                        value={sheet.heading_level ?? 2}
+                        onChange={(e) => updateSheet(sheetIdx, { heading_level: parseInt(e.target.value) })}
+                        className={smallInputCls + " w-full"}
+                      >
+                        <option value={0}>正文段落</option>
+                        <option value={1}>H1</option>
+                        <option value={2}>H2（默认）</option>
+                        <option value={3}>H3</option>
+                        <option value={4}>H4</option>
+                        <option value={5}>H5</option>
+                        <option value={6}>H6</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={labelCls}>条目标题级别</label>
+                      <select
+                        value={sheet.item_heading_level ?? 3}
+                        onChange={(e) => updateSheet(sheetIdx, { item_heading_level: parseInt(e.target.value) })}
+                        className={smallInputCls + " w-full"}
+                      >
+                        <option value={0}>编号段落</option>
+                        <option value={1}>H1</option>
+                        <option value={2}>H2</option>
+                        <option value={3}>H3（默认）</option>
+                        <option value={4}>H4</option>
+                        <option value={5}>H5</option>
+                        <option value={6}>H6</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="max-w-[200px]">
+                      <label className={labelCls}>表头行号</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={sheet.header_row ?? 1}
+                        onChange={(e) => updateSheet(sheetIdx, { header_row: parseInt(e.target.value) || 1 })}
+                        className={smallInputCls + " w-full"}
+                      />
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer pb-1.5">
+                        <input
+                          type="checkbox"
+                          checked={sheet.enabled !== false}
+                          onChange={(e) => updateSheet(sheetIdx, { enabled: e.target.checked })}
+                          className="rounded accent-brand"
+                        />
+                        <span className="text-[0.8rem] text-text">启用此章节</span>
+                      </label>
                     </div>
                   </div>
 

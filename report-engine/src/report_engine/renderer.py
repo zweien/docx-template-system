@@ -169,25 +169,13 @@ def render_report(
 
     tpl.render(context, autoescape=True)
 
-    # Ensure OMML (m:) namespace is declared on document.xml root element
-    # for formula blocks. lxml's set() with xmlns namespace URI generates
-    # invalid ns0:m attributes, so we manipulate the XML string directly.
-    root = tpl.docx._element
-    if "m" not in root.nsmap:
-        from lxml import etree
-        OMML_NS = 'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"'
-        xml_bytes = etree.tostring(root, xml_declaration=False)
-        xml_str = xml_bytes.decode("utf-8")
-        # Insert before mc:Ignorable if present, otherwise before the first >
-        if " mc:Ignorable=" in xml_str:
-            xml_str = xml_str.replace(
-                " mc:Ignorable=",
-                f" {OMML_NS} mc:Ignorable=",
-                1,
-            )
-        else:
-            xml_str = xml_str.replace(">", f" {OMML_NS}>", 1)
-        tpl.docx._element = etree.fromstring(xml_str.encode("utf-8"))
+    # 确保 OMML (m:) 命名空间在 document.xml 根元素上已声明，
+    # 否则 formula block 插入的 <m:oMath> 会导致 XML 解析错误。
+    # 注意：lxml 的 set("{http://www.w3.org/2000/xmlns/}m", ...) 会产生
+    # xmlns:ns0 错误，所以先 register_namespace 再序列化。
+    from lxml import etree
+    etree.register_namespace("m", "http://schemas.openxmlformats.org/officeDocument/2006/math")
+    etree.register_namespace("a", "http://schemas.openxmlformats.org/drawingml/2006/main")
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     tpl.save(output_path)

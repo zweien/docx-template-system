@@ -27,6 +27,7 @@ class SummaryResult(BaseModel):
     value_column_found: Optional[bool] = None
     mapped_count: int = 0
     missing_keys: list[str] = []
+    mapped_values: dict[str, str] = {}
 
 
 class ExcelValidationResponse(BaseModel):

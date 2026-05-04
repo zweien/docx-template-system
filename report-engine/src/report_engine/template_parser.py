@@ -25,6 +25,39 @@ def _read_document_xml(template_path: str) -> str:
         return zf.read("word/document.xml").decode("utf-8", errors="ignore")
 
 
+def _merge_runs_in_xml(xml: str) -> str:
+    """Merge split <w:t> texts within each <w:p> so regex can match across runs.
+
+    Word often splits ``{{p 设备费_SUBDOC }}`` into:
+    ``<w:r><w:t>{{p </w:t></w:r><w:r><w:t>设备费</w:t></w:r><w:r><w:t>_SUBDOC }}</w:t></w:r>``
+    which breaks regex-based placeholder extraction.
+    """
+    import lxml.etree as etree
+
+    NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+    root = etree.fromstring(xml.encode("utf-8") if isinstance(xml, str) else xml)
+
+    for p in root.iter(f"{{{NS}}}p"):
+        texts = []
+        for t in p.iter(f"{{{NS}}}t"):
+            if t.text:
+                texts.append(t.text)
+        if len(texts) <= 1:
+            continue
+
+        merged = "".join(texts)
+        to_remove = [ch for ch in p if ch.tag in (f"{{{NS}}}r", f"{{{NS}}}proofErr")]
+        for ch in to_remove:
+            p.remove(ch)
+
+        r = etree.SubElement(p, f"{{{NS}}}r")
+        t_elem = etree.SubElement(r, f"{{{NS}}}t")
+        t_elem.set("{http://www.w3.org/XML/1998/namespace}space", "preserve")
+        t_elem.text = merged
+
+    return etree.tostring(root, encoding="unicode")
+
+
 def _extract_paragraphs(xml: str) -> List[dict]:
     """Parse word/document.xml and return paragraphs in order with style and text info."""
     try:
@@ -164,9 +197,11 @@ def _pair_flags_with_subdocs(flags, subdocs):
 def parse_template(template_path: str) -> Tuple[dict, List[str]]:
     warnings = []
     xml = _read_template_xml(template_path)
-    scalar_vars = _extract_scalar_vars(xml)
-    subdocs = _extract_subdoc_placeholders(xml)
-    flags = _extract_flags(xml)
+    # 合并每个段落中被 Word 拆分的 run，确保正则能匹配跨 run 的占位符
+    merged_xml = _merge_runs_in_xml(_read_document_xml(template_path))
+    scalar_vars = _extract_scalar_vars(merged_xml)
+    subdocs = _extract_subdoc_placeholders(merged_xml)
+    flags = _extract_flags(merged_xml)
     context_vars = [v for v in scalar_vars if not v.startswith("ENABLE_")]
     sections = _pair_flags_with_subdocs(flags, subdocs)
 
@@ -182,7 +217,7 @@ def parse_template(template_path: str) -> Tuple[dict, List[str]]:
     if "APPENDICES_SUBDOC" in subdocs:
         attachments_bundle = {"placeholder": "APPENDICES_SUBDOC", "flag_name": "ENABLE_APPENDICES"}
 
-    _extract_section_headings(_read_document_xml(template_path), sections)
+    _extract_section_headings(merged_xml, sections)
 
     # Extract PROMPT annotations
     try:

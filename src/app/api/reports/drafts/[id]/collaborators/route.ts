@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 import {
   addCollaborator,
   removeCollaborator,
 } from "@/modules/reports/services/report-draft.service";
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
@@ -20,11 +22,22 @@ export async function POST(
     const status = result.error.code === "NOT_FOUND" ? 404 : 409;
     return NextResponse.json({ error: result.error.message }, { status });
   }
+  await logAudit({
+    userId: session.user.id,
+    userName: session.user.name,
+    userEmail: session.user.email,
+    action: "REPORT_COLLABORATOR_ADD",
+    targetType: "ReportDraft",
+    targetId: id,
+    detail: { collaboratorEmail: body.email },
+    ipAddress: getClientIp(req),
+    userAgent: getUserAgent(req),
+  });
   return NextResponse.json({ collaborators: result.data });
 }
 
 export async function DELETE(
-  req: Request,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
@@ -37,5 +50,16 @@ export async function DELETE(
   if (!result.success) {
     return NextResponse.json({ error: result.error.message }, { status: 404 });
   }
+  await logAudit({
+    userId: session.user.id,
+    userName: session.user.name,
+    userEmail: session.user.email,
+    action: "REPORT_COLLABORATOR_REMOVE",
+    targetType: "ReportDraft",
+    targetId: id,
+    detail: { collaboratorEmail: body.email },
+    ipAddress: getClientIp(req),
+    userAgent: getUserAgent(req),
+  });
   return NextResponse.json({ collaborators: result.data });
 }

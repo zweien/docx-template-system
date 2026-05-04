@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 import { createReportDraftSchema } from "@/modules/reports/validators";
 import * as draftService from "@/modules/reports/services/report-draft.service";
 
@@ -27,6 +29,17 @@ export async function POST(request: NextRequest) {
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "REPORT_DRAFT_CREATE",
+      targetType: "ReportDraft",
+      targetId: result.data.id,
+      targetName: result.data.title,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
     return NextResponse.json({ success: true, data: result.data }, { status: 201 });
   } catch (e: unknown) {
     if (e instanceof Error && "issues" in e) {

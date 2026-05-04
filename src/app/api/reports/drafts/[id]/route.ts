@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 import { updateReportDraftSchema } from "@/modules/reports/validators";
 import * as draftService from "@/modules/reports/services/report-draft.service";
 
@@ -34,6 +36,16 @@ export async function PATCH(
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "REPORT_DRAFT_UPDATE",
+      targetType: "ReportDraft",
+      targetId: id,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
     return NextResponse.json({ success: true });
   } catch (e: unknown) {
     if (e instanceof Error && "issues" in e) {
@@ -56,5 +68,15 @@ export async function DELETE(
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  await logAudit({
+    userId: session.user.id,
+    userName: session.user.name,
+    userEmail: session.user.email,
+    action: "REPORT_DRAFT_DELETE",
+    targetType: "ReportDraft",
+    targetId: id,
+    ipAddress: getClientIp(_request),
+    userAgent: getUserAgent(_request),
+  });
   return NextResponse.json({ success: true });
 }

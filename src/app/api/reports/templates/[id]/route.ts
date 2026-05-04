@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { logAudit } from "@/lib/services/audit-log.service";
+import { getClientIp, getUserAgent } from "@/lib/request-utils";
 import { renameReportTemplateSchema } from "@/modules/reports/validators";
 import * as reportTemplateService from "@/modules/reports/services/report-template.service";
 
@@ -18,6 +20,17 @@ export async function PATCH(
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
+    await logAudit({
+      userId: session.user.id,
+      userName: session.user.name,
+      userEmail: session.user.email,
+      action: "REPORT_TEMPLATE_UPDATE",
+      targetType: "ReportTemplate",
+      targetId: id,
+      targetName: body.name,
+      ipAddress: getClientIp(request),
+      userAgent: getUserAgent(request),
+    });
     return NextResponse.json({ success: true });
   } catch (e: unknown) {
     if (e instanceof Error && "issues" in e) {
@@ -40,5 +53,15 @@ export async function DELETE(
   if (!result.success) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
+  await logAudit({
+    userId: session.user.id,
+    userName: session.user.name,
+    userEmail: session.user.email,
+    action: "REPORT_TEMPLATE_DELETE",
+    targetType: "ReportTemplate",
+    targetId: id,
+    ipAddress: getClientIp(_request),
+    userAgent: getUserAgent(_request),
+  });
   return NextResponse.json({ success: true });
 }

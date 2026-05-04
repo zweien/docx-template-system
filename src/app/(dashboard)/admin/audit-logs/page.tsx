@@ -39,6 +39,15 @@ const actionLabels: Record<string, string> = {
   FORM_SHARE_DELETE: "删除表单分享",
   FORM_SUBMIT: "表单提交",
   DATA_TABLE_FIELD_UPDATE: "更新字段配置",
+  REPORT_TEMPLATE_CREATE: "创建报告模板",
+  REPORT_TEMPLATE_UPDATE: "更新报告模板",
+  REPORT_TEMPLATE_DELETE: "删除报告模板",
+  REPORT_DRAFT_CREATE: "创建报告草稿",
+  REPORT_DRAFT_UPDATE: "更新报告草稿",
+  REPORT_DRAFT_DELETE: "删除报告草稿",
+  REPORT_EXPORT: "导出报告",
+  REPORT_COLLABORATOR_ADD: "添加协作者",
+  REPORT_COLLABORATOR_REMOVE: "移除协作者",
 };
 
 const actionOptions = Object.entries(actionLabels);
@@ -58,6 +67,8 @@ const targetTypeLabels: Record<string, string> = {
   DataRecord: "数据记录",
   User: "用户",
   ApiToken: "API令牌",
+  ReportTemplate: "报告模板",
+  ReportDraft: "报告草稿",
 };
 
 interface AuditLogItem {

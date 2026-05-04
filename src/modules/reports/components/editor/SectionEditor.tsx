@@ -5,7 +5,7 @@ import { BlockNoteView } from "@blocknote/shadcn";
 import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blocknote/core/extensions";
 import "@blocknote/shadcn/style.css";
 import "@blocknote/xl-ai/style.css";
-import { useCallback, useEffect, useRef } from "react";
+import { Component, useCallback, useEffect, useRef, useState } from "react";
 
 import * as Y from "yjs";
 import type { WebsocketProvider } from "y-websocket";
@@ -329,7 +329,10 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
       const aiItems = getAISlashMenuItems(editor);
       items.push(...aiItems);
 
-      return filterSuggestionItems(items, query);
+      // Guard against undefined items (BlockNote internal bug with table operations)
+      const filtered = items.filter(Boolean);
+
+      return filterSuggestionItems(filtered, query);
     },
     [editor],
   );
@@ -411,7 +414,7 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
   }, [editor]);
 
   return (
-    <div className="min-h-[400px]">
+    <EditorErrorBoundary>
       <BlockNoteView
         editor={editor}
         onChange={handleEditorChange}
@@ -442,6 +445,31 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
         onEditAction={onEditAIAction ?? (() => {})}
         onCreateAction={onCreateAIAction ?? (() => {})}
       />
-    </div>
+    </EditorErrorBoundary>
   );
+}
+
+class EditorErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidUpdate() {
+    if (this.state.hasError) {
+      // Retry on next tick
+      setTimeout(() => this.setState({ hasError: false }), 0);
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return <div className="min-h-[400px]" />;
+    }
+    return this.props.children;
+  }
 }

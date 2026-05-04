@@ -793,6 +793,23 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
         if not sheet_name:
             continue
 
+        # disabled 的 sheet 仍生成 section（enabled=false），让 payload 中的 ENABLE 标志生效
+        if sheet_config.get("enabled", True) is False:
+            section_id = sheet_config.get("id") or _snake_case(
+                sheet_config.get("name", sheet_name)
+            )
+            display_name = _strip_chinese_number_prefix(
+                sheet_config.get("name", sheet_name)
+            )
+            sections.append({
+                "name": display_name,
+                "id": section_id,
+                "enabled": False,
+                "blocks": [],
+            })
+            logger.info("跳过已禁用的 Sheet: %s", sheet_name)
+            continue
+
         if sheet_name not in wb_data.sheetnames:
             msg = f"Sheet '{sheet_name}' 不存在，可用: {wb_data.sheetnames}"
             logger.warning(msg)

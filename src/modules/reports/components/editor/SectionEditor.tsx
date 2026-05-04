@@ -201,6 +201,42 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editor]);
 
+  // Fix y-prosemirror UndoManager broken by React strict mode remount.
+  // destroy() removes: 1) afterTransaction listener from Y.Doc,
+  // 2) the UndoManager from its own trackedOrigins set.
+  // On remount, view() only re-registers stack-item-* events — neither the
+  // afterTransaction listener nor trackedOrigins are restored, breaking both
+  // undo capture and redo.
+  useEffect(() => {
+    const pmState = (editor as any)._tiptapEditor?.state;
+    if (!pmState) return;
+    const yUndoPlugin = pmState.plugins.find(
+      (p: any) => p.getState(pmState)?.undoManager
+    );
+    if (!yUndoPlugin) return;
+    const um = yUndoPlugin.getState(pmState).undoManager;
+    const origDestroy = um.destroy.bind(um);
+    um.destroy = function () {
+      origDestroy();
+      // Restore afterTransaction listener and self-reference in trackedOrigins
+      if (um.doc) {
+        if (!um.doc._observers?.has("afterTransaction")) {
+          um.doc.on("afterTransaction", um.afterTransactionHandler);
+        }
+        um.trackedOrigins.add(um);
+      }
+    };
+    // Restore state that may have been lost in a previous strict-mode destroy
+    if (um.doc && !um.doc._observers?.has("afterTransaction")) {
+      um.doc.on("afterTransaction", um.afterTransactionHandler);
+    }
+    um.trackedOrigins.add(um);
+    return () => {
+      um.destroy = origDestroy;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
+
   // Track last focused block ID so sidebar insertions go to the right place
   useEffect(() => {
     const pmView = (editor as any)?._tiptapEditor?.view;

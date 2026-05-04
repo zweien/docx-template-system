@@ -7,7 +7,6 @@ import { useSession } from "next-auth/react";
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, Shield } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 import { AppLogo } from "@/components/layout/app-logo";
-import { UserNav } from "@/components/layout/user-nav";
 import { isRouteActive } from "@/components/layout/navigation/matcher";
 import { ADMIN_NAV_ITEMS, FOOTER_NAV_ITEMS, NAV_ENTRIES, filterEntriesByRole, type NavItem } from "@/components/layout/navigation/schema";
 import { NavGroup } from "@/components/layout/navigation/nav-group";
@@ -176,26 +175,19 @@ export function Sidebar() {
         )}
       </div>
 
-      <div className="shrink-0 border-t border-border-subtle">
-        <div className="flex items-center gap-2 p-2">
-          {!collapsed ? (
-            <div className="min-w-0 flex-1">
-              <UserNav />
-            </div>
-          ) : null}
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={toggleCollapsed}
-            aria-label={collapsed ? "展开侧边栏" : "折叠侧边栏"}
-            className={cn(
-              "shrink-0 text-muted-foreground hover:bg-white/5 hover:text-foreground",
-              collapsed && "mx-auto"
-            )}
-          >
-            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-          </Button>
-        </div>
+      <div className="shrink-0 border-t border-border-subtle p-2">
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "展开侧边栏" : "折叠侧边栏"}
+          className={cn(
+            "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+            collapsed ? "mx-auto" : "w-full"
+          )}
+        >
+          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </Button>
       </div>
     </aside>
   );

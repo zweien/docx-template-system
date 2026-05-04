@@ -26,10 +26,10 @@ export function SelectionAttachment({ selection, onRemove }: SelectionAttachment
       <button
         type="button"
         onClick={() => onRemove(selection.id)}
-        className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
-        title="移除"
+        className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+        title="移除引用"
       >
-        <X className="size-3" />
+        <X className="size-3.5" />
       </button>
     </div>
   );

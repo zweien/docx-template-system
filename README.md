@@ -15,6 +15,35 @@
 
 模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。同时提供报告撰写、文档收集、预算报告等功能模块。
 
+## 界面预览
+
+<table>
+  <tr>
+    <td align="center"><b>工作台</b></td>
+    <td align="center"><b>模板库</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/workspace.png" alt="工作台" width="480" /></td>
+    <td><img src="docs/screenshots/templates.png" alt="模板库" width="480" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>填表生成</b></td>
+    <td align="center"><b>数据表</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/generate.png" alt="填表生成" width="480" /></td>
+    <td><img src="docs/screenshots/data-grid.png" alt="数据表" width="480" /></td>
+  </tr>
+  <tr>
+    <td align="center"><b>AI 智能助手</b></td>
+    <td align="center"><b>报告编辑器</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/ai-agent.png" alt="AI 智能助手" width="480" /></td>
+    <td><img src="docs/screenshots/report-editor.png" alt="报告编辑器" width="480" /></td>
+  </tr>
+</table>
+
 ## 功能特性
 
 ### 模板与文档

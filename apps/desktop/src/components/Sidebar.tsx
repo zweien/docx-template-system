@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Rocket, FileText, Settings2, CheckSquare, Sun, Moon, Settings, CircleHelp, History, Info, PanelLeftClose, PanelLeft, type LucideIcon } from "lucide-react";
 import { useAppStore, AppView, ThemeMode } from "../stores/app-store";
 import { AboutContent } from "./AboutContent";
 
@@ -28,11 +29,11 @@ export function Sidebar() {
     if (isNarrow) setCollapsed(true);
   };
 
-  const items: { view: AppView; icon: string; label: string; desc: string }[] = [
-    { view: "wizard", icon: "🚀", label: "生成报告", desc: "四步向导" },
-    { view: "templates", icon: "⊞", label: "模板管理", desc: "导入与管理" },
-    { view: "configs", icon: "▤", label: "配置方案", desc: "管理与编辑" },
-    { view: "validation", icon: "✓", label: "数据校验", desc: "Excel 校验" },
+  const items: { view: AppView; icon: LucideIcon; label: string; desc: string }[] = [
+    { view: "wizard", icon: Rocket, label: "生成报告", desc: "四步向导" },
+    { view: "templates", icon: FileText, label: "模板管理", desc: "导入与管理" },
+    { view: "configs", icon: Settings2, label: "配置方案", desc: "管理与编辑" },
+    { view: "validation", icon: CheckSquare, label: "数据校验", desc: "Excel 校验" },
   ];
 
   const toggleTheme = () => {
@@ -41,8 +42,9 @@ export function Sidebar() {
     document.documentElement.setAttribute("data-theme", next);
   };
 
-  const renderNavItem = (item: { view: AppView; icon: string; label: string; desc: string }) => {
+  const renderNavItem = (item: { view: AppView; icon: LucideIcon; label: string; desc: string }) => {
     const active = currentView === item.view;
+    const Icon = item.icon;
     return (
       <button
         key={item.view}
@@ -56,8 +58,8 @@ export function Sidebar() {
         }`}
         title={collapsed ? item.label : undefined}
       >
-        <span className={`shrink-0 ${collapsed ? "" : "w-5 text-center"}`} style={{ fontSize: "0.93em" }}>
-          <span className={active ? "text-brand-accent" : ""}>{item.icon}</span>
+        <span className={`shrink-0 ${active ? "text-brand-accent" : ""} ${collapsed ? "" : "w-5 flex justify-center"}`}>
+          <Icon size={16} />
         </span>
         {!collapsed && (
           <div className="min-w-0">
@@ -69,14 +71,14 @@ export function Sidebar() {
     );
   };
 
-  const renderFooterLink = (icon: string, label: string, onClick: () => void) => (
+  const renderFooterLink = (Icon: LucideIcon, label: string, onClick: () => void) => (
     <button
       onClick={onClick}
-      className="text-text-quaternary hover:text-text-secondary transition-colors"
-      style={{ fontSize: "0.667em" }}
+      className="text-text-quaternary hover:text-text-secondary transition-colors flex items-center gap-1"
       title={collapsed ? label : undefined}
     >
-      {collapsed ? icon : <>{icon} {label}</>}
+      <Icon size={12} />
+      {!collapsed && <span style={{ fontSize: "0.667em" }}>{label}</span>}
     </button>
   );
 
@@ -113,7 +115,7 @@ export function Sidebar() {
             className="w-5 h-5 rounded flex items-center justify-center text-text-quaternary hover:text-text-secondary hover:bg-sidebar-hover transition-all duration-100"
             title={collapsed ? "展开侧边栏" : "收起侧边栏"}
           >
-            <span className={`transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}>◂</span>
+            {collapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
           </button>
         </div>
 
@@ -137,8 +139,8 @@ export function Sidebar() {
               }`}
               title={collapsed ? (settings.theme === "dark" ? "切换浅色" : "切换深色") : undefined}
             >
-              <span className={`shrink-0 ${collapsed ? "" : "w-5 text-center"}`} style={{ fontSize: "0.93em" }}>
-                {settings.theme === "dark" ? "☀" : "☽"}
+              <span className={`shrink-0 ${collapsed ? "" : "w-5 flex justify-center"}`}>
+                {settings.theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
               </span>
               {!collapsed && (
                 <div className="min-w-0">
@@ -146,17 +148,17 @@ export function Sidebar() {
                 </div>
               )}
             </button>
-            {renderNavItem({ view: "settings", icon: "⚙", label: "设置", desc: "外观与偏好" })}
+            {renderNavItem({ view: "settings", icon: Settings, label: "设置", desc: "外观与偏好" })}
           </div>
         </div>
 
         {/* Footer */}
         <div className={`border-t border-sidebar-border py-2 ${collapsed ? "px-1.5 flex flex-col items-center gap-1" : "px-4 flex items-center gap-3 justify-center"}`}>
-          {renderFooterLink("?", "帮助", () => setModal("help"))}
+          {renderFooterLink(CircleHelp, "帮助", () => setModal("help"))}
           {!collapsed && <span className="text-sidebar-border">·</span>}
-          {renderFooterLink("♣", "更新", () => setModal("changelog"))}
+          {renderFooterLink(History, "更新", () => setModal("changelog"))}
           {!collapsed && <span className="text-sidebar-border">·</span>}
-          {renderFooterLink("i", "关于", () => setModal("about"))}
+          {renderFooterLink(Info, "关于", () => setModal("about"))}
         </div>
       </aside>
 

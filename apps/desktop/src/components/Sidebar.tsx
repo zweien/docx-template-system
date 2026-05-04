@@ -232,19 +232,9 @@ function HelpContent() {
 function ChangelogContent() {
   const versions = [
     { ver: "0.7.5", date: "2026-05-04", changes: [
-      { type: "fix", text: "修复 Windows 打包版 Sidecar 启动失败：添加缺失的 report_engine/budget 模块文件" },
-    ]},
-    { ver: "0.7.4", date: "2026-05-04", changes: [
-      { type: "fix", text: "修复 Windows 打包版 Sidecar 启动失败：补全 report_engine.budget 模块" },
-    ]},
-    { ver: "0.7.3", date: "2026-05-04", changes: [
-      { type: "fix", text: "Sidecar 崩溃时捕获 stderr 并显示 Python 错误详情" },
-    ]},
-    { ver: "0.7.2", date: "2026-05-04", changes: [
-      { type: "fix", text: "修复 Sidecar 启动诊断：显示具体错误信息而非无限等待" },
-    ]},
-    { ver: "0.7.1", date: "2026-05-03", changes: [
       { type: "feat", text: "更新应用图标为全新紫色 Lab Logo" },
+      { type: "fix", text: "修复 Windows 打包版 Sidecar 启动失败（report_engine/budget 模块缺失）" },
+      { type: "fix", text: "Sidecar 崩溃时捕获 stderr 并显示 Python 错误详情" },
     ]},
     { ver: "0.7.0", date: "2026-05-03", changes: [
       { type: "feat", text: "独立数据校验功能：根据配置校验 Excel 数据完整性" },
@@ -332,7 +322,7 @@ function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.7.3</span>
+          <span className="font-mono text-text">0.7.5</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

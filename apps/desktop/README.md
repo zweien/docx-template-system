@@ -7,7 +7,7 @@
 ## 技术栈
 
 - **Tauri 2.0** — Rust 后端 + 系统 WebView
-- **React 18** + **TypeScript 5** — 前端 UI
+- **React 19** + **TypeScript 5** — 前端 UI
 - **Zustand** — 状态管理
 - **Tailwind CSS v4** — 样式
 - **Python sidecar** — FastAPI 报告渲染引擎（PyInstaller 打包）

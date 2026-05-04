@@ -74,11 +74,11 @@ export function Sidebar() {
   const renderFooterLink = (Icon: LucideIcon, label: string, onClick: () => void) => (
     <button
       onClick={onClick}
-      className="text-text-quaternary hover:text-text-secondary transition-colors flex items-center gap-1"
+      className="text-text-quaternary hover:text-text-secondary transition-colors flex items-center gap-1.5"
       title={collapsed ? label : undefined}
     >
-      <Icon size={12} />
-      {!collapsed && <span style={{ fontSize: "0.667em" }}>{label}</span>}
+      <Icon size={collapsed ? 14 : 13} />
+      {!collapsed && <span className="text-[0.733rem]">{label}</span>}
     </button>
   );
 
@@ -153,11 +153,9 @@ export function Sidebar() {
         </div>
 
         {/* Footer */}
-        <div className={`border-t border-sidebar-border py-2 ${collapsed ? "px-1.5 flex flex-col items-center gap-1" : "px-4 flex items-center gap-3 justify-center"}`}>
+        <div className={`border-t border-sidebar-border py-2.5 ${collapsed ? "px-1.5 flex flex-col items-center gap-1.5" : "px-5 flex items-center gap-4"}`}>
           {renderFooterLink(CircleHelp, "帮助", () => setModal("help"))}
-          {!collapsed && <span className="text-sidebar-border">·</span>}
           {renderFooterLink(History, "更新", () => setModal("changelog"))}
-          {!collapsed && <span className="text-sidebar-border">·</span>}
           {renderFooterLink(Info, "关于", () => setModal("about"))}
         </div>
       </aside>

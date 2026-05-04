@@ -16,7 +16,7 @@ export function AboutContent() {
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>
-          <span className="font-mono text-text">Tauri 2.0 + React 18</span>
+          <span className="font-mono text-text">Tauri 2.0 + React 19</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">后端服务</span>

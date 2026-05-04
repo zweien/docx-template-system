@@ -3,6 +3,7 @@
 import { useCallback } from "react";
 import { Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useEditorAIStore } from "./useEditorAIStore";
 
 interface AIActionButtonProps {
@@ -98,15 +99,20 @@ export function AIActionButton({ editor }: AIActionButtonProps) {
   }, [editor, openActionDialog]);
 
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      className="gap-1.5"
-      title="AI 助手"
-      onClick={handleClick}
-    >
-      <Sparkles className="size-4" />
-      <span>▾</span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="sm"
+            className="gap-1 text-primary hover:text-primary hover:bg-primary/10"
+            onClick={handleClick}
+          >
+            <Sparkles className="size-4" />
+          </Button>
+        }
+      />
+      <TooltipContent>AI 助手</TooltipContent>
+    </Tooltip>
   );
 }

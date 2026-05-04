@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
-import { Send, Settings, ChevronDown, Copy, ArrowRightLeft } from "lucide-react";
+import { Send, Settings, ChevronDown, Copy, ArrowRightLeft, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { EditorAIActionItem } from "@/types/editor-ai";
 import { executeAIAction } from "./AIActionExecutor";
@@ -176,7 +176,7 @@ export function AIActionPopover({
   }, [result]);
 
   return (
-    <div className="flex w-80 flex-col gap-3">
+    <div className="flex flex-col gap-3 p-4">
       <div className="flex flex-col gap-0.5">
         <span className="font-medium">✨ AI 助手</span>
         <span className="text-xs text-muted-foreground">
@@ -325,13 +325,15 @@ export function AIActionPopover({
         >
           + 新建模板
         </button>
-        <button
-          type="button"
-          className="hover:text-foreground"
+        <Button
+          variant="outline"
+          size="xs"
+          className="gap-1 text-xs"
           onClick={onOpenSidebar}
         >
+          <MessageSquare className="size-3" />
           侧边栏对话
-        </button>
+        </Button>
       </div>
     </div>
   );

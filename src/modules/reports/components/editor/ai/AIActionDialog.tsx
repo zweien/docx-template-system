@@ -72,7 +72,7 @@ export function AIActionDialog({
 
   return (
     <Dialog open={actionDialogOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm p-0 gap-0">
+      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
         <AIActionPopover
           globalActions={globalActions}
           userActions={userActions}

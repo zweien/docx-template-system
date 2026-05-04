@@ -426,10 +426,10 @@ export function SectionEditor({ blocks, onChange, scrollToBlockId, onScrolled, c
         <FormattingToolbarController
           formattingToolbar={() => (
             <FormattingToolbar>
-              {getFormattingToolbarItems()}
               <AIActionButton
                 editor={editor}
               />
+              {getFormattingToolbarItems()}
             </FormattingToolbar>
           )}
         />

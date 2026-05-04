@@ -43,7 +43,14 @@ export function AIActionDialog({
   );
 
   const handleOpenSidebar = useCallback(() => {
+    const { actionDialogSelection, actionDialogBlockIds, addPinnedSelection } = useEditorAIStore.getState();
     closeActionDialog();
+    if (actionDialogSelection?.trim()) {
+      addPinnedSelection({
+        text: actionDialogSelection.trim(),
+        blockIds: actionDialogBlockIds,
+      });
+    }
     onOpenSidebar();
   }, [closeActionDialog, onOpenSidebar]);
 

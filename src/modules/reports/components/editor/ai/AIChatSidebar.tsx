@@ -14,7 +14,6 @@ import {
   ArrowDownToLine,
   ChevronDown,
   Sparkles,
-  Paperclip,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,20 +35,17 @@ interface AIChatSidebarProps {
 
 // ---------- Component ----------
 export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
-  const {
-    sidebarOpen,
-    setSidebarOpen,
-    messages,
-    addMessage,
-    clearMessages,
-    pinnedSelections,
-    addPinnedSelection,
-    removePinnedSelection,
-    clearPinnedSelections,
-    selectedModel,
-    setSelectedModel,
-    sectionContent,
-  } = useEditorAIStore();
+  const sidebarOpen = useEditorAIStore((s) => s.sidebarOpen);
+  const setSidebarOpen = useEditorAIStore((s) => s.setSidebarOpen);
+  const messages = useEditorAIStore((s) => s.messages);
+  const addMessage = useEditorAIStore((s) => s.addMessage);
+  const pinnedSelections = useEditorAIStore((s) => s.pinnedSelections);
+  const addPinnedSelection = useEditorAIStore((s) => s.addPinnedSelection);
+  const removePinnedSelection = useEditorAIStore((s) => s.removePinnedSelection);
+  const clearPinnedSelections = useEditorAIStore((s) => s.clearPinnedSelections);
+  const selectedModel = useEditorAIStore((s) => s.selectedModel);
+  const setSelectedModel = useEditorAIStore((s) => s.setSelectedModel);
+  const sectionContent = useEditorAIStore((s) => s.sectionContent);
 
   const { globalActions } = useAIActions();
 
@@ -529,27 +525,6 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
 
       {/* Input area */}
       <div className="border-t p-3">
-        {/* Quote selection button */}
-        <div className="mb-2 flex items-center gap-1.5">
-          <Button
-            variant="outline"
-            size="xs"
-            className="h-6 gap-1 text-xs"
-            onClick={() => {
-              const editor = editorRef.current;
-              if (!editor) return;
-              const text = editor.getSelectedText?.();
-              if (!text?.trim()) return;
-              const focused = editor.focusBlock;
-              const blockIds = focused ? [focused.id] : [];
-              addPinnedSelection({ text: text.trim(), blockIds });
-            }}
-            title="引用编辑器中选中的文字"
-          >
-            <Paperclip className="size-3" />
-            引用选中文本
-          </Button>
-        </div>
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}

@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StepIndicator } from "@/components/batch/step-indicator";
 import { BudgetDataValidationPanel } from "@/components/budget/budget-data-validation-panel";
+import { PageHeader } from "@/components/shared";
 import { cn } from "@/lib/utils";
 import {
   validateBudgetExcel,
@@ -241,15 +242,10 @@ export default function BudgetWizardPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-[510] tracking-[-0.7px] text-foreground">
-          预算报告
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          数据校验与预算报告生成
-        </p>
-      </div>
+      <PageHeader
+        title="预算报告"
+        description="数据校验与预算报告生成"
+      />
 
       <Tabs defaultValue="wizard">
         <TabsList>
@@ -268,10 +264,10 @@ export default function BudgetWizardPage() {
 
       {/* Step 1: Select template & config */}
       {step === 1 && (
-        <Card className="rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03),0_12px_30px_rgb(0_0_0_/_0.18)]">
+        <Card className="rounded-lg border border-border bg-card p-5 ">
           <CardContent className="space-y-6 p-0">
             <div>
-              <h2 className="text-lg font-[590] tracking-tight mb-1">选择模板和配置</h2>
+              <h2 className="text-lg font-[510] tracking-tight mb-1">选择模板和配置</h2>
               <p className="text-sm text-muted-foreground">
                 上传报告模板与解析配置，或使用默认配置
               </p>
@@ -429,10 +425,10 @@ export default function BudgetWizardPage() {
 
       {/* Step 2: Upload Excel */}
       {step === 2 && (
-        <Card className="rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03),0_12px_30px_rgb(0_0_0_/_0.18)]">
+        <Card className="rounded-lg border border-border bg-card p-5 ">
           <CardContent className="space-y-6 p-0">
             <div>
-              <h2 className="text-lg font-[590] tracking-tight mb-1">上传 Excel 文件</h2>
+              <h2 className="text-lg font-[510] tracking-tight mb-1">上传 Excel 文件</h2>
               <p className="text-sm text-muted-foreground">
                 拖放或选择 .xlsx / .xls 文件，系统将自动校验并解析数据
               </p>
@@ -444,7 +440,7 @@ export default function BudgetWizardPage() {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               className={cn(
-                "relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-6 py-12 transition-colors cursor-pointer",
+                "relative flex flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed px-6 py-12 transition-colors cursor-pointer",
                 isDragging
                   ? "border-primary bg-primary/5"
                   : "border-muted-foreground/25 hover:border-muted-foreground/50",
@@ -624,10 +620,10 @@ export default function BudgetWizardPage() {
 
       {/* Step 3: Preview & generate */}
       {step === 3 && parseResult?.content && (
-        <Card className="rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03),0_12px_30px_rgb(0_0_0_/_0.18)]">
+        <Card className="rounded-lg border border-border bg-card p-5 ">
           <CardContent className="space-y-6 p-0">
             <div>
-              <h2 className="text-lg font-[590] tracking-tight mb-1">预览与生成</h2>
+              <h2 className="text-lg font-[510] tracking-tight mb-1">预览与生成</h2>
               <p className="text-sm text-muted-foreground">
                 确认解析结果后，点击生成按钮导出 Word 报告
               </p>
@@ -746,7 +742,7 @@ export default function BudgetWizardPage() {
 
       {/* Step 3: parse failed state */}
       {step === 3 && parseResult && !parseResult.success && parseResult.error && (
-        <Card className="rounded-xl border border-border bg-card p-5 shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.03),0_12px_30px_rgb(0_0_0_/_0.18)]">
+        <Card className="rounded-lg border border-border bg-card p-5 ">
           <CardContent className="p-0">
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-destructive mt-0.5 shrink-0" />

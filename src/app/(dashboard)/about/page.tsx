@@ -1,11 +1,6 @@
 import { auth } from "@/lib/auth";
 import { AppLogo } from "@/components/layout/app-logo";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { ContentCard } from "@/components/shared";
 import { ExternalLink, Globe, Mail } from "lucide-react";
 
 export default async function AboutPage() {
@@ -14,7 +9,7 @@ export default async function AboutPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-card p-8">
+      <div className="flex flex-col items-center gap-4 rounded-lg border border-border bg-card p-8">
         <AppLogo className="h-16 w-auto" priority />
         <h1 className="text-2xl font-[510] tracking-tight text-foreground">
           IDRL 填表系统
@@ -25,11 +20,9 @@ export default async function AboutPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">开发团队</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <ContentCard>
+        <h2 className="text-base font-[510] tracking-tight mb-4">开发团队</h2>
+        <div className="space-y-3">
           <div className="flex items-center gap-3 text-sm">
             <Globe className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">IDRL Lab</span>
@@ -38,14 +31,12 @@ export default async function AboutPage() {
             <Mail className="h-4 w-4 text-muted-foreground" />
             <span className="text-muted-foreground">idrl@example.com</span>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </ContentCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">相关链接</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <ContentCard>
+        <h2 className="text-base font-[510] tracking-tight mb-4">相关链接</h2>
+        <div className="space-y-3">
           <a
             href="https://github.com/zweien/docx-template-system"
             target="_blank"
@@ -55,8 +46,8 @@ export default async function AboutPage() {
             <ExternalLink className="h-4 w-4 text-muted-foreground" />
             GitHub 仓库
           </a>
-        </CardContent>
-      </Card>
+        </div>
+      </ContentCard>
     </div>
   );
 }

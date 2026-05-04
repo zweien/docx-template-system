@@ -19,17 +19,26 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
     let bundled_bin = sidecar_dir.join("budget-sidecar").join(&bin_name);
 
     let is_prod = bundled_bin.exists();
+
+    // Log path info for debugging
+    println!("[sidecar] Resource dir: {}", sidecar_dir.display());
+    println!("[sidecar] Looking for: {}", bundled_bin.display());
+    println!("[sidecar] is_prod: {}", is_prod);
+
     let (cmd, args) = if is_prod {
         println!("[sidecar] Using bundled binary: {}", bundled_bin.display());
         (bundled_bin.as_os_str().to_owned(), vec![])
     } else {
         let main_py = sidecar_dir.join("main.py");
         if !main_py.exists() {
-            return Err(format!(
-                "Sidecar 未找到:\n  打包: {}\n  开发: {}",
+            let err = format!(
+                "Sidecar 未找到:\n  打包: {}\n  开发: {}\n  目录内容: {:?}",
                 bundled_bin.display(),
-                main_py.display()
-            ));
+                main_py.display(),
+                std::fs::read_dir(&sidecar_dir).ok().map(|d| d.filter_map(|e| e.ok()).map(|e| e.path().display().to_string()).collect::<Vec<_>>())
+            );
+            commands::set_sidecar_error(err.clone());
+            return Err(err);
         }
         println!("[sidecar] Using Python dev mode: {}", main_py.display());
         (std::ffi::OsString::from("python3"), vec![main_py])
@@ -91,7 +100,9 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         sleep(Duration::from_millis(500)).await;
 
         if !is_alive() {
-            return Err("Sidecar 进程意外退出，请检查日志".to_string());
+            let err_msg = "Sidecar 进程意外退出，请检查日志".to_string();
+            commands::set_sidecar_error(err_msg.clone());
+            return Err(err_msg);
         }
 
         if let Ok(resp) = client
@@ -115,8 +126,10 @@ pub async fn start(app: &AppHandle) -> Result<(), String> {
         }
     }
 
+    let err_msg = "Sidecar 健康检查超时（20秒）".to_string();
+    commands::set_sidecar_error(err_msg.clone());
     stop();
-    Err("Sidecar 健康检查超时（20秒）".to_string())
+    Err(err_msg)
 }
 
 pub fn is_alive() -> bool {

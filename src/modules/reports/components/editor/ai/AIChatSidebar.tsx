@@ -45,6 +45,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
     pinnedSelections,
     addPinnedSelection,
     removePinnedSelection,
+    clearPinnedSelections,
     selectedModel,
     setSelectedModel,
     sectionContent,
@@ -101,6 +102,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
     const userPinnedSelections = pinnedSelections.length > 0 ? [...pinnedSelections] : undefined;
     addMessage({ role: "user", content: trimmed, pinnedSelections: userPinnedSelections });
     setInput("");
+    clearPinnedSelections();
     setStreaming(true);
 
     // Build API messages (exclude system messages, add user pinned refs)
@@ -202,6 +204,7 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
     selectedModel,
     sectionContent,
     addMessage,
+    clearPinnedSelections,
   ]);
 
   // ---------- Helpers to update last assistant message ----------
@@ -504,6 +507,16 @@ export function AIChatSidebar({ editorRef }: AIChatSidebarProps) {
       {/* Pinned selections */}
       {pinnedSelections.length > 0 && (
         <div className="flex flex-col gap-1.5 border-t px-3 py-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">引用文本 ({pinnedSelections.length})</span>
+            <button
+              type="button"
+              onClick={clearPinnedSelections}
+              className="text-xs text-muted-foreground hover:text-destructive"
+            >
+              清除全部
+            </button>
+          </div>
           {pinnedSelections.map((sel) => (
             <SelectionAttachment
               key={sel.id}

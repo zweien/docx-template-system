@@ -8,11 +8,12 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql)
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
+![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 > **v0.9.1**
 
-模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。
+模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。同时提供报告撰写、文档收集、预算报告等功能模块。
 
 ## 功能特性
 
@@ -24,6 +25,35 @@
 - **文档生成** — report-engine CLI 渲染引擎，支持富文本块（标题/列表/表格/公式/图片）、条件段落、子文档引用
 - **批量生成** — 上传 Excel 数据批量生成文档，支持字段自动映射
 - **草稿系统** — 表单数据自动保存，随时恢复编辑
+
+### 报告撰写
+
+- **报告模板** — 上传 .docx 模板，自动解析章节结构、上下文变量、样式要求和 AI 写作提示词
+- **富文本编辑器** — 基于 BlockNote，支持段落、标题、列表、表格、公式、Mermaid 图表、图片、附件
+- **AI 智能写作** — 章节级 AI 生成（流式输出）、AI 对话侧边栏、自定义 AI 动作（写作/翻译/分析）
+- **实时协作** — 基于 y-websocket + Yjs CRDT，多人同时编辑、光标同步、在线状态显示
+- **导出 .docx** — report-engine 渲染引擎导出，支持富文本块、条件段落、子文档引用
+- **附件管理** — 附件上传与管理、批量打包导出
+
+### 文档收集
+
+- **任务管理** — 创建文件收集任务，指定截止时间和收集人名单
+- **文件提交** — 收集人上传文件，系统按配置规则自动重命名
+- **版本追踪** — 多版本提交历史，随时查看和下载历史版本
+- **批量下载** — 一键打包下载所有提交文件（ZIP 格式）
+
+### 预算报告
+
+- **Excel 数据校验** — 上传 Excel 文件，实时校验工作表、列、数据格式和填写率
+- **三步向导** — 选择模板与配置 → 上传 Excel 校验 → 预览并生成 DOCX
+- **配置管理** — 自定义校验规则和字段映射，支持 JSON 配置导入导出
+
+### 桌面应用
+
+- **独立运行** — 基于 Tauri 2.0 的桌面应用，内置 Python sidecar，无需联网
+- **离线生成** — 本地完成 Excel 校验和报告生成，适合内网环境
+- **配置管理** — 可视化配置编辑器、多配置方案、JSON 导入导出
+- **跨平台** — Windows（NSIS 安装包）、Linux（AppImage/deb）
 
 ### 主数据管理
 
@@ -57,12 +87,13 @@
 
 ### AI 智能助手
 
-- **AI 对话** — 多模型聊天界面，流式响应，支持附件上传和文本提取
-- **AI 填充助手** — 对话式表单填写，AI 智能推荐字段值，支持模型选择
-- **工具调用** — MCP (Model Context Protocol) 集成，支持工具确认工作流
+- **多模型对话** — 动态模型选择，流式响应，支持附件上传和文本提取
+- **AI 填充助手** — 对话式表单填写，AI 智能推荐字段值
+- **MCP 工具调用** — Model Context Protocol 集成，支持工具确认工作流
 - **对话管理** — 历史记录、收藏、建议系统
+- **AI 动作管理** — 管理员可创建全局 AI 动作（写作/翻译/分析），用户可自建个人动作，支持变量模板
 
-### 自动化引擎（一期）
+### 自动化引擎
 
 - **多种触发器** — 支持记录创建、记录更新、记录删除、字段变更、定时触发、手动触发
 - **条件分支** — 支持单条件节点下的 `AND/OR` 组合判断，并根据结果走 `Then/Else` 分支
@@ -72,7 +103,7 @@
 
 ### 系统管理
 
-- **审计日志** — 记录数据创建/更新/删除、表单分享/提交等关键操作
+- **审计日志** — 记录所有关键操作，覆盖模板管理、文档生成、数据表操作、用户管理、报告系统（模板/草稿/导出/协作）等
 - **用户管理** — 管理员/普通用户角色，邮箱身份映射
 - **系统设置** — AI 模型配置、MCP 服务器管理
 
@@ -84,6 +115,11 @@
 | UI 组件 | shadcn/ui v4 (Base UI), Tailwind CSS 4 |
 | 数据库 | PostgreSQL + Prisma 7 (Driver Adapter) |
 | 认证 | NextAuth v4 + authentik OIDC |
+| 报告编辑器 | BlockNote 0.49 + @blocknote/xl-ai |
+| 实时协作 | Yjs + y-websocket + y-leveldb |
+| 桌面应用 | Tauri 2.0 (Rust + React) |
+| AI 集成 | @ai-sdk (OpenAI/MCP) |
+| 状态管理 | Zustand |
 | 文档生成 | report-engine (Python, python-docx + docxtpl) |
 | 简单文档替换 | python-service (Python FastAPI, python-docx) |
 | 验证 | Zod |
@@ -108,6 +144,7 @@ NEXTAUTH_SECRET="your-random-secret"
 NEXTAUTH_URL="http://localhost:8060"
 UPLOAD_DIR="public/uploads"
 PYTHON_SERVICE_URL="http://localhost:8065"
+REPORT_ENGINE_URL="http://localhost:8066"
 AUTHENTIK_ISSUER="http://127.0.0.1:9000/application/o/docx-template-system"
 AUTHENTIK_CLIENT_ID="从 authentik 复制"
 AUTHENTIK_CLIENT_SECRET="从 authentik 复制"
@@ -126,7 +163,8 @@ SMTP_FROM="DOCX Template System <bot@example.com>"
 - `AUTHENTIK_ISSUER` 必须指向 authentik 中对应应用的 issuer，例如 `http://127.0.0.1:9000/application/o/docx-template-system`
 - `AUTHENTIK_CLIENT_ID` 和 `AUTHENTIK_CLIENT_SECRET` 只能从 authentik 后台复制
 - `AUTHENTIK_ADMIN_EMAILS` 只用于首次统一登录时自动赋予本地 `ADMIN` 角色
-- `SMTP_*` 为自动化邮件动作的可选配置；未配置时，“发送邮件”动作会执行失败，并触发自动化失败告警
+- `REPORT_ENGINE_URL` 为报告撰写模块使用的渲染引擎地址
+- `SMTP_*` 为自动化邮件动作的可选配置；未配置时，"发送邮件"动作会执行失败，并触发自动化失败告警
 - 本地 `User.role` 仍然保留，统一认证只负责"是谁"，业务权限仍由本系统负责
 
 ### 开发模式绕过认证
@@ -167,7 +205,10 @@ cd ..
 cd report-engine && .venv/bin/python main.py &
 cd ..
 
-# 7. 启动 Next.js 开发服务器
+# 7. 启动协作 WebSocket 服务器（端口 8072，报告协作编辑使用）
+npm run dev:collab &
+
+# 8. 启动 Next.js 开发服务器
 npm run dev
 ```
 
@@ -177,6 +218,7 @@ npm run dev
 
 ```bash
 npm run dev          # 启动开发服务器 (Turbopack, 端口 8060)
+npm run dev:collab   # 启动协作 WebSocket 服务器 (端口 8072)
 npm run build        # 生产构建 (Turbopack)
 npm run start        # 启动生产服务
 npm run lint         # ESLint 检查
@@ -227,8 +269,8 @@ NEXT_PUBLIC_DEV_BYPASS_AUTH=true
 ```bash
 docker compose build
 docker save \
-  docx-template-system-app:v0.7.4 \
-  docx-template-system-python-service:v0.7.4 \
+  docx-template-system-app:v0.9.1 \
+  docx-template-system-python-service:v0.9.1 \
   -o docx-template-system-offline.tar
 ```
 
@@ -257,7 +299,7 @@ docker compose -f docker-compose.offline.yml --env-file .env.offline run --rm --
 ### 增量升级建议
 
 - 推荐在内网搭私有 Registry（Harbor/registry:2），镜像按层增量传输
-- 版本升级时仅更新镜像 tag（如 `v0.8.0`），再执行：
+- 版本升级时仅更新镜像 tag（如 `v0.9.1`），再执行：
 
 ```bash
 docker compose -f docker-compose.offline.yml --env-file .env.offline up -d --remove-orphans
@@ -380,6 +422,7 @@ src/
 │   └── (dashboard)/      # 主应用页面
 ├── components/
 │   ├── agent2/           # AI 智能助手组件
+│   ├── budget/           # 预算报告组件
 │   ├── forms/            # 动态表单组件 + AI 填充助手
 │   ├── templates/        # 模板管理组件
 │   ├── data/             # 主数据组件
@@ -391,18 +434,34 @@ src/
 │   ├── formula/          # 公式引擎 (tokenizer/AST/evaluator)
 │   ├── docx-parser.ts    # DOCX 占位符解析
 │   └── db.ts             # Prisma 客户端单例
+├── modules/
+│   └── reports/          # 报告撰写模块
+│       ├── components/   # 编辑器、AI 侧边栏、协作
+│       ├── converter/    # BlockNote → report-engine 格式转换
+│       ├── schema/       # BlockNote 自定义 schema
+│       └── services/     # 报告模板/草稿/导出服务
 ├── types/                # TypeScript 接口
 └── validators/           # Zod schemas
+
+apps/
+└── desktop/              # Tauri 2.0 桌面应用
+    ├── src/              # React 前端
+    ├── src-tauri/        # Rust 后端
+    └── sidecar/          # Python sidecar (report-engine)
+
+y-websocket-server/       # 协作 WebSocket 服务器 (端口 8072)
+├── server.mjs            # y-websocket 服务端 (JWT 认证 + LevelDB 持久化)
 
 python-service/
 └── main.py               # FastAPI 简单文档替换服务 (端口 8065)
 
 report-engine/
-├── main.py               # FastAPI HTTP 服务 (端口 8066，报告撰写导出)
+├── main.py               # FastAPI HTTP 服务 (端口 8066)
 ├── src/report_engine/    # 模板驱动的 DOCX 渲染引擎
 │   ├── cli.py            # CLI 入口 (validate/check-template/render)
 │   ├── renderer.py       # 核心渲染逻辑
 │   ├── blocks.py         # 富文本块注册表 (标题/列表/表格/图片/公式等)
+│   ├── budget/           # 预算报告模块 (Excel 解析/校验/构建)
 │   ├── schema.py         # Payload 数据模型
 │   ├── validator.py      # Payload 校验
 │   ├── template_checker.py  # 模板契约检查
@@ -420,6 +479,7 @@ report-engine/
 - [认证接入说明](./docs/authentication.md)
 - [开发运行说明](./docs/development.md)
 - [故障排查](./docs/troubleshooting.md)
+- [桌面应用说明](./apps/desktop/README.md)
 
 ## 认证边界
 

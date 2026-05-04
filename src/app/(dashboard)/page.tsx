@@ -61,7 +61,7 @@ function QuickActionCard({
           "flex h-8 w-8 items-center justify-center rounded-md",
           accent === "primary" && "bg-primary/15 text-accent",
           accent === "success" && "bg-emerald-500/15 text-emerald-400",
-          !accent && "bg-white/[0.08] text-muted-foreground"
+          !accent && "bg-secondary text-muted-foreground"
         )}
       >
         <Icon className="h-4 w-4" />
@@ -168,7 +168,7 @@ export default async function WorkspacePage() {
     ...recentReports.map((r) => ({
       kind: "report" as const,
       name: r.title,
-      href: `/reports/${r.id}/edit`,
+      href: `/reports/drafts/${r.id}`,
       time: r.updatedAt,
     })),
   ].sort((a, b) => b.time.getTime() - a.time.getTime());
@@ -188,7 +188,7 @@ export default async function WorkspacePage() {
           accent="primary"
         />
         <QuickActionCard
-          href="/reports/new"
+          href="/reports/drafts"
           icon={PenLine}
           label="撰写报告"
           description="使用模板撰写工作报告"
@@ -429,7 +429,7 @@ function StatItem({
   value: number;
 }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-md bg-white/[0.04] p-3">
+    <div className="flex items-center gap-2.5 rounded-md bg-secondary p-3">
       <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
       <div>
         <div className="text-lg font-[510] leading-tight text-foreground">

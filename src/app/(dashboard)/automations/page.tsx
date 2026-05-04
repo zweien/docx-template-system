@@ -29,7 +29,7 @@ export default async function AutomationsPage() {
       <ContentCard>
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-lg border border-border bg-background p-4">
-            <p className="text-xs font-[510] uppercase tracking-wider text-[#62666d]">
+            <p className="text-xs font-[510] uppercase tracking-wider text-text-dim">
               总规则
             </p>
             <p className="mt-3 text-3xl font-[510] tracking-tight text-foreground">
@@ -37,7 +37,7 @@ export default async function AutomationsPage() {
             </p>
           </div>
           <div className="rounded-lg border border-border bg-background p-4">
-            <p className="text-xs font-[510] uppercase tracking-wider text-[#62666d]">
+            <p className="text-xs font-[510] uppercase tracking-wider text-text-dim">
               启用中
             </p>
             <p className="mt-3 text-3xl font-[510] tracking-tight text-foreground">
@@ -45,7 +45,7 @@ export default async function AutomationsPage() {
             </p>
           </div>
           <div className="rounded-lg border border-border bg-background p-4">
-            <p className="text-xs font-[510] uppercase tracking-wider text-[#62666d]">
+            <p className="text-xs font-[510] uppercase tracking-wider text-text-dim">
               停用中
             </p>
             <p className="mt-3 text-3xl font-[510] tracking-tight text-foreground">

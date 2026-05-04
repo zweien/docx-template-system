@@ -16,10 +16,10 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const ACTIVE_ITEM_CLASS_NAME =
-  "border border-[rgb(255_255_255_/_0.1)] bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8] shadow-[inset_0_0_0_1px_rgb(113_112_255_/_0.34)]";
+  "border border-border-hover bg-accent/20 text-foreground shadow-[inset_0_0_0_1px_rgb(113_112_255_/_0.34)]";
 
 const INACTIVE_ITEM_CLASS_NAME =
-  "border border-transparent text-[#8a8f98] hover:border-[rgb(255_255_255_/_0.08)] hover:bg-[rgb(255_255_255_/_0.03)] hover:text-[#f7f8f8]";
+  "border border-transparent text-muted-foreground hover:border-border hover:bg-white/[0.03] hover:text-foreground";
 
 type SidebarNavLinkProps = {
   readonly collapsed: boolean;
@@ -78,16 +78,16 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "hidden h-screen shrink-0 flex-col border-r border-[rgb(255_255_255_/_0.05)] bg-[rgb(15_16_17_/_0.92)] backdrop-blur-xl transition-[width] duration-100 md:flex",
+        "hidden h-screen shrink-0 flex-col border-r border-border-subtle bg-sidebar backdrop-blur-xl transition-[width] duration-100 md:flex",
         collapsed ? "w-16" : "w-60"
       )}
     >
-      <div className="flex h-14 shrink-0 items-center border-b border-[rgb(255_255_255_/_0.05)] px-4">
+      <div className="flex h-14 shrink-0 items-center border-b border-border-subtle px-4">
         <Link href="/" className="group flex items-center gap-2.5">
           <AppLogo className="transition-transform group-hover:scale-110" priority />
           <span
             className={cn(
-              "whitespace-nowrap text-base font-[510] tracking-[-0.13px] text-[#f7f8f8] transition-opacity duration-100",
+              "whitespace-nowrap text-base font-[510] tracking-tight text-foreground transition-opacity duration-100",
               collapsed && "w-0 overflow-hidden opacity-0"
             )}
           >
@@ -105,7 +105,7 @@ export function Sidebar() {
         </div>
 
         {/* Navigation groups */}
-        <div className="mt-4 border-t border-[rgb(255_255_255_/_0.05)] pt-4 space-y-1.5">
+        <div className="mt-4 border-t border-border-subtle pt-4 space-y-1.5">
           {groupEntries.map((entry) =>
             entry.type === "group" ? (
               <NavGroup key={entry.group.id} group={entry.group} collapsed={collapsed} />
@@ -115,7 +115,7 @@ export function Sidebar() {
 
         {/* Standalone tools */}
         {standaloneEntries.length > 0 ? (
-          <div className="mt-4 border-t border-[rgb(255_255_255_/_0.05)] pt-4 space-y-1.5">
+          <div className="mt-4 border-t border-border-subtle pt-4 space-y-1.5">
             {standaloneEntries.map((entry) =>
               entry.type === "item" ? (
                 <SidebarNavLink key={entry.item.id} item={entry.item} pathname={pathname} collapsed={collapsed} />
@@ -126,7 +126,7 @@ export function Sidebar() {
 
         {/* Admin section */}
         {adminItems.length > 0 ? (
-          <div className="mt-4 border-t border-[rgb(255_255_255_/_0.05)] pt-4">
+          <div className="mt-4 border-t border-border-subtle pt-4">
             {collapsed ? (
               <div className="space-y-1.5">
                 {adminItems.map((item) => (
@@ -138,7 +138,7 @@ export function Sidebar() {
                 <button
                   type="button"
                   onClick={() => setAdminExpanded((prev) => !prev)}
-                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-[510] uppercase tracking-wider text-[#62666d] transition-colors hover:text-[#f7f8f8]"
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-[510] uppercase tracking-wider text-text-dim transition-colors hover:text-foreground"
                   aria-expanded={adminExpanded}
                 >
                   <Shield className="h-4 w-4 shrink-0" />
@@ -164,7 +164,7 @@ export function Sidebar() {
       </nav>
 
       <div className="shrink-0 px-3 py-2">
-        <div className="text-xs text-[#62666d]">
+        <div className="text-xs text-text-dim">
           {!collapsed ? "IDRL填表系统 " : ""}v{process.env.NEXT_PUBLIC_APP_VERSION}
         </div>
         {footerItems.length > 0 && (
@@ -176,7 +176,7 @@ export function Sidebar() {
         )}
       </div>
 
-      <div className="shrink-0 border-t border-[rgb(255_255_255_/_0.05)]">
+      <div className="shrink-0 border-t border-border-subtle">
         <div className="flex items-center gap-2 p-2">
           {!collapsed ? (
             <div className="min-w-0 flex-1">
@@ -189,7 +189,7 @@ export function Sidebar() {
             onClick={toggleCollapsed}
             aria-label={collapsed ? "展开侧边栏" : "折叠侧边栏"}
             className={cn(
-              "shrink-0 text-[#8a8f98] hover:bg-white/5 hover:text-[#f7f8f8]",
+              "shrink-0 text-muted-foreground hover:bg-white/5 hover:text-foreground",
               collapsed && "mx-auto"
             )}
           >

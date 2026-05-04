@@ -9,10 +9,10 @@ import { isRouteActive } from "./matcher";
 import { cn } from "@/lib/utils";
 
 export const ACTIVE_ITEM_CLASS_NAME =
-  "border border-[rgb(255_255_255_/_0.1)] bg-[rgb(113_112_255_/_0.18)] text-[#f7f8f8] shadow-[inset_0_0_0_1px_rgb(113_112_255_/_0.34)]";
+  "border border-border-hover bg-accent/20 text-foreground shadow-[inset_0_0_0_1px_rgb(113_112_255_/_0.34)]";
 
 export const INACTIVE_ITEM_CLASS_NAME =
-  "border border-transparent text-[#8a8f98] hover:border-[rgb(255_255_255_/_0.08)] hover:bg-[rgb(255_255_255_/_0.03)] hover:text-[#f7f8f8]";
+  "border border-transparent text-muted-foreground hover:border-border hover:bg-white/[0.03] hover:text-foreground";
 
 type NavGroupProps = {
   readonly group: NavGroupDef;
@@ -62,7 +62,7 @@ export function NavGroup({ group, collapsed }: NavGroupProps) {
       <button
         type="button"
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-[510] uppercase tracking-wider text-[#62666d] transition-colors hover:text-[#f7f8f8]"
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-[510] uppercase tracking-wider text-text-dim transition-colors hover:text-foreground"
         aria-expanded={isExpanded}
       >
         <GroupIcon className="h-4 w-4 shrink-0" />

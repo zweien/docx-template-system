@@ -100,7 +100,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.1</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.2</p>
             </div>
           )}
         </div>
@@ -231,6 +231,9 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.7.2", date: "2026-05-04", changes: [
+      { type: "fix", text: "修复 Sidecar 启动诊断：显示具体错误信息而非无限等待" },
+    ]},
     { ver: "0.7.1", date: "2026-05-03", changes: [
       { type: "feat", text: "更新应用图标为全新紫色 Lab Logo" },
     ]},
@@ -320,7 +323,7 @@ function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.7.1</span>
+          <span className="font-mono text-text">0.7.2</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

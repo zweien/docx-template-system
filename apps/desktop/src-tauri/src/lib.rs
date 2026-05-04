@@ -23,6 +23,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::get_sidecar_port,
+            commands::get_sidecar_status,
             commands::select_excel,
             commands::select_output_dir,
             commands::open_report,

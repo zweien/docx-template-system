@@ -16,16 +16,30 @@ export default function App() {
   const { currentView, sidecarReady, setSidecarReady, setSidecarPort, setTemplates, loadConfigs, addLog, logs, clearLogs, settings } = useAppStore();
 
   useEffect(() => {
+    let sidecarRetryCount = 0;
+    const MAX_RETRIES = 30; // 60 seconds max
+
     const checkTauri = async () => {
       try {
         const { invoke } = await import("@tauri-apps/api/core");
-        const info = await invoke("get_sidecar_port") as { port: number };
+        const info = await invoke("get_sidecar_status") as { port: number };
         setSidecarPort(info.port);
         setSidecarReady(true);
         addLog(`Sidecar 服务已就绪 (port ${info.port})`);
-      } catch {
-        addLog("等待 Sidecar 启动...");
-        setTimeout(checkTauri, 2000);
+      } catch (e) {
+        sidecarRetryCount++;
+        const msg = String(e);
+        const isStarting = msg.includes("正在启动中");
+
+        if (isStarting && sidecarRetryCount < MAX_RETRIES) {
+          addLog("等待 Sidecar 启动...");
+          setTimeout(checkTauri, 2000);
+        } else if (!isStarting) {
+          // Permanent error — show details and stop retrying
+          addLog(`Sidecar 启动失败: ${msg}`);
+        } else {
+          addLog("Sidecar 启动超时，请重启应用");
+        }
       }
     };
 

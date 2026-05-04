@@ -58,6 +58,7 @@ fn validate_config_structure(val: &serde_json::Value) -> Result<(), String> {
 }
 
 static SIDECAR_PORT: AtomicU16 = AtomicU16::new(0);
+static SIDECAR_ERROR: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 
 #[derive(Serialize)]
 pub struct SidecarInfo {
@@ -86,6 +87,26 @@ pub fn get_sidecar_port() -> Result<SidecarInfo, String> {
 
 pub fn set_sidecar_port(port: u16) {
     SIDECAR_PORT.store(port, Ordering::SeqCst);
+}
+
+pub fn set_sidecar_error(msg: String) {
+    if let Ok(mut guard) = SIDECAR_ERROR.lock() {
+        *guard = Some(msg);
+    }
+}
+
+#[tauri::command]
+pub fn get_sidecar_status() -> Result<SidecarInfo, String> {
+    let port = SIDECAR_PORT.load(Ordering::SeqCst);
+    if port > 0 {
+        return Ok(SidecarInfo { port });
+    }
+    if let Ok(guard) = SIDECAR_ERROR.lock() {
+        if let Some(ref err) = *guard {
+            return Err(err.clone());
+        }
+    }
+    Err("Sidecar 正在启动中...".to_string())
 }
 
 // ── File dialogs ──

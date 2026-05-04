@@ -63,11 +63,11 @@ export function StepConfigure() {
       <div className="bg-surface rounded-lg border border-border overflow-hidden">
         <div className="px-3.5 py-2 border-b border-border-subtle">
           <span className="text-ui text-[0.733rem] text-text-quaternary">
-            Sheet 配置 ({config.sheets.length})
+            Sheet 配置 ({config.sheets.filter((s) => s.enabled !== false).length}/{config.sheets.length})
           </span>
         </div>
         <div className="divide-y divide-border-subtle">
-          {config.sheets.map((sheet, idx) => {
+          {config.sheets.filter((s) => s.enabled !== false).map((sheet, idx) => {
             const allCols = Object.entries(sheet.columns);
             const tableCols = sheet.table_columns || [];
             const detailCols = sheet.detail_fields || [];

@@ -1,24 +1,39 @@
 import { describe, expect, it } from "vitest";
 import { House } from "lucide-react";
 import type { NavItem } from "./schema";
-import { NAV_ITEMS, filterNavItemsByRole } from "./schema";
+import { NAV_ITEMS, NAV_ENTRIES, ADMIN_NAV_ITEMS, FOOTER_NAV_ITEMS, filterEntriesByRole, filterNavItemsByRole } from "./schema";
 
 describe("navigation schema", () => {
-  it("按定义顺序导出导航项，并包含单一导航源所需字段", () => {
-    expect(NAV_ITEMS.map((item) => item.href)).toEqual([
-      "/",
-      "/generate",
-      "/records",
-      "/drafts",
-      "/templates",
-      "/data",
-      "/collections",
-      "/ai-agent2",
-      "/admin/settings",
-      "/admin/users",
-      "/admin/audit-logs",
-    ]);
+  it("NAV_ITEMS 包含所有导航项（向后兼容平铺结构）", () => {
+    const hrefs = NAV_ITEMS.map((item) => item.href);
 
+    // Home
+    expect(hrefs).toContain("/");
+    // Template & Form group
+    expect(hrefs).toContain("/templates");
+    expect(hrefs).toContain("/generate");
+    expect(hrefs).toContain("/records");
+    expect(hrefs).toContain("/drafts");
+    // Data group
+    expect(hrefs).toContain("/data");
+    // Report group
+    expect(hrefs).toContain("/reports/drafts");
+    expect(hrefs).toContain("/reports/templates");
+    expect(hrefs).toContain("/budget");
+    // Standalone tools
+    expect(hrefs).toContain("/automations");
+    expect(hrefs).toContain("/collections");
+    expect(hrefs).toContain("/ai-agent2");
+    // Admin
+    expect(hrefs).toContain("/admin/settings");
+    expect(hrefs).toContain("/admin/editor-ai");
+    expect(hrefs).toContain("/admin/users");
+    expect(hrefs).toContain("/admin/audit-logs");
+    // Footer
+    expect(hrefs).toContain("/about");
+  });
+
+  it("NAV_ITEMS 首项为首页", () => {
     expect(NAV_ITEMS[0]).toEqual(
       expect.objectContaining({
         id: "home",
@@ -31,13 +46,18 @@ describe("navigation schema", () => {
   it("未提供角色时仅返回公共项", () => {
     expect(filterNavItemsByRole(NAV_ITEMS).map((item) => item.href)).toEqual([
       "/",
+      "/templates",
       "/generate",
       "/records",
       "/drafts",
-      "/templates",
       "/data",
+      "/reports/drafts",
+      "/reports/templates",
+      "/budget",
+      "/automations",
       "/collections",
       "/ai-agent2",
+      "/about",
     ]);
   });
 
@@ -56,5 +76,35 @@ describe("navigation schema", () => {
       "/admin/settings",
       "/admin/users",
     ]);
+  });
+
+  it("NAV_ENTRIES 包含分组和独立项", () => {
+    expect(NAV_ENTRIES).toHaveLength(7);
+    expect(NAV_ENTRIES[0]).toEqual({ type: "item", item: expect.objectContaining({ id: "home" }) });
+    expect(NAV_ENTRIES[1]).toEqual({ type: "group", group: expect.objectContaining({ id: "templates-forms" }) });
+    expect(NAV_ENTRIES[2]).toEqual({ type: "group", group: expect.objectContaining({ id: "data" }) });
+    expect(NAV_ENTRIES[3]).toEqual({ type: "group", group: expect.objectContaining({ id: "reports" }) });
+  });
+
+  it("ADMIN_NAV_ITEMS 包含管理员专属导航项", () => {
+    expect(ADMIN_NAV_ITEMS.map((item) => item.href)).toEqual([
+      "/admin/settings",
+      "/admin/editor-ai",
+      "/admin/users",
+      "/admin/audit-logs",
+    ]);
+  });
+
+  it("FOOTER_NAV_ITEMS 包含页脚导航项", () => {
+    expect(FOOTER_NAV_ITEMS.map((item) => item.href)).toEqual(["/about"]);
+  });
+
+  it("filterEntriesByRole 过滤分组和独立项", () => {
+    const filtered = filterEntriesByRole(NAV_ENTRIES);
+    // All public entries should be present
+    expect(filtered).toHaveLength(7);
+
+    const filteredWithAdmin = filterEntriesByRole(NAV_ENTRIES, "ADMIN");
+    expect(filteredWithAdmin).toHaveLength(7);
   });
 });

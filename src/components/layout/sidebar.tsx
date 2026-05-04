@@ -1,14 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, Shield } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 import { AppLogo } from "@/components/layout/app-logo";
 import { UserNav } from "@/components/layout/user-nav";
 import { isRouteActive } from "@/components/layout/navigation/matcher";
-import { NAV_ITEMS, filterNavItemsByRole, type NavItem } from "@/components/layout/navigation/schema";
+import { ADMIN_NAV_ITEMS, FOOTER_NAV_ITEMS, NAV_ENTRIES, filterEntriesByRole, type NavItem } from "@/components/layout/navigation/schema";
+import { NavGroup } from "@/components/layout/navigation/nav-group";
 import { useNavigationState } from "@/components/layout/navigation/state";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -60,11 +62,18 @@ export function Sidebar() {
   const { data: session } = useSession();
   const { collapsed, toggleCollapsed } = useNavigationState();
   const role = session?.user?.role as Role | undefined;
-  const navItems = filterNavItemsByRole(NAV_ITEMS, role);
-  const mainItems = navItems.filter((item) => item.section === "main");
-  const reportItems = navItems.filter((item) => item.section === "reports");
-  const adminItems = navItems.filter((item) => item.section === "admin");
-  const footerItems = navItems.filter((item) => item.section === "footer");
+  const [adminExpanded, setAdminExpanded] = useState(false);
+
+  const filteredEntries = filterEntriesByRole(NAV_ENTRIES, role);
+  const adminItems: readonly NavItem[] = ADMIN_NAV_ITEMS.filter((item: NavItem) => role === "ADMIN" || !item.roles?.length);
+  const footerItems = FOOTER_NAV_ITEMS;
+
+  // Split entries: home (0) | groups (1-3) | standalone tools (4-6)
+  const homeEntry = filteredEntries.find((e) => e.type === "item" && e.item.id === "home");
+  const groupEntries = filteredEntries.filter((e) => e.type === "group");
+  const standaloneEntries = filteredEntries.filter(
+    (e) => e.type === "item" && e.item.id !== "home"
+  );
 
   return (
     <aside
@@ -88,39 +97,68 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
+        {/* Home */}
         <div className="space-y-1.5">
-          {mainItems.map((item) => (
-            <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
-          ))}
+          {homeEntry && homeEntry.type === "item" && (
+            <SidebarNavLink key={homeEntry.item.id} item={homeEntry.item} pathname={pathname} collapsed={collapsed} />
+          )}
         </div>
 
-        {reportItems.length > 0 ? (
-          <div className="mt-6 border-t border-[rgb(255_255_255_/_0.05)] pt-4">
-            {!collapsed ? (
-              <p className="mb-2 px-3 text-xs font-[510] uppercase tracking-wider text-[#62666d]">
-                报告撰写
-              </p>
-            ) : null}
-            <div className="space-y-1.5">
-              {reportItems.map((item) => (
-                <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
-              ))}
-            </div>
+        {/* Navigation groups */}
+        <div className="mt-4 border-t border-[rgb(255_255_255_/_0.05)] pt-4 space-y-1.5">
+          {groupEntries.map((entry) =>
+            entry.type === "group" ? (
+              <NavGroup key={entry.group.id} group={entry.group} collapsed={collapsed} />
+            ) : null
+          )}
+        </div>
+
+        {/* Standalone tools */}
+        {standaloneEntries.length > 0 ? (
+          <div className="mt-4 border-t border-[rgb(255_255_255_/_0.05)] pt-4 space-y-1.5">
+            {standaloneEntries.map((entry) =>
+              entry.type === "item" ? (
+                <SidebarNavLink key={entry.item.id} item={entry.item} pathname={pathname} collapsed={collapsed} />
+              ) : null
+            )}
           </div>
         ) : null}
 
+        {/* Admin section */}
         {adminItems.length > 0 ? (
-          <div className="mt-6 border-t border-[rgb(255_255_255_/_0.05)] pt-4">
-            {!collapsed ? (
-              <p className="mb-2 px-3 text-xs font-[510] uppercase tracking-wider text-[#62666d]">
-                管理员
-              </p>
-            ) : null}
-            <div className="space-y-1.5">
-              {adminItems.map((item) => (
-                <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
-              ))}
-            </div>
+          <div className="mt-4 border-t border-[rgb(255_255_255_/_0.05)] pt-4">
+            {collapsed ? (
+              <div className="space-y-1.5">
+                {adminItems.map((item) => (
+                  <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
+                ))}
+              </div>
+            ) : (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setAdminExpanded((prev) => !prev)}
+                  className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-xs font-[510] uppercase tracking-wider text-[#62666d] transition-colors hover:text-[#f7f8f8]"
+                  aria-expanded={adminExpanded}
+                >
+                  <Shield className="h-4 w-4 shrink-0" />
+                  <span className="flex-1 text-left">管理后台</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                      adminExpanded && "rotate-180"
+                    )}
+                  />
+                </button>
+                {adminExpanded && (
+                  <div className="mt-0.5 space-y-1.5">
+                    {adminItems.map((item) => (
+                      <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : null}
       </nav>

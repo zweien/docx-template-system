@@ -169,14 +169,25 @@ def render_report(
 
     tpl.render(context, autoescape=True)
 
-    # 确保 OMML (m:) 命名空间在 document.xml 根元素上已声明，
-    # 否则 formula block 插入的 <m:oMath> 会导致 XML 解析错误。
+    # Ensure OMML (m:) namespace is declared on document.xml root element
+    # for formula blocks. lxml's set() with xmlns namespace URI generates
+    # invalid ns0:m attributes, so we manipulate the XML string directly.
     root = tpl.docx._element
     if "m" not in root.nsmap:
-        root.set(
-            "{http://www.w3.org/2000/xmlns/}m",
-            "http://schemas.openxmlformats.org/officeDocument/2006/math",
-        )
+        from lxml import etree
+        OMML_NS = 'xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"'
+        xml_bytes = etree.tostring(root, xml_declaration=False)
+        xml_str = xml_bytes.decode("utf-8")
+        # Insert before mc:Ignorable if present, otherwise before the first >
+        if " mc:Ignorable=" in xml_str:
+            xml_str = xml_str.replace(
+                " mc:Ignorable=",
+                f" {OMML_NS} mc:Ignorable=",
+                1,
+            )
+        else:
+            xml_str = xml_str.replace(">", f" {OMML_NS}>", 1)
+        tpl.docx._element = etree.fromstring(xml_str.encode("utf-8"))
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     tpl.save(output_path)

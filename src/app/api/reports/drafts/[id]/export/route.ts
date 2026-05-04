@@ -16,10 +16,11 @@ export async function POST(
     const status = result.error.code === "NOT_FOUND" ? 404 : 500;
     return NextResponse.json({ error: result.error }, { status });
   }
-  const response = result.data as unknown as Response;
+
+  const buf = await result.data.arrayBuffer();
   const headers = new Headers();
   headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-  const disposition = response.headers.get("content-disposition");
+  const disposition = result.data.headers.get("content-disposition");
   if (disposition) headers.set("Content-Disposition", disposition);
-  return new Response(response.body, { status: 200, headers });
+  return new Response(buf, { status: 200, headers });
 }

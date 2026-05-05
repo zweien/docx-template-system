@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { isRouteActive } from "@/components/layout/navigation/matcher";
@@ -9,7 +9,7 @@ import { NAV_ITEMS } from "@/components/layout/navigation/schema";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserNav } from "@/components/layout/user-nav";
-import { GlobalSearchDialog } from "@/components/data/global-search-dialog";
+import { CommandPalette } from "@/components/layout/command-palette";
 
 const routeTitleOverrides: Record<string, string> = {
   "/ai-agent2": "智能助手",
@@ -41,20 +41,46 @@ function isTypingElement(target: EventTarget | null): boolean {
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
 
   const title = getHeaderTitle(pathname);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (isTypingElement(e.target)) {
+    if (isTypingElement(e.target)) return;
+
+    const mod = e.metaKey || e.ctrlKey;
+    if (!mod) return;
+
+    const key = e.key;
+
+    if (key.toLowerCase() === "k") {
+      e.preventDefault();
+      setSearchOpen((v) => !v);
       return;
     }
 
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+    // Navigation shortcuts
+    const navMap: Record<string, string> = {
+      "1": "/templates",
+      "2": "/data",
+      "3": "/records",
+      "4": "/collections",
+      "5": "/reports/drafts",
+    };
+
+    if (navMap[key]) {
       e.preventDefault();
-      setSearchOpen((v) => !v);
+      router.push(navMap[key]);
+      return;
     }
-  }, []);
+
+    // Help shortcut
+    if (key === "/") {
+      e.preventDefault();
+      setSearchOpen(true);
+    }
+  }, [router]);
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);
@@ -85,7 +111,7 @@ export function Header() {
         <NotificationBell />
         <UserNav />
       </header>
-      <GlobalSearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

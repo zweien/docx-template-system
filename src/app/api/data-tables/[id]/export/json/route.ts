@@ -23,7 +23,9 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const result = await exportToJSON(tableId);
+  const { searchParams } = new URL(_request.url);
+  const selectedIds = searchParams.getAll("selectedId");
+  const result = await exportToJSON(tableId, selectedIds.length > 0 ? selectedIds : undefined);
   if (!result.success) {
     return NextResponse.json(
       { error: result.error.message },

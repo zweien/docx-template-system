@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { globalSearch } from "@/lib/services/search.service";
+import { unifiedSearch } from "@/lib/services/search.service";
+import type { Role } from "@/generated/prisma/enums";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -11,9 +12,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const isAdmin = (session.user.role as Role) === "ADMIN";
+
   const q = request.nextUrl.searchParams.get("q")?.trim();
   if (!q) {
-    return NextResponse.json({ success: true, data: [] });
+    return NextResponse.json({ success: true, data: { templates: [], records: [], dataRecords: [], collectionTasks: [], reportTemplates: [] } });
   }
 
   const limit = Math.min(
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
     20
   );
 
-  const result = await globalSearch(q, limit);
+  const result = await unifiedSearch(q, limit, session.user.id, isAdmin);
 
   if (!result.success) {
     return NextResponse.json(

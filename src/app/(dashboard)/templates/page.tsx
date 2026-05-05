@@ -1,36 +1,12 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Badge } from "@/components/ui/badge";
 import { Button, LinkButton } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Upload, ChevronLeft, ChevronRight, Pencil, Eye, FileText } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, Download } from "lucide-react";
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
-import { TemplateListDeleteButton } from "./template-list-delete-button";
 import { CategoryTagManagerButton } from "@/components/templates/category-tag-manager-button";
-import { PageHeader, ContentCard, EmptyState } from "@/components/shared";
-
-const STATUS_LABELS: Record<TemplateStatus, string> = {
-  DRAFT: "草稿",
-  PUBLISHED: "已发布",
-  ARCHIVED: "已归档",
-};
-
-const STATUS_VARIANTS: Record<
-  TemplateStatus,
-  "secondary" | "default" | "destructive"
-> = {
-  DRAFT: "secondary",
-  PUBLISHED: "default",
-  ARCHIVED: "destructive",
-};
+import { TemplateTableWithBatch } from "@/components/templates/template-table-with-batch";
+import { PageHeader, ContentCard } from "@/components/shared";
 
 const STATUS_TABS: { label: string; value: string }[] = [
   { label: "全部", value: "" },
@@ -115,15 +91,24 @@ export default async function TemplatesPage({
         title="模板管理"
         description={`共 ${total} 个模板`}
         actions={
-          isAdmin ? (
-            <div className="flex items-center gap-2">
-              <CategoryTagManagerButton />
-              <LinkButton href="/templates/new">
-                <Upload className="h-4 w-4" />
-                上传模板
-              </LinkButton>
-            </div>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            <a
+              href="/api/templates/export"
+              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 h-9 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+            >
+              <Download className="h-4 w-4" />
+              导出
+            </a>
+            {isAdmin && (
+              <>
+                <CategoryTagManagerButton />
+                <LinkButton href="/templates/new">
+                  <Upload className="h-4 w-4" />
+                  上传模板
+                </LinkButton>
+              </>
+            )}
+          </div>
         }
       />
 
@@ -175,119 +160,11 @@ export default async function TemplatesPage({
       )}
 
       <ContentCard className="!p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[100px]">分类</TableHead>
-              <TableHead className="w-[30%]">名称</TableHead>
-              <TableHead>版本</TableHead>
-              <TableHead className="w-[150px]">标签</TableHead>
-              <TableHead className="w-[100px]">状态</TableHead>
-              <TableHead className="w-[100px]">创建者</TableHead>
-              <TableHead className="w-[160px]">创建时间</TableHead>
-              <TableHead className="w-[160px] text-right">操作</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {templates.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8}>
-                  <EmptyState
-                    icon={FileText}
-                    title="暂无模板数据"
-                    description={isAdmin ? "上传第一个模板来开始管理您的文档" : undefined}
-                    action={
-                      isAdmin ? (
-                        <LinkButton variant="link" size="sm" href="/templates/new">
-                          上传第一个模板
-                        </LinkButton>
-                      ) : undefined
-                    }
-                  />
-                </TableCell>
-              </TableRow>
-            ) : (
-              templates.map((template) => (
-                <TableRow key={template.id}>
-                  <TableCell>
-                    {template.category ? (
-                      <Badge variant="secondary">{template.category.name}</Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-[510] text-foreground">{template.name}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {template.currentVersion ? `v${template.currentVersion.version}` : "—"}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {template.tags.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      ) : (
-                        <>
-                          {template.tags.slice(0, 3).map((t) => (
-                            <Badge key={t.tag.id} variant="outline" className="text-xs">
-                              {t.tag.name}
-                            </Badge>
-                          ))}
-                          {template.tags.length > 3 && (
-                            <span className="text-xs text-muted-foreground">+{template.tags.length - 3}</span>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={STATUS_VARIANTS[template.status]}>
-                      {STATUS_LABELS[template.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {template.createdBy.name}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {template.createdAt.toLocaleDateString("zh-CN", {
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                    })}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <LinkButton
-                        variant="ghost"
-                        size="icon-xs"
-                        className="text-muted-foreground hover:text-foreground"
-                        href={`/templates/${template.id}`}
-                      >
-                        <Eye className="h-3.5 w-3.5" />
-                        <span className="sr-only">查看</span>
-                      </LinkButton>
-                      {isAdmin && (
-                        <>
-                          <LinkButton
-                            variant="ghost"
-                            size="icon-xs"
-                            className="text-muted-foreground hover:text-foreground"
-                            href={`/templates/${template.id}/edit`}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                            <span className="sr-only">编辑</span>
-                          </LinkButton>
-                          <TemplateListDeleteButton
-                            templateId={template.id}
-                            templateName={template.name}
-                          />
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <TemplateTableWithBatch
+          templates={templates}
+          categories={categories}
+          isAdmin={isAdmin}
+        />
       </ContentCard>
 
       {totalPages > 1 && (

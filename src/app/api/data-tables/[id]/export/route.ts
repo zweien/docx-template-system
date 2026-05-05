@@ -28,10 +28,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
   const { searchParams } = new URL(_request.url);
   const visibleFields = searchParams.getAll("visibleField");
   const fieldOrder = searchParams.getAll("fieldOrder");
+  const selectedIds = searchParams.getAll("selectedId");
   const result = await exportToExcel(tableId, {
     visibleFields: visibleFields.length > 0 ? visibleFields : undefined,
     fieldOrder: fieldOrder.length > 0 ? fieldOrder : undefined,
-  });
+  }, selectedIds.length > 0 ? selectedIds : undefined);
 
   if (!result.success) {
     return NextResponse.json(

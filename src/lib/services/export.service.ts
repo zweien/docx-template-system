@@ -26,7 +26,8 @@ export interface TableExportData {
 // ── Shared Data Fetcher ──
 
 export async function getTableExportData(
-  tableId: string
+  tableId: string,
+  selectedIds?: string[]
 ): Promise<ServiceResult<TableExportData>> {
   const tableResult = await getTable(tableId);
   if (!tableResult.success) {
@@ -36,7 +37,10 @@ export async function getTableExportData(
   const table = tableResult.data;
 
   const records = await db.dataRecord.findMany({
-    where: { tableId },
+    where: {
+      tableId,
+      ...(selectedIds ? { id: { in: selectedIds } } : {}),
+    },
     orderBy: { createdAt: "asc" },
   });
 
@@ -137,10 +141,11 @@ export function exportRecordToExcel(
 
 export async function exportToExcel(
   tableId: string,
-  options?: ExcelExportOptions
+  options?: ExcelExportOptions,
+  selectedIds?: string[]
 ): Promise<ServiceResult<Buffer>> {
   try {
-    const dataResult = await getTableExportData(tableId);
+    const dataResult = await getTableExportData(tableId, selectedIds);
     if (!dataResult.success) {
       return { success: false, error: dataResult.error };
     }
@@ -193,10 +198,11 @@ export interface ExportJSON {
 }
 
 export async function exportToJSON(
-  tableId: string
+  tableId: string,
+  selectedIds?: string[]
 ): Promise<ServiceResult<ExportJSON>> {
   try {
-    const dataResult = await getTableExportData(tableId);
+    const dataResult = await getTableExportData(tableId, selectedIds);
     if (!dataResult.success) {
       return { success: false, error: dataResult.error };
     }

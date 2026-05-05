@@ -3,3 +3,4 @@ export { EmptyState } from "./empty-state";
 export { FilterBar } from "./filter-bar";
 export { ContentCard } from "./content-card";
 export { Breadcrumbs } from "./breadcrumbs";
+export { ListPageSkeleton, DetailPageSkeleton, FormPageSkeleton, DataTableSkeleton, ReportEditorSkeleton, AiAgentSkeleton } from "./skeletons";

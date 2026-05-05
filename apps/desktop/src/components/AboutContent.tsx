@@ -12,7 +12,7 @@ export function AboutContent() {
       <div className="bg-surface rounded-md border border-border p-4 space-y-2 text-[0.8rem]">
         <div className="flex justify-between">
           <span className="text-text-muted">版本</span>
-          <span className="font-mono text-text">0.8.0</span>
+          <span className="font-mono text-text">0.8.1</span>
         </div>
         <div className="flex justify-between">
           <span className="text-text-muted">前端引擎</span>

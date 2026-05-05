@@ -107,7 +107,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.0</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.1</p>
             </div>
           )}
         </div>
@@ -260,6 +260,9 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.8.1", date: "2026-05-05", changes: [
+      { type: "feat", text: "更新应用图标为全新紫色 Lab Logo（正方形比例、透明背景）" },
+    ]},
     { ver: "0.8.0", date: "2026-05-05", changes: [
       { type: "feat", text: "Excel 合并功能：多文件按 sheet 合并，保留图片和格式" },
       { type: "feat", text: "合并字段不匹配检测与报告" },

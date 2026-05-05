@@ -63,7 +63,7 @@ export function RecordTableWithBatch({ records, isAdmin }: RecordTableProps) {
 
   const allSelected =
     records.length > 0 && selectedIds.size === records.length;
-  const someSelected = selectedIds.size > 0 && !allSelected;
+  const hasSelection = selectedIds.size > 0;
 
   function toggleAll() {
     if (allSelected) {
@@ -158,7 +158,7 @@ export function RecordTableWithBatch({ records, isAdmin }: RecordTableProps) {
 
   return (
     <>
-      {someSelected && (
+      {hasSelection && (
         <div className="px-4 pt-4">
           <SharedBatchActionBar
             selectedCount={selectedIds.size}
@@ -174,7 +174,7 @@ export function RecordTableWithBatch({ records, isAdmin }: RecordTableProps) {
             <TableHead className="w-[40px]">
               <Checkbox
                 checked={allSelected}
-                {...(someSelected ? { indeterminate: true } : {})}
+                {...(hasSelection && !allSelected ? { indeterminate: true } : {})}
                 onCheckedChange={toggleAll}
               />
             </TableHead>

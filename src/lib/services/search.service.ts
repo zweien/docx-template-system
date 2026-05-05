@@ -90,11 +90,13 @@ export interface TemplateSearchItem {
 
 export async function searchTemplates(
   query: string,
-  limit: number = 5
+  limit: number = 5,
+  isAdmin: boolean = false
 ): Promise<ServiceResult<TemplateSearchItem[]>> {
   try {
     const templates = await db.template.findMany({
       where: {
+        ...(!isAdmin ? { status: "PUBLISHED" } : {}),
         OR: [
           { name: { contains: query, mode: "insensitive" } },
           { description: { contains: query, mode: "insensitive" } },
@@ -139,11 +141,14 @@ export interface RecordSearchItem {
 
 export async function searchRecords(
   query: string,
-  limit: number = 5
+  limit: number = 5,
+  userId?: string,
+  isAdmin: boolean = false
 ): Promise<ServiceResult<RecordSearchItem[]>> {
   try {
     const records = await db.record.findMany({
       where: {
+        ...(!isAdmin && userId ? { userId } : {}),
         OR: [
           { fileName: { contains: query, mode: "insensitive" } },
           { template: { name: { contains: query, mode: "insensitive" } } },
@@ -274,11 +279,13 @@ export interface UnifiedSearchResult {
 
 export async function unifiedSearch(
   query: string,
-  limit: number = 5
+  limit: number = 5,
+  userId?: string,
+  isAdmin: boolean = false
 ): Promise<ServiceResult<UnifiedSearchResult>> {
   const [templatesRes, recordsRes, dataRecordsRes, collectionsRes, reportsRes] = await Promise.all([
-    searchTemplates(query, limit),
-    searchRecords(query, limit),
+    searchTemplates(query, limit, isAdmin),
+    searchRecords(query, limit, userId, isAdmin),
     globalSearch(query, limit),
     searchCollectionTasks(query, limit),
     searchReportTemplates(query, limit),

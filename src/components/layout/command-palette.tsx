@@ -187,10 +187,13 @@ export function CommandPalette({
   }, [searchQuery, isCommandMode, open]);
 
   const handleClose = useCallback(() => {
+    if (query.trim() && !query.startsWith(">")) {
+      addRecentSearch(query.trim());
+    }
     setQuery("");
     setSearchData(null);
     onClose();
-  }, [onClose]);
+  }, [onClose, query]);
 
   const handleSelectTemplate = useCallback(
     (id: string) => {

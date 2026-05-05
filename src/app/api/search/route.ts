@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { unifiedSearch } from "@/lib/services/search.service";
+import type { Role } from "@/generated/prisma/enums";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -10,6 +11,8 @@ export async function GET(request: NextRequest) {
       { status: 401 }
     );
   }
+
+  const isAdmin = (session.user.role as Role) === "ADMIN";
 
   const q = request.nextUrl.searchParams.get("q")?.trim();
   if (!q) {
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
     20
   );
 
-  const result = await unifiedSearch(q, limit);
+  const result = await unifiedSearch(q, limit, session.user.id, isAdmin);
 
   if (!result.success) {
     return NextResponse.json(

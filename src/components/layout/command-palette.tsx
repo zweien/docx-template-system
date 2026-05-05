@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { useCommands } from "@/hooks/use-command-palette";
 import type { CommandItem } from "@/hooks/use-command-palette";
 import {
+  Command,
   CommandDialog,
   CommandInput,
   CommandList,
@@ -283,6 +284,11 @@ export function CommandPalette({
         if (!v) handleClose();
       }}
     >
+      <Command filter={(value, search) => {
+        // In command mode, cmdk should not filter — we handle it ourselves
+        if (search.startsWith(">")) return 1;
+        return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
+      }}>
       <CommandInput
         placeholder={
           isCommandMode ? "输入命令名称..." : "搜索模板、记录、数据... 输入 > 切换命令模式"
@@ -485,6 +491,7 @@ export function CommandPalette({
             </CommandGroup>
           )}
       </CommandList>
+      </Command>
     </CommandDialog>
   );
 }

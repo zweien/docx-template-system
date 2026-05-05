@@ -49,10 +49,8 @@ export function ExcelMerge() {
       }
       setFilesInfo(res.files);
       setCommonSheets(res.common_sheets);
-      // 默认选中除第一个 sheet 外的所有共有 sheet
-      const defaults = res.common_sheets.length > 1
-        ? new Set(res.common_sheets.slice(1))
-        : new Set<string>();
+      // 默认全选所有共有 sheet
+      const defaults = new Set(res.common_sheets);
       setSelectedSheets(defaults);
       setPhase("sheets");
       addLog(`发现 ${res.common_sheets.length} 个共有 sheet`, "success");
@@ -71,7 +69,7 @@ export function ExcelMerge() {
     setSelectedSheets(next);
   };
 
-  const selectAll = () => setSelectedSheets(new Set(commonSheets.slice(1)));
+  const selectAll = () => setSelectedSheets(new Set(commonSheets));
   const deselectAll = () => setSelectedSheets(new Set());
 
   const handleMerge = async () => {
@@ -154,10 +152,14 @@ export function ExcelMerge() {
             {files.map((f) => {
               const isBase = f === baseFile;
               return (
-                <div key={f} className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                <div key={f} onClick={() => setBaseFile(f)} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
                   isBase ? "border-brand-border bg-brand-bg" : "border-border bg-surface hover:border-border-strong"
                 }`}>
-                  <input type="radio" name="base" checked={isBase} onChange={() => setBaseFile(f)} className="shrink-0" />
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 ${
+                    isBase ? "border-brand-accent" : "border-border-strong"
+                  }`}>
+                    {isBase && <div className="w-2 h-2 rounded-full bg-brand-accent" />}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[0.867rem] text-text truncate">{fileName(f)}</div>
                     <div className="text-[0.733rem] text-text-quaternary">

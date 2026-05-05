@@ -252,12 +252,6 @@ export function CommandPalette({
     [handleClose]
   );
 
-  const handleSearchSubmit = useCallback(() => {
-    if (searchQuery.trim()) {
-      addRecentSearch(searchQuery.trim());
-    }
-  }, [searchQuery]);
-
   // Filter commands in command mode
   const filteredCommands = isCommandMode
     ? commands.filter((cmd) => {

@@ -47,15 +47,40 @@ export function Header() {
   const title = getHeaderTitle(pathname);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (isTypingElement(e.target)) {
+    if (isTypingElement(e.target)) return;
+
+    const mod = e.metaKey || e.ctrlKey;
+    if (!mod) return;
+
+    const key = e.key;
+
+    if (key.toLowerCase() === "k") {
+      e.preventDefault();
+      setSearchOpen((v) => !v);
       return;
     }
 
-    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+    // Navigation shortcuts
+    const navMap: Record<string, string> = {
+      "1": "/templates",
+      "2": "/data",
+      "3": "/records",
+      "4": "/collections",
+      "5": "/reports/drafts",
+    };
+
+    if (navMap[key]) {
       e.preventDefault();
-      setSearchOpen((v) => !v);
+      router.push(navMap[key]);
+      return;
     }
-  }, []);
+
+    // Help shortcut
+    if (key === "/") {
+      e.preventDefault();
+      setSearchOpen(true);
+    }
+  }, [router]);
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown);

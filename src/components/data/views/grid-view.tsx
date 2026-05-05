@@ -3,7 +3,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronRight, Expand, GripVertical, Loader2, MessageSquare, Plus, Redo2, Search, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Expand, GripVertical, Loader2, MessageSquare, Plus, Redo2, Search, Trash2, Undo2 } from "lucide-react";
 import { BatchActionBar } from "@/components/data/batch-action-bar";
 import { BatchEditDialog } from "@/components/data/batch-edit-dialog";
 import { FindReplaceBar } from "@/components/data/views/find-replace-bar";
@@ -1982,12 +1982,29 @@ export function GridView({
   return (
     <div className="rounded-md border flex-1 min-h-0 flex flex-col overflow-hidden gap-0">
       {selectedIdsSet.size > 0 && (
-        <BatchActionBar
-          selectedCount={selectedIdsSet.size}
-          onBatchDelete={handleBatchDelete}
-          onBatchEdit={() => setBatchEditOpen(true)}
-          onClearSelection={() => setSelectedIdsSet(new Set())}
-        />
+        <div className="flex items-center gap-2">
+          <BatchActionBar
+            selectedCount={selectedIdsSet.size}
+            onBatchDelete={handleBatchDelete}
+            onBatchEdit={() => setBatchEditOpen(true)}
+            onClearSelection={() => setSelectedIdsSet(new Set())}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 text-xs gap-1"
+            onClick={() => {
+              const params = new URLSearchParams();
+              for (const id of selectedIdsSet) {
+                params.append("selectedId", id);
+              }
+              window.location.href = `/api/data-tables/${tableId}/export?${params.toString()}`;
+            }}
+          >
+            <Download className="h-3 w-3" />
+            导出选中
+          </Button>
+        </div>
       )}
       <BatchEditDialog
         open={batchEditOpen}

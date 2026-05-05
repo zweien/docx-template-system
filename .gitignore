@@ -49,7 +49,6 @@ report-engine/src/*.egg-info/
 /sidebar-test.png
 /src/generated/prisma
 .superpowers/
-docs/superpowers/
 # testing
 test-results/
 /tool-error.png

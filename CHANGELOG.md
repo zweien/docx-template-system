@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.0](https://github.com/zweien/docx-template-system/compare/v0.9.2...v0.10.0) (2026-05-05)
+
+
+### Features
+
+* add export APIs and buttons for templates and records ([246140a](https://github.com/zweien/docx-template-system/commit/246140a15365a5706468b8bb23d44fe2966dc915))
+* add shared batch action bar component ([cf4af81](https://github.com/zweien/docx-template-system/commit/cf4af8140196f5b94c5e4bd0129ffad17df7ce7e))
+* **command-palette:** replace global search with command palette ([7f0d153](https://github.com/zweien/docx-template-system/commit/7f0d15308b445d2558bafcbd32d858135e29b6ed))
+* **data-table:** add export selected records support ([7f077cf](https://github.com/zweien/docx-template-system/commit/7f077cf3bc66442e2aadcf52990b2b16b4cead41))
+* **desktop:** add Excel merge feature for combining multiple xlsx files ([d049b37](https://github.com/zweien/docx-template-system/commit/d049b37fa8fe061325c35ec20aa0e6722f6cff22))
+* **desktop:** add heading level, header row, and enabled toggle to sheet config editor ([1b9e58d](https://github.com/zweien/docx-template-system/commit/1b9e58de532e6537a7743884bbb2423d092cc7ba))
+* **desktop:** add template validation on import ([a312efa](https://github.com/zweien/docx-template-system/commit/a312efa340643eda2803d0231eef6a8a1a087569))
+* **desktop:** add typed log panel and confirm dialogs for delete operations ([2b4e27d](https://github.com/zweien/docx-template-system/commit/2b4e27d5d00bbe3be3ca737110d805507015df07))
+* **desktop:** show mapped key-value pairs in summary validation results ([74dc793](https://github.com/zweien/docx-template-system/commit/74dc793f8981f9701b274d86ec07b633f1b66fbe))
+* **desktop:** update app icon with new logo ([36c8072](https://github.com/zweien/docx-template-system/commit/36c80721c7da417bdd7c91562b4eff23ce35851f))
+* **desktop:** use Lucide icons for sidebar navigation ([d4d1cfe](https://github.com/zweien/docx-template-system/commit/d4d1cfe07cd9145e366c56c6c672846cdda26649))
+* **keyboard:** add global navigation shortcuts ([281a2a5](https://github.com/zweien/docx-template-system/commit/281a2a5fcbfcd030b61fcb7f6d40a7b521f143e8))
+* **records:** add batch operations API ([4a6931e](https://github.com/zweien/docx-template-system/commit/4a6931e2f95951bb844d3d96d97070ec383b31bb))
+* **records:** add batch selection, delete and export ([4986172](https://github.com/zweien/docx-template-system/commit/498617274c3f2996d922c4e568ef917252060d8d))
+* **search:** expand search to multiple data sources ([0c81473](https://github.com/zweien/docx-template-system/commit/0c814735b8ba483ab4e369da0514afac5f3b8bec))
+* **templates:** add batch operations API ([7c2606c](https://github.com/zweien/docx-template-system/commit/7c2606ce9f516931e1420c8d737ec50ff0c26675))
+* **templates:** add batch selection and operations ([7b11783](https://github.com/zweien/docx-template-system/commit/7b11783992a3149e5650cbb6b4e88b6f80f0decb))
+
+
+### Bug Fixes
+
+* address PR review feedback ([f76a1b1](https://github.com/zweien/docx-template-system/commit/f76a1b16613371ae82d2811f3eaabb3daf8dc491))
+* **command-palette:** wrap children in Command component for cmdk context ([0840bcb](https://github.com/zweien/docx-template-system/commit/0840bcb7059c0d4b490850cc2b7d7077d8c6e0d7))
+* **desktop:** add missing lucide-react dependency ([f27ceaa](https://github.com/zweien/docx-template-system/commit/f27ceaadd058f8546450a5621c39de9065a0696b))
+* **desktop:** fix lxml XML namespace corruption in generated DOCX ([2205fac](https://github.com/zweien/docx-template-system/commit/2205fac19ddfc3b7a74dbd0d4c7370d7f8f186ff))
+* **desktop:** hide disabled sheets from config preview after parsing ([7caef9b](https://github.com/zweien/docx-template-system/commit/7caef9bd9dbd468805a9da40ff990ecc297b6fc8))
+* **desktop:** improve Excel merge UX - select all sheets by default, clickable cards ([5d30bca](https://github.com/zweien/docx-template-system/commit/5d30bca01d92f7298e19a4dae640fee44b8e574f))
+* **desktop:** merge split XML runs before extracting template placeholders ([61c2704](https://github.com/zweien/docx-template-system/commit/61c270437ca60cb6de8a6d93ebcf7e6d63accbcb))
+* **desktop:** pass through placeholder/flag_name from config to match template ([ca97ab5](https://github.com/zweien/docx-template-system/commit/ca97ab57f71428a9b43055de2d4630058cfea609))
+* **desktop:** respect sheet enabled flag when parsing Excel ([9368caa](https://github.com/zweien/docx-template-system/commit/9368caa49e9bfc7a17e70f9f4122c0b51d12699b))
+* **desktop:** scale sidebar icons with font size setting ([f064af4](https://github.com/zweien/docx-template-system/commit/f064af423ba1c6830dedcd48f684ad66f61c8ab2))
+* **desktop:** strip Chinese number prefix from headings for auto-numbered templates ([962f97c](https://github.com/zweien/docx-template-system/commit/962f97ce0510f9fb09ee6cd6e5dd120f83100ef0))
+* **desktop:** update tech stack refs and improve sidebar footer layout ([2d5b28a](https://github.com/zweien/docx-template-system/commit/2d5b28ab188ad8a1b14a770c8d070cba1d644d2b))
+* remove unused variables flagged by lint ([13715be](https://github.com/zweien/docx-template-system/commit/13715be4a9e439c55688001da82b869d347c46b7))
+* **report-engine:** sync desktop sidecar fixes to main project ([02e31a5](https://github.com/zweien/docx-template-system/commit/02e31a57edbcaf52b5a16328caf2130c36f9b905))
+
 ## [0.9.2](https://github.com/zweien/docx-template-system/compare/v0.9.1...v0.9.2) (2026-05-04)
 
 ## [0.9.1](https://github.com/zweien/docx-template-system/compare/v0.9.0...v0.9.1) (2026-05-04)

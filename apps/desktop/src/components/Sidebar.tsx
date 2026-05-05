@@ -29,6 +29,9 @@ export function Sidebar() {
     if (isNarrow) setCollapsed(true);
   };
 
+  const iconSize = Math.round(settings.fontSize * 16 / 15);
+  const footerIconSize = Math.round(iconSize * 0.8);
+
   const items: { view: AppView; icon: LucideIcon; label: string; desc: string }[] = [
     { view: "wizard", icon: Rocket, label: "生成报告", desc: "四步向导" },
     { view: "templates", icon: FileText, label: "模板管理", desc: "导入与管理" },
@@ -59,8 +62,8 @@ export function Sidebar() {
         }`}
         title={collapsed ? item.label : undefined}
       >
-        <span className={`shrink-0 ${active ? "text-brand-accent" : ""} ${collapsed ? "" : "w-5 flex justify-center"}`}>
-          <Icon size={16} />
+        <span className={`shrink-0 ${active ? "text-brand-accent" : ""} ${collapsed ? "" : "flex justify-center"}`} style={{ width: `${iconSize}px` }}>
+          <Icon size={iconSize} />
         </span>
         {!collapsed && (
           <div className="min-w-0">
@@ -78,7 +81,7 @@ export function Sidebar() {
       className="text-text-quaternary hover:text-text-secondary transition-colors flex items-center gap-1.5"
       title={collapsed ? label : undefined}
     >
-      <Icon size={collapsed ? 14 : 13} />
+      <Icon size={footerIconSize} />
       {!collapsed && <span className="text-[0.733rem]">{label}</span>}
     </button>
   );
@@ -116,7 +119,7 @@ export function Sidebar() {
             className="w-5 h-5 rounded flex items-center justify-center text-text-quaternary hover:text-text-secondary hover:bg-sidebar-hover transition-all duration-100"
             title={collapsed ? "展开侧边栏" : "收起侧边栏"}
           >
-            {collapsed ? <PanelLeft size={14} /> : <PanelLeftClose size={14} />}
+            {collapsed ? <PanelLeft size={footerIconSize} /> : <PanelLeftClose size={footerIconSize} />}
           </button>
         </div>
 
@@ -140,8 +143,8 @@ export function Sidebar() {
               }`}
               title={collapsed ? (settings.theme === "dark" ? "切换浅色" : "切换深色") : undefined}
             >
-              <span className={`shrink-0 ${collapsed ? "" : "w-5 flex justify-center"}`}>
-                {settings.theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+              <span className={`shrink-0 ${collapsed ? "" : "flex justify-center"}`} style={{ width: `${iconSize}px` }}>
+                {settings.theme === "dark" ? <Sun size={iconSize} /> : <Moon size={iconSize} />}
               </span>
               {!collapsed && (
                 <div className="min-w-0">

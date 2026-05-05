@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Upload, ChevronLeft, ChevronRight, Pencil, Eye, FileText } from "lucide-react";
+import { Upload, ChevronLeft, ChevronRight, Pencil, Eye, FileText, Download } from "lucide-react";
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 import { TemplateListDeleteButton } from "./template-list-delete-button";
 import { CategoryTagManagerButton } from "@/components/templates/category-tag-manager-button";
@@ -115,15 +115,24 @@ export default async function TemplatesPage({
         title="模板管理"
         description={`共 ${total} 个模板`}
         actions={
-          isAdmin ? (
-            <div className="flex items-center gap-2">
-              <CategoryTagManagerButton />
-              <LinkButton href="/templates/new">
-                <Upload className="h-4 w-4" />
-                上传模板
-              </LinkButton>
-            </div>
-          ) : undefined
+          <div className="flex items-center gap-2">
+            <a
+              href="/api/templates/export"
+              className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 h-9 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+            >
+              <Download className="h-4 w-4" />
+              导出
+            </a>
+            {isAdmin && (
+              <>
+                <CategoryTagManagerButton />
+                <LinkButton href="/templates/new">
+                  <Upload className="h-4 w-4" />
+                  上传模板
+                </LinkButton>
+              </>
+            )}
+          </div>
         }
       />
 

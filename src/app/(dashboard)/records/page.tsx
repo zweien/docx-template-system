@@ -97,6 +97,15 @@ export default async function RecordsPage({
       <PageHeader
         title="生成记录"
         description={`共 ${total} 条记录`}
+        actions={
+          <a
+            href="/api/records/export"
+            className="inline-flex items-center gap-2 rounded-md border border-input bg-background px-3 h-9 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+          >
+            <Download className="h-4 w-4" />
+            导出
+          </a>
+        }
       />
 
       <div className="flex gap-1 overflow-x-auto rounded-lg border border-border bg-card p-1">

@@ -11,7 +11,7 @@
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-> **v0.9.2**
+> **v0.10.0**
 
 模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。同时提供报告撰写、文档收集、预算报告等功能模块。
 

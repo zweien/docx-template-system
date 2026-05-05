@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { isRouteActive } from "@/components/layout/navigation/matcher";
@@ -9,7 +9,7 @@ import { NAV_ITEMS } from "@/components/layout/navigation/schema";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { UserNav } from "@/components/layout/user-nav";
-import { GlobalSearchDialog } from "@/components/data/global-search-dialog";
+import { CommandPalette } from "@/components/layout/command-palette";
 
 const routeTitleOverrides: Record<string, string> = {
   "/ai-agent2": "智能助手",
@@ -41,6 +41,7 @@ function isTypingElement(target: EventTarget | null): boolean {
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const [searchOpen, setSearchOpen] = useState(false);
 
   const title = getHeaderTitle(pathname);
@@ -85,7 +86,7 @@ export function Header() {
         <NotificationBell />
         <UserNav />
       </header>
-      <GlobalSearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>
   );
 }

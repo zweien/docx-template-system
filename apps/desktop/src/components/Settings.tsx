@@ -1,4 +1,5 @@
 import { useAppStore } from "../stores/app-store";
+import { AboutContent } from "./AboutContent";
 
 export function Settings() {
   const { settings, updateSettings } = useAppStore();
@@ -134,24 +135,7 @@ export function Settings() {
           {/* About */}
           <section className="bg-surface rounded-lg border border-border p-5">
             <h3 className="text-ui text-sm text-text mb-3">关于</h3>
-            <div className="space-y-2 text-[0.8rem]">
-              <div className="flex justify-between">
-                <span className="text-text-muted">版本</span>
-                <span className="font-mono text-text-secondary">0.6.1</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">引擎</span>
-                <span className="font-mono text-text-secondary">Tauri 2.0 + React</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">后端</span>
-                <span className="font-mono text-text-secondary">report-engine</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-muted">开发团队</span>
-                <span className="font-mono text-text-secondary font-medium">IDRL</span>
-              </div>
-            </div>
+            <AboutContent />
           </section>
         </div>
       </div>

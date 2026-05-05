@@ -43,12 +43,12 @@ export function StepGenerate() {
         setValidationResult(crossVal);
         if (!crossVal.canProceed) {
           setError(`校验失败: ${crossVal.summary.errors} 个错误`);
-          addLog(`校验失败: ${crossVal.summary.errors} 个错误, ${crossVal.summary.warnings} 个警告`);
+          addLog(`校验失败: ${crossVal.summary.errors} 个错误, ${crossVal.summary.warnings} 个警告`, "warn");
           setGenerating(false);
           return;
         }
         if (crossVal.issues.length > 0) {
-          addLog(`校验通过，有 ${crossVal.summary.warnings} 个警告`);
+          addLog(`校验通过，有 ${crossVal.summary.warnings} 个警告`, "warn");
         }
       }
       let content = excelContent;
@@ -61,9 +61,9 @@ export function StepGenerate() {
         if (parseRes.success && parseRes.content) {
           content = parseRes.content;
           setExcelContent(content);
-          addLog(`重新解析完成: ${content.sections?.length || 0} 个章节`);
+          addLog(`重新解析完成: ${content.sections?.length || 0} 个章节`, "success");
         } else {
-          addLog(`重新解析失败，使用缓存数据: ${parseRes.error?.message}`);
+          addLog(`重新解析失败，使用缓存数据: ${parseRes.error?.message}`, "error");
         }
       }
 
@@ -83,14 +83,14 @@ export function StepGenerate() {
         setTempPath(res.output_path);
         setOutputReportPath(res.output_path);
         setDone(true);
-        addLog(`报告生成成功: ${res.output_path}`);
+        addLog(`报告生成成功: ${res.output_path}`, "success");
       } else {
         setError(res.error?.message || "生成失败");
-        addLog(`生成失败: ${res.error?.message}`);
+        addLog(`生成失败: ${res.error?.message}`, "error");
       }
     } catch (e) {
       setError(String(e));
-      addLog(`生成异常: ${e}`);
+      addLog(`生成异常: ${e}`, "error");
     } finally {
       setGenerating(false);
     }
@@ -105,10 +105,10 @@ export function StepGenerate() {
       if (dest) {
         setSavedPath(dest);
         setOutputReportPath(dest);
-        addLog(`报告已保存到: ${dest}`);
+        addLog(`报告已保存到: ${dest}`, "success");
       }
     } catch (e) {
-      addLog(`保存失败: ${e}`);
+      addLog(`保存失败: ${e}`, "error");
       setError(`保存失败: ${e}`);
     }
   };
@@ -119,7 +119,7 @@ export function StepGenerate() {
     try {
       await openReport(path);
     } catch (e) {
-      addLog(`打开失败: ${e}`);
+      addLog(`打开失败: ${e}`, "error");
       setError(`打开报告失败: ${e}`);
     }
   };

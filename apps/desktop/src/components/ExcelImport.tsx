@@ -11,7 +11,7 @@ import { validateExcel } from "../services/validation";
 
 interface Props {
   onParsed: (content: ReportContent) => void;
-  addLog: (msg: string) => void;
+  addLog: (msg: string, type?: "info" | "success" | "warn" | "error") => void;
 }
 
 async function fetchAndSave(url: string, filename: string) {
@@ -66,7 +66,7 @@ export function ExcelImport({ onParsed, addLog }: Props) {
       setValidationResult(preCheck);
       if (!preCheck.canProceed) {
         setError(`Excel 校验失败: ${preCheck.summary.errors} 个错误`);
-        addLog(`Excel 校验失败: ${preCheck.summary.errors} 个错误, ${preCheck.summary.warnings} 个警告`);
+        addLog(`Excel 校验失败: ${preCheck.summary.errors} 个错误, ${preCheck.summary.warnings} 个警告`, "warn");
         setLoading(false);
         return;
       }
@@ -77,18 +77,18 @@ export function ExcelImport({ onParsed, addLog }: Props) {
       });
       if (res.success && res.content) {
         setWarnings(res.warnings);
-        addLog(`解析完成: ${res.content.sections?.length || 0} 个章节`);
+        addLog(`解析完成: ${res.content.sections?.length || 0} 个章节`, "success");
         if (res.warnings.length > 0) {
-          addLog(`警告: ${res.warnings.length} 条`);
+          addLog(`警告: ${res.warnings.length} 条`, "warn");
         }
         onParsed(res.content);
       } else {
         setError(res.error?.message || "解析失败");
-        addLog(`错误: ${res.error?.message}`);
+        addLog(`错误: ${res.error?.message}`, "error");
       }
     } catch (e) {
       setError(String(e));
-      addLog(`异常: ${e}`);
+      addLog(`异常: ${e}`, "error");
     } finally {
       setLoading(false);
     }

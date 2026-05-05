@@ -20,7 +20,7 @@ for _ in range(8):
         break
     _p = _p.parent
 
-from api import parse, render, config, progress, validate, validate_excel
+from api import parse, render, config, progress, validate, validate_excel, merge_excel
 
 
 @asynccontextmanager
@@ -45,6 +45,7 @@ app.include_router(config.router, prefix="/api")
 app.include_router(progress.router, prefix="/api")
 app.include_router(validate.router, prefix="/api")
 app.include_router(validate_excel.router, prefix="/api")
+app.include_router(merge_excel.router, prefix="/api")
 
 
 @app.get("/health")

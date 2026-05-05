@@ -2,11 +2,13 @@ import { useState } from "react";
 import { useAppStore, DEFAULT_CONFIG } from "../stores/app-store";
 import { saveConfig, deleteConfig, exportConfig, importConfigFromJson, listConfigs } from "../services/tauri-commands";
 import { ConfigEditor } from "./ConfigEditor";
+import { ConfirmDialog } from "./ConfirmDialog";
 
 export function ConfigSelector() {
   const { config, setConfig, configs, setConfigs, selectedConfigId, selectConfigId, addLog } = useAppStore();
   const [showEditor, setShowEditor] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleSelect = async (id: string | null) => {
     selectConfigId(id);
@@ -22,7 +24,7 @@ export function ConfigSelector() {
       setConfig(parsed);
       addLog(`切换配置: ${meta.title}`);
     } catch (e) {
-      addLog(`加载配置失败: ${e}`);
+      addLog(`加载配置失败: ${e}`, "error");
     }
   };
 
@@ -33,27 +35,32 @@ export function ConfigSelector() {
       selectConfigId(meta.id);
       const updated = await listConfigs();
       setConfigs(updated);
-      addLog(`配置已保存: ${meta.title}`);
+      addLog(`配置已保存: ${meta.title}`, "success");
     } catch (e) {
-      addLog(`保存失败: ${e}`);
+      addLog(`保存失败: ${e}`, "error");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!selectedConfigId) return;
-    if (!confirm("确定删除此配置方案？")) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!selectedConfigId) return;
     try {
       await deleteConfig(selectedConfigId);
       selectConfigId(null);
       setConfig(DEFAULT_CONFIG);
       const updated = await listConfigs();
       setConfigs(updated);
-      addLog("配置已删除");
+      addLog("配置已删除", "success");
     } catch (e) {
-      addLog(`删除失败: ${e}`);
+      addLog(`删除失败: ${e}`, "error");
     }
+    setShowDeleteConfirm(false);
   };
 
   const handleExport = async () => {
@@ -71,9 +78,9 @@ export function ConfigSelector() {
       a.download = `${config.title || "config"}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      addLog("配置已导出");
+      addLog("配置已导出", "success");
     } catch (e) {
-      addLog(`导出失败: ${e}`);
+      addLog(`导出失败: ${e}`, "error");
     }
   };
 
@@ -94,7 +101,7 @@ export function ConfigSelector() {
         setConfig(parsed);
         addLog(`导入配置: ${meta.title}`);
       } catch (e) {
-        addLog(`导入失败: ${e}`);
+        addLog(`导入失败: ${e}`, "error");
       }
     };
     input.click();
@@ -142,6 +149,17 @@ export function ConfigSelector() {
           config={config}
           onChange={setConfig}
           onClose={() => setShowEditor(false)}
+        />
+      )}
+
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title="删除配置方案"
+          message="确定删除此配置方案？此操作无法撤销。"
+          confirmLabel="删除"
+          danger
+          onConfirm={confirmDelete}
+          onCancel={() => setShowDeleteConfirm(false)}
         />
       )}
     </>

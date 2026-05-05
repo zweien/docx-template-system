@@ -1,13 +1,26 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppStore } from "../stores/app-store";
 
+interface LogEntry {
+  time: string;
+  msg: string;
+  type: "info" | "success" | "warn" | "error";
+}
+
 interface Props {
-  logs: string[];
+  logs: LogEntry[];
   onClear: () => void;
 }
 
 const MIN_HEIGHT = 28;
 const MAX_HEIGHT = 480;
+
+const LOG_STYLES: Record<string, { icon: string; color: string; bg: string }> = {
+  info: { icon: "ℹ", color: "text-text-muted", bg: "" },
+  success: { icon: "✓", color: "text-success", bg: "" },
+  warn: { icon: "⚠", color: "text-warning", bg: "" },
+  error: { icon: "✕", color: "text-danger", bg: "" },
+};
 
 export function LogPanel({ logs, onClear }: Props) {
   const { settings } = useAppStore();
@@ -45,6 +58,9 @@ export function LogPanel({ logs, onClear }: Props) {
 
   const logFontSize = Math.max(9, settings.fontSize * 0.73);
 
+  const errorCount = logs.filter((l) => l.type === "error").length;
+  const warnCount = logs.filter((l) => l.type === "warn").length;
+
   return (
     <div
       className="bg-panel text-text-secondary font-mono flex flex-col shrink-0 border-t border-border"
@@ -70,6 +86,8 @@ export function LogPanel({ logs, onClear }: Props) {
           {logs.length > 0 && (
             <span className="bg-surface text-text-muted px-1.5 py-px rounded-sm border border-border-subtle">
               {logs.length}
+              {errorCount > 0 && <span className="text-danger ml-1">{errorCount}</span>}
+              {warnCount > 0 && <span className="text-warning ml-0.5">{warnCount}</span>}
             </span>
           )}
         </button>
@@ -86,12 +104,16 @@ export function LogPanel({ logs, onClear }: Props) {
       {/* Content */}
       {!collapsed && (
         <div className="flex-1 overflow-auto px-3 py-1" style={{ fontSize: `${logFontSize}px`, lineHeight: `${logFontSize * 1.6}px` }}>
-          {recentLogs.map((log, i) => (
-            <div key={i} className="whitespace-nowrap">
-              <span className="text-text-quaternary">{log.slice(0, 10)}</span>
-              <span className="text-text-muted">{log.slice(10)}</span>
-            </div>
-          ))}
+          {recentLogs.map((log, i) => {
+            const style = LOG_STYLES[log.type] || LOG_STYLES.info;
+            return (
+              <div key={i} className="whitespace-nowrap flex gap-1.5">
+                <span className="text-text-quaternary shrink-0">{log.time}</span>
+                <span className={`shrink-0 ${style.color}`}>{style.icon}</span>
+                <span className={style.color}>{log.msg}</span>
+              </div>
+            );
+          })}
           <div ref={bottomRef} />
         </div>
       )}

@@ -1,13 +1,13 @@
 # 预算报告生成器 — 桌面版
 
-> **v0.7.5**
+> **v0.8.1**
 
 基于 Tauri 2.0 的离线预算报告生成桌面应用。将 report-engine 的 DOCX 模板渲染能力打包为独立桌面工具，无需联网即可使用。
 
 ## 技术栈
 
 - **Tauri 2.0** — Rust 后端 + 系统 WebView
-- **React 18** + **TypeScript 5** — 前端 UI
+- **React 19** + **TypeScript 5** — 前端 UI
 - **Zustand** — 状态管理
 - **Tailwind CSS v4** — 样式
 - **Python sidecar** — FastAPI 报告渲染引擎（PyInstaller 打包）
@@ -106,6 +106,10 @@ apps/desktop/
 - **导入导出** — JSON 文件导入导出，方便团队共享
 
 ## 版本历史
+
+### v0.8.1
+
+- 更新应用图标为全新紫色 Lab Logo（正方形比例、透明背景）
 
 ### v0.7.5
 

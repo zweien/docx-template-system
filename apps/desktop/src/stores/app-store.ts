@@ -2,7 +2,7 @@ import { create } from "zustand";
 import type { BudgetConfig, ConfigMeta, ReportContent } from "../types";
 import { listConfigs as listConfigsCmd } from "../services/tauri-commands";
 
-export type AppView = "wizard" | "templates" | "configs" | "settings" | "validation";
+export type AppView = "wizard" | "templates" | "configs" | "settings" | "validation" | "merge";
 export type ThemeMode = "light" | "dark";
 
 export interface AppSettings {
@@ -89,8 +89,8 @@ interface AppState {
   updateSettings: (partial: Partial<AppSettings>) => void;
 
   // Logs
-  logs: string[];
-  addLog: (msg: string) => void;
+  logs: { time: string; msg: string; type: "info" | "success" | "warn" | "error" }[];
+  addLog: (msg: string, type?: "info" | "success" | "warn" | "error") => void;
   clearLogs: () => void;
 }
 
@@ -149,9 +149,9 @@ export const useAppStore = create<AppState>((set) => ({
     }),
 
   logs: [],
-  addLog: (msg) =>
+  addLog: (msg, type = "info") =>
     set((state) => ({
-      logs: [...state.logs, `[${new Date().toLocaleTimeString()}] ${msg}`],
+      logs: [...state.logs, { time: new Date().toLocaleTimeString(), msg, type }],
     })),
   clearLogs: () => set({ logs: [] }),
 }));

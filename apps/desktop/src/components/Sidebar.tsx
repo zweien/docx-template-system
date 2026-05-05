@@ -107,7 +107,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.7.6</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.0</p>
             </div>
           )}
         </div>
@@ -260,6 +260,15 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.8.0", date: "2026-05-05", changes: [
+      { type: "feat", text: "Excel 合并功能：多文件按 sheet 合并，保留图片和格式" },
+      { type: "feat", text: "合并字段不匹配检测与报告" },
+      { type: "feat", text: "Lucide 图标系统：侧边栏使用矢量图标，跟随字体缩放" },
+      { type: "feat", text: "删除操作确认弹窗，防止误删" },
+      { type: "feat", text: "日志面板按类型分色显示（信息/成功/警告/错误）" },
+      { type: "feat", text: "设置与侧边栏关于页面共享组件，版本信息统一" },
+      { type: "refactor", text: "升级 React 19，统一 monorepo 类型依赖" },
+    ]},
     { ver: "0.7.6", date: "2026-05-04", changes: [
       { type: "fix", text: "修复生成 DOCX 文档 XML 命名空间损坏问题" },
       { type: "fix", text: "修复中文占位符无法识别（Word 拆分 run）" },

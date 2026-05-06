@@ -25,18 +25,20 @@ DEFAULT_STYLE_MAP = {
     "heading_4": "Heading 4",
     "heading_5": "Heading 5",
     "body": "Body Text",
-    "table_caption": "TableCaption",
-    "figure_caption": "FigureCaption",
-    "legend": "Legend",
-    "figure_paragraph": "Figure Paragraph",
-    "table": "ResearchTable",
+    "table_caption": "表格标题",
+    "figure_caption": "图片标题",
+    "legend": "图例",
+    "figure_paragraph": "图片段落",
+    "table": "研究表格",
     "bullet_list": "List Bullet",
     "numbered_list": "List Number",
-    "note": "Note",
-    "quote": "Quote",
-    "appendix_table": "AppendixTable",
-    "checklist": "Checklist",
-    "code_block": "CodeBlock",
+    "note": "注释",
+    "quote": "引用",
+    "appendix_table": "附录表格",
+    "checklist": "清单",
+    "code_block": "代码块",
+    "table_header_style": "表格表头",
+    "table_body_style": "表格正文",
     "auto_number_captions": True,
 }
 
@@ -276,6 +278,20 @@ def _mathml_to_omml(src: etree._Element, parent: etree._Element) -> None:
             _mathml_to_omml(child, parent)
 
 
+def _apply_cell_style(cell: Any, doc: Any, style_map: Dict[str, Any], is_header: bool = False) -> None:
+    key = "table_header_style" if is_header else "table_body_style"
+    fallback = "Normal"
+    style_name = _get_style_name(doc, style_map.get(key, ""), fallback)
+
+    for paragraph in cell.paragraphs:
+        if style_name != fallback:
+            try:
+                paragraph.style = doc.styles[style_name]
+            except KeyError:
+                pass
+        paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+
+
 def _add_table_block_impl(
     doc: Any,
     block: Dict[str, Any],
@@ -283,7 +299,7 @@ def _add_table_block_impl(
     default_style: str,
 ) -> None:
     if block.get("title"):
-        caption_style = _get_style_name(doc, style_map.get("table_caption", "TableCaption"), "TableCaption")
+        caption_style = _get_style_name(doc, style_map.get("table_caption", "表格标题"), "表格标题")
         auto_num = style_map.get("auto_number_captions", True)
         _add_caption_paragraph(doc, "表", "表", str(block["title"]), caption_style, auto_number=auto_num)
 
@@ -298,25 +314,18 @@ def _add_table_block_impl(
     hdr_cells = table.rows[0].cells
     for i, header in enumerate(headers):
         hdr_cells[i].text = "" if header is None else str(header)
+    for cell in hdr_cells:
+        _apply_cell_style(cell, doc, style_map, is_header=True)
 
     for row in rows:
         row_cells = table.add_row().cells
         for i, value in enumerate(row):
             row_cells[i].text = "" if value is None else str(value)
+        for cell in row_cells:
+            _apply_cell_style(cell, doc, style_map, is_header=False)
 
     if block.get("force_borders", True):
         _set_table_borders(table)
-
-    # 设置表格单元格字体：小五号宋体，单倍行距
-    for row in table.rows:
-        for cell in row.cells:
-            for paragraph in cell.paragraphs:
-                paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
-                for run in paragraph.runs:
-                    run.font.size = Pt(9)
-                    rPr = run._element.get_or_add_rPr()
-                    rFonts = rPr.get_or_add_rFonts()
-                    rFonts.set(qn("w:eastAsia"), "宋体")
 
     body_style = _get_style_name(doc, style_map["body"], "Normal")
     doc.add_paragraph("", style=body_style)
@@ -363,7 +372,7 @@ def add_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) 
 def add_three_line_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
     auto_num = style_map.get("auto_number_captions", True)
     if block.get("title"):
-        caption_style = _get_style_name(doc, style_map.get("table_caption", "TableCaption"), "TableCaption")
+        caption_style = _get_style_name(doc, style_map.get("table_caption", "表格标题"), "表格标题")
         _add_caption_paragraph(doc, "表", "表", str(block["title"]), caption_style, auto_number=auto_num)
 
     headers = block["headers"]
@@ -377,24 +386,17 @@ def add_three_line_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[
     hdr_cells = table.rows[0].cells
     for i, header in enumerate(headers):
         hdr_cells[i].text = "" if header is None else str(header)
+    for cell in hdr_cells:
+        _apply_cell_style(cell, doc, style_map, is_header=True)
 
     for row in rows:
         row_cells = table.add_row().cells
         for i, value in enumerate(row):
             row_cells[i].text = "" if value is None else str(value)
+        for cell in row_cells:
+            _apply_cell_style(cell, doc, style_map, is_header=False)
 
     _set_three_line_table_borders(table)
-
-    # 设置表格单元格字体：小五号宋体，单倍行距
-    for row in table.rows:
-        for cell in row.cells:
-            for paragraph in cell.paragraphs:
-                paragraph.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
-                for run in paragraph.runs:
-                    run.font.size = Pt(9)
-                    rPr = run._element.get_or_add_rPr()
-                    rFonts = rPr.get_or_add_rFonts()
-                    rFonts.set(qn("w:eastAsia"), "宋体")
 
     body_style = _get_style_name(doc, style_map["body"], "Normal")
     doc.add_paragraph("", style=body_style)
@@ -419,7 +421,7 @@ def add_image_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) 
         p.add_run(f"[图片缺失：{image_path}]")
 
     if block.get("caption"):
-        caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
+        caption_style = _get_style_name(doc, style_map.get("figure_caption", "图片标题"), "图片标题")
         _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
     if block.get("legend"):
@@ -453,7 +455,7 @@ def add_rich_paragraph_block(doc: Any, block: Dict[str, Any], style_map: Dict[st
 
 
 def add_note_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
-    style_name = _get_style_name(doc, style_map.get("note", "Note"), style_map["body"])
+    style_name = _get_style_name(doc, style_map.get("note", "注释"), style_map["body"])
     p = doc.add_paragraph(style=style_name)
     prefix_run = p.add_run("注：")
     prefix_run.bold = True
@@ -461,7 +463,7 @@ def add_note_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -
 
 
 def add_quote_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
-    quote_style = _get_style_name(doc, style_map.get("quote", "Quote"), style_map["body"])
+    quote_style = _get_style_name(doc, style_map.get("quote", "引用"), style_map["body"])
     doc.add_paragraph(str(block["text"]), style=quote_style)
     if block.get("source"):
         source_style = _get_style_name(doc, style_map["body"], "Normal")
@@ -491,7 +493,7 @@ def add_two_images_row_block(doc: Any, block: Dict[str, Any], style_map: Dict[st
     tbl_pr.append(borders)
 
     figure_style = _get_style_name(doc, style_map["figure_paragraph"], style_map["body"])
-    caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
+    caption_style = _get_style_name(doc, style_map.get("figure_caption", "图片标题"), "图片标题")
 
     for i, img in enumerate(images):
         cell = table.cell(0, i)
@@ -526,7 +528,7 @@ def add_appendix_table_block(doc: Any, block: Dict[str, Any], style_map: Dict[st
 
 
 def add_checklist_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
-    style_name = _get_style_name(doc, style_map.get("checklist", "Checklist"), style_map.get("bullet_list", style_map["body"]))
+    style_name = _get_style_name(doc, style_map.get("checklist", "清单"), style_map.get("bullet_list", style_map["body"]))
     for item in block["items"]:
         p = doc.add_paragraph(style=style_name)
         prefix = "☑" if item.get("checked", False) else "☐"
@@ -580,7 +582,7 @@ def add_toc_placeholder_block(doc: Any, block: Dict[str, Any], style_map: Dict[s
 def add_code_block_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]) -> None:
     code = str(block["code"])
     lines = code.split("\n")
-    style_name = _get_style_name(doc, style_map.get("code_block", "CodeBlock"), style_map["body"])
+    style_name = _get_style_name(doc, style_map.get("code_block", "代码块"), style_map["body"])
 
     for line in lines:
         p = doc.add_paragraph(style=style_name)
@@ -658,7 +660,7 @@ def add_formula_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]
 
     # 方案 3: 纯文本降级
     if not omml_inserted:
-        style_name = _get_style_name(doc, style_map.get("code_block", "CodeBlock"), style_map["body"])
+        style_name = _get_style_name(doc, style_map.get("code_block", "代码块"), style_map["body"])
         p = doc.add_paragraph(style=style_name)
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run = p.add_run(latex)
@@ -666,7 +668,7 @@ def add_formula_block(doc: Any, block: Dict[str, Any], style_map: Dict[str, str]
 
     # caption（可选）
     if block.get("caption"):
-        caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
+        caption_style = _get_style_name(doc, style_map.get("figure_caption", "图片标题"), "图片标题")
         _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
 
@@ -795,7 +797,7 @@ def add_ascii_diagram_block(doc: Any, block: Dict[str, Any], style_map: Dict[str
 
             # caption
             if block.get("caption"):
-                caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
+                caption_style = _get_style_name(doc, style_map.get("figure_caption", "图片标题"), "图片标题")
                 _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
             body_style = _get_style_name(doc, style_map["body"], "Normal")
@@ -909,7 +911,7 @@ def add_ascii_diagram_block(doc: Any, block: Dict[str, Any], style_map: Dict[str
             run.add_picture(buf)
 
         if block.get("caption"):
-            caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
+            caption_style = _get_style_name(doc, style_map.get("figure_caption", "图片标题"), "图片标题")
             _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
         body_style = _get_style_name(doc, style_map["body"], "Normal")
@@ -1001,7 +1003,7 @@ def _render_ascii_as_text(
 
     # caption（可选）
     if block.get("caption"):
-        caption_style = _get_style_name(doc, style_map.get("figure_caption", "FigureCaption"), "FigureCaption")
+        caption_style = _get_style_name(doc, style_map.get("figure_caption", "图片标题"), "图片标题")
         _add_caption_paragraph(doc, "图", "图", str(block["caption"]), caption_style, WD_ALIGN_PARAGRAPH.CENTER, auto_number=auto_num)
 
     body_style = _get_style_name(doc, style_map["body"], "Normal")

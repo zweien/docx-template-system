@@ -246,9 +246,7 @@ def _read_summary_table(sheet, formula_sheet, summary_config: dict) -> Dict[str,
     header_row = summary_config.get("header_row", 1)
     key_col_name = summary_config.get("key_column")
     value_col_name = summary_config.get("value_column")
-    desc_col_name = summary_config.get("description_column")
     prefix = summary_config.get("prefix", "SUMMARY_")
-    desc_prefix = summary_config.get("description_prefix", "DESC_")
 
     if not key_col_name or not value_col_name:
         logger.warning("summary table 模式需要 key_column 和 value_column")
@@ -261,14 +259,11 @@ def _read_summary_table(sheet, formula_sheet, summary_config: dict) -> Dict[str,
 
     key_col_idx = None
     value_col_idx = None
-    desc_col_idx = None
     for idx, hv in enumerate(header_values):
         if hv == key_col_name:
             key_col_idx = idx
         if hv == value_col_name:
             value_col_idx = idx
-        if desc_col_name and hv == desc_col_name:
-            desc_col_idx = idx
 
     if key_col_idx is None:
         logger.warning("汇总页未找到 key_column '%s'，可用: %s", key_col_name, header_values)
@@ -276,8 +271,6 @@ def _read_summary_table(sheet, formula_sheet, summary_config: dict) -> Dict[str,
     if value_col_idx is None:
         logger.warning("汇总页未找到 value_column '%s'，可用: %s", value_col_name, header_values)
         return result
-    if desc_col_name and desc_col_idx is None:
-        logger.warning("汇总页未找到 description_column '%s'，可用: %s", desc_col_name, header_values)
 
     # 读取数据行（同时遍历 data_sheet 和 formula_sheet）
     data_iter = sheet.iter_rows(min_row=header_row + 1, values_only=False)
@@ -304,16 +297,6 @@ def _read_summary_table(sheet, formula_sheet, summary_config: dict) -> Dict[str,
 
         result[context_key] = value
         logger.debug("汇总页映射: %s -> %s", context_key, value)
-
-        # 读取描述列
-        if desc_col_idx is not None:
-            desc_data_cell = data_row[desc_col_idx] if desc_col_idx < len(data_row) else None
-            desc_formula_cell = formula_row[desc_col_idx] if formula_row and desc_col_idx < len(formula_row) else None
-            description = _get_cell_value(desc_data_cell, desc_formula_cell)
-            if description and description.strip():
-                desc_key = f"{desc_prefix}{_snake_case(key)}"
-                result[desc_key] = description.strip()
-                logger.debug("汇总页描述映射: %s -> %s", desc_key, description.strip()[:50])
 
     return result
 
@@ -702,38 +685,6 @@ def _strip_chinese_number_prefix(text: str) -> str:
     return re.sub(r"^[一二三四五六七八九十百]+[、．.\s]*", "", text).strip()
 
 
-def _get_section_description(config: dict, summary_descriptions: Dict[str, str]) -> str:
-    """从汇总页描述中查找当前 section 的描述文本。
-
-    查找优先级：
-    1. summary_key 的 snake_case 形式在 summary_descriptions 中查找（table 模式）
-    2. summary_key 原文在 summary_descriptions 中查找（cell_map 模式或直接匹配）
-    3. name 的 snake_case 形式作为缺省
-    """
-    if not summary_descriptions:
-        return ""
-
-    summary_key = config.get("summary_key", "")
-    name = config.get("name", "")
-
-    # 1. table 模式：按 description_prefix + snake_case(key) 提取的描述
-    if summary_key:
-        lookup = _snake_case(summary_key)
-        if lookup in summary_descriptions:
-            return summary_descriptions[lookup]
-        # 2. cell_map 模式：summary_key 直接是 extra_context 中的 key
-        if summary_key in summary_descriptions:
-            return summary_descriptions[summary_key]
-
-    # 3. 缺省用 name 匹配
-    if name:
-        lookup = _snake_case(name)
-        if lookup in summary_descriptions:
-            return summary_descriptions[lookup]
-
-    return ""
-
-
 def _build_section(
     data_rows: List[Dict],
     config: dict,
@@ -741,7 +692,7 @@ def _build_section(
     table_columns: Optional[List[str]] = None,
     detail_fields: Optional[List[Dict[str, str]]] = None,
     image_columns: Optional[List[str]] = None,
-    summary_descriptions: Optional[Dict[str, str]] = None,
+    global_defaults: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """构建一个 sheet 对应的 section（简化内容描述格式）。"""
     sheet_name = config.get("name", config.get("sheet_name", "明细"))
@@ -755,8 +706,10 @@ def _build_section(
     if image_columns is None:
         image_columns = ["报价截图"]
 
-    heading_level = config.get("heading_level", 2)
-    item_heading_level = config.get("item_heading_level", 3)
+    defaults = global_defaults or {}
+    heading_level = defaults.get("heading_level", 2)
+    item_heading_level = defaults.get("item_heading_level", 3)
+    _image_width_cm = defaults.get("image_width_cm", 14)
 
     # 去掉中文编号前缀（模板已自带自动编号）
     display_name = _strip_chinese_number_prefix(sheet_name)
@@ -769,12 +722,7 @@ def _build_section(
     else:
         blocks.append({"type": "heading", "text": display_name, "level": heading_level})
 
-    # 2. 总体描述（从汇总页提取）
-    description = _get_section_description(config, summary_descriptions)
-    if description:
-        blocks.append({"type": "paragraph", "text": description})
-
-    # 3. 明细表
+    # 2. 明细表
     headers, rows = _build_table_rows(data_rows, columns_config, table_columns)
     if headers:
         blocks.append({
@@ -814,7 +762,7 @@ def _build_section(
                         "type": "image",
                         "path": img_path,
                         "caption": caption,
-                        "width_cm": 14,
+                        "width_cm": _image_width_cm,
                     })
             else:
                 blocks.append({
@@ -850,26 +798,6 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
     wb_formula = load_workbook(input_path, data_only=False)
 
     sections = []
-
-    # 先读取汇总页，以便提取描述信息传递给 sections
-    extra_context = {}
-    summary_descriptions = {}
-    if "summary" in config:
-        summary_config = config["summary"]
-        summary_data = _read_summary_sheet(wb_data, wb_formula, summary_config)
-        extra_context.update(summary_data)
-
-        # 构建描述查找表：
-        # - table 模式：提取 description_prefix 开头的变量，key 为 snake_case 形式
-        # - cell_map 模式：所有映射变量都可被 summary_key 直接引用
-        desc_prefix = summary_config.get("description_prefix", "DESC_")
-        for k, v in summary_data.items():
-            if k.startswith(desc_prefix):
-                lookup_key = k[len(desc_prefix):]
-                summary_descriptions[lookup_key] = v
-            else:
-                summary_descriptions[k] = v
-
     for sheet_config in config.get("sheets", []):
         sheet_name = sheet_config.get("sheet_name")
         if not sheet_name:
@@ -922,12 +850,22 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
             table_columns=sheet_config.get("table_columns"),
             detail_fields=sheet_config.get("detail_fields"),
             image_columns=sheet_config.get("image_columns"),
-            summary_descriptions=summary_descriptions,
+            global_defaults={
+                "heading_level": config.get("heading_level"),
+                "item_heading_level": config.get("item_heading_level"),
+                "image_width_cm": config.get("image_width_cm"),
+            },
         )
         sections.append(section)
 
         logger.info("Sheet '%s' 读取 %d 行数据，%d 张图片", sheet_name, len(data_rows),
                     sum(len(r.get("__image_paths__", [])) for r in data_rows))
+
+    # 读取汇总页数据作为 extra_context
+    extra_context = {}
+    if "summary" in config:
+        summary_data = _read_summary_sheet(wb_data, wb_formula, config["summary"])
+        extra_context.update(summary_data)
 
     content = {
         "title": config.get("title", "预算报告"),

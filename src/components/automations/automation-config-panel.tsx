@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/components/ui/input";
+import { HelpTooltip } from "@/components/shared/help-tooltip";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type {
@@ -110,7 +111,7 @@ export function AutomationConfigPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-[520] text-foreground">触发类型</label>
+            <label className="text-sm font-[520] text-foreground">触发类型 <HelpTooltip text="选择什么事件触发自动化：记录创建/更新/删除、字段变更、定时或手动" /></label>
             <select
               className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
               value={trigger.type}
@@ -145,7 +146,7 @@ export function AutomationConfigPanel({
 
           {trigger.type === "field_changed" && (
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">监听字段</label>
+              <label className="text-sm font-[520] text-foreground">监听字段 <HelpTooltip text="选择要监听变更的字段，仅该字段值变化时触发" /></label>
               <Input
                 value={trigger.fieldKey}
                 onChange={(event) =>
@@ -158,7 +159,7 @@ export function AutomationConfigPanel({
           {trigger.type === "schedule" && (
             <div className="grid gap-3">
               <div className="space-y-2">
-                <label className="text-sm font-[520] text-foreground">执行频率</label>
+                <label className="text-sm font-[520] text-foreground">执行频率 <HelpTooltip text="定时触发的执行间隔：每小时、每天、每周、每月" /></label>
                 <select
                   className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
                   value={trigger.schedule.mode}
@@ -178,7 +179,7 @@ export function AutomationConfigPanel({
                 </select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-[520] text-foreground">时间</label>
+                <label className="text-sm font-[520] text-foreground">时间 <HelpTooltip text="定时触发的具体执行时间" /></label>
                 <Input
                   value={trigger.schedule.time}
                   onChange={(event) =>
@@ -217,7 +218,7 @@ export function AutomationConfigPanel({
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <label className="text-sm font-[520] text-foreground">逻辑关系</label>
+            <label className="text-sm font-[520] text-foreground">逻辑关系 <HelpTooltip text="多个条件之间的逻辑关系：AND（全部满足）或 OR（任一满足）" /></label>
             <select
               className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
               value={condition.operator}
@@ -237,7 +238,7 @@ export function AutomationConfigPanel({
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-[520] text-foreground">字段路径</label>
+            <label className="text-sm font-[520] text-foreground">字段路径 <HelpTooltip text="要检查的字段标识，如 `status`、`amount`" /></label>
             <Input
               value={firstLeaf.field}
               onChange={(event) =>
@@ -252,7 +253,7 @@ export function AutomationConfigPanel({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-[520] text-foreground">操作符</label>
+            <label className="text-sm font-[520] text-foreground">操作符 <HelpTooltip text="字段值与比较值之间的关系：等于、不等于、包含、大于、小于等" /></label>
             <select
               className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
               value={firstLeaf.op}
@@ -279,7 +280,7 @@ export function AutomationConfigPanel({
             </select>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-[520] text-foreground">比较值</label>
+            <label className="text-sm font-[520] text-foreground">比较值 <HelpTooltip text="与字段值进行比较的目标值" /></label>
             <Input
               value={String(firstLeaf.value ?? "")}
               onChange={(event) =>
@@ -313,7 +314,7 @@ export function AutomationConfigPanel({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm font-[520] text-foreground">动作类型</label>
+          <label className="text-sm font-[520] text-foreground">动作类型 <HelpTooltip text="触发后执行的操作类型" /></label>
           <select
             className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
             value={action.type}
@@ -336,7 +337,7 @@ export function AutomationConfigPanel({
         {action.type === "update_field" && (
           <>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">字段 Key</label>
+              <label className="text-sm font-[520] text-foreground">字段 Key <HelpTooltip text="要更新的字段标识，对应数据表中的字段" /></label>
               <Input
                 value={(action as UpdateFieldAction).fieldKey}
                 onChange={(event) =>
@@ -350,7 +351,7 @@ export function AutomationConfigPanel({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">写入值</label>
+              <label className="text-sm font-[520] text-foreground">写入值 <HelpTooltip text="更新为的新值，支持模板变量如 {{字段名}}" /></label>
               <Input
                 value={String((action as UpdateFieldAction).value ?? "")}
                 onChange={(event) =>
@@ -369,7 +370,7 @@ export function AutomationConfigPanel({
         {action.type === "create_record" && (
           <>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">目标数据表 ID</label>
+              <label className="text-sm font-[520] text-foreground">目标数据表 ID <HelpTooltip text="在哪个数据表中创建新记录" /></label>
               <Input
                 value={(action as CreateRecordAction).tableId}
                 onChange={(event) =>
@@ -383,7 +384,7 @@ export function AutomationConfigPanel({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">字段值 JSON</label>
+              <label className="text-sm font-[520] text-foreground">字段值 JSON <HelpTooltip text='新记录的字段值，JSON 格式。如 {"name": "测试", "status": "待处理"}' /></label>
               <Textarea
                 value={JSON.stringify((action as CreateRecordAction).values, null, 2)}
                 onChange={(event) => {
@@ -407,7 +408,7 @@ export function AutomationConfigPanel({
         {action.type === "update_related_records" && (
           <>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">关系字段 Key</label>
+              <label className="text-sm font-[520] text-foreground">关系字段 Key <HelpTooltip text="用于定位关联记录的关系字段标识" /></label>
               <Input
                 value={(action as UpdateRelatedRecordsAction).relationFieldKey}
                 onChange={(event) =>
@@ -421,7 +422,7 @@ export function AutomationConfigPanel({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">作用范围</label>
+              <label className="text-sm font-[520] text-foreground">作用范围 <HelpTooltip text="first：仅更新第一条关联记录；all：更新所有关联记录" /></label>
               <select
                 className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
                 value={(action as UpdateRelatedRecordsAction).targetScope}
@@ -439,7 +440,7 @@ export function AutomationConfigPanel({
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">更新值 JSON</label>
+              <label className="text-sm font-[520] text-foreground">更新值 JSON <HelpTooltip text="关联记录更新的字段值，JSON 格式" /></label>
               <Textarea
                 value={JSON.stringify((action as UpdateRelatedRecordsAction).values, null, 2)}
                 onChange={(event) => {
@@ -463,7 +464,7 @@ export function AutomationConfigPanel({
         {action.type === "call_webhook" && (
           <>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">Webhook URL</label>
+              <label className="text-sm font-[520] text-foreground">Webhook URL <HelpTooltip text="接收请求的外部服务地址" /></label>
               <Input
                 value={(action as CallWebhookAction).url}
                 onChange={(event) =>
@@ -477,7 +478,7 @@ export function AutomationConfigPanel({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">请求方法</label>
+              <label className="text-sm font-[520] text-foreground">请求方法 <HelpTooltip text="HTTP 请求方法：GET、POST、PUT、DELETE" /></label>
               <select
                 className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
                 value={(action as CallWebhookAction).method}
@@ -499,7 +500,7 @@ export function AutomationConfigPanel({
 
         {action.type === "add_comment" && (
           <div className="space-y-2">
-            <label className="text-sm font-[520] text-foreground">评论内容</label>
+            <label className="text-sm font-[520] text-foreground">评论内容 <HelpTooltip text="添加到记录上的评论文本，支持模板变量" /></label>
             <Textarea
               value={(action as AddCommentAction).content}
               onChange={(event) =>
@@ -517,7 +518,7 @@ export function AutomationConfigPanel({
         {action.type === "send_email" && (
           <>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">收件人</label>
+              <label className="text-sm font-[520] text-foreground">收件人 <HelpTooltip text="邮件接收者，支持模板变量如 {{email}}" /></label>
               <Input
                 value={(action as SendEmailAction).to}
                 onChange={(event) =>
@@ -531,7 +532,7 @@ export function AutomationConfigPanel({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">邮件主题</label>
+              <label className="text-sm font-[520] text-foreground">邮件主题 <HelpTooltip text="邮件标题，支持模板变量" /></label>
               <Input
                 value={(action as SendEmailAction).subject}
                 onChange={(event) =>
@@ -545,7 +546,7 @@ export function AutomationConfigPanel({
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-[520] text-foreground">邮件内容</label>
+              <label className="text-sm font-[520] text-foreground">邮件内容 <HelpTooltip text="邮件正文，支持模板变量和换行" /></label>
               <Textarea
                 value={(action as SendEmailAction).body}
                 onChange={(event) =>

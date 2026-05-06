@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { HelpTooltip } from "@/components/shared/help-tooltip";
 
 const BUILTIN_VARIABLES = [
   "任务标题",
@@ -50,7 +51,7 @@ export function CollectionRenameRuleEditor({
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label htmlFor="renameRule">文件命名规则</Label>
+        <Label htmlFor="renameRule">文件命名规则 <HelpTooltip text="提交文件的自动命名规则。支持变量：{姓名}、{任务标题}、自定义变量名" /></Label>
         <Input
           id="renameRule"
           aria-label="文件命名规则"

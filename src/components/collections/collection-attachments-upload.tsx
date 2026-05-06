@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HelpTooltip } from "@/components/shared/help-tooltip";
 
 export function CollectionAttachmentsUpload({
   files,
@@ -17,7 +18,7 @@ export function CollectionAttachmentsUpload({
     <div className="space-y-3 rounded-lg border border-dashed p-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium">参考附件</p>
+          <p className="text-sm font-medium">参考附件 <HelpTooltip text="供提交人参考的示例文件或模板" /></p>
           <p className="text-xs text-muted-foreground">创建任务时会一并上传，供提交人查看和下载。</p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={() => inputRef.current?.click()}>

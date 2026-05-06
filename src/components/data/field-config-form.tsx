@@ -35,6 +35,7 @@ import type { DataFieldInput } from "@/validators/data-table";
 import { FormulaEditor } from "@/components/data/formula-editor";
 import { parseFormula, evaluateFormula, detectCircularRefs } from "@/lib/formula";
 import { FieldTypeIcon } from "./field-type-icon";
+import { HelpTooltip } from "@/components/shared/help-tooltip";
 
 interface FieldConfigFormProps {
   open: boolean;
@@ -733,7 +734,7 @@ export function FieldConfigForm({
           <div className="grid gap-4 py-4 overflow-y-auto flex-1 min-h-0 px-4">
             <div className="grid gap-2">
               <Label htmlFor="key">
-                字段标识 <span className="text-red-500">*</span>
+                字段标识 <span className="text-red-500">*</span> <HelpTooltip text="字段在数据库中的唯一标识符，创建后不可修改。英文字母开头，仅支持小写字母、数字、下划线" />
               </Label>
               <Input
                 id="key"
@@ -747,7 +748,7 @@ export function FieldConfigForm({
 
             <div className="grid gap-2">
               <Label htmlFor="label">
-                显示名称 <span className="text-red-500">*</span>
+                显示名称 <span className="text-red-500">*</span> <HelpTooltip text="填表和列表中展示的字段名称，支持中文" />
               </Label>
               <Input
                 id="label"
@@ -758,7 +759,7 @@ export function FieldConfigForm({
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="field-type-select">字段类型</Label>
+              <Label htmlFor="field-type-select">字段类型 <HelpTooltip text="选择字段存储的数据类型。创建后部分类型不可修改" /></Label>
               <Select
                 value={fieldType}
                 onValueChange={(value) => setFieldType(value as FieldType)}
@@ -789,14 +790,14 @@ export function FieldConfigForm({
               fieldType !== FieldType.AUTO_NUMBER && fieldType !== FieldType.SYSTEM_TIMESTAMP &&
               fieldType !== FieldType.SYSTEM_USER && (
               <div className="flex items-center justify-between">
-                <Label htmlFor="required">是否必填</Label>
+                <Label htmlFor="required">是否必填 <HelpTooltip text="开启后，填写表单时该字段不能为空" /></Label>
                 <Switch id="required" checked={required} onCheckedChange={setRequired} />
               </div>
             )}
 
             {(fieldType === FieldType.SELECT || fieldType === FieldType.MULTISELECT) && (
               <div className="grid gap-2">
-                <Label>选项列表</Label>
+                <Label>选项列表 <HelpTooltip text="单选/多选字段的可选值列表。可设置每个选项的颜色" /></Label>
                 <div className="space-y-2">
                   {selectOptions.map((opt, i) => (
                     <div key={i} className="flex items-center gap-2">
@@ -862,7 +863,7 @@ export function FieldConfigForm({
 
             {fieldType === FieldType.FORMULA && (
               <div className="grid gap-2">
-                <Label>公式表达式</Label>
+                <Label>公式表达式 <HelpTooltip text="根据 Excel 风格公式自动计算字段值，支持引用其他字段" /></Label>
                 <FormulaEditor
                   initialValue={formulaExpression}
                   fields={allFields}
@@ -875,7 +876,7 @@ export function FieldConfigForm({
 
             {fieldType === FieldType.COUNT && (
               <div className="grid gap-2">
-                <Label>计数字段</Label>
+                <Label>计数字段 <HelpTooltip text="自动统计关联记录数量，当关联记录增删时自动更新" /></Label>
                 {allFields.filter(
                   (f) => f.type === FieldType.RELATION || f.type === FieldType.RELATION_SUBTABLE
                 ).length === 0 ? (
@@ -915,7 +916,7 @@ export function FieldConfigForm({
 
             {fieldType === FieldType.LOOKUP && (
               <div className="grid gap-2">
-                <Label>源关联字段</Label>
+                <Label>源关联字段 <HelpTooltip text="选择一个关联当前表的关联字段，作为数据来源" /></Label>
                 {allFields.filter(
                   (f) => f.type === FieldType.RELATION || f.type === FieldType.RELATION_SUBTABLE
                 ).length === 0 ? (
@@ -964,7 +965,7 @@ export function FieldConfigForm({
                   if (targetTableFields.length === 0) return null;
                   return (
                     <>
-                      <Label>拉取字段</Label>
+                      <Label>拉取字段 <HelpTooltip text="从关联记录中拉取指定字段的值，只读展示" /></Label>
                       <Select
                         value={lookupTargetFieldKey}
                         onValueChange={(value) => setLookupTargetFieldKey(value ?? "")}
@@ -997,7 +998,7 @@ export function FieldConfigForm({
 
             {fieldType === FieldType.ROLLUP && (
               <div className="grid gap-2">
-                <Label>源关联字段</Label>
+                <Label>源关联字段 <HelpTooltip text="选择一个关联当前表的关联字段，作为数据来源" /></Label>
                 <Select value={rollupSourceFieldId} onValueChange={(value) => {
                   setRollupSourceFieldId(value ?? "");
                   setRollupTargetFieldKey("");
@@ -1037,7 +1038,7 @@ export function FieldConfigForm({
                   );
                   return (
                     <>
-                      <Label>汇总字段</Label>
+                      <Label>汇总字段 <HelpTooltip text="对关联记录的指定字段进行聚合计算" /></Label>
                       <Select value={rollupTargetFieldKey} onValueChange={(value) => {
                         setRollupTargetFieldKey(value ?? "");
                         setRollupAggregateType("");
@@ -1067,7 +1068,7 @@ export function FieldConfigForm({
                   const aggs = getAvailableRollupAggregates(targetField.type as FieldType);
                   return (
                     <>
-                      <Label>聚合方式</Label>
+                      <Label>聚合方式 <HelpTooltip text="选择聚合函数：求和、平均值、最大值、最小值、计数等" /></Label>
                       <Select value={rollupAggregateType} onValueChange={(v) => setRollupAggregateType(v as RollupAggregateType)}>
                         <SelectTrigger>
                           <SelectValue placeholder="选择聚合方式" />
@@ -1099,7 +1100,7 @@ export function FieldConfigForm({
                   if (condTargetFields.length === 0) return null;
                   return (
                     <>
-                      <Label>筛选条件（可选）</Label>
+                      <Label>筛选条件（可选） <HelpTooltip text="仅对满足条件的关联记录进行汇总计算" /></Label>
                       <p className="text-xs text-muted-foreground -mt-1">仅汇总满足条件的关联记录</p>
                       {rollupConditions.map((group, gi) => (
                         <div key={gi} className="border rounded-md p-2 space-y-2">
@@ -1264,7 +1265,7 @@ export function FieldConfigForm({
             {fieldType === FieldType.RATING && (
               <div className="grid gap-3">
                 <div className="grid gap-2">
-                  <Label htmlFor="rating-max">最大星数</Label>
+                  <Label htmlFor="rating-max">最大星数 <HelpTooltip text="评分字段的最大星星数量（1-10）" /></Label>
                   <Input
                     id="rating-max"
                     type="number"
@@ -1276,7 +1277,7 @@ export function FieldConfigForm({
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="rating-half">允许半星</Label>
+                  <Label htmlFor="rating-half">允许半星 <HelpTooltip text="允许用户选择半颗星评分" /></Label>
                   <Switch id="rating-half" checked={ratingAllowHalf} onCheckedChange={setRatingAllowHalf} />
                 </div>
               </div>
@@ -1285,7 +1286,7 @@ export function FieldConfigForm({
             {fieldType === FieldType.CURRENCY && (
               <div className="grid gap-3">
                 <div className="grid gap-2">
-                  <Label htmlFor="currency-code">币种</Label>
+                  <Label htmlFor="currency-code">币种 <HelpTooltip text="货币字段的币种单位" /></Label>
                   <Select value={currencyCode} onValueChange={(value) => setCurrencyCode(value ?? "CNY")}>
                     <SelectTrigger id="currency-code">
                       <SelectValue />
@@ -1298,7 +1299,7 @@ export function FieldConfigForm({
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="currency-decimals">小数位数</Label>
+                  <Label htmlFor="currency-decimals">小数位数 <HelpTooltip text="货币值保留的小数位数（0-6）" /></Label>
                   <Input
                     id="currency-decimals"
                     type="number"
@@ -1314,7 +1315,7 @@ export function FieldConfigForm({
 
             {fieldType === FieldType.PERCENTAGE && (
               <div className="grid gap-2">
-                <Label htmlFor="percentage-decimals">小数位数</Label>
+                <Label htmlFor="percentage-decimals">小数位数 <HelpTooltip text="百分比值保留的小数位数（0-4）" /></Label>
                 <Input
                   id="percentage-decimals"
                   type="number"
@@ -1329,7 +1330,7 @@ export function FieldConfigForm({
 
             {fieldType === FieldType.DURATION && (
               <div className="grid gap-2">
-                <Label htmlFor="duration-format">显示格式</Label>
+                <Label htmlFor="duration-format">显示格式 <HelpTooltip text="时长字段的显示格式" /></Label>
                 <Select value={durationFormat} onValueChange={(value) => setDurationFormat(value ?? "hh:mm")}>
                   <SelectTrigger id="duration-format">
                     <SelectValue />
@@ -1346,7 +1347,7 @@ export function FieldConfigForm({
             {isRelationType && (
               <>
                 <div className="grid gap-2">
-                  <Label htmlFor="relation-table-select">关联到表</Label>
+                  <Label htmlFor="relation-table-select">关联到表 <HelpTooltip text="选择要关联的目标数据表" /></Label>
                   <Select
                     value={selectedTableId}
                     onValueChange={(value) => {
@@ -1374,7 +1375,7 @@ export function FieldConfigForm({
 
                 {selectedTableId && (
                   <div className="grid gap-2">
-                    <Label htmlFor="relation-display-field-select">显示字段</Label>
+                    <Label htmlFor="relation-display-field-select">显示字段 <HelpTooltip text="在下拉列表中展示关联记录的哪个字段" /></Label>
                     <Select
                       value={selectedDisplayField}
                       onValueChange={(value) => setSelectedDisplayField(value ?? "")}
@@ -1412,7 +1413,7 @@ export function FieldConfigForm({
                 {fieldType === FieldType.RELATION_SUBTABLE && (
                   <>
                     <div className="grid gap-2">
-                      <Label htmlFor="relation-cardinality-select">本侧基数</Label>
+                      <Label htmlFor="relation-cardinality-select">本侧基数 <HelpTooltip text="当前表中每条记录可以关联几条目标记录：单条（1:1/1:N）或多条（N:N/N:1）" /></Label>
                       <Select
                         value={relationCardinality}
                         onValueChange={(value) => {
@@ -1439,7 +1440,7 @@ export function FieldConfigForm({
                     </div>
 
                     <div className="grid gap-2">
-                      <Label htmlFor="inverse-relation-cardinality-select">反向侧基数</Label>
+                      <Label htmlFor="inverse-relation-cardinality-select">反向侧基数 <HelpTooltip text="目标表中每条记录可以被几条当前记录关联" /></Label>
                       <Select
                         value={inverseRelationCardinality}
                         onValueChange={(value) =>
@@ -1472,7 +1473,7 @@ export function FieldConfigForm({
                     <div className="rounded-md border p-3" data-testid="relation-schema-editor">
                       <div className="flex items-center justify-between gap-2">
                         <div>
-                          <p className="font-medium">边属性</p>
+                          <p className="font-medium">边属性 <HelpTooltip text="在关联记录上附加的额外字段，用于存储关系本身的属性" /></p>
                           <p className="text-xs text-zinc-500">编辑 relationSchema.version = 1 的子字段</p>
                         </div>
                         <Button
@@ -1633,7 +1634,7 @@ export function FieldConfigForm({
               fieldType !== FieldType.AUTO_NUMBER && fieldType !== FieldType.SYSTEM_TIMESTAMP &&
               fieldType !== FieldType.SYSTEM_USER && (
               <div className="grid gap-2">
-                <Label htmlFor="defaultValue">默认值</Label>
+                <Label htmlFor="defaultValue">默认值 <HelpTooltip text="新建记录时自动填入的初始值" /></Label>
                 <Input
                   id="defaultValue"
                   placeholder="可选"

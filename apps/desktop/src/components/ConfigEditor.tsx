@@ -309,6 +309,26 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                           placeholder="SUMMARY_"
                         />
                       </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>描述列</label>
+                          <input
+                            value={local.summary.description_column || ""}
+                            onChange={(e) => updateSummary({ description_column: e.target.value })}
+                            className={inputCls}
+                            placeholder="说明"
+                          />
+                        </div>
+                        <div>
+                          <label className={labelCls}>描述变量前缀</label>
+                          <input
+                            value={local.summary.description_prefix || ""}
+                            onChange={(e) => updateSummary({ description_prefix: e.target.value })}
+                            className={inputCls}
+                            placeholder="DESC_"
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -387,7 +407,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       </button>
                     </div>
                   </div>
-                  <div className="form-grid-3 grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-4 gap-3">
                     <div>
                       <label className={labelCls}>章节名称</label>
                       <input
@@ -410,6 +430,15 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                         value={sheet.id}
                         onChange={(e) => updateSheet(sheetIdx, { id: e.target.value })}
                         className={smallInputCls + " w-full"}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>汇总页描述键</label>
+                      <input
+                        value={sheet.summary_key || ""}
+                        onChange={(e) => updateSheet(sheetIdx, { summary_key: e.target.value })}
+                        className={smallInputCls + " w-full"}
+                        placeholder={sheet.name}
                       />
                     </div>
                   </div>

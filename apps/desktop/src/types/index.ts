@@ -51,6 +51,8 @@ export interface SummaryConfig {
   key_column?: string;
   value_column?: string;
   prefix?: string;
+  description_column?: string;
+  description_prefix?: string;
   mappings?: Record<string, string>;
 }
 
@@ -71,6 +73,7 @@ export interface SheetConfig {
   item_heading_level?: number;
   header_row?: number;
   enabled?: boolean;
+  summary_key?: string;
 }
 
 export interface ApiError {

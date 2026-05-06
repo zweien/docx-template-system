@@ -6,13 +6,16 @@
     "header_row": 1,
     "key_column": "科目",
     "value_column": "金额（元）",
-    "prefix": "SUMMARY_"
+    "prefix": "SUMMARY_",
+    "description_column": "说明",
+    "description_prefix": "DESC_"
   },
   "sheets": [
     {
       "name": "设备费明细",
       "sheet_name": "设备费",
       "id": "equipment_fee",
+      "summary_key": "设备费",
       "columns": {
         "name": "名称",
         "spec": "规格",
@@ -33,6 +36,7 @@
       "name": "材料费明细",
       "sheet_name": "材料费",
       "id": "material_fee",
+      "summary_key": "材料费",
       "columns": {
         "name": "名称",
         "spec": "规格",
@@ -53,6 +57,7 @@
       "name": "测试费明细",
       "sheet_name": "测试费",
       "id": "test_fee",
+      "summary_key": "测试费",
       "columns": {
         "name": "名称",
         "spec": "规格",
@@ -73,6 +78,7 @@
       "name": "外部协作费明细",
       "sheet_name": "外部协作费",
       "id": "external_cooperation_fee",
+      "summary_key": "外部协作费",
       "heading_level": 2,
       "item_heading_level": 3,
       "columns": {

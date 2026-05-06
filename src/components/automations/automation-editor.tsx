@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CircleAlert, Loader2, Save } from "lucide-react";
+import { HelpTooltip } from "@/components/shared/help-tooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -226,7 +227,7 @@ export function AutomationEditor({
             <div className="space-y-4">
               {mode === "create" ? (
                 <div className="space-y-2">
-                  <label className="text-sm font-[520] text-foreground">目标数据表</label>
+                  <label className="text-sm font-[520] text-foreground">目标数据表 <HelpTooltip text="自动化操作的数据表，创建后不可修改" /></label>
                   <Select value={tableId} onValueChange={(nextValue) => setTableId(nextValue ?? "")}>
                     <SelectTrigger className="h-9 w-full" data-testid="automation-table-select-trigger">
                       <SelectValue placeholder="请选择数据表">
@@ -250,11 +251,11 @@ export function AutomationEditor({
                 </div>
               ) : null}
               <div className="space-y-2">
-                <label className="text-sm font-[520] text-foreground">自动化名称</label>
+                <label className="text-sm font-[520] text-foreground">自动化名称 <HelpTooltip text="为自动化规则命名，便于识别和管理" /></label>
                 <Input value={name} onChange={(event) => setName(event.target.value)} />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-[520] text-foreground">描述</label>
+                <label className="text-sm font-[520] text-foreground">描述 <HelpTooltip text="可选，描述自动化的用途和逻辑" /></label>
                 <Textarea
                   value={description}
                   onChange={(event) => setDescription(event.target.value)}
@@ -264,7 +265,7 @@ export function AutomationEditor({
 
             <div className="space-y-4 rounded-2xl border border-border/70 bg-background/70 p-4">
               <div className="space-y-2">
-                <p className="text-sm font-[520] text-foreground">启用状态</p>
+                <p className="text-sm font-[520] text-foreground">启用状态 <HelpTooltip text="开启后自动化规则立即生效，关闭则暂停" /></p>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm text-muted-foreground">
                     {enabled ? "当前自动生效" : "当前已停用"}

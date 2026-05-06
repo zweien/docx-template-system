@@ -242,6 +242,19 @@ function HelpContent() {
       </div>
 
       <div className="border-t border-border-subtle pt-4 space-y-2">
+        <h4 className="text-ui text-[0.8rem] text-text">模板样式</h4>
+        <p className="text-[0.8rem] text-text-muted">在 Word 模板中定义段落样式，生成报告时自动应用：</p>
+        <div className="space-y-1 text-[0.8rem]">
+          <div><span className="font-medium text-text">表格表头</span><span className="text-text-muted"> — 表格第一行（标题行）的文字样式</span></div>
+          <div><span className="font-medium text-text">表格正文</span><span className="text-text-muted"> — 表格数据行的文字样式</span></div>
+          <div><span className="font-medium text-text">表格标题</span><span className="text-text-muted"> — "表 1 xxx" 标题段落样式</span></div>
+          <div><span className="font-medium text-text">图片标题</span><span className="text-text-muted"> — "图 1 xxx" 标题段落样式</span></div>
+          <div><span className="font-medium text-text">注释 / 引用 / 图例</span><span className="text-text-muted"> — 对应内容块的段落样式</span></div>
+        </div>
+        <p className="text-[0.733rem] text-text-quaternary mt-1">在 Word 中通过「开始 → 样式窗格」创建这些样式，导入模板时会自动校验</p>
+      </div>
+
+      <div className="border-t border-border-subtle pt-4 space-y-2">
         <h4 className="text-ui text-[0.8rem] text-text">界面操作</h4>
         <div className="grid grid-cols-2 gap-2 text-[0.8rem]">
           <span className="text-text-muted">侧边栏收缩/展开</span>

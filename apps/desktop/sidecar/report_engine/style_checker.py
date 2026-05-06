@@ -26,6 +26,8 @@ STYLE_TYPE_REQUIREMENTS = {
     "quote": WD_STYLE_TYPE.PARAGRAPH,
     "checklist": WD_STYLE_TYPE.PARAGRAPH,
     "code_block": WD_STYLE_TYPE.PARAGRAPH,
+    "table_header_style": WD_STYLE_TYPE.PARAGRAPH,
+    "table_body_style": WD_STYLE_TYPE.PARAGRAPH,
     "table": WD_STYLE_TYPE.TABLE,
     "appendix_table": WD_STYLE_TYPE.TABLE,
 }

@@ -34,6 +34,9 @@ export interface BudgetConfig {
   summary?: SummaryConfig;
   sheets: SheetConfig[];
   excel_path?: string;
+  image_width_cm?: number;
+  heading_level?: number;
+  item_heading_level?: number;
 }
 
 export interface ConfigMeta {
@@ -51,6 +54,8 @@ export interface SummaryConfig {
   key_column?: string;
   value_column?: string;
   prefix?: string;
+  description_column?: string;
+  description_prefix?: string;
   mappings?: Record<string, string>;
 }
 
@@ -67,10 +72,9 @@ export interface SheetConfig {
   table_columns?: string[];
   detail_fields?: DetailField[];
   image_columns?: string[];
-  heading_level?: number;
-  item_heading_level?: number;
   header_row?: number;
   enabled?: boolean;
+  summary_key?: string;
 }
 
 export interface ApiError {

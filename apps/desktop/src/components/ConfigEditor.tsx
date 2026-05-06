@@ -216,13 +216,59 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
         <div className="flex-1 overflow-auto p-5 space-y-4">
           {/* ── Basic Tab ── */}
           {tab === "basic" && (
-            <div>
-              <label className="block text-[0.733rem] text-text-quaternary mb-1.5">报告标题</label>
-              <input
-                value={local.title}
-                onChange={(e) => setLocal({ ...local, title: e.target.value })}
-                className={inputCls}
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[0.733rem] text-text-quaternary mb-1.5">报告标题</label>
+                <input
+                  value={local.title}
+                  onChange={(e) => setLocal({ ...local, title: e.target.value })}
+                  className={inputCls}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className={labelCls}>图片宽度 (cm)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    step={0.5}
+                    value={local.image_width_cm ?? 14}
+                    onChange={(e) => setLocal({ ...local, image_width_cm: parseFloat(e.target.value) || 14 })}
+                    className={inputCls}
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>科目标题级别</label>
+                  <select
+                    value={local.heading_level ?? 2}
+                    onChange={(e) => setLocal({ ...local, heading_level: parseInt(e.target.value) })}
+                    className={inputCls}
+                  >
+                    <option value={0}>正文段落</option>
+                    <option value={1}>H1</option>
+                    <option value={2}>H2（默认）</option>
+                    <option value={3}>H3</option>
+                    <option value={4}>H4</option>
+                    <option value={5}>H5</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={labelCls}>条目标题级别</label>
+                  <select
+                    value={local.item_heading_level ?? 3}
+                    onChange={(e) => setLocal({ ...local, item_heading_level: parseInt(e.target.value) })}
+                    className={inputCls}
+                  >
+                    <option value={0}>编号段落</option>
+                    <option value={1}>H1</option>
+                    <option value={2}>H2</option>
+                    <option value={3}>H3（默认）</option>
+                    <option value={4}>H4</option>
+                    <option value={5}>H5</option>
+                  </select>
+                </div>
+              </div>
             </div>
           )}
 
@@ -309,6 +355,26 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                           placeholder="SUMMARY_"
                         />
                       </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelCls}>描述列</label>
+                          <input
+                            value={local.summary.description_column || ""}
+                            onChange={(e) => updateSummary({ description_column: e.target.value })}
+                            className={inputCls}
+                            placeholder="说明"
+                          />
+                        </div>
+                        <div>
+                          <label className={labelCls}>描述变量前缀</label>
+                          <input
+                            value={local.summary.description_prefix || ""}
+                            onChange={(e) => updateSummary({ description_prefix: e.target.value })}
+                            className={inputCls}
+                            placeholder="DESC_"
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
 
@@ -387,7 +453,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       </button>
                     </div>
                   </div>
-                  <div className="form-grid-3 grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-4 gap-3">
                     <div>
                       <label className={labelCls}>章节名称</label>
                       <input
@@ -412,39 +478,14 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                         className={smallInputCls + " w-full"}
                       />
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>科目标题级别</label>
-                      <select
-                        value={sheet.heading_level ?? 2}
-                        onChange={(e) => updateSheet(sheetIdx, { heading_level: parseInt(e.target.value) })}
+                      <label className={labelCls}>汇总页描述键</label>
+                      <input
+                        value={sheet.summary_key || ""}
+                        onChange={(e) => updateSheet(sheetIdx, { summary_key: e.target.value })}
                         className={smallInputCls + " w-full"}
-                      >
-                        <option value={0}>正文段落</option>
-                        <option value={1}>H1</option>
-                        <option value={2}>H2（默认）</option>
-                        <option value={3}>H3</option>
-                        <option value={4}>H4</option>
-                        <option value={5}>H5</option>
-                        <option value={6}>H6</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={labelCls}>条目标题级别</label>
-                      <select
-                        value={sheet.item_heading_level ?? 3}
-                        onChange={(e) => updateSheet(sheetIdx, { item_heading_level: parseInt(e.target.value) })}
-                        className={smallInputCls + " w-full"}
-                      >
-                        <option value={0}>编号段落</option>
-                        <option value={1}>H1</option>
-                        <option value={2}>H2</option>
-                        <option value={3}>H3（默认）</option>
-                        <option value={4}>H4</option>
-                        <option value={5}>H5</option>
-                        <option value={6}>H6</option>
-                      </select>
+                        placeholder={sheet.name}
+                      />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">

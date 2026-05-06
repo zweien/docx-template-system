@@ -107,7 +107,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.1</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.3</p>
             </div>
           )}
         </div>
@@ -242,6 +242,19 @@ function HelpContent() {
       </div>
 
       <div className="border-t border-border-subtle pt-4 space-y-2">
+        <h4 className="text-ui text-[0.8rem] text-text">模板样式</h4>
+        <p className="text-[0.8rem] text-text-muted">在 Word 模板中定义段落样式，生成报告时自动应用：</p>
+        <div className="space-y-1 text-[0.8rem]">
+          <div><span className="font-medium text-text">表格表头</span><span className="text-text-muted"> — 表格第一行（标题行）的文字样式</span></div>
+          <div><span className="font-medium text-text">表格正文</span><span className="text-text-muted"> — 表格数据行的文字样式</span></div>
+          <div><span className="font-medium text-text">表格标题</span><span className="text-text-muted"> — "表 1 xxx" 标题段落样式</span></div>
+          <div><span className="font-medium text-text">图片标题</span><span className="text-text-muted"> — "图 1 xxx" 标题段落样式</span></div>
+          <div><span className="font-medium text-text">注释 / 引用 / 图例</span><span className="text-text-muted"> — 对应内容块的段落样式</span></div>
+        </div>
+        <p className="text-[0.733rem] text-text-quaternary mt-1">在 Word 中通过「开始 → 样式窗格」创建这些样式，导入模板时会自动校验</p>
+      </div>
+
+      <div className="border-t border-border-subtle pt-4 space-y-2">
         <h4 className="text-ui text-[0.8rem] text-text">界面操作</h4>
         <div className="grid grid-cols-2 gap-2 text-[0.8rem]">
           <span className="text-text-muted">侧边栏收缩/展开</span>
@@ -260,6 +273,18 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.8.3", date: "2026-05-06", changes: [
+      { type: "feat", text: "表格样式：通过模板段落样式（表格表头/表格正文）控制表格字体" },
+      { type: "feat", text: "全局配置：图片宽度、科目/条目标题级别统一设置" },
+      { type: "feat", text: "模板管理页面：下载示例模板按钮，Excel导入步骤增加模板下载" },
+      { type: "feat", text: "帮助文档新增模板样式说明" },
+      { type: "refactor", text: "自定义样式名统一为中文（表格标题、图片标题、注释等）" },
+    ]},
+    { ver: "0.8.2", date: "2026-05-06", changes: [
+      { type: "feat", text: "科目总体描述：从 Excel 汇总页读取描述插入到 heading 下（table/cell_map 均支持）" },
+      { type: "fix", text: "修复 Word 拆分 run 导致占位符无法识别的问题" },
+      { type: "fix", text: "修复 OMML 命名空间注册产生 xmlns:ns0 错误" },
+    ]},
     { ver: "0.8.1", date: "2026-05-05", changes: [
       { type: "feat", text: "更新应用图标为全新紫色 Lab Logo（正方形比例、透明背景）" },
     ]},

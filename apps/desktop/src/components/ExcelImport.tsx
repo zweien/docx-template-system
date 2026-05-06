@@ -36,6 +36,10 @@ async function downloadSampleConfig() {
   await fetchAndSave("/samples/sample-config.json", "sample-config.json");
 }
 
+async function downloadSampleTemplate() {
+  await fetchAndSave("/samples/budget_report.docx", "预算报告模板.docx");
+}
+
 export function ExcelImport({ onParsed, addLog }: Props) {
   const { config, setWizardStep, setExcelFilePath } = useAppStore();
   const [filePath, setFilePath] = useState("");
@@ -133,6 +137,13 @@ export function ExcelImport({ onParsed, addLog }: Props) {
           className="text-brand-accent hover:text-brand-hover font-medium transition-colors"
         >
           示例配置
+        </button>
+        <span className="text-border">|</span>
+        <button
+          onClick={downloadSampleTemplate}
+          className="text-brand-accent hover:text-brand-hover font-medium transition-colors"
+        >
+          模板文件
         </button>
       </div>
 

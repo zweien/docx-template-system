@@ -692,6 +692,7 @@ def _build_section(
     table_columns: Optional[List[str]] = None,
     detail_fields: Optional[List[Dict[str, str]]] = None,
     image_columns: Optional[List[str]] = None,
+    global_defaults: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """构建一个 sheet 对应的 section（简化内容描述格式）。"""
     sheet_name = config.get("name", config.get("sheet_name", "明细"))
@@ -705,8 +706,13 @@ def _build_section(
     if image_columns is None:
         image_columns = ["报价截图"]
 
-    heading_level = config.get("heading_level", 2)
-    item_heading_level = config.get("item_heading_level", 3)
+    defaults = global_defaults or {}
+    heading_level = defaults.get("heading_level", 2)
+    item_heading_level = defaults.get("item_heading_level", 3)
+    _image_width_cm = defaults.get("image_width_cm", 14)
+
+    # 去掉中文编号前缀（模板已自带自动编号）
+    display_name = _strip_chinese_number_prefix(sheet_name)
 
     # 去掉中文编号前缀（模板已自带自动编号）
     display_name = _strip_chinese_number_prefix(sheet_name)
@@ -759,7 +765,7 @@ def _build_section(
                         "type": "image",
                         "path": img_path,
                         "caption": caption,
-                        "width_cm": 14,
+                        "width_cm": _image_width_cm,
                     })
             else:
                 blocks.append({
@@ -847,6 +853,11 @@ def parse_excel_budget(input_path: str, output_dir: str, config: dict) -> Tuple[
             table_columns=sheet_config.get("table_columns"),
             detail_fields=sheet_config.get("detail_fields"),
             image_columns=sheet_config.get("image_columns"),
+            global_defaults={
+                "heading_level": config.get("heading_level"),
+                "item_heading_level": config.get("item_heading_level"),
+                "image_width_cm": config.get("image_width_cm"),
+            },
         )
         sections.append(section)
 

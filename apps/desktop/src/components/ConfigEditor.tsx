@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { BudgetConfig, SheetConfig, SummaryConfig } from "../types";
 import { validateConfigLocal } from "../services/validation";
 import { ValidationPanel } from "./ValidationPanel";
+import { HelpPopover } from "./HelpPopover";
 
 interface Props {
   config: BudgetConfig;
@@ -227,7 +228,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
               </div>
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className={labelCls}>图片宽度 (cm)</label>
+                  <label className={labelCls}>图片宽度 (cm) <HelpPopover>生成报告中图片的默认宽度（cm），仅对有图片列的章节生效。</HelpPopover></label>
                   <input
                     type="number"
                     min={1}
@@ -239,7 +240,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                   />
                 </div>
                 <div>
-                  <label className={labelCls}>科目标题级别</label>
+                  <label className={labelCls}>科目标题级别 <HelpPopover>每个 Sheet 数据在报告中显示为几级标题。H2 适合作为章标题，正文段落则不使用标题样式。</HelpPopover></label>
                   <select
                     value={local.heading_level ?? 2}
                     onChange={(e) => setLocal({ ...local, heading_level: parseInt(e.target.value) })}
@@ -254,7 +255,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className={labelCls}>条目标题级别</label>
+                  <label className={labelCls}>条目标题级别 <HelpPopover>每条明细数据（如一台设备）的标题级别。H3 为默认，编号段落会自动加序号。</HelpPopover></label>
                   <select
                     value={local.item_heading_level ?? 3}
                     onChange={(e) => setLocal({ ...local, item_heading_level: parseInt(e.target.value) })}
@@ -296,7 +297,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                 <>
                   <div className="form-grid-2 grid grid-cols-2 gap-3">
                     <div>
-                      <label className={labelCls}>Excel Sheet</label>
+                      <label className={labelCls}>Excel Sheet <HelpPopover>包含汇总数据的 Sheet 名称。</HelpPopover></label>
                       <input
                         value={local.summary.sheet_name}
                         onChange={(e) => updateSummary({ sheet_name: e.target.value })}
@@ -304,7 +305,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       />
                     </div>
                     <div>
-                      <label className={labelCls}>模式</label>
+                      <label className={labelCls}>模式 <HelpPopover>table：键值对表格模式；cell_map：精确到单元格的映射。</HelpPopover></label>
                       <select
                         value={local.summary.mode}
                         onChange={(e) => updateSummary({ mode: e.target.value as "table" | "cell_map" })}
@@ -321,7 +322,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       <h4 className="text-ui text-[0.8rem] text-text-muted">表格模式配置</h4>
                       <div className="form-grid-3 grid grid-cols-3 gap-3">
                         <div>
-                          <label className={labelCls}>表头行号</label>
+                          <label className={labelCls}>表头行号 <HelpPopover>汇总表中表头所在行号（从 1 开始）。</HelpPopover></label>
                           <input
                             type="number"
                             value={local.summary.header_row ?? 1}
@@ -330,7 +331,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                           />
                         </div>
                         <div>
-                          <label className={labelCls}>键列</label>
+                          <label className={labelCls}>键列 <HelpPopover>变量名字段，如"项目"。</HelpPopover></label>
                           <input
                             value={local.summary.key_column || ""}
                             onChange={(e) => updateSummary({ key_column: e.target.value })}
@@ -338,7 +339,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                           />
                         </div>
                         <div>
-                          <label className={labelCls}>值列</label>
+                          <label className={labelCls}>值列 <HelpPopover>变量值字段，如"经费"。</HelpPopover></label>
                           <input
                             value={local.summary.value_column || ""}
                             onChange={(e) => updateSummary({ value_column: e.target.value })}
@@ -347,7 +348,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                         </div>
                       </div>
                       <div>
-                        <label className={labelCls}>变量前缀</label>
+                        <label className={labelCls}>变量前缀 <HelpPopover>生成的模板变量前缀，如 SUMMARY_ 会生成 SUMMARY_总经费。</HelpPopover></label>
                         <input
                           value={local.summary.prefix || ""}
                           onChange={(e) => updateSummary({ prefix: e.target.value })}
@@ -357,7 +358,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className={labelCls}>描述列</label>
+                          <label className={labelCls}>描述列 <HelpPopover>从汇总页读取描述信息插入到章节标题下。</HelpPopover></label>
                           <input
                             value={local.summary.description_column || ""}
                             onChange={(e) => updateSummary({ description_column: e.target.value })}
@@ -455,7 +456,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                   </div>
                   <div className="grid grid-cols-4 gap-3">
                     <div>
-                      <label className={labelCls}>章节名称</label>
+                      <label className={labelCls}>章节名称 <HelpPopover>报告中显示的标题。</HelpPopover></label>
                       <input
                         value={sheet.name}
                         onChange={(e) => updateSheet(sheetIdx, { name: e.target.value })}
@@ -463,7 +464,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       />
                     </div>
                     <div>
-                      <label className={labelCls}>Excel Sheet</label>
+                      <label className={labelCls}>Excel Sheet <HelpPopover>对应的 Excel 工作表名称。</HelpPopover></label>
                       <input
                         value={sheet.sheet_name}
                         onChange={(e) => updateSheet(sheetIdx, { sheet_name: e.target.value })}
@@ -471,7 +472,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       />
                     </div>
                     <div>
-                      <label className={labelCls}>章节 ID</label>
+                      <label className={labelCls}>章节 ID <HelpPopover>唯一标识，用于模板占位符匹配。</HelpPopover></label>
                       <input
                         value={sheet.id}
                         onChange={(e) => updateSheet(sheetIdx, { id: e.target.value })}
@@ -479,7 +480,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                       />
                     </div>
                     <div>
-                      <label className={labelCls}>汇总页描述键</label>
+                      <label className={labelCls}>汇总页描述键 <HelpPopover>关联汇总页中的哪一行描述。</HelpPopover></label>
                       <input
                         value={sheet.summary_key || ""}
                         onChange={(e) => updateSheet(sheetIdx, { summary_key: e.target.value })}
@@ -490,7 +491,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="max-w-[200px]">
-                      <label className={labelCls}>表头行号</label>
+                      <label className={labelCls}>表头行号 <HelpPopover>数据表表头所在行号（从 1 开始）。</HelpPopover></label>
                       <input
                         type="number"
                         min={1}
@@ -523,8 +524,8 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                     <div className="grid grid-cols-[1fr_1fr_36px_36px_20px_20px_20px] gap-1 mb-1 px-1">
                       <span className="text-[0.6rem] text-text-quaternary uppercase">字段名</span>
                       <span className="text-[0.6rem] text-text-quaternary uppercase">Excel 列名</span>
-                      <span className="text-[0.6rem] text-text-quaternary uppercase text-center" title="表格列">表格</span>
-                      <span className="text-[0.6rem] text-text-quaternary uppercase text-center" title="详情字段">详情</span>
+                      <span className="text-[0.6rem] text-text-quaternary uppercase text-center" title="勾选后作为表格列显示">表格 <HelpPopover>勾选的字段会作为列显示在表格中。</HelpPopover></span>
+                      <span className="text-[0.6rem] text-text-quaternary uppercase text-center" title="勾选后以段落形式显示">详情 <HelpPopover>勾选的字段会以段落形式显示在每条明细下方。</HelpPopover></span>
                       <span></span><span></span><span></span>
                     </div>
                     {Object.entries(sheet.columns).map(([key, value], colIdx) => (
@@ -582,7 +583,7 @@ export function ConfigEditor({ config, onChange, onClose }: Props) {
                   {/* Image columns */}
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <span className="text-ui text-[0.733rem] text-text-quaternary">图片列</span>
+                      <span className="text-ui text-[0.733rem] text-text-quaternary">图片列 <HelpPopover>包含图片的列名（如"报价截图"），图片会按全局设定的宽度插入报告。</HelpPopover></span>
                       <button onClick={() => addImageColumn(sheetIdx)} className="text-[0.733rem] text-brand-accent hover:text-brand-hover transition-colors">
                         + 添加
                       </button>

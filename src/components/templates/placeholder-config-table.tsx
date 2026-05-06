@@ -31,6 +31,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
+import { HelpTooltip } from "@/components/shared/help-tooltip";
 
 interface TableColumn {
   key: string;
@@ -434,13 +435,13 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[140px]">键名</TableHead>
-                <TableHead className="min-w-[160px]">标签</TableHead>
-                <TableHead className="min-w-[160px]">备注</TableHead>
-                <TableHead className="w-[130px]">输入类型</TableHead>
-                <TableHead className="w-[70px]">必填</TableHead>
-                <TableHead className="w-[140px]">默认值</TableHead>
-                <TableHead className="w-[80px]">排序</TableHead>
-                <TableHead className="w-[100px]">数据源</TableHead>
+                <TableHead className="min-w-[160px]">标签 <HelpTooltip text="填表时显示的字段名称，替代占位符键名" /></TableHead>
+                <TableHead className="min-w-[160px]">备注 <HelpTooltip text="填表时显示在字段下方的提示说明" /></TableHead>
+                <TableHead className="w-[130px]">输入类型 <HelpTooltip text="单行文本：普通输入框；多行文本：支持换行的文本域；明细表：表格形式录入多行数据" /></TableHead>
+                <TableHead className="w-[70px]">必填 <HelpTooltip text="填表时该占位符必须填写" /></TableHead>
+                <TableHead className="w-[140px]">默认值 <HelpTooltip text="填表时自动填入的初始值" /></TableHead>
+                <TableHead className="w-[80px]">排序 <HelpTooltip text="填表表单中的显示顺序" /></TableHead>
+                <TableHead className="w-[100px]">数据源 <HelpTooltip text="绑定数据表字段后，填表时可从数据表中选择已有数据" /></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -642,7 +643,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                 onCheckedChange={setEnablePicker}
                 id="enable-picker"
               />
-              <Label htmlFor="enable-picker">启用数据选择</Label>
+              <Label htmlFor="enable-picker">启用数据选择 <HelpTooltip text="开启后，填表时该字段可从数据表中搜索选择" /></Label>
             </div>
 
             {/* Data Source Configuration */}
@@ -657,7 +658,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                   <>
                     {/* Source Table Select */}
                     <div className="space-y-2">
-                      <Label htmlFor="source-table">数据来源表</Label>
+                      <Label htmlFor="source-table">数据来源表 <HelpTooltip text="选择提供数据的源数据表" /></Label>
                       <Select
                         value={sourceTableId ?? ""}
                         onValueChange={(v) => {
@@ -683,7 +684,7 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
                     {/* Source Field Select */}
                     {sourceTableId && (
                       <div className="space-y-2">
-                        <Label htmlFor="source-field">数据字段</Label>
+                        <Label htmlFor="source-field">数据字段 <HelpTooltip text="选择展示给用户的数据表字段" /></Label>
                         <Select
                           value={sourceField ?? ""}
                           onValueChange={setSourceField}

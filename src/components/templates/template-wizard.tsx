@@ -19,6 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { PlaceholderConfigTable, type PlaceholderConfigTableHandle } from "./placeholder-config-table";
 import { CategorySelect } from "./category-select";
+import { HelpTooltip } from "@/components/shared/help-tooltip";
 import { TagMultiSelect } from "./tag-multi-select";
 
 // ── Types ──
@@ -507,7 +508,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
               {/* File Upload Area */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  模板文件 {isEditMode ? "(可选，留空则不替换)" : ""}
+                  模板文件 {isEditMode ? "(可选，留空则不替换)" : ""} <HelpTooltip text="上传包含 {{ 占位符 }} 标记的 .docx 文件，系统会自动识别其中的占位符" />
                 </label>
                 <div
                   className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
@@ -559,7 +560,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
               {/* Name */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  模板名称 <span className="text-destructive">*</span>
+                  模板名称 <span className="text-destructive">*</span> <HelpTooltip text="模板的显示名称，会出现在模板列表和填表页面" />
                 </label>
                 <Input
                   value={name}
@@ -570,7 +571,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
 
               {/* Description */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">描述（可选）</label>
+                <label className="text-sm font-medium">描述（可选） <HelpTooltip text="模板的简要说明，帮助用户了解模板用途" /></label>
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -582,20 +583,20 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
               {/* Category */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">
-                  分类 <span className="text-destructive">*</span>
+                  分类 <span className="text-destructive">*</span> <HelpTooltip text="将模板归类到不同分类中，便于管理和查找" />
                 </label>
                 <CategorySelect value={categoryId} onChange={setCategoryId} />
               </div>
 
               {/* Tags */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">标签（可选）</label>
+                <label className="text-sm font-medium">标签（可选） <HelpTooltip text="为模板添加标签，支持多标签筛选" /></label>
                 <TagMultiSelect value={tagIds} onChange={setTagIds} />
               </div>
 
               {/* Screenshot Upload */}
               <div className="space-y-2">
-                <label className="text-sm font-medium">模板截图（可选）</label>
+                <label className="text-sm font-medium">模板截图（可选） <HelpTooltip text="上传模板的预览截图，方便用户在列表中识别模板" /></label>
                 <div
                   className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-4 transition-colors ${
                     screenshotPreview

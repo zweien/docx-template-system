@@ -35,6 +35,26 @@ export function TemplateManager() {
     }
   };
 
+  const handleDownloadSample = async () => {
+    try {
+      const res = await fetch("/samples/budget_report.docx");
+      const blob = await res.blob();
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve) => {
+        reader.onload = () => {
+          const dataUrl = reader.result as string;
+          resolve(dataUrl.split(",", 2)[1]);
+        };
+        reader.readAsDataURL(blob);
+      });
+      const { saveDataAs } = await import("../services/tauri-commands");
+      await saveDataAs("预算报告模板.docx", base64, true);
+      addLog("示例模板已下载", "success");
+    } catch (e) {
+      addLog(`下载失败: ${e}`, "error");
+    }
+  };
+
   const handleDelete = (id: string) => setDeleteTarget(id);
 
   const confirmDelete = async () => {
@@ -62,12 +82,20 @@ export function TemplateManager() {
             <h2 className="text-heading text-lg text-text">模板管理</h2>
             <p className="text-caption text-text-muted mt-1">管理和导入报告模板</p>
           </div>
-          <button
-            onClick={handleImport}
-            className="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[0.867rem] font-medium transition-colors"
-          >
-            + 导入模板
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleDownloadSample}
+              className="px-4 py-2 bg-surface border border-border text-text-secondary rounded-md hover:bg-surface-hover text-[0.867rem] transition-colors"
+            >
+              下载示例模板
+            </button>
+            <button
+              onClick={handleImport}
+              className="px-4 py-2 bg-brand text-white rounded-md hover:bg-brand-hover text-[0.867rem] font-medium transition-colors"
+            >
+              + 导入模板
+            </button>
+          </div>
         </div>
 
         {templates.length === 0 ? (
@@ -76,7 +104,7 @@ export function TemplateManager() {
               ⊞
             </div>
             <p className="text-text-secondary font-medium text-[0.867rem]">还没有导入模板</p>
-            <p className="text-[0.733rem] text-text-quaternary mt-1">点击上方按钮导入 .docx 模板文件</p>
+            <p className="text-[0.733rem] text-text-quaternary mt-1">点击上方按钮导入 .docx 模板文件，或下载示例模板</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 card-grid">

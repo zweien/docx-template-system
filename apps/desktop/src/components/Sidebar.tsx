@@ -107,7 +107,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.2</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.3</p>
             </div>
           )}
         </div>
@@ -273,6 +273,13 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.8.3", date: "2026-05-06", changes: [
+      { type: "feat", text: "表格样式：通过模板段落样式（表格表头/表格正文）控制表格字体" },
+      { type: "feat", text: "全局配置：图片宽度、科目/条目标题级别统一设置" },
+      { type: "feat", text: "模板管理页面：下载示例模板按钮，Excel导入步骤增加模板下载" },
+      { type: "feat", text: "帮助文档新增模板样式说明" },
+      { type: "refactor", text: "自定义样式名统一为中文（表格标题、图片标题、注释等）" },
+    ]},
     { ver: "0.8.2", date: "2026-05-06", changes: [
       { type: "feat", text: "科目总体描述：从 Excel 汇总页读取描述插入到 heading 下（table/cell_map 均支持）" },
       { type: "fix", text: "修复 Word 拆分 run 导致占位符无法识别的问题" },

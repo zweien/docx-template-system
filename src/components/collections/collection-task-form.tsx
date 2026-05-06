@@ -13,6 +13,7 @@ import {
 } from "./collection-assignee-picker";
 import { CollectionAttachmentsUpload } from "./collection-attachments-upload";
 import { CollectionRenameRuleEditor } from "./collection-rename-rule-editor";
+import { HelpTooltip } from "@/components/shared/help-tooltip";
 
 interface CustomVariableRow {
   key: string;
@@ -109,7 +110,7 @@ export function CollectionTaskForm({
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="collection-title">任务标题</Label>
+              <Label htmlFor="collection-title">任务标题 <HelpTooltip text="文档收集任务的名称，也用于默认的文件命名" /></Label>
               <Input
                 id="collection-title"
                 value={title}
@@ -120,7 +121,7 @@ export function CollectionTaskForm({
             </div>
 
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="collection-instruction">提交说明</Label>
+              <Label htmlFor="collection-instruction">提交说明 <HelpTooltip text="提交人看到的填写说明，如文件格式要求、注意事项" /></Label>
               <Textarea
                 id="collection-instruction"
                 value={instruction}
@@ -132,7 +133,7 @@ export function CollectionTaskForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="collection-due-at">截止时间</Label>
+              <Label htmlFor="collection-due-at">截止时间 <HelpTooltip text="提交的截止日期，过期后提交人无法提交" /></Label>
               <Input
                 id="collection-due-at"
                 type="datetime-local"
@@ -143,7 +144,7 @@ export function CollectionTaskForm({
             </div>
 
             <div className="space-y-2">
-              <Label>提交人</Label>
+              <Label>提交人 <HelpTooltip text="可以提交文档的人员列表" /></Label>
               <CollectionAssigneePicker
                 options={assigneeOptions}
                 value={assigneeIds}
@@ -154,7 +155,7 @@ export function CollectionTaskForm({
 
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>自定义变量</Label>
+              <Label>自定义变量 <HelpTooltip text="在文件命名规则中使用的额外变量。内置变量：{姓名}、{任务标题}；自定义变量可自行定义名称和预设值" /></Label>
               <Button
                 type="button"
                 variant="outline"

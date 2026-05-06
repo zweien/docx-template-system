@@ -107,7 +107,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.1</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.2</p>
             </div>
           )}
         </div>
@@ -260,6 +260,11 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.8.2", date: "2026-05-06", changes: [
+      { type: "feat", text: "科目总体描述：从 Excel 汇总页读取描述插入到 heading 下（table/cell_map 均支持）" },
+      { type: "fix", text: "修复 Word 拆分 run 导致占位符无法识别的问题" },
+      { type: "fix", text: "修复 OMML 命名空间注册产生 xmlns:ns0 错误" },
+    ]},
     { ver: "0.8.1", date: "2026-05-05", changes: [
       { type: "feat", text: "更新应用图标为全新紫色 Lab Logo（正方形比例、透明背景）" },
     ]},

@@ -118,10 +118,10 @@ export function StepConfigure() {
                     </tbody>
                   </table>
                 </div>
-                {(imgCols.length > 0 || sheet.heading_level != null) && (
+                {(imgCols.length > 0 || config?.heading_level != null) && (
                   <div className="flex gap-4 text-[0.667rem] text-text-quaternary">
                     {imgCols.length > 0 && <span>图片列: {imgCols.join(", ")}</span>}
-                    {sheet.heading_level != null && <span>标题级别: {sheet.heading_level}</span>}
+                    {config?.heading_level != null && <span>标题级别: {config.heading_level}</span>}
                   </div>
                 )}
               </div>

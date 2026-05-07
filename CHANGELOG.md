@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.1](https://github.com/zweien/docx-template-system/compare/v0.10.0...v0.10.1) (2026-05-07)
+
+
+### Features
+
+* add select-all toggle to collection assignee picker ([68f8d25](https://github.com/zweien/docx-template-system/commit/68f8d25ca0f060ab67ba08fd94e8e96c25a8d1ac))
+* **budget:** add section description from Excel summary page ([7804843](https://github.com/zweien/docx-template-system/commit/78048433e4c1130abe2abb173808c7c505d71174))
+* **desktop:** add global config for image width, heading levels ([5f9db3f](https://github.com/zweien/docx-template-system/commit/5f9db3f36f0271f130365f080a7e53dd30acc62d))
+* **desktop:** add sample template download to template management page ([e5cbb78](https://github.com/zweien/docx-template-system/commit/e5cbb7849979b35d84f0a86728d6e513a5a581d6))
+* **report-engine:** use named styles for table cells and localize style names ([041fb1e](https://github.com/zweien/docx-template-system/commit/041fb1e2e7a9fd33def16fe7596e9f4a263cb792))
+
+
+### Bug Fixes
+
+* **desktop:** fix TS error from moved heading_level to global config ([bd3398d](https://github.com/zweien/docx-template-system/commit/bd3398d047a38b426456140a5e99f8bce984c38d))
+* **report-engine:** merge split runs for placeholder matching and fix OMML namespace ([e67a33d](https://github.com/zweien/docx-template-system/commit/e67a33d4c9c8dd94a8a8c69fce39eabf3b430203))
+
 ## [0.10.0](https://github.com/zweien/docx-template-system/compare/v0.9.2...v0.10.0) (2026-05-05)
 
 

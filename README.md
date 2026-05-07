@@ -10,8 +10,9 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)
 ![License](https://img.shields.io/badge/License-MIT-green)
+[![文档站](https://img.shields.io/badge/文档站-在线阅读-blue)](https://zweien.github.io/docx-template-system/)
 
-> **v0.10.1**
+> **v0.10.1** · [在线文档](https://zweien.github.io/docx-template-system/)
 
 模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。同时提供报告撰写、文档收集、预算报告等功能模块。
 
@@ -481,6 +482,10 @@ report-engine/
 三层后端模式：`types/` → `validators/` → `services/` → API Routes。
 
 ## 文档索引
+
+**在线文档**：https://zweien.github.io/docx-template-system/
+
+本地文档（`docs/` 目录）：
 
 - [认证接入说明](./docs/authentication.md)
 - [开发运行说明](./docs/development.md)

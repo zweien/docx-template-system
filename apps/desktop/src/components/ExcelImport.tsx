@@ -17,7 +17,7 @@ interface Props {
 }
 
 async function fetchAndSave(url: string, filename: string) {
-  const res = await fetch(`http://localhost:1420${url}`);
+  const res = await fetch(url);
   const blob = await res.blob();
   const reader = new FileReader();
   const base64 = await new Promise<string>((resolve) => {

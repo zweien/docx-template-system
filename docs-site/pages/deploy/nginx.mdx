@@ -1,0 +1,102 @@
+# Nginx HTTPS 反向代理
+
+使用 Nginx 作为反向代理，提供 HTTPS 访问和负载均衡。
+
+## 基本配置
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name your-domain.com;
+
+    # SSL 证书
+    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    # 主应用
+    location / {
+        proxy_pass http://127.0.0.1:8060;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
+        client_max_body_size 20M;
+    }
+
+    # 协作 WebSocket（如需独立代理）
+    location /collab {
+        proxy_pass http://127.0.0.1:8072;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_read_timeout 86400;
+    }
+}
+
+# HTTP -> HTTPS 重定向
+server {
+    listen 80;
+    server_name your-domain.com;
+    return 301 https://$host$request_uri;
+}
+```
+
+## 内网 HTTP 配置
+
+内网环境通常不需要 HTTPS，简化配置即可：
+
+```nginx
+server {
+    listen 80;
+    server_name <内网域名或IP>;
+
+    location / {
+        proxy_pass http://127.0.0.1:8060;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_cache_bypass $http_upgrade;
+        client_max_body_size 20M;
+    }
+}
+```
+
+## SSL 证书
+
+### 使用 Certbot（Let's Encrypt）
+
+```bash
+# 安装 Certbot
+apt install certbot python3-certbot-nginx
+
+# 签发证书
+certbot --nginx -d your-domain.com
+
+# 自动续期（Certbot 会自动配置 cron）
+certbot renew --dry-run
+```
+
+### 使用自签名证书
+
+```bash
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout /etc/nginx/ssl/server.key \
+  -out /etc/nginx/ssl/server.crt
+```
+
+## 关键配置说明
+
+- `client_max_body_size 20M` — 允许上传最大 20MB 文件
+- `proxy_http_version 1.1` + `Upgrade` 头 — 支持 WebSocket
+- `X-Forwarded-Proto` — 让 Next.js 知道原始请求是 HTTPS

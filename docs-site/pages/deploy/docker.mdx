@@ -1,0 +1,114 @@
+# Docker 在线部署
+
+使用 Docker Compose 一键部署到服务器。
+
+## 架构
+
+```
+用户 -> Nginx (443/SSL) -> Docker (8060) -> Next.js App
+                                          -> Python Service (8065)
+                                          -> Report Engine (8066)
+                                          -> PostgreSQL
+```
+
+## 前置条件
+
+- Docker + Docker Compose 插件
+- 域名（可选，用于 HTTPS）
+- SMTP 服务器（可选，用于邮件通知）
+
+## 部署步骤
+
+### 1. 克隆仓库
+
+```bash
+git clone https://github.com/zweien/docx-template-system.git
+cd docx-template-system
+```
+
+### 2. 准备环境变量
+
+```bash
+cp .env.example .env.local
+```
+
+编辑 `.env.local`，至少配置：
+
+- `DATABASE_URL` — PostgreSQL 连接字符串
+- `NEXTAUTH_SECRET` — 随机密钥（`openssl rand -hex 32`）
+- `NEXTAUTH_URL` — 应用访问地址
+- Authentik OIDC 相关配置（如果使用统一认证）
+
+详见 [环境变量说明](/deploy/env-vars)。
+
+### 3. 构建并启动
+
+```bash
+# 构建镜像
+docker compose build
+
+# 同步数据库
+docker compose run --rm --user root app npx prisma db push
+
+# 初始化种子数据（仅首次）
+docker compose run --rm --user root app npx prisma db seed
+
+# 启动服务
+docker compose up -d --remove-orphans
+```
+
+### 4. 验证
+
+```bash
+# 健康检查
+curl -sf http://127.0.0.1:8060
+
+# 查看日志
+docker compose logs --tail=50 app
+docker compose logs --tail=50 python-service
+```
+
+## 自动部署（GitHub Actions）
+
+推送到 `v*` tag 时自动触发部署：
+
+```bash
+npm run release           # patch bump
+npm run release:minor     # minor bump
+git push --follow-tags    # 触发自动部署
+```
+
+部署流程：SSH 到服务器 → `git fetch --tags --force` → `docker compose build` → `docker compose up -d`
+
+## 手动更新
+
+```bash
+cd /opt/docx-template-system
+git fetch --tags --force
+git checkout <version-tag>
+
+docker compose build
+docker compose run --rm --user root app npx prisma db push
+docker compose up -d --remove-orphans
+```
+
+## Dockerfile 注意事项
+
+### prisma generate 需要占位 DATABASE_URL
+
+Docker 构建时 `.env.local` 不存在，需要在 builder 阶段设置占位值：
+
+```dockerfile
+ENV DATABASE_URL="postgresql://placeholder:placeholder@localhost:5432/placeholder"
+RUN npx prisma generate
+```
+
+### 构建时环境变量
+
+Next.js build 时会执行部分路由代码，需要提供所有必要环境变量的占位值：
+
+```dockerfile
+ARG AUTHENTIK_ISSUER="placeholder"
+ARG AUTHENTIK_CLIENT_ID="placeholder"
+ARG AUTHENTIK_CLIENT_SECRET="placeholder"
+```

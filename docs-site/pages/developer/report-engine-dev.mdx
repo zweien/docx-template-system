@@ -1,0 +1,123 @@
+# Report Engine 开发
+
+Report Engine 是独立的 Python 模块，提供 DOCX 模板渲染能力。
+
+## 模块结构
+
+```
+report-engine/
+├── main.py               # FastAPI HTTP 服务入口 (端口 8066)
+├── src/report_engine/
+│   ├── __init__.py
+│   ├── cli.py            # CLI 入口 (validate/check-template/render)
+│   ├── renderer.py       # 核心渲染逻辑
+│   ├── blocks.py         # 富文本块注册表
+│   ├── schema.py         # Payload 数据模型 (Pydantic)
+│   ├── validator.py      # Payload 校验
+│   ├── template_parser.py   # 模板占位符解析
+│   ├── template_checker.py  # 模板契约检查
+│   ├── style_checker.py  # 样式检查
+│   ├── converter.py      # BlockNote → report-engine 格式转换
+│   ├── subdoc.py         # 子文档构建
+│   ├── prompt_parser.py  # AI 提示词解析
+│   └── budget/           # 预算报告模块
+│       ├── models.py
+│       ├── parse_excel.py
+│       ├── validate_excel.py
+│       └── build_payload.py
+└── tests/
+```
+
+## 核心流程
+
+### 渲染流程
+
+```
+模板文件 (.docx)
+  ↓ template_parser.py
+解析占位符和结构
+  ↓
+payload 数据 (JSON)
+  ↓ validator.py
+校验 payload
+  ↓ renderer.py
+渲染 DOCX
+  ↓ blocks.py
+处理各类富文本块
+  ↓ subdoc.py
+构建子文档
+  ↓
+输出 DOCX
+```
+
+### BlockRegistry
+
+块渲染器通过注册表模式管理：
+
+```python
+from report_engine.blocks import BlockRegistry, create_default_registry
+
+registry = create_default_registry()
+
+# 注册自定义块类型
+def render_custom(doc, block, style_map):
+    # 自定义渲染逻辑
+    pass
+
+registry.register("custom_type", render_custom)
+```
+
+### 可扩展设计
+
+新增富文本块类型只需：
+
+1. 在 `blocks.py` 中添加渲染函数
+2. 注册到 `create_default_registry()`
+3. 在 `schema.py` 中更新 Block 模型（如需要）
+
+## CLI 命令
+
+```bash
+# 校验 payload 数据
+report-engine validate --payload data.json
+
+# 检查模板契约
+report-engine check-template --template tpl.docx --payload data.json
+
+# 渲染报告
+report-engine render --template tpl.docx --payload data.json --output out.docx
+```
+
+## 开发指南
+
+### 安装为可编辑包
+
+```bash
+cd report-engine
+python -m venv .venv
+.venv/bin/pip install -e .
+```
+
+### 运行测试
+
+```bash
+.venv/bin/python -m pytest tests/
+```
+
+### 添加新块类型
+
+1. 在 `blocks.py` 中实现渲染函数：
+
+```python
+def _render_custom_block(doc, block, style_map):
+    # 实现渲染逻辑
+    pass
+```
+
+2. 在 `create_default_registry()` 中注册：
+
+```python
+registry.register("custom_block", _render_custom_block)
+```
+
+3. 更新样式映射（`DEFAULT_STYLE_MAP`）如需要。

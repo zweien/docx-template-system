@@ -23,6 +23,9 @@ docs/deploy.md
 next-env.d.ts
 # next.js
 /node_modules
+docs-site/node_modules/
+docs-site/.next/
+docs-site/out/
 npm-debug.log*
 /out/
 /output

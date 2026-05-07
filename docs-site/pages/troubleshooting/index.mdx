@@ -1,0 +1,126 @@
+# 故障排查
+
+## http://localhost:8060/ 打不开
+
+检查是否有进程监听：
+
+```bash
+lsof -iTCP:8060 -sTCP:LISTEN -n -P
+```
+
+如果没有输出，启动开发服务：
+
+```bash
+npm run dev
+```
+
+## next dev 启动后很快失效，日志出现 ENOSPC
+
+这是 Linux 文件监听数量上限问题。
+
+```bash
+# 临时提升限制
+echo 524288 | sudo tee /proc/sys/fs/inotify/max_user_watches
+```
+
+同时检查：
+- 是否绕过了 `npm run dev`，直接手敲了别的 `next dev`
+- 是否同时开很多重复的开发进程
+
+## /login 能开，但点击统一登录失败
+
+检查以下环境变量：
+
+- `AUTHENTIK_ISSUER`
+- `AUTHENTIK_CLIENT_ID`
+- `AUTHENTIK_CLIENT_SECRET`
+- Authentik 后台 Redirect URI
+
+正确回调地址应为：
+
+```
+http://localhost:8060/api/auth/callback/authentik
+```
+
+## 登录成功后没有管理员权限
+
+确认 Authentik 用户邮箱是否和本地用户邮箱一致。
+
+本地角色认领规则：
+
+- 优先按 `oidcSubject`
+- 其次按邮箱认领已有本地用户
+
+如需首次自动成为管理员：
+- 把邮箱加入 `AUTHENTIK_ADMIN_EMAILS`
+- 或在本地"用户管理"中手动设为 `ADMIN`
+
+## 退出后再次进入还是自动登录
+
+确认：
+
+1. 前端是否经过 `/api/auth/sso-logout-url`
+2. Authentik 后台是否启用了正确的退出失效流程
+
+如果只清本地 Session，没有清 Authentik SSO，会出现"退出后再次进入自动登录"。
+
+## redirect_uri mismatch
+
+通常是 Authentik 后台和本地代码配置不一致。检查：
+
+- Authentik 应用 Redirect URI
+- `.env.local` 里的 issuer 和站点地址
+- 是否把 `localhost`、`127.0.0.1`、端口、路径写混了
+
+## invalid_client
+
+检查：
+
+- `AUTHENTIK_CLIENT_ID`
+- `AUTHENTIK_CLIENT_SECRET`
+
+最常见原因：
+- 从错误的 Provider 复制了凭据
+- 修改 `.env.local` 后没有重启开发服务
+
+## 页面框体或下拉弹层变透明
+
+打开 UI 验证页：`http://localhost:8060/login/ui-check`
+
+检查：
+1. 外层卡片是不是白底
+2. 卡片边框是不是可见
+3. Select 下拉层是不是白底深字
+4. Popover、DropdownMenu 是否会透出背景内容
+
+如果验证页也异常，优先检查 `src/app/tokens.css` 和 UI 组件。
+
+## 选项模板上传后解析为空
+
+### 不在支持范围内
+
+当前支持：
+- `{{选项:key|single}}` + `□ 选项`
+- `{{选项:key|multiple}}` + Word `w:sym` 内联勾选
+
+当前不支持：
+- 没有显式类型控制行
+- 使用了非 Wingdings 2 字体符号
+- 复杂嵌套场景
+
+### 运行中的服务是旧版本
+
+修改了 `src/lib/docx-parser.ts` 或 `python-service/main.py` 后需要重启对应服务。
+
+## Dashboard 首屏很慢
+
+### 首次编译慢
+
+某些页面第一次打开会明显慢，第二次变快。这是开发态编译成本。
+
+### 请求链路慢
+
+每次都慢时，检查 dev 日志判断是：
+- 页面本身数据加载慢
+- API 查询慢
+- 认证链路重复请求

@@ -1,0 +1,92 @@
+# 富文本块
+
+富文本块是 report-engine 渲染引擎的核心功能，支持将结构化数据渲染为格式化的 Word 内容。
+
+## 支持的块类型
+
+| 类型 | 说明 |
+|------|------|
+| `heading` | 标题（H1-H5） |
+| `paragraph` | 普通段落 |
+| `bullet_list` | 无序列表 |
+| `numbered_list` | 有序列表 |
+| `table` | 表格 |
+| `image` | 图片 |
+| `formula` | 数学公式 |
+| `code_block` | 代码块 |
+| `quote` | 引用 |
+| `checklist` | 清单 |
+| `note` | 注释 |
+
+## Payload 示例
+
+```json
+{
+  "sections": [
+    {
+      "id": "research",
+      "placeholder": "RESEARCH_CONTENT_SUBDOC",
+      "blocks": [
+        {
+          "type": "heading",
+          "text": "研究背景",
+          "level": 2
+        },
+        {
+          "type": "paragraph",
+          "text": "本研究探讨了..."
+        },
+        {
+          "type": "bullet_list",
+          "items": ["要点一", "要点二", "要点三"]
+        },
+        {
+          "type": "table",
+          "headers": ["指标", "数值", "单位"],
+          "rows": [
+            ["温度", "25", "°C"],
+            ["压力", "101.3", "kPa"]
+          ]
+        },
+        {
+          "type": "formula",
+          "latex": "E = mc^2"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## 样式映射
+
+渲染引擎使用样式映射将块类型对应到 Word 样式：
+
+| 块类型 | 默认 Word 样式 |
+|--------|---------------|
+| heading_1 | Heading 1 |
+| heading_2 | Heading 2 |
+| body | Body Text |
+| bullet_list | List Bullet |
+| numbered_list | List Number |
+| table_caption | 表格标题 |
+| figure_caption | 图片标题 |
+
+可通过 payload 中的 `style_map` 字段自定义样式映射。
+
+## 表格样式
+
+表格支持丰富的配置：
+
+- 自动表头样式（"表格表头"）
+- 自动正文样式（"表格正文"）
+- 表格/图片自动编号（SEQ 域代码）
+- 可关闭自动编号
+
+## 图片块
+
+图片支持多种来源：
+
+- Base64 编码的图片数据
+- URL 图片（自动下载）
+- 本地文件路径

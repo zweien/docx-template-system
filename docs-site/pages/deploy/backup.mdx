@@ -1,0 +1,92 @@
+# 数据备份与升级
+
+## 数据备份
+
+### 备份数据库
+
+```bash
+# 导出数据库
+docker exec <pg容器名> pg_dump -U docx_user docx_template_system > backup_$(date +%Y%m%d).sql
+
+# 或使用自定义格式（更高效）
+docker exec <pg容器名> pg_dump -U docx_user -Fc docx_template_system > backup_$(date +%Y%m%d).dump
+```
+
+### 备份上传文件
+
+```bash
+tar czf uploads_backup_$(date +%Y%m%d).tar.gz public/uploads/
+```
+
+### 恢复数据库
+
+```bash
+# 从 SQL 文件恢复
+cat backup_20260507.sql | docker exec -i <pg容器名> psql -U docx_user docx_template_system
+
+# 从自定义格式恢复
+docker exec -i <pg容器名> pg_restore -U docx_user -d docx_template_system < backup_20260507.dump
+```
+
+## 定时备份
+
+使用 crontab 设置定时备份：
+
+```bash
+# 每天凌晨 3 点备份
+0 3 * * * docker exec pg pg_dump -U docx_user -Fc docx_template_system > /opt/backups/db_$(date +\%Y\%m\%d).dump
+0 3 * * * tar czf /opt/backups/uploads_$(date +\%Y\%m\%d).tar.gz /opt/docx-template-system/public/uploads/
+```
+
+## 版本升级
+
+### Docker 部署升级
+
+```bash
+cd /opt/docx-template-system
+
+# 拉取最新代码
+git fetch --tags --force
+git checkout <new-version-tag>
+
+# 重新构建
+docker compose build
+
+# 同步数据库 schema
+docker compose run --rm --user root app npx prisma db push
+
+# 重启服务
+docker compose up -d --remove-orphans
+```
+
+### 离线部署升级
+
+1. 在开发机构建新版本镜像
+2. 导出并传输到内网
+3. 加载新镜像
+4. 更新 `docker-compose.offline.yml` 中的镜像版本号
+5. 执行 `docker compose up -d` 和 `prisma db push`
+
+详见 [内网离线部署](/deploy/offline#版本升级)。
+
+## 数据迁移
+
+### 关系子表格字段迁移
+
+如果数据库中存在旧的 `RELATION` 类型字段，需运行迁移脚本：
+
+```bash
+# 预览迁移（不写入数据库）
+npx tsx scripts/migrate-relation-fields.ts --dry-run
+
+# 执行迁移
+npx tsx scripts/migrate-relation-fields.ts
+```
+
+迁移内容：
+1. 将 `RELATION` 字段类型改为 `RELATION_SUBTABLE`
+2. 为缺失反向字段的字段自动生成系统反向字段
+3. 从 `DataRecord.data` 中回填 `DataRelationRow` 关系行
+4. 刷新正反 JSONB 快照
+
+**注意：** 执行前务必先运行 `--dry-run` 检查数据完整性。

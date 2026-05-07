@@ -1,0 +1,54 @@
+# 桌面应用
+
+桌面应用基于 Tauri 2.0 构建，内置 Python sidecar，支持离线运行。
+
+## 功能特点
+
+- **独立运行** — 无需联网，无需部署服务器
+- **离线生成** — 本地完成 Excel 校验和报告生成
+- **配置管理** — 可视化配置编辑器，支持多方案管理
+- **跨平台** — Windows（NSIS 安装包）、Linux（AppImage/deb）
+
+## 安装
+
+从 [GitHub Releases](https://github.com/zweien/docx-template-system/releases) 下载对应平台的安装包。
+
+| 平台 | 格式 |
+|------|------|
+| Windows | `.exe`（NSIS 安装包） |
+| Linux | `.AppImage` / `.deb` |
+
+## 使用流程
+
+### 1. 导入模板
+
+- 点击"导入模板"上传 `.docx` 文件
+- 系统自动验证模板格式和占位符
+
+### 2. 配置方案
+
+- 使用可视化配置编辑器设置字段映射
+- 支持 JSON 配置导入导出
+- 可创建多个配置方案
+
+### 3. 导入 Excel
+
+- 上传 Excel 数据文件
+- 系统自动解析并校验工作表
+
+### 4. 生成报告
+
+- 预览生成效果
+- 选择输出路径
+- 生成 DOCX 文件
+
+## 本地开发
+
+```bash
+cd apps/desktop
+npm install
+cd sidecar && pip install -r requirements.txt
+npm run tauri:dev
+```
+
+详见 [桌面应用 README](https://github.com/zweien/docx-template-system/blob/master/apps/desktop/README.md)。

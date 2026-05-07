@@ -1,0 +1,117 @@
+# API 开发模式
+
+本节介绍如何按照项目约定开发新的 API 接口。
+
+## 三层模式
+
+### 1. 类型定义（types/）
+
+在 `src/types/` 中定义 TypeScript 接口：
+
+```typescript
+// src/types/template.ts
+export interface TemplateListItem {
+  id: string
+  name: string
+  status: TemplateStatus
+  createdAt: Date
+}
+```
+
+### 2. 验证器（validators/）
+
+在 `src/validators/` 中使用 Zod 定义输入验证：
+
+```typescript
+// src/validators/template.ts
+import { z } from "zod"
+
+export const createTemplateSchema = z.object({
+  name: z.string().min(1, "名称不能为空"),
+  description: z.string().optional(),
+})
+
+export type CreateTemplateInput = z.infer<typeof createTemplateSchema>
+```
+
+### 3. 服务层（lib/services/）
+
+在 `src/lib/services/` 中实现业务逻辑，返回 `ServiceResult<T>`：
+
+```typescript
+// src/lib/services/template.service.ts
+import { db } from "@/lib/db"
+
+type ServiceResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: { code: string; message: string } }
+
+export async function createTemplate(
+  input: CreateTemplateInput
+): Promise<ServiceResult<TemplateListItem>> {
+  try {
+    const template = await db.template.create({
+      data: input,
+    })
+    return { success: true, data: template }
+  } catch (error) {
+    return {
+      success: false,
+      error: { code: "INTERNAL_ERROR", message: "创建失败" },
+    }
+  }
+}
+```
+
+### 4. Route Handler（app/api/）
+
+在 `src/app/api/` 中创建薄包装层：
+
+```typescript
+// src/app/api/templates/route.ts
+import { NextRequest, NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+import { createTemplateSchema } from "@/validators/template"
+import { createTemplate } from "@/lib/services/template.service"
+
+export async function POST(request: NextRequest) {
+  const session = await auth()
+  if (!session?.user) {
+    return NextResponse.json({ error: "未授权" }, { status: 401 })
+  }
+
+  const body = await request.json()
+  const parsed = createTemplateSchema.safeParse(body)
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: "输入验证失败", details: parsed.error.flatten() },
+      { status: 400 }
+    )
+  }
+
+  const result = await createTemplate(parsed.data)
+
+  if (!result.success) {
+    return NextResponse.json(
+      { error: result.error.message },
+      { status: 500 }
+    )
+  }
+
+  return NextResponse.json(result.data, { status: 201 })
+}
+```
+
+## 文件上传
+
+使用 `src/lib/file.service.ts` 处理文件上传：
+
+```typescript
+import { saveFile, copyFile, deleteFile } from "@/lib/file.service"
+
+// 保存上传文件
+const filePath = await saveFile(file, "templates")
+```
+
+上传文件存储在 `public/uploads/{templates|documents}/` 目录。

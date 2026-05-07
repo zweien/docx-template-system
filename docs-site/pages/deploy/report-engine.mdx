@@ -1,0 +1,92 @@
+# Report Engine 配置
+
+Report Engine 是模板驱动的 DOCX 渲染引擎，支持富文本块、条件段落、子文档等高级功能。
+
+## 概述
+
+- **端口**：8066（默认）
+- **技术栈**：Python FastAPI + python-docx + docxtpl
+- **功能**：模板渲染、Payload 校验、模板检查、预算报告生成
+
+## 安装
+
+```bash
+cd report-engine
+python -m venv .venv
+.venv/bin/pip install -e .
+```
+
+## 启动
+
+### HTTP 服务
+
+```bash
+cd report-engine
+.venv/bin/python main.py
+```
+
+服务将在 `http://localhost:8066` 启动。
+
+### CLI 使用
+
+```bash
+# 校验 payload 数据
+report-engine validate --payload data.json
+
+# 检查模板契约
+report-engine check-template --template tpl.docx --payload data.json
+
+# 渲染报告
+report-engine render --template tpl.docx --payload data.json --output out.docx
+```
+
+## HTTP 接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/health` | 健康检查 |
+| POST | `/render` | 渲染 DOCX |
+| POST | `/parse-template` | 解析模板占位符 |
+
+### POST /render
+
+请求参数：
+
+```json
+{
+  "template_path": "/path/to/template.docx",
+  "output_filename": "output.docx",
+  "payload": {
+    "title": "报告标题",
+    "sections": [
+      {
+        "type": "heading",
+        "text": "第一章 概述",
+        "level": 1
+      }
+    ]
+  }
+}
+```
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `REPORT_ENGINE_URL` | `http://localhost:8066` | 服务地址（在主应用中配置） |
+
+## Docker 部署
+
+Report Engine 与主应用共享 Dockerfile，在同一容器中运行。
+
+## 核心模块
+
+| 模块 | 说明 |
+|------|------|
+| `renderer.py` | 核心渲染逻辑 |
+| `blocks.py` | 富文本块注册表（标题/列表/表格/图片/公式等） |
+| `template_parser.py` | 模板占位符解析 |
+| `template_checker.py` | 模板契约检查 |
+| `subdoc.py` | 子文档构建 |
+| `converter.py` | BlockNote → report-engine 格式转换 |
+| `budget/` | 预算报告模块（Excel 解析/校验/构建） |

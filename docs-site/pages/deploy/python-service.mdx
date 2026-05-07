@@ -1,0 +1,81 @@
+# Python Service 配置
+
+Python Service 是一个轻量级 FastAPI 服务，用于简单的 DOCX 占位符替换。
+
+## 概述
+
+- **端口**：8065（默认）
+- **技术栈**：Python FastAPI + python-docx
+- **功能**：替换 `{{ key }}` 形式的占位符
+
+## 安装
+
+```bash
+cd python-service
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+## 启动
+
+```bash
+cd python-service
+.venv/bin/python main.py
+```
+
+服务将在 `http://localhost:8065` 启动。
+
+## 接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/health` | 健康检查 |
+| POST | `/generate` | 生成文档 |
+
+### POST /generate
+
+请求参数：
+
+```json
+{
+  "template_path": "/path/to/template.docx",
+  "output_filename": "output.docx",
+  "form_data": {
+    "contractNo": "HT-2026-001",
+    "partyA": "公司A",
+    "signDate": "2026-01-01"
+  }
+}
+```
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `PYTHON_SERVICE_URL` | `http://localhost:8065` | 服务地址（在主应用中配置） |
+
+## Docker 部署
+
+Python Service 有独立的 Dockerfile：
+
+```bash
+docker build -t docx-template-system-python-service:<version> ./python-service/
+```
+
+在 `docker-compose.yml` 中：
+
+```yaml
+python-service:
+  build:
+    context: ./python-service
+  environment:
+    - PYTHON_SERVICE_URL=http://localhost:8065
+  volumes:
+    - uploads:/app/public/uploads
+  restart: unless-stopped
+```
+
+## 注意事项
+
+- 修改 `python-service/main.py` 后需要重启服务才能生效
+- 该服务仅用于简单的占位符替换，复杂渲染（富文本块、条件段落等）请使用 report-engine

@@ -1,0 +1,77 @@
+# y-websocket 协作服务配置
+
+y-websocket 是基于 Yjs 的实时协作 WebSocket 服务器，用于报告撰写模块的多用户协同编辑。
+
+## 概述
+
+- **端口**：8072（默认）
+- **技术栈**：y-websocket + Yjs + y-leveldb
+- **功能**：多人实时编辑、光标同步、在线状态、数据持久化
+
+## 启动
+
+### 开发模式
+
+```bash
+npm run dev:collab
+```
+
+### Docker 部署
+
+在 `docker-compose.yml` 中添加：
+
+```yaml
+collab:
+  build:
+    context: .
+    dockerfile: Dockerfile
+  command: node y-websocket-server/server.cjs
+  ports:
+    - "8072:8072"
+  environment:
+    - COLLAB_PORT=8072
+  volumes:
+    - collab-data:/app/y-websocket-server/data
+  restart: unless-stopped
+
+volumes:
+  collab-data:
+```
+
+## 环境变量
+
+| 变量 | 默认值 | 说明 |
+|------|--------|------|
+| `COLLAB_PORT` | `8072` | WebSocket 服务端口 |
+
+## 认证
+
+协作服务使用 JWT 认证：
+
+- 连接时验证用户身份
+- 支持多人同时编辑同一文档
+- 基于 Yjs CRDT 算法解决冲突
+
+## 数据持久化
+
+使用 y-leveldb 存储协作数据：
+
+- 编辑内容实时持久化
+- 断线重连后自动同步
+- 数据存储在 `y-websocket-server/data/` 目录
+
+## Nginx 代理配置
+
+WebSocket 需要特殊的 Nginx 配置：
+
+```nginx
+location /collab {
+    proxy_pass http://127.0.0.1:8072;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_read_timeout 86400;
+}
+```

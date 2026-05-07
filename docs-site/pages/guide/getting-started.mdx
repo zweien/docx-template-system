@@ -1,0 +1,98 @@
+# 快速开始
+
+本页帮助你快速搭建本地开发环境并运行 DOCX Template System。
+
+## 前置要求
+
+| 工具 | 最低版本 |
+|------|----------|
+| Node.js | >= 20 |
+| Python | >= 3.10 |
+| PostgreSQL | >= 14 |
+
+## 安装步骤
+
+### 1. 克隆仓库
+
+```bash
+git clone https://github.com/zweien/docx-template-system.git
+cd docx-template-system
+```
+
+### 2. 安装 Node.js 依赖
+
+```bash
+npm install
+```
+
+### 3. 准备环境变量
+
+创建 `.env.local` 文件：
+
+```bash
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/docx_template_system"
+NEXTAUTH_SECRET="your-random-secret"
+NEXTAUTH_URL="http://localhost:8060"
+UPLOAD_DIR="public/uploads"
+PYTHON_SERVICE_URL="http://localhost:8065"
+REPORT_ENGINE_URL="http://localhost:8066"
+DEV_BYPASS_AUTH=true
+NEXT_PUBLIC_DEV_BYPASS_AUTH=true
+```
+
+设置 `DEV_BYPASS_AUTH=true` 可在本地跳过 Authentik 认证，直接使用内置账号登录。
+
+### 4. 初始化数据库
+
+```bash
+npx prisma db push
+npx prisma generate
+npx prisma db seed
+```
+
+### 5. 安装 Python 服务
+
+```bash
+# 文档生成服务（端口 8065）
+cd python-service
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cd ..
+
+# report-engine 渲染引擎（端口 8066）
+cd report-engine
+python -m venv .venv
+.venv/bin/pip install -e .
+cd ..
+```
+
+### 6. 启动服务
+
+```bash
+# 启动 Python 文档生成服务
+cd python-service && .venv/bin/python main.py &
+
+# 启动 report-engine HTTP 服务
+cd report-engine && .venv/bin/python main.py &
+
+# 启动协作 WebSocket 服务器（报告撰写使用）
+npm run dev:collab &
+
+# 启动 Next.js 开发服务器
+npm run dev
+```
+
+### 7. 登录系统
+
+打开 http://localhost:8060/login ，使用开发模式账号登录：
+
+| 角色 | 邮箱 | 密码 |
+|------|------|------|
+| 管理员 | `admin@example.com` | `admin123` |
+| 普通用户 | `user@example.com` | `user123` |
+
+## 下一步
+
+- [模板管理](/guide/templates) — 了解如何创建和管理 DOCX 模板
+- [模板语法](/template-syntax/simple-placeholder) — 学习模板占位符的写法
+- [部署指南](/deploy/local) — 部署到生产环境

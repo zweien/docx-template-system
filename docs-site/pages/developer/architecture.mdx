@@ -1,0 +1,98 @@
+# 系统架构
+
+## 目录结构
+
+```
+src/
+├── app/
+│   ├── api/              # Route Handlers (thin wrappers)
+│   ├── (auth)/           # 登录页面
+│   └── (dashboard)/      # 主应用页面
+├── components/
+│   ├── agent2/           # AI 智能助手组件
+│   ├── budget/           # 预算报告组件
+│   ├── forms/            # 动态表单组件 + AI 填充助手
+│   ├── templates/        # 模板管理组件
+│   ├── data/             # 主数据组件
+│   │   ├── views/        # 5 种视图 (Grid/Kanban/Gallery/Timeline/Form)
+│   │   └── formula-editor.tsx  # 公式编辑器
+│   └── ui/               # shadcn/ui 基础组件
+├── lib/
+│   ├── services/         # 业务逻辑层 (ServiceResult 模式)
+│   ├── formula/          # 公式引擎 (tokenizer/AST/evaluator)
+│   ├── docx-parser.ts    # DOCX 占位符解析
+│   └── db.ts             # Prisma 客户端单例
+├── modules/
+│   └── reports/          # 报告撰写模块
+│       ├── components/   # 编辑器、AI 侧边栏、协作
+│       ├── converter/    # BlockNote → report-engine 格式转换
+│       ├── schema/       # BlockNote 自定义 schema
+│       └── services/     # 报告模板/草稿/导出服务
+├── types/                # TypeScript 接口
+└── validators/           # Zod schemas
+
+apps/
+└── desktop/              # Tauri 2.0 桌面应用
+    ├── src/              # React 前端
+    ├── src-tauri/        # Rust 后端
+    └── sidecar/          # Python sidecar (report-engine)
+
+y-websocket-server/       # 协作 WebSocket 服务器
+python-service/           # FastAPI 简单文档替换服务
+report-engine/            # DOCX 渲染引擎
+```
+
+## 三层后端模式
+
+```
+types/ (TypeScript 接口)
+  ↓
+validators/ (Zod schemas)
+  ↓
+lib/services/ (业务逻辑，返回 ServiceResult<T>)
+  ↓
+app/api/ (Route Handlers，thin wrappers)
+```
+
+### ServiceResult 模式
+
+所有 service 函数返回统一的结果类型：
+
+```typescript
+type ServiceResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: { code: string; message: string } }
+```
+
+Route Handlers 是薄包装层，负责：
+
+1. 验证输入（Zod）
+2. 检查认证和权限
+3. 委托给 service
+4. 返回 HTTP 响应
+
+## 路由分组
+
+| 分组 | 说明 | 布局 |
+|------|------|------|
+| `(auth)` | 登录页面 | 无侧边栏 |
+| `(dashboard)` | 主应用页面 | 侧边栏 + 头部 |
+
+## 关键模块
+
+### 报告撰写模块（modules/reports）
+
+独立的模块化设计：
+
+- **schema/** — BlockNote 自定义 schema，定义编辑器支持的块类型
+- **converter/** — BlockNote JSON → report-engine payload 格式转换
+- **components/** — 编辑器、AI 侧边栏、协作 UI 组件
+- **services/** — 模板/草稿/导出等业务服务
+
+### 公式引擎（lib/formula）
+
+```typescript
+// tokenizer → AST → evaluator
+parse("SUM({field1}, {field2})")
+// → Token[] → AST → number
+```

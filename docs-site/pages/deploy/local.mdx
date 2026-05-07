@@ -1,0 +1,72 @@
+# 本地开发运行
+
+适用于开发和测试环境。
+
+## 前置要求
+
+- Node.js >= 20
+- Python >= 3.10
+- PostgreSQL >= 14
+
+## 快速启动
+
+```bash
+# 1. 安装依赖
+npm install
+
+# 2. 初始化数据库
+npx prisma db push
+npx prisma generate
+npx prisma db seed
+
+# 3. 安装 Python 文档生成服务
+cd python-service
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cd ..
+
+# 4. 安装 report-engine
+cd report-engine
+python -m venv .venv
+.venv/bin/pip install -e .
+cd ..
+
+# 5. 启动各服务
+cd python-service && .venv/bin/python main.py &        # 端口 8065
+cd report-engine && .venv/bin/python main.py &         # 端口 8066
+npm run dev:collab &                                    # 端口 8072
+npm run dev                                             # 端口 8060
+```
+
+## 端口说明
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| Next.js | 8060 | 主应用 |
+| Python Service | 8065 | 简单文档替换 |
+| Report Engine | 8066 | 报告渲染引擎 |
+| y-websocket | 8072 | 协作 WebSocket |
+
+## 开发模式绕过认证
+
+设置以下环境变量可跳过 Authentik 认证：
+
+```env
+DEV_BYPASS_AUTH=true
+NEXT_PUBLIC_DEV_BYPASS_AUTH=true
+```
+
+登录页将显示管理员/普通用户快捷登录按钮。
+
+## 常用命令
+
+```bash
+npm run dev          # 启动开发服务器 (Turbopack, 端口 8060)
+npm run dev:collab   # 启动协作 WebSocket 服务器 (端口 8072)
+npm run build        # 生产构建
+npm run lint         # ESLint 检查
+npm run test:run     # 运行测试
+npx tsc --noEmit     # 类型检查
+npx prisma db push   # 同步数据库 schema
+npx prisma studio    # 数据库可视化工具
+```

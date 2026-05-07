@@ -1,0 +1,66 @@
+# 环境变量说明
+
+## 基础配置
+
+| 变量 | 必填 | 默认值 | 说明 |
+|------|------|--------|------|
+| `DATABASE_URL` | 是 | — | PostgreSQL 连接字符串 |
+| `NEXTAUTH_SECRET` | 是 | — | JWT 签名密钥，使用 `openssl rand -hex 32` 生成 |
+| `NEXTAUTH_URL` | 是 | — | 应用访问地址，如 `http://localhost:8060` |
+| `UPLOAD_DIR` | 否 | `public/uploads` | 上传文件存储目录 |
+| `APP_PORT` | 否 | `8060` | 应用监听端口 |
+
+## 认证配置
+
+| 变量 | 必填 | 说明 |
+|------|------|------|
+| `AUTHENTIK_ISSUER` | 是 | Authentik OIDC Issuer URL |
+| `AUTHENTIK_CLIENT_ID` | 是 | Authentik 应用 Client ID |
+| `AUTHENTIK_CLIENT_SECRET` | 是 | Authentik 应用 Client Secret |
+| `AUTHENTIK_LOGOUT_REDIRECT_URL` | 否 | 退出登录后跳转地址 |
+| `AUTHENTIK_ADMIN_EMAILS` | 否 | 首次登录自动赋予 ADMIN 角色的邮箱列表（逗号分隔） |
+
+### 开发模式绕过认证
+
+| 变量 | 说明 |
+|------|------|
+| `DEV_BYPASS_AUTH=true` | 服务端绕过认证 |
+| `NEXT_PUBLIC_DEV_BYPASS_AUTH=true` | 前端显示快捷登录按钮 |
+
+## 服务配置
+
+| 变量 | 必填 | 默认值 | 说明 |
+|------|------|--------|------|
+| `PYTHON_SERVICE_URL` | 否 | `http://localhost:8065` | Python 文档替换服务地址 |
+| `REPORT_ENGINE_URL` | 否 | `http://localhost:8066` | Report Engine 渲染引擎地址 |
+| `COLLAB_PORT` | 否 | `8072` | y-websocket 协作服务端口 |
+
+## AI 配置（可选）
+
+| 变量 | 说明 |
+|------|------|
+| `AI_PROVIDER` | AI 提供商（如 `openai`） |
+| `AI_BASE_URL` | AI API 基础 URL |
+| `AI_API_KEY` | AI API 密钥 |
+| `AI_MODEL` | 默认 AI 模型名称 |
+
+## SMTP 邮件配置（可选）
+
+用于自动化引擎的"发送模板邮件"动作。未配置时，邮件动作会执行失败。
+
+| 变量 | 说明 |
+|------|------|
+| `SMTP_HOST` | SMTP 服务器地址 |
+| `SMTP_PORT` | SMTP 端口（如 `587`） |
+| `SMTP_SECURE` | 是否使用 SSL（`true` / `false`） |
+| `SMTP_USER` | SMTP 用户名 |
+| `SMTP_PASS` | SMTP 密码 |
+| `SMTP_FROM` | 发件人地址，如 `系统 <bot@example.com>` |
+
+## 关键说明
+
+- `AUTHENTIK_ISSUER` 必须指向 Authentik 中对应应用的 issuer，如 `http://127.0.0.1:9000/application/o/docx-template-system`
+- `AUTHENTIK_CLIENT_ID` 和 `AUTHENTIK_CLIENT_SECRET` 只能从 Authentik 后台复制
+- `AUTHENTIK_ADMIN_EMAILS` 只用于首次统一登录时自动赋予本地 `ADMIN` 角色
+- `REPORT_ENGINE_URL` 为报告撰写模块使用的渲染引擎地址
+- 本地 `User.role` 仍然保留，统一认证只负责"是谁"，业务权限仍由本系统负责

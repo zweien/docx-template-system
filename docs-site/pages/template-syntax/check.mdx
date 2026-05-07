@@ -1,0 +1,88 @@
+# 模板检查
+
+report-engine 提供模板检查工具，用于验证模板的完整性和正确性。
+
+## CLI 检查
+
+### 校验 Payload
+
+```bash
+report-engine validate --payload data.json
+```
+
+检查 payload 数据是否符合 schema 定义，包括：
+
+- 必填字段是否存在
+- 字段类型是否正确
+- 嵌套结构是否完整
+
+### 检查模板契约
+
+```bash
+report-engine check-template --template tpl.docx --payload data.json
+```
+
+检查模板与 payload 的匹配关系：
+
+- 模板中的占位符是否在 payload 中有对应数据
+- payload 中的数据是否被模板引用
+- 子文档占位符是否配对正确
+- 条件标志是否完整
+
+## HTTP 接口
+
+### POST /parse-template
+
+解析模板文件，返回结构信息：
+
+```json
+{
+  "context_vars": ["contractNo", "partyA", "signDate"],
+  "sections": [
+    {
+      "id": "research",
+      "placeholder": "RESEARCH_CONTENT_SUBDOC",
+      "flag_name": "ENABLE_RESEARCH",
+      "template_headings": [
+        { "text": "研究背景", "level": 2 }
+      ]
+    }
+  ],
+  "required_styles": [],
+  "prompts": []
+}
+```
+
+## 解析能力
+
+模板解析器能识别：
+
+| 元素 | 模式 |
+|------|------|
+| 简单占位符 | `{{ key }}` |
+| 子文档占位符 | `{{p KEY_SUBDOC }}` |
+| 条件标志 | `{%p if ENABLE_KEY %}` |
+| 标题层级 | Heading 1-5 样式 |
+| AI 提示词 | PROMPT 注释 |
+
+## Word Run 合并
+
+真实 Word 模板中，占位符文本经常被 Word 拆分为多个 XML run。解析器会自动合并这些分散的 run，确保正确识别：
+
+```xml
+<!-- Word 拆分后的 XML -->
+<w:r><w:t>{{p </w:t></w:r>
+<w:r><w:t>研究内容</w:t></w:r>
+<w:r><w:t>_SUBDOC }}</w:t></w:r>
+
+<!-- 解析器自动合并为 -->
+{{p 研究内容_SUBDOC }}
+```
+
+## 常见警告
+
+| 警告 | 说明 |
+|------|------|
+| `Subdoc has no ENABLE flag` | 子文档没有对应的条件标志，默认为始终启用 |
+| `No recognizable sections` | 模板中没有识别到任何章节结构 |
+| `Missing required styles` | 模板中缺少必要的 Word 样式定义 |

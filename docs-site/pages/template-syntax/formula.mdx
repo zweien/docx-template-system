@@ -1,0 +1,54 @@
+# 公式
+
+在模板和报告渲染中支持数学公式。
+
+## 报告中的公式
+
+在报告撰写编辑器中，可以插入 LaTeX 数学公式。公式在编辑器中实时预览，导出 DOCX 时转换为 Word 原生公式格式（OMML）。
+
+## report-engine 公式块
+
+在 payload 中使用公式块：
+
+```json
+{
+  "type": "formula",
+  "latex": "E = mc^2"
+}
+```
+
+### LaTeX 语法
+
+支持标准 LaTeX 数学语法：
+
+| 公式 | LaTeX |
+|------|-------|
+| 分数 | `\frac{a}{b}` |
+| 根号 | `\sqrt{x}` |
+| 求和 | `\sum_{i=1}^{n} x_i` |
+| 积分 | `\int_{a}^{b} f(x) dx` |
+| 矩阵 | `\begin{pmatrix} a & b \\ c & d \end{pmatrix}` |
+
+### 导出格式
+
+公式在导出 DOCX 时会转换为 Word 原生公式格式（Office MathML / OMML），可以在 Word 中直接编辑。
+
+## 行内公式
+
+在段落文本中也可以包含行内公式：
+
+```json
+{
+  "type": "paragraph",
+  "text": "根据公式 $E = mc^2$，能量与质量的关系..."
+}
+```
+
+## 公式编辑器（主数据）
+
+主数据管理模块的公式引擎支持 26 个内置函数，详见 [主数据管理](/guide/master-data#公式引擎)。
+
+## 注意事项
+
+- 确保 LaTeX 语法正确，否则渲染可能失败
+- Word 公式格式（OMML）与 LaTeX 存在少量差异，复杂公式建议在 Word 中微调

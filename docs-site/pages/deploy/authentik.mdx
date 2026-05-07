@@ -1,0 +1,71 @@
+# Authentik OIDC 配置
+
+本系统通过 Authentik 提供 OIDC 统一认证，NextAuth 负责将 OIDC 用户映射为本地会话。
+
+## 认证架构
+
+```
+用户 -> 系统登录页 -> Authentik OIDC -> 回调 -> NextAuth JWT -> 本地会话
+```
+
+- `Authentik` 负责统一登录、OIDC 授权、退出登录
+- `NextAuth` 负责把 OIDC 用户映射为本地 Session
+- 本地 `User` 表保留 `role` 字段，页面和 API 权限判断仍以本地 `role` 为准
+
+## Authentik 后台配置
+
+### 创建 Provider
+
+1. 进入 **Applications -> Providers -> Create**
+2. 选择 **OAuth2/OpenID Provider**
+3. 配置：
+   - 名称：`docx-template-system`
+   - Client type：`Confidential`
+   - Authorization flow：`default-provider-authorization-explicit-consent`
+   - Redirect URI：`http://<应用地址>:8060/api/auth/callback/authentik`
+   - Post logout redirect URI：`http://<应用地址>:8060`
+
+### 创建 Application
+
+1. 绑定上面创建的 Provider
+2. Launch URL：`http://<应用地址>:8060`
+3. 记录 **Client ID** 和 **Client Secret**
+
+### 记录 Issuer URL
+
+格式：`http://<Authentik地址>/application/o/docx-template-system`
+
+## 环境变量
+
+```env
+AUTHENTIK_ISSUER="http://<Authentik地址>/application/o/docx-template-system"
+AUTHENTIK_CLIENT_ID="<从 Authentik 复制>"
+AUTHENTIK_CLIENT_SECRET="<从 Authentik 复制>"
+AUTHENTIK_LOGOUT_REDIRECT_URL="http://<应用地址>:8060"
+AUTHENTIK_ADMIN_EMAILS="admin@example.com"
+```
+
+## 用户同步规则
+
+首次通过 OIDC 登录时，系统会：
+
+1. 先按 `oidcSubject` 查本地用户
+2. 未命中时，再按邮箱查找现有本地用户
+3. 如果邮箱命中，则认领该账号并写入 `oidcSubject`
+4. 如果都未命中，则自动创建本地用户
+
+默认角色规则：
+
+- 邮箱在 `AUTHENTIK_ADMIN_EMAILS` 列表中 → `ADMIN`
+- 其他用户 → `USER`
+
+## 退出登录
+
+退出流程不是只清本地 Session：
+
+1. 前端请求 `/api/auth/sso-logout-url`
+2. 服务端基于 `id_token` 生成 Authentik 退出地址
+3. 前端执行 `signOut()`
+4. 浏览器跳转到 Authentik 退出地址
+
+这样做是因为只清本地 Session 会导致 Authentik SSO 仍然存在，用户再次进入时会自动登录。

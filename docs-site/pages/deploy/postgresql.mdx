@@ -1,0 +1,81 @@
+# PostgreSQL 配置
+
+本系统使用 PostgreSQL 作为数据库，通过 Prisma 7 (Driver Adapter) 连接。
+
+## 创建数据库
+
+```bash
+# 使用 psql 创建数据库
+psql -U postgres -c "CREATE DATABASE docx_template_system;"
+psql -U postgres -c "CREATE USER docx_user WITH PASSWORD 'your-password';"
+psql -U postgres -c "GRANT ALL PRIVILEGES ON DATABASE docx_template_system TO docx_user;"
+```
+
+## 连接字符串
+
+`DATABASE_URL` 格式：
+
+```
+postgresql://<用户名>:<密码>@<主机>:<端口>/<数据库名>?schema=public
+```
+
+示例：
+
+```
+postgresql://docx_user:your-password@localhost:5432/docx_template_system?schema=public
+```
+
+## Docker 中使用 PostgreSQL
+
+### 外部 PostgreSQL
+
+如果已有独立的 PostgreSQL 服务，直接配置 `DATABASE_URL` 指向即可。
+
+### 容器内 PostgreSQL
+
+在 `docker-compose.yml` 中添加 PostgreSQL 服务：
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: docx_user
+      POSTGRES_PASSWORD: your-password
+      POSTGRES_DB: docx_template_system
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+```
+
+此时 `DATABASE_URL` 应使用容器内部地址：
+
+```
+postgresql://docx_user:your-password@postgres:5432/docx_template_system
+```
+
+## 数据库管理
+
+```bash
+# 同步 schema（开发阶段使用，不生成 migration 文件）
+npx prisma db push
+
+# 生成 Prisma Client
+npx prisma generate
+
+# 初始化种子数据
+npx prisma db seed
+
+# 数据库可视化工具
+npx prisma studio
+```
+
+## 重置用户密码
+
+```bash
+docker exec <pg容器名> psql -U docx_user -d docx_template_system \
+  -c "UPDATE \"User\" SET password='<bcrypt hash>' WHERE email='admin@example.com';"
+```

@@ -1,0 +1,75 @@
+# 认证流程
+
+## 认证架构
+
+```
+Authentik (OIDC Provider)
+    ↕ OIDC
+NextAuth (JWT Strategy)
+    ↕ JWT Session
+应用路由保护 (proxy.ts)
+    ↕ 本地 User.role
+业务权限判断
+```
+
+## 关键文件
+
+| 文件 | 说明 |
+|------|------|
+| `src/lib/auth-options.ts` | NextAuth 配置，含 OIDC 和 JWT callback |
+| `src/lib/oidc-user-sync.ts` | OIDC 用户到本地用户的同步逻辑 |
+| `src/lib/authentik.ts` | Authentik 环境变量读取 |
+| `src/proxy.ts` | 路由保护中间件 |
+| `src/app/(auth)/login/page.tsx` | 登录页面 |
+
+## 完整登录流程
+
+```
+1. 用户访问受保护页面
+2. proxy.ts 检查 JWT → 未登录 → 跳转 /login
+3. 登录页调用 signIn("authentik")
+4. 跳转到 Authentik 进行认证
+5. Authentik 认证成功 → 回调 /api/auth/callback/authentik
+6. NextAuth jwt callback 执行本地用户同步
+7. 系统将本地 id、role、email 写入 JWT Session
+8. 页面和 API 使用本地 Session 进行授权
+```
+
+## 用户同步逻辑
+
+首次 OIDC 登录时：
+
+1. 按 `oidcSubject` 查本地用户
+2. 未命中 → 按邮箱查找
+3. 邮箱命中 → 认领该账号，写入 `oidcSubject`
+4. 都未命中 → 自动创建本地用户
+
+角色分配：
+
+- 邮箱在 `AUTHENTIK_ADMIN_EMAILS` 中 → `ADMIN`
+- 其他用户 → `USER`
+
+## 退出登录流程
+
+```
+1. 前端请求 /api/auth/sso-logout-url
+2. 服务端基于 id_token 生成 Authentik 退出地址
+3. 前端执行 signOut({ redirect: false })
+4. 浏览器跳转到 Authentik 退出地址
+```
+
+不能只清本地 Session，否则 Authentik SSO 仍然存在，用户再次进入会自动登录。
+
+## 路由保护
+
+`src/proxy.ts` 实现路由保护：
+
+- 所有路由（除 `/login` 和 `/api/auth`）都需要认证
+- 检查 JWT 中的用户信息
+- 未认证请求重定向到 `/login`
+
+## 权限模型
+
+- 本地 `User.role` 保留 `ADMIN` 和 `USER` 两个角色
+- 统一认证只负责"是谁"
+- 业务权限仍由本系统判断

@@ -1,0 +1,51 @@
+# 条件段落
+
+条件段落允许根据条件控制文档中某些段落的显示或隐藏。
+
+## 语法
+
+使用 `{%p if ENABLE_KEY %}` 和 `{%p endif %}` 包裹条件段落：
+
+```
+{%p if ENABLE_SUMMARY %}
+这里是摘要内容，只在 ENABLE_SUMMARY 为 true 时显示。
+{%p endif %}
+```
+
+## 命名规则
+
+条件标志通常以 `ENABLE_` 前缀命名：
+
+```
+ENABLE_OVERVIEW     — 是否显示概述章节
+ENABLE_BUDGET       — 是否显示预算章节
+ENABLE_APPENDICES   — 是否显示附录
+```
+
+## 与子文档配合
+
+条件段落通常与子文档占位符配合使用：
+
+```
+{%p if ENABLE_RESEARCH %}
+{{p RESEARCH_CONTENT_SUBDOC }}
+{%p endif %}
+```
+
+当 `ENABLE_RESEARCH` 为 `true` 时，渲染 `RESEARCH_CONTENT_SUBDOC` 子文档内容；为 `false` 时，整个章节不显示。
+
+## 自动识别
+
+report-engine 的模板解析器会自动识别：
+
+- 所有 `{%p if ENABLE_* %}` 标志
+- 对应的 `{{p *_SUBDOC }}` 子文档占位符
+- 自动配对标志和子文档
+
+## 模板中的使用
+
+在报告模板中，条件段落用于：
+
+- 控制可选章节的显示
+- 根据报告类型显示不同内容
+- 管理员在配置中启用/禁用章节

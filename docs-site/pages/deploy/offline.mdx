@@ -1,0 +1,160 @@
+# 内网离线部署
+
+适用于办公内网无法访问公网、但可使用 Docker 的场景。
+
+## 架构
+
+```
+内网用户 -> Nginx (80) -> Docker (8060) -> Next.js App
+                                        -> Python Service (8065)
+                                        -> Report Engine (8066)
+                                        -> PostgreSQL (内网独立部署或容器)
+                                        -> Authentik SSO (内网已有)
+```
+
+## 前置条件
+
+**开发机（有互联网）：**
+- Docker + Docker Compose
+- Git
+
+**内网服务器：**
+- Docker + Docker Compose（v2 插件）
+- 如内网无 PostgreSQL，需一并准备 `postgres:16-alpine` 镜像
+
+## 步骤一：在开发机构建镜像
+
+```bash
+git clone https://github.com/zweien/docx-template-system.git
+cd docx-template-system
+git checkout <version-tag>
+
+# 构建主应用镜像
+docker build -t docx-template-system-app:<version> .
+
+# 构建 Python 服务镜像
+docker build -t docx-template-system-python-service:<version> ./python-service/
+
+# 导出镜像为 tar（用于 U 盘/内网传输）
+docker save \
+  docx-template-system-app:<version> \
+  docx-template-system-python-service:<version> \
+  -o docx-offline-images-<version>.tar
+
+# 如果内网没有 PostgreSQL
+docker pull postgres:16-alpine
+docker save postgres:16-alpine -o postgres-16-alpine.tar
+```
+
+## 步骤二：准备配置文件
+
+```bash
+cp .env.offline.example .env.offline
+```
+
+编辑 `.env.offline`，参考 [环境变量说明](/deploy/env-vars)。
+
+关键配置项：
+
+```env
+APP_PORT=8060
+NEXTAUTH_URL="http://<内网IP或域名>:8060"
+NEXTAUTH_SECRET="<openssl rand -hex 32 生成>"
+DATABASE_URL="postgresql://docx_user:<密码>@<PG地址>:5432/docx_template_system"
+```
+
+如果是纯内网环境且不需要 Authentik：
+
+```env
+DEV_BYPASS_AUTH=true
+NEXT_PUBLIC_DEV_BYPASS_AUTH=true
+```
+
+## 步骤三：传输到内网服务器
+
+通过 U 盘或内网文件传输，将以下文件拷贝到内网服务器：
+
+- `docx-offline-images-<version>.tar` — Docker 镜像
+- `postgres-16-alpine.tar` — PG 镜像（如需要）
+- `docker-compose.offline.yml`
+- `.env.offline`
+- `scripts/deploy-offline.sh`（可选）
+
+## 步骤四：在内网服务器部署
+
+```bash
+# 1. 加载镜像
+docker load -i docx-offline-images-<version>.tar
+
+# 2. 启动服务
+docker compose -f docker-compose.offline.yml --env-file .env.offline up -d
+
+# 3. 同步数据库（首次部署或版本升级后）
+docker compose -f docker-compose.offline.yml --env-file .env.offline \
+  run --rm --user root app npx prisma db push
+
+# 4. 初始化种子数据（仅首次）
+docker compose -f docker-compose.offline.yml --env-file .env.offline \
+  run --rm --user root app npx prisma db seed
+
+# 5. 健康检查
+curl -sf http://127.0.0.1:8060
+```
+
+或使用一键部署脚本：
+
+```bash
+chmod +x scripts/deploy-offline.sh
+./scripts/deploy-offline.sh --image-tar /path/to/docx-offline-images-<version>.tar
+```
+
+## 自带 PostgreSQL 的 docker-compose
+
+如果内网没有独立的 PostgreSQL，可以在 `docker-compose.offline.yml` 中添加：
+
+```yaml
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: docx_user
+      POSTGRES_PASSWORD: "<密码>"
+      POSTGRES_DB: docx_template_system
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+```
+
+对应 `.env.offline` 中 `DATABASE_URL` 改为：
+
+```env
+DATABASE_URL="postgresql://docx_user:<密码>@postgres:5432/docx_template_system"
+```
+
+## 版本升级
+
+```bash
+# 开发机上构建新版本镜像
+docker build -t docx-template-system-app:<new-version> .
+docker save docx-template-system-app:<new-version> \
+  -o docx-offline-images-<new-version>.tar
+
+# 拷贝到内网后
+docker load -i docx-offline-images-<new-version>.tar
+
+# 更新 docker-compose.offline.yml 中的镜像版本号
+# 更新 .env.offline（如有新配置项）
+
+docker compose -f docker-compose.offline.yml --env-file .env.offline up -d
+docker compose -f docker-compose.offline.yml --env-file .env.offline \
+  run --rm --user root app npx prisma db push
+```
+
+数据通过 Docker Volume 持久化，升级不影响已有数据。
+
+### 增量升级建议
+
+推荐在内网搭私有 Registry（Harbor/registry:2），镜像按层增量传输。

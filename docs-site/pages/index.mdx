@@ -1,0 +1,64 @@
+---
+title: DOCX Template System — 模板驱动的办公自动化系统
+---
+
+# DOCX Template System
+
+**模板驱动的办公自动化系统** — 上传 Word 模板，配置占位符，填写动态表单，一键生成文档。
+
+## 核心模块
+
+| 模块 | 说明 | 详情 |
+|------|------|------|
+| 模板与文档 | 上传 DOCX 模板，自动解析占位符，生成文档 | [查看](/guide/templates) |
+| 报告撰写 | BlockNote 富文本编辑器，AI 写作，多人协作 | [查看](/guide/reports) |
+| 文档收集 | 文件收集任务，版本追踪，批量下载 | [查看](/guide/collection) |
+| 预算报告 | Excel 数据校验，三步向导生成 DOCX | [查看](/guide/budget) |
+| 主数据管理 | 15 种字段类型，5 种视图，公式引擎 | [查看](/guide/master-data) |
+| AI 智能助手 | 多模型对话，AI 填充，MCP 工具调用 | [查看](/guide/ai-assistant) |
+| 自动化引擎 | 触发器驱动，条件分支，动作执行 | [查看](/guide/automation) |
+| 桌面应用 | Tauri 2.0 桌面端，内置 Python，离线运行 | [查看](/guide/desktop) |
+
+## 功能亮点
+
+- **智能解析** — 自动从 DOCX 文件中提取占位符，支持简单字段、动态表格块、选项模板
+- **富文本渲染** — report-engine 渲染引擎，支持标题/列表/表格/公式/图片等富文本块
+- **实时协作** — 基于 y-websocket + Yjs CRDT，多人同时编辑、光标同步、在线状态显示
+- **Excel 批量生成** — 上传 Excel 数据批量生成文档，支持字段自动映射
+- **公式引擎** — 26 个内置函数，字段引用补全，实时预览，循环引用检测
+- **审计日志** — 全链路操作记录，覆盖模板管理、文档生成、数据表、用户管理等
+
+## 技术栈
+
+| 层级 | 技术 |
+|------|------|
+| 前端框架 | Next.js 16 (App Router, Turbopack) |
+| UI 组件 | shadcn/ui v4 (Base UI), Tailwind CSS 4 |
+| 数据库 | PostgreSQL + Prisma 7 (Driver Adapter) |
+| 认证 | NextAuth v4 + Authentik OIDC |
+| 报告编辑器 | BlockNote 0.49 |
+| 实时协作 | Yjs + y-websocket + y-leveldb |
+| 桌面应用 | Tauri 2.0 (Rust + React) |
+| 文档生成 | report-engine (Python, python-docx + docxtpl) |
+| AI 集成 | @ai-sdk (OpenAI/MCP) |
+
+## 快速开始
+
+```bash
+# 克隆仓库
+git clone https://github.com/zweien/docx-template-system.git
+cd docx-template-system
+
+# 安装依赖
+npm install
+
+# 初始化数据库
+npx prisma db push && npx prisma generate && npx prisma db seed
+
+# 启动开发服务
+npm run dev
+```
+
+打开 http://localhost:8060/login 即可使用。
+
+详细部署说明请参考 [部署指南](/deploy/local)。

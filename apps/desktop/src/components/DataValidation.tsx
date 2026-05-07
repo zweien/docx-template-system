@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAppStore } from "../stores/app-store";
 import { listConfigs, exportConfig, selectExcel } from "../services/tauri-commands";
 import { validateExcelData } from "../services/api";
 import type { BudgetConfig, ConfigMeta, ExcelValidationResponse, SheetValidationResult, SummaryValidationResult } from "../types";
+import { HelpPopover } from "./HelpPopover";
+import { DropZone } from "./DropZone";
 
 type ConfigSource = "saved" | "import";
 
@@ -100,12 +102,37 @@ export function DataValidation() {
   const currentConfig = configSource === "saved" ? loadedSavedConfig : importedConfig;
   const canValidate = currentConfig && excelPath;
 
+  const handleDrop = useCallback((paths: string[]) => {
+    const path = paths[0];
+    if (!path) return;
+    const ext = "." + path.split(".").pop()?.toLowerCase();
+    if (ext === ".json") {
+      fetch(`file://${path}`).then(r => r.text()).then(text => {
+        try {
+          const cfg = JSON.parse(text) as BudgetConfig;
+          setImportedConfig(cfg);
+          setImportFileName(path.split(/[/\\]/).pop() || path);
+          setConfigSource("import");
+          addLog(`配置导入成功: ${cfg.title}`, "success");
+        } catch {
+          addLog("JSON 解析失败", "error");
+        }
+      }).catch(() => {
+        addLog(`读取文件失败: ${path}`, "error");
+      });
+    } else if (ext === ".xlsx" || ext === ".xls") {
+      setExcelPath(path);
+      setExcelFileName(path.replace(/\\/g, "/").split("/").pop() || path);
+      addLog(`选择文件: ${path}`);
+    }
+  }, [addLog]);
+
   return (
-    <div className="flex-1 overflow-auto">
+    <DropZone accept={[".xlsx", ".xls", ".json"]} onDrop={handleDrop} className="flex-1 overflow-auto">
       <div className="max-w-5xl mx-auto p-8">
         {/* Header */}
         <div className="mb-8">
-          <h2 className="text-heading text-lg text-text">数据校验</h2>
+          <h2 className="text-heading text-lg text-text flex items-center gap-1.5">数据校验 <HelpPopover>在生成报告前校验 Excel 数据是否完整、格式是否正确。检查项目包括：Sheet 是否存在、列是否匹配、空单元格、数值格式等。</HelpPopover></h2>
           <p className="text-caption text-text-muted mt-1">校验 Excel 数据是否符合配置要求，输出详细校验报告</p>
         </div>
 
@@ -114,7 +141,7 @@ export function DataValidation() {
           <div className="space-y-4">
             {/* Config Source */}
             <section className="bg-surface rounded-lg border border-border p-5">
-              <h3 className="text-ui text-sm text-text mb-3">配置来源</h3>
+              <h3 className="text-ui text-sm text-text mb-3 flex items-center gap-1.5">配置来源 <HelpPopover>选择用于校验的配置方案。可使用已保存的配置，或导入 JSON 格式的配置文件。</HelpPopover></h3>
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <button
                   onClick={() => setConfigSource("saved")}
@@ -177,7 +204,7 @@ export function DataValidation() {
 
             {/* Excel Selection */}
             <section className="bg-surface rounded-lg border border-border p-5">
-              <h3 className="text-ui text-sm text-text mb-3">Excel 文件</h3>
+              <h3 className="text-ui text-sm text-text mb-3 flex items-center gap-1.5">Excel 文件 <HelpPopover>选择需要校验的 Excel 文件。校验会将文件中的数据结构与配置方案进行比对。</HelpPopover></h3>
               <button
                 onClick={handleSelectExcel}
                 className="w-full px-3 py-2 rounded-md border border-dashed border-border hover:border-brand-border text-[0.867rem] text-text-muted hover:text-brand-accent transition-colors text-left"
@@ -229,7 +256,7 @@ export function DataValidation() {
           </div>
         </div>
       </div>
-    </div>
+    </DropZone>
   );
 }
 

@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAppStore } from "../stores/app-store";
 import { getMergeInfo, mergeExcel } from "../services/api";
 import { selectExcelFiles, selectXlsxSave, openReport } from "../services/tauri-commands";
 import type { FileMergeInfo, MergeExcelResponse, SheetMismatchDetail } from "../types";
+import { HelpPopover } from "./HelpPopover";
+import { DropZone } from "./DropZone";
 
 type Phase = "select" | "sheets" | "result";
 
@@ -115,12 +117,41 @@ export function ExcelMerge() {
 
   // ── Render ──
 
+  const handleDrop = useCallback((paths: string[]) => {
+    setFiles((prev) => {
+      const newFiles = [...new Set([...prev, ...paths])];
+      if (!baseFile && newFiles.length > 0) setBaseFile(newFiles[0]);
+      return newFiles;
+    });
+    addLog(`添加 ${paths.length} 个文件`);
+  }, [baseFile, addLog]);
+
+  if (phase !== "select") {
+    return (
+      <div className="content-page flex-1 overflow-auto">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-heading text-lg text-text flex items-center gap-1.5">合并表格 <HelpPopover>将多个 Excel 文件的数据按 Sheet 合并到一个文件中。选择一个基准文件，其余文件的数据行将追加到对应 Sheet 的末尾。</HelpPopover></h2>
+              <p className="text-caption text-text-muted mt-1">将多个 Excel 文件的数据按 sheet 合并</p>
+            </div>
+            <button onClick={handleReset} className="px-3 py-1.5 bg-surface border border-border text-text-secondary rounded-md text-[0.8rem] hover:bg-surface-hover transition-colors">
+              重新开始
+            </button>
+          </div>
+          {phase === "sheets" && renderSheetSelect()}
+          {phase === "result" && renderResult()}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="content-page flex-1 overflow-auto">
+    <DropZone accept={[".xlsx", ".xls"]} onDrop={handleDrop} multiple className="content-page flex-1 overflow-auto">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-heading text-lg text-text">合并表格</h2>
+            <h2 className="text-heading text-lg text-text flex items-center gap-1.5">合并表格 <HelpPopover>将多个 Excel 文件的数据按 Sheet 合并到一个文件中。选择一个基准文件，其余文件的数据行将追加到对应 Sheet 的末尾。</HelpPopover></h2>
             <p className="text-caption text-text-muted mt-1">将多个 Excel 文件的数据按 sheet 合并</p>
           </div>
           {phase !== "select" && (
@@ -130,11 +161,9 @@ export function ExcelMerge() {
           )}
         </div>
 
-        {phase === "select" && renderFileSelect()}
-        {phase === "sheets" && renderSheetSelect()}
-        {phase === "result" && renderResult()}
+        {renderFileSelect()}
       </div>
-    </div>
+    </DropZone>
   );
 
   // ── Phase 1 UI ──

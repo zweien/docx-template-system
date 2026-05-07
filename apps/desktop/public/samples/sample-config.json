@@ -6,22 +6,22 @@
     "header_row": 1,
     "key_column": "科目",
     "value_column": "金额（元）",
-    "prefix": "SUMMARY_",
-    "description_column": "说明",
-    "description_prefix": "DESC_"
+    "prefix": ""
   },
+  "image_width_cm": 12,
+  "heading_level": 3,
+  "item_heading_level": 4,
   "sheets": [
     {
-      "name": "设备费明细",
+      "name": "设备费",
       "sheet_name": "设备费",
-      "id": "equipment_fee",
-      "summary_key": "设备费",
+      "id": "设备费",
       "columns": {
         "name": "名称",
         "spec": "规格",
-        "unit_price": "单价",
+        "unit_price": "单价（元）",
         "quantity": "数量",
-        "amount": "经费",
+        "amount": "经费（元）",
         "reason": "购置理由",
         "basis": "测算依据"
       },
@@ -33,16 +33,15 @@
       "image_columns": ["报价截图"]
     },
     {
-      "name": "材料费明细",
+      "name": "材料费",
       "sheet_name": "材料费",
-      "id": "material_fee",
-      "summary_key": "材料费",
+      "id": "材料费",
       "columns": {
         "name": "名称",
         "spec": "规格",
-        "unit_price": "单价",
+        "unit_price": "单价（元）",
         "quantity": "数量",
-        "amount": "经费",
+        "amount": "经费（元）",
         "reason": "用途说明",
         "basis": "采购依据"
       },
@@ -54,45 +53,136 @@
       "image_columns": ["报价截图"]
     },
     {
-      "name": "测试费明细",
-      "sheet_name": "测试费",
-      "id": "test_fee",
-      "summary_key": "测试费",
-      "columns": {
-        "name": "名称",
-        "spec": "规格",
-        "unit_price": "单价",
-        "quantity": "数量",
-        "amount": "经费",
-        "reason": "测试内容",
-        "basis": "计费依据"
-      },
-      "table_columns": ["name", "spec", "unit_price", "quantity", "amount"],
-      "detail_fields": [
-        {"field": "reason", "label": "测试内容"},
-        {"field": "basis", "label": "计费依据"}
-      ],
-      "image_columns": ["报价截图"]
-    },
-    {
-      "name": "外部协作费明细",
+      "name": "外部协作费",
       "sheet_name": "外部协作费",
-      "id": "external_cooperation_fee",
-      "summary_key": "外部协作费",
-      "heading_level": 2,
-      "item_heading_level": 3,
+      "id": "外部协作费",
       "columns": {
         "name": "名称",
-        "amount": "经费",
-        "cooperation_content": "外协内容",
+        "amount": "经费（元）",
+        "content": "外协内容",
         "basis": "计费依据"
       },
       "table_columns": ["name", "amount"],
       "detail_fields": [
-        {"field": "cooperation_content", "label": "外协内容"},
+        {"field": "content", "label": "外协内容"},
         {"field": "basis", "label": "计费依据"}
-      ],
-      "image_columns": []
+      ]
+    },
+    {
+      "name": "燃料动力费",
+      "sheet_name": "燃料动力费",
+      "id": "燃料动力费",
+      "columns": {
+        "name": "名称",
+        "quantity": "数量",
+        "unit_price": "单价（元）",
+        "amount": "经费（元）",
+        "reason": "用途说明",
+        "basis": "测算依据"
+      },
+      "table_columns": ["name", "quantity", "unit_price", "amount"],
+      "detail_fields": [
+        {"field": "reason", "label": "用途说明"},
+        {"field": "basis", "label": "测算依据"}
+      ]
+    },
+    {
+      "name": "会议差旅国际合作与交流费",
+      "sheet_name": "会议差旅国际合作与交流费",
+      "id": "会议差旅国际合作与交流费",
+      "columns": {
+        "name": "名称",
+        "people": "人数",
+        "amount": "经费（元）",
+        "content": "内容说明",
+        "basis": "计费依据"
+      },
+      "table_columns": ["name", "people", "amount"],
+      "detail_fields": [
+        {"field": "content", "label": "内容说明"},
+        {"field": "basis", "label": "计费依据"}
+      ]
+    },
+    {
+      "name": "出版文献信息传播知识产权事务费",
+      "sheet_name": "出版文献信息传播知识产权事务费",
+      "id": "出版文献信息传播知识产权事务费",
+      "columns": {
+        "name": "名称",
+        "amount": "经费（元）",
+        "reason": "用途说明",
+        "basis": "计费依据"
+      },
+      "table_columns": ["name", "amount"],
+      "detail_fields": [
+        {"field": "reason", "label": "用途说明"},
+        {"field": "basis", "label": "计费依据"}
+      ]
+    },
+    {
+      "name": "劳务费",
+      "sheet_name": "劳务费",
+      "id": "劳务费",
+      "columns": {
+        "name": "名称",
+        "people": "人数",
+        "months": "月数",
+        "rate": "标准（元/月）",
+        "amount": "经费（元）",
+        "note": "说明"
+      },
+      "table_columns": ["name", "people", "months", "rate", "amount"],
+      "detail_fields": [
+        {"field": "note", "label": "说明"}
+      ]
+    },
+    {
+      "name": "专家咨询费",
+      "sheet_name": "专家咨询费",
+      "id": "专家咨询费",
+      "columns": {
+        "name": "名称",
+        "times": "人次",
+        "rate": "标准（元/次）",
+        "amount": "经费（元）",
+        "content": "咨询内容",
+        "basis": "计费依据"
+      },
+      "table_columns": ["name", "times", "rate", "amount"],
+      "detail_fields": [
+        {"field": "content", "label": "咨询内容"},
+        {"field": "basis", "label": "计费依据"}
+      ]
+    },
+    {
+      "name": "其他支出",
+      "sheet_name": "其他支出",
+      "id": "其他支出",
+      "columns": {
+        "name": "名称",
+        "amount": "经费（元）",
+        "reason": "支出说明",
+        "basis": "测算依据"
+      },
+      "table_columns": ["name", "amount"],
+      "detail_fields": [
+        {"field": "reason", "label": "支出说明"},
+        {"field": "basis", "label": "测算依据"}
+      ]
+    },
+    {
+      "name": "间接经费",
+      "sheet_name": "间接经费",
+      "id": "间接经费",
+      "columns": {
+        "name": "名称",
+        "amount": "金额（元）",
+        "note": "说明"
+      },
+      "table_columns": ["name", "amount"],
+      "detail_fields": [
+        {"field": "note", "label": "说明"}
+      ]
     }
   ]
 }

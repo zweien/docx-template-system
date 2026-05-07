@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { parseExcel } from "../services/api";
 import { selectExcel } from "../services/tauri-commands";
 import { ReportContent, ValidationResult } from "../types";
@@ -8,6 +8,8 @@ import { ValidationPanel } from "./ValidationPanel";
 import { ConfigSelector } from "./ConfigSelector";
 import { saveDataAs } from "../services/tauri-commands";
 import { validateExcel } from "../services/validation";
+import { HelpPopover } from "./HelpPopover";
+import { DropZone } from "./DropZone";
 
 interface Props {
   onParsed: (content: ReportContent) => void;
@@ -100,10 +102,20 @@ export function ExcelImport({ onParsed, addLog }: Props) {
 
   const fileName = filePath ? filePath.split("/").pop() || filePath : "";
 
+  const handleDrop = useCallback((paths: string[]) => {
+    const path = paths[0];
+    if (path) {
+      setFilePath(path);
+      setExcelFilePath(path);
+      setError("");
+      addLog(`选择文件: ${path}`);
+    }
+  }, [setExcelFilePath, addLog]);
+
   return (
-    <div className="space-y-5">
+    <DropZone accept={[".xlsx", ".xls"]} onDrop={handleDrop} className="space-y-5">
       <div>
-        <h2 className="text-heading text-lg text-text">导入 Excel 数据源</h2>
+        <h2 className="text-heading text-lg text-text flex items-center gap-1.5">导入 Excel 数据源 <HelpPopover>选择包含预算数据的 .xlsx 文件。Excel 中的每个 Sheet 对应报告中的一个章节，数据将按照配置方案的映射规则解析。</HelpPopover></h2>
         <p className="text-caption text-text-muted mt-1">选择包含预算数据的 Excel 文件，配置映射规则后解析</p>
       </div>
 
@@ -169,6 +181,6 @@ export function ExcelImport({ onParsed, addLog }: Props) {
           {loading ? "解析中..." : "解析并继续 →"}
         </button>
       </div>
-    </div>
+    </DropZone>
   );
 }

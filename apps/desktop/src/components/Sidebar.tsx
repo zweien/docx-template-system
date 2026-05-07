@@ -107,7 +107,7 @@ export function Sidebar() {
           {!collapsed && (
             <div>
               <h1 className="font-medium text-text leading-tight" style={{ fontSize: "0.867em" }}>预算报告</h1>
-              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.3</p>
+              <p className="text-text-quaternary leading-tight mt-0.5 font-mono" style={{ fontSize: "0.667em" }}>v0.8.4</p>
             </div>
           )}
         </div>
@@ -273,6 +273,11 @@ function HelpContent() {
 
 function ChangelogContent() {
   const versions = [
+    { ver: "0.8.4", date: "2026-05-07", changes: [
+      { type: "feat", text: "帮助说明：各页面添加 ? 图标帮助气泡，解释配置项含义" },
+      { type: "feat", text: "文件拖拽：模板选择、Excel 导入、模板管理、数据校验、合并表格支持拖入文件" },
+      { type: "fix", text: "修复帮助气泡靠右时溢出屏幕的问题" },
+    ]},
     { ver: "0.8.3", date: "2026-05-06", changes: [
       { type: "feat", text: "表格样式：通过模板段落样式（表格表头/表格正文）控制表格字体" },
       { type: "feat", text: "全局配置：图片宽度、科目/条目标题级别统一设置" },

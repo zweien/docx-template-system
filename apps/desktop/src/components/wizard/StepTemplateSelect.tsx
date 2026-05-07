@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAppStore } from "../../stores/app-store";
 import { listTemplates, selectDocx, importTemplate, deleteTemplate, renameTemplate } from "../../services/tauri-commands";
+import { HelpPopover } from "../HelpPopover";
+import { DropZone } from "../DropZone";
 import { validateTemplate } from "../../services/validation";
 import { ValidationResult } from "../../types";
 import { ValidationPanel } from "../ValidationPanel";
@@ -62,10 +64,28 @@ export function StepTemplateSelect() {
 
   const selected = templates.find((t) => t.id === selectedTemplateId);
 
+  const handleDrop = useCallback(async (paths: string[]) => {
+    for (const path of paths) {
+      try {
+        addLog(`导入模板: ${path}`);
+        const meta = await importTemplate(path);
+        setTemplates([meta, ...useAppStore.getState().templates]);
+        selectTemplate(meta.id);
+        addLog(`模板导入成功: ${meta.name}`, "success");
+        const vr = await validateTemplate(meta.path);
+        if (vr.issues.length > 0) {
+          setValidationResult(vr);
+        }
+      } catch (e) {
+        addLog(`导入失败: ${e}`, "error");
+      }
+    }
+  }, [addLog, setTemplates, selectTemplate]);
+
   return (
-    <div className="space-y-6">
+    <DropZone accept={[".docx"]} onDrop={handleDrop} multiple className="space-y-6">
       <div>
-        <h2 className="text-heading text-lg text-text">选择报告模板</h2>
+        <h2 className="text-heading text-lg text-text flex items-center gap-1.5">选择报告模板 <HelpPopover>导入 .docx 文件作为报告的基础模板。模板中的占位符（如 {'{{'} 科目名称 {'}'}）将在生成报告时被替换为实际数据。</HelpPopover></h2>
         <p className="text-caption text-text-muted mt-1">选择或导入一个 .docx 模板文件作为报告基础</p>
       </div>
 
@@ -133,7 +153,7 @@ export function StepTemplateSelect() {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-    </div>
+    </DropZone>
   );
 }
 

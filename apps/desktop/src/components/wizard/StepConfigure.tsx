@@ -1,5 +1,6 @@
 import { useAppStore } from "../../stores/app-store";
 import { ConfigSelector } from "../ConfigSelector";
+import { HelpPopover } from "../HelpPopover";
 
 export function StepConfigure() {
   const { config, excelContent, templates, selectedTemplateId, setWizardStep, addLog } =
@@ -24,7 +25,7 @@ export function StepConfigure() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-heading text-lg text-text">配置与预览</h2>
+        <h2 className="text-heading text-lg text-text flex items-center gap-1.5">配置与预览 <HelpPopover>确认配置方案和数据映射的结果预览。此处显示的信息来自上一步选择的配置方案和解析后的 Excel 数据。</HelpPopover></h2>
         <p className="text-caption text-text-muted mt-1">确认配置方案和数据映射，预览解析结果</p>
       </div>
 

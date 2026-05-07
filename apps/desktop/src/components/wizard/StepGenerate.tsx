@@ -5,6 +5,7 @@ import { openReport, saveReportAs, getAppDataDir } from "../../services/tauri-co
 import { crossValidate } from "../../services/validation";
 import { ValidationResult } from "../../types";
 import { ValidationPanel } from "../ValidationPanel";
+import { HelpPopover } from "../HelpPopover";
 
 export function StepGenerate() {
   const {
@@ -129,7 +130,7 @@ export function StepGenerate() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-heading text-lg text-text">生成报告</h2>
+        <h2 className="text-heading text-lg text-text flex items-center gap-1.5">生成报告 <HelpPopover>将模板与 Excel 数据结合，生成最终的 .docx 报告文件。生成前会自动校验模板和数据的一致性。</HelpPopover></h2>
         <p className="text-caption text-text-muted mt-1">确认信息后生成 Word 文档报告</p>
       </div>
 

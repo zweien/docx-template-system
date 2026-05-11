@@ -31,7 +31,7 @@ jobs:
 
             # Rebuild and deploy
             docker compose build
-            docker compose run --rm --user root app npx prisma db push
+            docker compose run --rm --user root app npx prisma db push --accept-data-loss
             docker compose up -d --remove-orphans
 
             # Health check

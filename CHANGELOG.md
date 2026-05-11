@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.2](https://github.com/zweien/docx-template-system/compare/v0.10.1...v0.10.2) (2026-05-11)
+
+
+### Features
+
+* add dingtalk fields to User model ([83dffd6](https://github.com/zweien/docx-template-system/commit/83dffd698e767b0ea10b877856fb83979b777d54))
+* add DingTalk login button to login page ([4982dd3](https://github.com/zweien/docx-template-system/commit/4982dd30c6bcda42c151c05464c964cbfcf4030b))
+* add DingTalk OAuth API routes ([ce8f32d](https://github.com/zweien/docx-template-system/commit/ce8f32dbfcdb8523450a356c184cc4a0d2305072))
+* add DingTalk OAuth utility library ([e67252b](https://github.com/zweien/docx-template-system/commit/e67252bfae48f4bf71434095f8ee145c436b8942))
+* add DingTalk session helper for NextAuth JWT ([d847682](https://github.com/zweien/docx-template-system/commit/d84768206f27f75161bcf94bfc7a7983be607eee))
+* add DingTalk user sync logic ([bb1f32a](https://github.com/zweien/docx-template-system/commit/bb1f32a1092a0d5c65c728b7d4cefd6954629102))
+* add DingTalk workbench auto-login page ([705d6b4](https://github.com/zweien/docx-template-system/commit/705d6b489d998c47b1afe6398a21d988125625ab))
+* add docs site with Nextra + MDX ([ae478c4](https://github.com/zweien/docx-template-system/commit/ae478c4ecf3db56af809ac6aed6ad405e3fd71c2))
+* **desktop:** add HelpPopover to config editor with field descriptions ([0d06114](https://github.com/zweien/docx-template-system/commit/0d061144ca4ef91ed1b838b72ee9c8b5b87aa10f))
+* **desktop:** add HelpPopover, DropZone drag-drop, template batch operations, update sample files ([6ca3e0e](https://github.com/zweien/docx-template-system/commit/6ca3e0e56fbf21381dc4612587af7c72beac0f5e))
+* whitelist /dingtalk path in proxy ([5039534](https://github.com/zweien/docx-template-system/commit/503953473a9219e60b0d246ef750616495a98bca))
+
+
+### Bug Fixes
+
+* align session cookie name logic with NextAuth and use upsert for user sync ([5b09631](https://github.com/zweien/docx-template-system/commit/5b0963198195285a456c268ecde90c926d20e9d1))
+* **desktop:** fix sample file download in production build and bump to 0.8.6 ([22657d1](https://github.com/zweien/docx-template-system/commit/22657d1e2b5015208d134ea4f110762b7346895d))
+* **docs-site:** add tailwindcss dependency for CI build ([5521cb9](https://github.com/zweien/docx-template-system/commit/5521cb9809be75b51a5fb4dd75948596d1b066bf))
+* resolve lint errors in DingTalk files ([5e86c6b](https://github.com/zweien/docx-template-system/commit/5e86c6bb8c27a99d232effdb8f0461508719bc0a))
+
 ## [0.10.1](https://github.com/zweien/docx-template-system/compare/v0.10.0...v0.10.1) (2026-05-07)
 
 

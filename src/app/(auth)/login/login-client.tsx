@@ -12,7 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { LogIn, Check, Loader2 } from "lucide-react";
+import { LogIn, Loader2, ScanQrCode } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Role } from "@/generated/prisma/enums";
 
@@ -26,6 +26,7 @@ interface DevUser {
 interface LoginClientProps {
   users: DevUser[];
   callbackUrl: string;
+  dingtalkEnabled: boolean;
 }
 
 const devBypassAuth = process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === "true";
@@ -45,7 +46,31 @@ function RoleLabel({ role }: { role: Role }) {
   );
 }
 
-function DevLoginForm({ users, callbackUrl }: LoginClientProps) {
+function DingTalkLoginButton() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  async function handleClick() {
+    setIsLoading(true);
+    window.location.href = "/api/auth/dingtalk";
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={isLoading}
+      className="inline-flex h-8 w-full items-center justify-center rounded-md border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] px-2.5 text-sm font-[510] text-foreground transition-colors hover:bg-muted/50 disabled:opacity-45"
+    >
+      {isLoading ? (
+        <Loader2 className="mr-2 h-4 w-4 animate-spin text-blue-500" />
+      ) : (
+        <ScanQrCode className="mr-2 h-4 w-4 text-blue-500" />
+      )}
+      {isLoading ? "跳转中..." : "钉钉扫码登录"}
+    </button>
+  );
+}
+
+function DevLoginForm({ users, callbackUrl, dingtalkEnabled }: LoginClientProps) {
   const [loggingInEmail, setLoggingInEmail] = useState<string | null>(null);
 
   async function handleLogin(email: string) {
@@ -93,7 +118,7 @@ function DevLoginForm({ users, callbackUrl }: LoginClientProps) {
                       isLoggingIn
                         ? "border-[#7170ff]/50 bg-[#7170ff]/10 text-foreground"
                         : loggingInEmail !== null
-                          ? "border-border bg-transparent text-muted-foreground opacity-50 cursor-not-allowed"
+                          ? "cursor-not-allowed border-border bg-transparent text-muted-foreground opacity-50"
                           : "border-border bg-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground"
                     )}
                   >
@@ -109,13 +134,27 @@ function DevLoginForm({ users, callbackUrl }: LoginClientProps) {
                     {isLoggingIn ? (
                       <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[#7170ff]" />
                     ) : (
-                      <LogIn className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <LogIn className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                     )}
                   </button>
                 );
               })}
             </div>
           </div>
+
+          {dingtalkEnabled && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">或</span>
+                </div>
+              </div>
+              <DingTalkLoginButton />
+            </>
+          )}
         </div>
 
         <p className="mt-4 text-center text-xs text-[#62666d]">
@@ -127,7 +166,13 @@ function DevLoginForm({ users, callbackUrl }: LoginClientProps) {
   );
 }
 
-function AuthentikLoginForm({ callbackUrl }: { callbackUrl: string }) {
+function AuthentikLoginForm({
+  callbackUrl,
+  dingtalkEnabled,
+}: {
+  callbackUrl: string;
+  dingtalkEnabled: boolean;
+}) {
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit() {
@@ -162,11 +207,25 @@ function AuthentikLoginForm({ callbackUrl }: { callbackUrl: string }) {
           </p>
           <button
             onClick={handleSubmit}
-            className="w-full inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-8 px-2.5 text-sm font-[510] disabled:opacity-45"
+            className="inline-flex h-8 w-full items-center justify-center rounded-md bg-primary px-2.5 text-sm font-[510] text-primary-foreground disabled:opacity-45"
             disabled={isLoading}
           >
             {isLoading ? "跳转中..." : "前往统一登录"}
           </button>
+
+          {dingtalkEnabled && (
+            <>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">或</span>
+                </div>
+              </div>
+              <DingTalkLoginButton />
+            </>
+          )}
         </div>
         <p className="mt-4 text-center text-xs text-[#62666d]">
           v{process.env.NEXT_PUBLIC_APP_VERSION}
@@ -180,5 +239,10 @@ export function LoginClient(props: LoginClientProps) {
   if (devBypassAuth) {
     return <DevLoginForm {...props} />;
   }
-  return <AuthentikLoginForm callbackUrl={props.callbackUrl} />;
+  return (
+    <AuthentikLoginForm
+      callbackUrl={props.callbackUrl}
+      dingtalkEnabled={props.dingtalkEnabled}
+    />
+  );
 }

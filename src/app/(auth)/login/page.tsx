@@ -26,6 +26,10 @@ export default async function LoginPage({
         })
       : [];
 
+  const dingtalkEnabled = !!(
+    process.env.DINGTALK_CLIENT_ID && process.env.DINGTALK_CLIENT_SECRET
+  );
+
   return (
     <div className="w-full max-w-md">
       <div className="mb-6 text-center">
@@ -36,7 +40,11 @@ export default async function LoginPage({
           文档填表系统
         </h1>
       </div>
-      <LoginClient users={users} callbackUrl={callbackUrl || "/"} />
+      <LoginClient
+        users={users}
+        callbackUrl={callbackUrl || "/"}
+        dingtalkEnabled={dingtalkEnabled}
+      />
     </div>
   );
 }

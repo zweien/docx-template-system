@@ -6,7 +6,7 @@ const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days, matches NextAuth default
 
 function getSessionCookieName(): string {
   const useSecureCookies =
-    process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
+    process.env.NEXTAUTH_URL?.startsWith("https://") ?? !!process.env.VERCEL;
   return `${useSecureCookies ? "__Secure-" : ""}next-auth.session-token`;
 }
 

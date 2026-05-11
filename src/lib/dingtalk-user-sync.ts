@@ -23,23 +23,14 @@ function buildPlaceholderEmail(openId: string): string {
 export async function syncDingtalkUser(
   userInfo: DingtalkUserInfo
 ): Promise<DingtalkUserRecord> {
-  const existing = await db.user.findUnique({
+  return db.user.upsert({
     where: { dingtalkOpenId: userInfo.openId },
-  });
-
-  if (existing) {
-    return db.user.update({
-      where: { id: existing.id },
-      data: {
-        name: buildDisplayName(userInfo),
-        dingtalkUnionId: userInfo.unionId || existing.dingtalkUnionId,
-        dingtalkNick: userInfo.nick || existing.dingtalkNick,
-      },
-    });
-  }
-
-  return db.user.create({
-    data: {
+    update: {
+      name: buildDisplayName(userInfo),
+      dingtalkUnionId: userInfo.unionId || undefined,
+      dingtalkNick: userInfo.nick || undefined,
+    },
+    create: {
       email: buildPlaceholderEmail(userInfo.openId),
       name: buildDisplayName(userInfo),
       role: "USER" as Role,

@@ -28,6 +28,10 @@ model User {
   email         String    @unique
   password      String?
   oidcSubject   String?   @unique
+  dingtalkOpenId   String?   @unique
+  dingtalkUnionId  String?
+  dingtalkNick     String?
+  authProvider     String    @default("local")
   role          Role      @default(USER)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt

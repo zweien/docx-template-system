@@ -4,6 +4,13 @@ import type { Role } from "@/generated/prisma/enums";
 
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60; // 30 days, matches NextAuth default
 
+function getBaseUrl(): string {
+  return (process.env.NEXTAUTH_URL || "http://localhost:8060").replace(
+    /\/$/,
+    ""
+  );
+}
+
 function getSessionCookieName(): string {
   const useSecureCookies =
     process.env.NEXTAUTH_URL?.startsWith("https://") ?? !!process.env.VERCEL;
@@ -32,7 +39,7 @@ export async function createSessionResponse(
     maxAge: SESSION_MAX_AGE,
   });
 
-  const response = NextResponse.redirect(new URL(redirectUrl));
+  const response = NextResponse.redirect(new URL(redirectUrl, getBaseUrl()));
   response.cookies.set(getSessionCookieName(), sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

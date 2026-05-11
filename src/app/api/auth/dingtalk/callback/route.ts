@@ -5,6 +5,19 @@ import { syncDingtalkUser } from "@/lib/dingtalk-user-sync";
 import { createSessionResponse } from "@/lib/dingtalk-session";
 import { logAudit } from "@/lib/services/audit-log.service";
 
+function getBaseUrl(): string {
+  return (process.env.NEXTAUTH_URL || "http://localhost:8060").replace(
+    /\/$/,
+    ""
+  );
+}
+
+function errorRedirect(request: NextRequest) {
+  const loginUrl = new URL("/login", getBaseUrl());
+  loginUrl.searchParams.set("error", "dingtalk_auth_failed");
+  return NextResponse.redirect(loginUrl);
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const authCode = searchParams.get("authCode") ?? searchParams.get("code");
@@ -14,9 +27,7 @@ export async function GET(request: NextRequest) {
   const savedState = cookieStore.get("dingtalk_oauth_state")?.value;
 
   if (!authCode || !state || !savedState || state !== savedState) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("error", "dingtalk_auth_failed");
-    return NextResponse.redirect(loginUrl);
+    return errorRedirect(request);
   }
 
   cookieStore.delete("dingtalk_oauth_state");
@@ -37,8 +48,6 @@ export async function GET(request: NextRequest) {
     return await createSessionResponse(user, "/");
   } catch (error) {
     console.error("DingTalk OAuth callback error:", error);
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("error", "dingtalk_auth_failed");
-    return NextResponse.redirect(loginUrl);
+    return errorRedirect(request);
   }
 }

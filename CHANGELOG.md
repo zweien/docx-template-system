@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.3](https://github.com/zweien/docx-template-system/compare/v0.10.2...v0.10.3) (2026-05-11)
+
+
+### Bug Fixes
+
+* use NEXTAUTH_URL as base for redirect URLs ([58ae5b0](https://github.com/zweien/docx-template-system/commit/58ae5b044db6fc03521b5565d29a1447a2092e4d))
+
 ## [0.10.2](https://github.com/zweien/docx-template-system/compare/v0.10.1...v0.10.2) (2026-05-11)
 
 

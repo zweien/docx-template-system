@@ -10,9 +10,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow auth-related routes
+  // Allow auth-related routes and dingtalk workbench page
   if (
     pathname.startsWith("/login") ||
+    pathname.startsWith("/dingtalk") ||
     pathname.startsWith("/api/auth")
   ) {
     return NextResponse.next();

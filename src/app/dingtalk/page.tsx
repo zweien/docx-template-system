@@ -89,9 +89,12 @@ export default function DingtalkPage() {
         {status === "error" && (
           <>
             <p className="text-sm text-destructive">{errorMsg}</p>
-            <a href="/" className="text-sm text-primary underline">
+            <button
+              onClick={() => { window.location.href = "/"; }}
+              className="text-sm text-primary underline"
+            >
               返回首页
-            </a>
+            </button>
           </>
         )}
       </div>

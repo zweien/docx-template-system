@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { generateState, buildAuthUrl, getCallbackUrl } from "@/lib/dingtalk";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const state = generateState();
   const redirectUri = getCallbackUrl();
   const authUrl = buildAuthUrl(state, redirectUri);

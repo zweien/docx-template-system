@@ -32,8 +32,8 @@ export async function syncDingtalkUser(
       where: { id: existing.id },
       data: {
         name: buildDisplayName(userInfo),
-        dingtalkUnionId: info.unionId || existing.dingtalkUnionId,
-        dingtalkNick: info.nick || existing.dingtalkNick,
+        dingtalkUnionId: userInfo.unionId || existing.dingtalkUnionId,
+        dingtalkNick: userInfo.nick || existing.dingtalkNick,
       },
     });
   }
@@ -44,8 +44,8 @@ export async function syncDingtalkUser(
       name: buildDisplayName(userInfo),
       role: "USER" as Role,
       dingtalkOpenId: userInfo.openId,
-      dingtalkUnionId: info.unionId,
-      dingtalkNick: info.nick,
+      dingtalkUnionId: userInfo.unionId,
+      dingtalkNick: userInfo.nick,
       authProvider: "dingtalk",
     },
   });

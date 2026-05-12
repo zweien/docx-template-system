@@ -59,7 +59,7 @@ export default function DingtalkPage() {
 
         window.dd!.ready(() => {
           window.dd!.runtime.permission.requestAuthCode({
-            corpId,
+            corpId: corpId!,
             onSuccess: async (result) => {
               setStatus("redirecting");
               try {

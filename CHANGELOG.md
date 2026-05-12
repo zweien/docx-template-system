@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.10](https://github.com/zweien/docx-template-system/compare/v0.10.9...v0.10.10) (2026-05-12)
+
+
+### Bug Fixes
+
+* use 302 redirect instead of 307 for form POST response ([7c69903](https://github.com/zweien/docx-template-system/commit/7c699036f7af6a6d3ed0af9ca017c095637d4c6e))
+
 ## [0.10.9](https://github.com/zweien/docx-template-system/compare/v0.10.8...v0.10.9) (2026-05-12)
 
 

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.8](https://github.com/zweien/docx-template-system/compare/v0.10.7...v0.10.8) (2026-05-12)
+
+
+### Bug Fixes
+
+* handle missing qyapi_get_member permission for workbench login ([c2dbae5](https://github.com/zweien/docx-template-system/commit/c2dbae50d2fd4ede0375b4f2c6ab4b303da1c045))
+
 ## [0.10.7](https://github.com/zweien/docx-template-system/compare/v0.10.6...v0.10.7) (2026-05-12)
 
 

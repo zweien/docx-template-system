@@ -19,6 +19,19 @@ declare global {
   }
 }
 
+const DINGTALK_SDK_URL =
+  "https://g.alicdn.com/dingding/dingtalk-jsapi/3.0.25/dingtalk.open.js";
+
+function loadScript(src: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load ${src}`));
+    document.head.appendChild(script);
+  });
+}
+
 export default function DingtalkPage() {
   const [status, setStatus] = useState<"loading" | "error" | "redirecting">(
     "loading"
@@ -33,9 +46,18 @@ export default function DingtalkPage() {
       return;
     }
 
-    const checkSdk = () => {
-      if (window.dd?.ready) {
-        window.dd.ready(() => {
+    async function init() {
+      try {
+        if (!window.dd?.ready) {
+          await loadScript(DINGTALK_SDK_URL);
+        }
+
+        if (!window.dd?.ready) {
+          window.location.href = "/api/auth/dingtalk";
+          return;
+        }
+
+        window.dd!.ready(() => {
           window.dd!.runtime.permission.requestAuthCode({
             corpId,
             onSuccess: async (result) => {
@@ -64,12 +86,12 @@ export default function DingtalkPage() {
             },
           });
         });
-      } else {
+      } catch {
         window.location.href = "/api/auth/dingtalk";
       }
-    };
+    }
 
-    checkSdk();
+    init();
   }, []);
 
   return (

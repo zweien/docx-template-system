@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.5](https://github.com/zweien/docx-template-system/compare/v0.10.4...v0.10.5) (2026-05-12)
+
+
+### Bug Fixes
+
+* load DingTalk JS SDK for workbench auto-login ([a7c3ec6](https://github.com/zweien/docx-template-system/commit/a7c3ec67809f9ea8acb8be768a231ec81d051cb0))
+
 ## [0.10.4](https://github.com/zweien/docx-template-system/compare/v0.10.3...v0.10.4) (2026-05-12)
 
 

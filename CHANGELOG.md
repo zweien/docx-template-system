@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.4](https://github.com/zweien/docx-template-system/compare/v0.10.3...v0.10.4) (2026-05-12)
+
+
+### Features
+
+* **ci:** add NEXT_PUBLIC_DINGTALK_CORP_ID build arg ([d449828](https://github.com/zweien/docx-template-system/commit/d449828451c362adcc9a437995401746ccfe0e8f))
+
 ## [0.10.3](https://github.com/zweien/docx-template-system/compare/v0.10.2...v0.10.3) (2026-05-11)
 
 

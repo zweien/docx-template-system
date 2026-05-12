@@ -139,10 +139,15 @@ async function getOldAccessToken(): Promise<string> {
   return data.access_token as string;
 }
 
+interface GetUserInfoResult {
+  userId: string;
+  associatedOpenId?: string;
+}
+
 async function getOldUserId(
   accessToken: string,
   authCode: string
-): Promise<string> {
+): Promise<GetUserInfoResult> {
   const response = await fetch(
     `${DINGTALK_OLD_USER_INFO_URL}?access_token=${accessToken}`,
     {
@@ -159,7 +164,10 @@ async function getOldUserId(
   if (data.errcode !== 0) {
     throw new Error(`获取钉钉 userId 失败: ${data.errmsg}`);
   }
-  return data.result.userid as string;
+  return {
+    userId: data.result.userid as string,
+    associatedOpenId: data.result.associated_openid as string | undefined,
+  };
 }
 
 async function getOldUserDetail(
@@ -197,6 +205,37 @@ export async function getWorkbenchUserInfo(
   authCode: string
 ): Promise<DingtalkUserInfo> {
   const accessToken = await getOldAccessToken();
-  const userId = await getOldUserId(accessToken, authCode);
-  return getOldUserDetail(accessToken, userId);
+  const { userId, associatedOpenId } = await getOldUserId(accessToken, authCode);
+
+  // If getuserinfo returned an associated_openid, use it directly
+  // and skip the topapi/v2/user/get call (which needs qyapi_get_member permission)
+  if (associatedOpenId) {
+    console.log("[dingtalk] workbench: got associated_openid from getuserinfo, skipping user detail call");
+    return {
+      openId: associatedOpenId,
+      unionId: "",
+      nick: "",
+      avatarUrl: "",
+      mobile: "",
+    };
+  }
+
+  // Fallback: try to get full user detail (requires qyapi_get_member permission)
+  try {
+    return await getOldUserDetail(accessToken, userId);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("60011") || msg.includes("qyapi_get_member")) {
+      // Permission not granted — use userId as fallback identifier
+      console.warn("[dingtalk] workbench: qyapi_get_member not granted, using userId as identifier");
+      return {
+        openId: userId,
+        unionId: "",
+        nick: "",
+        avatarUrl: "",
+        mobile: "",
+      };
+    }
+    throw err;
+  }
 }

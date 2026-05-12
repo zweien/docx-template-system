@@ -113,3 +113,90 @@ export async function getDingtalkUserInfo(
     mobile: data.mobile ?? "",
   };
 }
+
+// --- Old DingTalk API (for workbench JS SDK authCode) ---
+
+const DINGTALK_OLD_TOKEN_URL = "https://oapi.dingtalk.com/gettoken";
+const DINGTALK_OLD_USER_INFO_URL =
+  "https://oapi.dingtalk.com/topapi/v2/user/getuserinfo";
+const DINGTALK_OLD_USER_DETAIL_URL =
+  "https://oapi.dingtalk.com/topapi/v2/user/get";
+
+async function getOldAccessToken(): Promise<string> {
+  const params = new URLSearchParams({
+    appkey: getClientId(),
+    appsecret: getClientSecret(),
+  });
+  const response = await fetch(`${DINGTALK_OLD_TOKEN_URL}?${params}`);
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`获取钉钉旧版 access_token 失败: ${response.status} ${text}`);
+  }
+  const data = await response.json();
+  if (data.errcode !== 0) {
+    throw new Error(`获取钉钉旧版 access_token 失败: ${data.errmsg}`);
+  }
+  return data.access_token as string;
+}
+
+async function getOldUserId(
+  accessToken: string,
+  authCode: string
+): Promise<string> {
+  const response = await fetch(
+    `${DINGTALK_OLD_USER_INFO_URL}?access_token=${accessToken}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: authCode }),
+    }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`获取钉钉 userId 失败: ${response.status} ${text}`);
+  }
+  const data = await response.json();
+  if (data.errcode !== 0) {
+    throw new Error(`获取钉钉 userId 失败: ${data.errmsg}`);
+  }
+  return data.result.userid as string;
+}
+
+async function getOldUserDetail(
+  accessToken: string,
+  userId: string
+): Promise<DingtalkUserInfo> {
+  const response = await fetch(
+    `${DINGTALK_OLD_USER_DETAIL_URL}?access_token=${accessToken}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userid: userId }),
+    }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`获取钉钉用户详情失败: ${response.status} ${text}`);
+  }
+  const data = await response.json();
+  if (data.errcode !== 0) {
+    throw new Error(`获取钉钉用户详情失败: ${data.errmsg}`);
+  }
+  const result = data.result;
+  return {
+    openId: result.openId ?? "",
+    unionId: result.unionid ?? "",
+    nick: result.name ?? "",
+    avatarUrl: result.avatar ?? "",
+    mobile: result.mobile ?? "",
+  };
+}
+
+/** Workbench flow: exchange JS SDK authCode via old DingTalk API */
+export async function getWorkbenchUserInfo(
+  authCode: string
+): Promise<DingtalkUserInfo> {
+  const accessToken = await getOldAccessToken();
+  const userId = await getOldUserId(accessToken, authCode);
+  return getOldUserDetail(accessToken, userId);
+}

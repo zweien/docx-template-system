@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserAccessToken, getDingtalkUserInfo } from "@/lib/dingtalk";
+import { getWorkbenchUserInfo } from "@/lib/dingtalk";
 import { syncDingtalkUser } from "@/lib/dingtalk-user-sync";
 import { createSessionJsonResponse } from "@/lib/dingtalk-session";
 import { logAudit } from "@/lib/services/audit-log.service";
@@ -16,8 +16,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tokenResult = await getUserAccessToken(authCode);
-    const userInfo = await getDingtalkUserInfo(tokenResult.accessToken);
+    const userInfo = await getWorkbenchUserInfo(authCode);
     const user = await syncDingtalkUser(userInfo);
 
     logAudit({

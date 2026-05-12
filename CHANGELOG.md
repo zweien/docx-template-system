@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.6](https://github.com/zweien/docx-template-system/compare/v0.10.5...v0.10.6) (2026-05-12)
+
+
+### Bug Fixes
+
+* assert corpId is defined before passing to DingTalk SDK ([cd182ee](https://github.com/zweien/docx-template-system/commit/cd182ee004bdd43bfd8b52e0c4965c7cdecfd066))
+
 ## [0.10.5](https://github.com/zweien/docx-template-system/compare/v0.10.4...v0.10.5) (2026-05-12)
 
 

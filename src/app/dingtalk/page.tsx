@@ -62,23 +62,18 @@ export default function DingtalkPage() {
             corpId: corpId!,
             onSuccess: async (result) => {
               setStatus("redirecting");
-              try {
-                const res = await fetch("/api/auth/dingtalk/workbench", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ authCode: result.code }),
-                });
-                const data = await res.json();
-                if (data.redirect) {
-                  window.location.href = data.redirect;
-                } else {
-                  setStatus("error");
-                  setErrorMsg(data.error || "登录失败");
-                }
-              } catch {
-                setStatus("error");
-                setErrorMsg("请求失败");
-              }
+              // Use form POST for full page navigation so WebView
+              // correctly processes Set-Cookie from the redirect response
+              const form = document.createElement("form");
+              form.method = "POST";
+              form.action = "/api/auth/dingtalk/workbench";
+              const input = document.createElement("input");
+              input.type = "hidden";
+              input.name = "authCode";
+              input.value = result.code;
+              form.appendChild(input);
+              document.body.appendChild(form);
+              form.submit();
             },
             onFail: (err) => {
               console.error("DingTalk requestAuthCode failed:", err);

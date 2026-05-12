@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.7](https://github.com/zweien/docx-template-system/compare/v0.10.6...v0.10.7) (2026-05-12)
+
+
+### Bug Fixes
+
+* use old DingTalk API for workbench auto-login ([278db2d](https://github.com/zweien/docx-template-system/commit/278db2df96ba69b964b703ad64b458992bb484cb))
+
 ## [0.10.6](https://github.com/zweien/docx-template-system/compare/v0.10.5...v0.10.6) (2026-05-12)
 
 

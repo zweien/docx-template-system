@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (!authCode) {
       const loginUrl = new URL("/login", getBaseUrl());
       loginUrl.searchParams.set("error", "dingtalk_auth_failed");
-      return NextResponse.redirect(loginUrl);
+      return NextResponse.redirect(loginUrl, 302);
     }
 
     console.log("[dingtalk] workbench: exchanging authCode, length:", authCode.length);
@@ -50,6 +50,6 @@ export async function POST(request: NextRequest) {
     console.error("DingTalk workbench auth error:", error);
     const loginUrl = new URL("/login", getBaseUrl());
     loginUrl.searchParams.set("error", "dingtalk_auth_failed");
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(loginUrl, 302);
   }
 }

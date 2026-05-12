@@ -39,7 +39,7 @@ export async function createSessionResponse(
     maxAge: SESSION_MAX_AGE,
   });
 
-  const response = NextResponse.redirect(new URL(redirectUrl, getBaseUrl()));
+  const response = NextResponse.redirect(new URL(redirectUrl, getBaseUrl()), 302);
   response.cookies.set(getSessionCookieName(), sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

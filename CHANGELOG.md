@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.16](https://github.com/zweien/docx-template-system/compare/v0.10.15...v0.10.16) (2026-05-13)
+
+
+### Bug Fixes
+
+* pass secureCookie=false when reading non-prefixed session cookie ([9195bbe](https://github.com/zweien/docx-template-system/commit/9195bbe3e8aacc37efdffa1b37cb560c978713b8))
+
 ## [0.10.15](https://github.com/zweien/docx-template-system/compare/v0.10.14...v0.10.15) (2026-05-13)
 
 

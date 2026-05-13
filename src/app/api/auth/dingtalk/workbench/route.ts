@@ -79,28 +79,56 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = getBaseUrl();
     const cookieName = getSessionCookieName();
-    const isProduction = process.env.NODE_ENV === "production";
 
-    // DingTalk WebView doesn't persist Set-Cookie headers.
-    // Use document.cookie in JS to set the session token directly.
+    // DingTalk WebView doesn't persist Set-Cookie headers or document.cookie reliably.
+    // Try multiple approaches: document.cookie with minimal flags, and also set via header.
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>登录成功</title></head>
 <body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif">
 <div style="text-align:center">
 <p id="msg">登录成功，正在跳转...</p>
+<p id="dbg" style="font-size:12px;color:#999"></p>
 </div>
 <script>
 (function(){
   var token = ${JSON.stringify(sessionToken)};
   var name = ${JSON.stringify(cookieName)};
-  var maxAge = ${SESSION_MAX_AGE};
-  var cookie = name + "=" + token + "; path=/; max-age=" + maxAge + "; SameSite=Lax" + (${isProduction ? "true" : "false"} ? "; Secure" : "");
-  document.cookie = cookie;
-  console.log("[dingtalk-workbench] set cookie:", name, "length:", token.length);
-  console.log("[dingtalk-workbench] all cookies:", document.cookie);
-  setTimeout(function(){ window.location.href = ${JSON.stringify(baseUrl + "/")}; }, 1000);
+  var dbg = document.getElementById("dbg");
+
+  // Attempt 1: minimal cookie (no Secure, no SameSite)
+  document.cookie = name + "=" + token + "; path=/";
+  dbg.textContent = "attempt 1: " + (document.cookie.indexOf(name) !== -1 ? "OK" : "FAIL");
+
+  // Attempt 2: with max-age
+  document.cookie = name + "=" + token + "; path=/; max-age=${SESSION_MAX_AGE}";
+
+  // Attempt 3: with domain
+  document.cookie = name + "=" + token + "; path=/; max-age=${SESSION_MAX_AGE}; domain=doc.idrl.top";
+
+  console.log("[dingtalk-wb] cookie set attempts done");
+  console.log("[dingtalk-wb] document.cookie:", document.cookie);
+
+  // Delayed redirect to allow cookie to be persisted
+  setTimeout(function(){
+    dbg.textContent += " | redirecting...";
+    window.location.href = ${JSON.stringify(baseUrl + "/")};
+  }, 2000);
 })();
 </script>
 </body></html>`;
+
+    // Also set via Set-Cookie header as belt-and-suspenders
+    const response = new NextResponse(html, {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
+    response.cookies.set(cookieName, sessionToken, {
+      httpOnly: false,
+      secure: false,
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_MAX_AGE,
+    });
+    return response;
 
     return new NextResponse(html, {
       status: 200,

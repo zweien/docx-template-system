@@ -42,11 +42,13 @@ export async function proxy(request: NextRequest) {
   });
 
   // Fallback: check non-prefixed cookie (set by DingTalk WebView via JS)
+  // Must pass secureCookie: false so SessionStore reads the non-prefixed name
   if (!token && secureCookie) {
     token = await getToken({
       req: request,
       secret: process.env.NEXTAUTH_SECRET,
       cookieName: "next-auth.session-token",
+      secureCookie: false,
     });
   }
 

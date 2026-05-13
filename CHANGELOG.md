@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.11](https://github.com/zweien/docx-template-system/compare/v0.10.10...v0.10.11) (2026-05-13)
+
+
+### Bug Fixes
+
+* return HTML page instead of redirect for workbench login ([b6f240c](https://github.com/zweien/docx-template-system/commit/b6f240c3cbe4ad4af03d7eaf6def99190a543a46))
+
 ## [0.10.10](https://github.com/zweien/docx-template-system/compare/v0.10.9...v0.10.10) (2026-05-12)
 
 

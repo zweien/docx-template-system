@@ -29,10 +29,25 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({
+  const secureCookie = process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
+  const cookieName = secureCookie
+    ? "__Secure-next-auth.session-token"
+    : "next-auth.session-token";
+
+  let token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,
+    cookieName,
   });
+
+  // Fallback: check non-prefixed cookie (set by DingTalk WebView via JS)
+  if (!token && secureCookie) {
+    token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+      cookieName: "next-auth.session-token",
+    });
+  }
 
   if (!token) {
     const loginUrl = new URL("/login", request.url);

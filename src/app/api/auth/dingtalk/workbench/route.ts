@@ -15,9 +15,9 @@ function getBaseUrl(): string {
 }
 
 function getSessionCookieName(): string {
-  const useSecureCookies =
-    process.env.NEXTAUTH_URL?.startsWith("https://") ?? !!process.env.VERCEL;
-  return `${useSecureCookies ? "__Secure-" : ""}next-auth.session-token`;
+  // Always use non-prefixed name so JS can set it via document.cookie
+  // (__Secure- prefix cookies cannot be set by JavaScript)
+  return "next-auth.session-token";
 }
 
 function errorHtml(message: string): string {
@@ -79,41 +79,33 @@ export async function POST(request: NextRequest) {
 
     const baseUrl = getBaseUrl();
     const cookieName = getSessionCookieName();
+    const isProduction = process.env.NODE_ENV === "production";
 
-    // Return HTML page with meta refresh instead of 302 redirect
-    // WebView handles Set-Cookie on 200 responses more reliably than on redirects
-    const html = `<!DOCTYPE html><html><head>
-<meta charset="utf-8">
-<meta http-equiv="refresh" content="2;url=${baseUrl}/">
-<title>登录成功</title>
-</head>
+    // DingTalk WebView doesn't persist Set-Cookie headers.
+    // Use document.cookie in JS to set the session token directly.
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>登录成功</title></head>
 <body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif">
 <div style="text-align:center">
-<p>登录成功，正在跳转...</p>
-<p><a href="${baseUrl}/">如果没有自动跳转，请点击这里</a></p>
+<p id="msg">登录成功，正在跳转...</p>
 </div>
 <script>
-// Debug: log cookie status
-console.log("[dingtalk-workbench] cookies:", document.cookie);
-// Force redirect as fallback
-setTimeout(function(){ window.location.href = "${baseUrl}/"; }, 1500);
+(function(){
+  var token = ${JSON.stringify(sessionToken)};
+  var name = ${JSON.stringify(cookieName)};
+  var maxAge = ${SESSION_MAX_AGE};
+  var cookie = name + "=" + token + "; path=/; max-age=" + maxAge + "; SameSite=Lax" + (${isProduction ? "true" : "false"} ? "; Secure" : "");
+  document.cookie = cookie;
+  console.log("[dingtalk-workbench] set cookie:", name, "length:", token.length);
+  console.log("[dingtalk-workbench] all cookies:", document.cookie);
+  setTimeout(function(){ window.location.href = ${JSON.stringify(baseUrl + "/")}; }, 1000);
+})();
 </script>
 </body></html>`;
 
-    const response = new NextResponse(html, {
+    return new NextResponse(html, {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
-
-    response.cookies.set(cookieName, sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: SESSION_MAX_AGE,
-    });
-
-    return response;
   } catch (error) {
     console.error("DingTalk workbench auth error:", error);
     return new NextResponse(errorHtml("钉钉登录失败，请重试"), {

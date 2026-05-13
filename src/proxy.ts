@@ -16,6 +16,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/dingtalk") ||
     pathname.startsWith("/api/auth")
   ) {
+    // But block dingtalk cookie-test/check in production (debug only)
     return NextResponse.next();
   }
 

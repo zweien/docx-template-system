@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.15](https://github.com/zweien/docx-template-system/compare/v0.10.14...v0.10.15) (2026-05-13)
+
+
+### Bug Fixes
+
+* clear duplicate cookies before setting session cookie ([12a04b3](https://github.com/zweien/docx-template-system/commit/12a04b3297612fbfeb1af2a08f1714747eca48ab))
+
 ## [0.10.14](https://github.com/zweien/docx-template-system/compare/v0.10.13...v0.10.14) (2026-05-13)
 
 ## [0.10.13](https://github.com/zweien/docx-template-system/compare/v0.10.12...v0.10.13) (2026-05-13)

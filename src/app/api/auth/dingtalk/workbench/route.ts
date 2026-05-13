@@ -83,29 +83,41 @@ export async function POST(request: NextRequest) {
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>登录成功</title></head>
 <body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif">
 <div style="text-align:center">
-<p id="msg">登录成功，正在跳转...</p>
-<p id="dbg" style="font-size:12px;color:#999"></p>
+<p>登录成功，正在跳转...</p>
 </div>
 <script>
 (function(){
   var token = ${JSON.stringify(sessionToken)};
   var name = ${JSON.stringify(cookieName)};
-  var dbg = document.getElementById("dbg");
 
+  // Clear any existing cookies first (avoid duplicates)
+  document.cookie = name + "=; path=/; max-age=0";
+  document.cookie = name + "=; path=/; max-age=0; domain=doc.idrl.top";
+
+  // Set fresh cookie
   document.cookie = name + "=" + token + "; path=/; max-age=${SESSION_MAX_AGE}";
-  dbg.textContent = "cookie: " + (document.cookie.indexOf(name) !== -1 ? "OK" : "FAIL");
 
   setTimeout(function(){
-    window.location.href = ${JSON.stringify(baseUrl + "/api/auth/dingtalk/cookie-test")};
-  }, 2000);
+    window.location.href = ${JSON.stringify(baseUrl + "/")};
+  }, 1000);
 })();
 </script>
 </body></html>`;
 
+    // Also set via Set-Cookie header (clear old + set new)
     const response = new NextResponse(html, {
       status: 200,
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
+    // Clear old __Secure- prefixed cookie if any
+    response.cookies.set("__Secure-next-auth.session-token", "", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+    });
+    // Set non-prefixed cookie
     response.cookies.set(cookieName, sessionToken, {
       httpOnly: false,
       secure: false,

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.12](https://github.com/zweien/docx-template-system/compare/v0.10.11...v0.10.12) (2026-05-13)
+
+
+### Bug Fixes
+
+* set session cookie via JS document.cookie for DingTalk WebView ([1b10a59](https://github.com/zweien/docx-template-system/commit/1b10a59079d07c601a2401e379dae28aacca6728))
+
 ## [0.10.11](https://github.com/zweien/docx-template-system/compare/v0.10.10...v0.10.11) (2026-05-13)
 
 

@@ -55,19 +55,35 @@ export async function proxy(request: NextRequest) {
     });
   }
 
-  if (!token) {
-    const ua = request.headers.get("user-agent") || "";
-    const hasCookie = !!(
-      request.cookies.get("next-auth.session-token")?.value ||
-      request.cookies.get("__Secure-next-auth.session-token")?.value
-    );
+  // Log all proxy hits for debugging DingTalk mobile auth
+  const allCookies = request.cookies.get("next-auth.session-token")
+    ? "non-prefixed-found"
+    : request.cookies.get("__Secure-next-auth.session-token")
+      ? "secure-found"
+      : "none";
+  const ua = request.headers.get("user-agent") || "";
+  const isMobile = /DingTalk|Mobile|Android|iPhone/i.test(ua);
+  if (isMobile || allCookies !== "none") {
     console.log(
-      "[proxy] no session, redirecting to login. path:",
+      "[proxy] hit path:",
       pathname,
-      "hasCookie:",
-      hasCookie,
+      "cookie:",
+      allCookies,
+      "token:",
+      !!token,
       "ua:",
-      ua.slice(0, 60)
+      ua.slice(0, 80)
+    );
+  }
+
+  if (!token) {
+    console.log(
+      "[proxy] REJECT path:",
+      pathname,
+      "cookie:",
+      allCookies,
+      "ua:",
+      ua.slice(0, 80)
     );
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);

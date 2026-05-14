@@ -24,6 +24,20 @@ if (devBypassAuth && isProductionRuntime) {
 const authentikConfig = getAuthentikConfig();
 
 export const authOptions: NextAuthOptions = {
+  // Use non-prefixed cookie name so DingTalk mobile WebView (which can only
+  // set cookies via document.cookie, and cannot set __Secure- prefixed ones)
+  // can establish a session. The Secure attribute still ensures HTTPS-only.
+  cookies: {
+    sessionToken: {
+      name: "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: true,
+      },
+    },
+  },
   providers: [
     AuthentikProvider({
       issuer: authentikConfig.issuer,

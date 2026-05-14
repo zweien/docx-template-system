@@ -12,9 +12,7 @@ function getBaseUrl(): string {
 }
 
 function getSessionCookieName(): string {
-  const useSecureCookies =
-    process.env.NEXTAUTH_URL?.startsWith("https://") ?? !!process.env.VERCEL;
-  return `${useSecureCookies ? "__Secure-" : ""}next-auth.session-token`;
+  return "next-auth.session-token";
 }
 
 interface SessionUser {

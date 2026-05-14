@@ -94,8 +94,10 @@ export async function POST(request: NextRequest) {
   document.cookie = name + "=; path=/; max-age=0";
   document.cookie = name + "=; path=/; max-age=0; domain=doc.idrl.top";
 
-  // Set fresh cookie
-  document.cookie = name + "=" + token + "; path=/; max-age=${SESSION_MAX_AGE}";
+  // DingTalk mobile WebView requires SameSite=None for cookies to be
+  // sent on navigation. SameSite=Lax (default) causes cookies to be
+  // silently dropped on page navigation in mobile WebView.
+  document.cookie = name + "=" + token + "; path=/; max-age=${SESSION_MAX_AGE}; SameSite=None; Secure";
 
   setTimeout(function(){
     window.location.href = ${JSON.stringify(baseUrl + "/")};
@@ -117,11 +119,11 @@ export async function POST(request: NextRequest) {
       path: "/",
       maxAge: 0,
     });
-    // Set non-prefixed cookie
+    // Set non-prefixed cookie with SameSite=None for DingTalk mobile WebView
     response.cookies.set(cookieName, sessionToken, {
       httpOnly: false,
-      secure: false,
-      sameSite: "lax",
+      secure: true,
+      sameSite: "none",
       path: "/",
       maxAge: SESSION_MAX_AGE,
     });

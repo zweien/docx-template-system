@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.17](https://github.com/zweien/docx-template-system/compare/v0.10.16...v0.10.17) (2026-05-14)
+
+
+### Bug Fixes
+
+* **dingtalk:** use SameSite=None for mobile WebView cookie compatibility ([51bf86d](https://github.com/zweien/docx-template-system/commit/51bf86d0e5bab6851b65cc032d34615c630b0f5e))
+
 ## [0.10.16](https://github.com/zweien/docx-template-system/compare/v0.10.15...v0.10.16) (2026-05-13)
 
 

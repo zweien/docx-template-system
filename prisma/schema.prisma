@@ -428,8 +428,8 @@ model DataRecordChangeHistory {
   fieldLabel  String
   oldValue    Json?
   newValue    Json?
-  changedById String
-  changedBy   User      @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  changedById String?
+  changedBy   User?     @relation(fields: [changedById], references: [id], onDelete: SetNull)
   changedAt   DateTime  @default(now())
 
   @@index([recordId, changedAt(sort: Desc)])

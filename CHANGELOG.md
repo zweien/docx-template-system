@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.22](https://github.com/zweien/docx-template-system/compare/v0.10.21...v0.10.22) (2026-05-14)
+
+
+### Bug Fixes
+
+* **schema:** make DataRecordChangeHistory.changedById nullable ([8f7c333](https://github.com/zweien/docx-template-system/commit/8f7c33346d7ff87a7754b4fb717ef647aa896933))
+
 ## [0.10.21](https://github.com/zweien/docx-template-system/compare/v0.10.20...v0.10.21) (2026-05-14)
 
 ## [0.10.20](https://github.com/zweien/docx-template-system/compare/v0.10.19...v0.10.20) (2026-05-14)

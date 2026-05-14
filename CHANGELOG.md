@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.18](https://github.com/zweien/docx-template-system/compare/v0.10.17...v0.10.18) (2026-05-14)
+
+
+### Bug Fixes
+
+* **dingtalk:** use OTT exchange instead of cookie for mobile WebView auth ([1ae8ac7](https://github.com/zweien/docx-template-system/commit/1ae8ac7bbc7afbd110f42bea2cfa7b228a7f41b5))
+
 ## [0.10.17](https://github.com/zweien/docx-template-system/compare/v0.10.16...v0.10.17) (2026-05-14)
 
 

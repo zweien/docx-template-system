@@ -3,7 +3,7 @@ import { getWorkbenchUserInfo } from "@/lib/dingtalk";
 import { syncDingtalkUser } from "@/lib/dingtalk-user-sync";
 import { logAudit } from "@/lib/services/audit-log.service";
 import { encode } from "next-auth/jwt";
-import type { Role } from "@/generated/prisma/enums";
+import { createOTT } from "@/lib/dingtalk-ott-store";
 
 const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
 
@@ -12,12 +12,6 @@ function getBaseUrl(): string {
     /\/$/,
     ""
   );
-}
-
-function getSessionCookieName(): string {
-  // Always use non-prefixed name so JS can set it via document.cookie
-  // (__Secure- prefix cookies cannot be set by JavaScript)
-  return "next-auth.session-token";
 }
 
 function errorHtml(message: string): string {
@@ -77,41 +71,22 @@ export async function POST(request: NextRequest) {
       maxAge: SESSION_MAX_AGE,
     });
 
+    // Create one-time token (OTT) for mobile WebView cookie workaround.
+    // DingTalk mobile WebView (iOS WKWebView) has unreliable cookie persistence
+    // across navigations. Instead of setting cookies in this response, we
+    // generate a short-lived OTT and redirect to the exchange endpoint which
+    // will handle session establishment.
+    const ott = createOTT(sessionToken, user.id, user.name);
     const baseUrl = getBaseUrl();
-    const cookieName = getSessionCookieName();
+    const exchangeUrl = `${baseUrl}/api/auth/dingtalk/exchange?ott=${ott}`;
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>登录成功</title></head>
-<body style="display:flex;justify-content:center;align-items:center;height:100vh;font-family:sans-serif">
-<div style="text-align:center">
-<p>登录成功，正在跳转...</p>
-</div>
-<script>
-(function(){
-  var token = ${JSON.stringify(sessionToken)};
-  var name = ${JSON.stringify(cookieName)};
+    console.log("[dingtalk] workbench: created OTT, redirecting to exchange endpoint");
 
-  // Clear any existing cookies first (avoid duplicates)
-  document.cookie = name + "=; path=/; max-age=0";
-  document.cookie = name + "=; path=/; max-age=0; domain=doc.idrl.top";
+    // Use HTTP 302 redirect instead of HTML response.
+    // 302 from POST converts to GET, so the browser will GET the exchange URL.
+    const response = NextResponse.redirect(exchangeUrl, 302);
 
-  // DingTalk mobile WebView requires SameSite=None for cookies to be
-  // sent on navigation. SameSite=Lax (default) causes cookies to be
-  // silently dropped on page navigation in mobile WebView.
-  document.cookie = name + "=" + token + "; path=/; max-age=${SESSION_MAX_AGE}; SameSite=None; Secure";
-
-  setTimeout(function(){
-    window.location.href = ${JSON.stringify(baseUrl + "/")};
-  }, 1000);
-})();
-</script>
-</body></html>`;
-
-    // Also set via Set-Cookie header (clear old + set new)
-    const response = new NextResponse(html, {
-      status: 200,
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
-    // Clear old __Secure- prefixed cookie if any
+    // Clear old cookies
     response.cookies.set("__Secure-next-auth.session-token", "", {
       httpOnly: true,
       secure: true,
@@ -119,14 +94,14 @@ export async function POST(request: NextRequest) {
       path: "/",
       maxAge: 0,
     });
-    // Set non-prefixed cookie with SameSite=None for DingTalk mobile WebView
-    response.cookies.set(cookieName, sessionToken, {
+    response.cookies.set("next-auth.session-token", "", {
       httpOnly: false,
       secure: true,
       sameSite: "none",
       path: "/",
-      maxAge: SESSION_MAX_AGE,
+      maxAge: 0,
     });
+
     return response;
   } catch (error) {
     console.error("DingTalk workbench auth error:", error);

@@ -38,6 +38,13 @@ export default function DingtalkPage() {
   );
   const [errorMsg, setErrorMsg] = useState("");
 
+  // Load DingTalk H5 remote debug script
+  useEffect(() => {
+    const s = document.createElement("script");
+    s.src = "https://g.alicdn.com/code/npm/@ali/dingtalk-h5-remote-debug/0.1.3/index.js";
+    document.head.appendChild(s);
+  }, []);
+
   useEffect(() => {
     const corpId = process.env.NEXT_PUBLIC_DINGTALK_CORP_ID;
 

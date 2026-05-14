@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { consumeOTT } from "@/lib/dingtalk-ott-store";
+
+const SESSION_MAX_AGE = 30 * 24 * 60 * 60;
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
 
   // Allow static assets in /public (e.g. /logo.png, /uploads/*)
   if (/\.[^/]+$/.test(pathname)) {
@@ -16,7 +19,6 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/dingtalk") ||
     pathname.startsWith("/api/auth")
   ) {
-    // But block dingtalk cookie-test/check in production (debug only)
     return NextResponse.next();
   }
 
@@ -30,7 +32,8 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const secureCookie = process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
+  const secureCookie =
+    process.env.NEXTAUTH_URL?.startsWith("https://") ?? false;
   const cookieName = secureCookie
     ? "__Secure-next-auth.session-token"
     : "next-auth.session-token";
@@ -53,6 +56,19 @@ export async function proxy(request: NextRequest) {
   }
 
   if (!token) {
+    const ua = request.headers.get("user-agent") || "";
+    const hasCookie = !!(
+      request.cookies.get("next-auth.session-token")?.value ||
+      request.cookies.get("__Secure-next-auth.session-token")?.value
+    );
+    console.log(
+      "[proxy] no session, redirecting to login. path:",
+      pathname,
+      "hasCookie:",
+      hasCookie,
+      "ua:",
+      ua.slice(0, 60)
+    );
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);

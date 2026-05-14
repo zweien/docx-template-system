@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.20](https://github.com/zweien/docx-template-system/compare/v0.10.19...v0.10.20) (2026-05-14)
+
+
+### Bug Fixes
+
+* **auth:** use non-prefixed session cookie for DingTalk mobile compatibility ([e2264cb](https://github.com/zweien/docx-template-system/commit/e2264cb5f51cae2bd2c2288eb05389765be18027))
+
 ## [0.10.19](https://github.com/zweien/docx-template-system/compare/v0.10.18...v0.10.19) (2026-05-14)
 
 ## [0.10.18](https://github.com/zweien/docx-template-system/compare/v0.10.17...v0.10.18) (2026-05-14)

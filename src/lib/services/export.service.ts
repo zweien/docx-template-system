@@ -2,6 +2,7 @@ import * as XLSX from "xlsx";
 import { db } from "@/lib/db";
 import { getTable } from "./data-table.service";
 import { formatCellText } from "@/lib/format-cell-text";
+import { createZipWithAttachments } from "./attachment-export.service";
 import type { ServiceResult, DataFieldItem, ExportBundle, BundleField, BundleTable } from "@/types/data-table";
 
 // ── Shared Types ──
@@ -296,7 +297,7 @@ export async function exportToSQL(
 
 export async function exportBundle(
   rootTableId: string
-): Promise<ServiceResult<ExportBundle>> {
+): Promise<ServiceResult<Buffer>> {
   try {
     // Phase 1: BFS to collect all related table IDs
     const visited = new Set<string>();
@@ -445,15 +446,24 @@ export async function exportBundle(
 
     const rootData = tableDataMap.get(rootTableId)!;
 
-    return {
-      success: true,
-      data: {
-        version: "2.0",
-        exportedAt: new Date().toISOString(),
-        rootTable: rootData.table.name,
-        tables,
-      },
+    const allRecords: Array<{ data: Record<string, unknown> }> = [];
+    const allFields: DataFieldItem[] = [];
+
+    for (const [, data] of tableDataMap) {
+      allRecords.push(...data.records);
+      allFields.push(...data.fields);
+    }
+
+    const bundleData: ExportBundle = {
+      version: "2.0",
+      exportedAt: new Date().toISOString(),
+      rootTable: rootData.table.name,
+      tables,
     };
+
+    const zipBuffer = await createZipWithAttachments(bundleData, allRecords, allFields);
+
+    return { success: true, data: zipBuffer };
   } catch (error) {
     const message = error instanceof Error ? error.message : "导出关联数据失败";
     return { success: false, error: { code: "EXPORT_BUNDLE_ERROR", message } };

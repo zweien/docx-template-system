@@ -1,9 +1,14 @@
 import { writeFile, readdir, readFile, stat } from "fs/promises";
 import { isAbsolute, join, normalize } from "path";
 import { db } from "@/lib/db";
-import type { ServiceResult } from "@/types/data-table";
+import type { ServiceResult, DataFieldItem } from "@/types/data-table";
 import type { BackupConfig } from "@/types/agent2";
 import type { Prisma } from "@/generated/prisma/client";
+import {
+  createZipWithAttachments,
+  extractZipAndRestoreAttachments,
+  rewriteRecordFilePaths,
+} from "./attachment-export.service";
 
 const DEFAULT_BACKUP_DIR = join(
   /* turbopackIgnore: true */ process.cwd(),
@@ -28,7 +33,7 @@ async function ensureBackupDir() {
   }
 }
 
-function getBackupDir() {
+export function getBackupDir() {
   const configuredDir = process.env.BACKUP_DIR?.trim();
 
   if (!configuredDir) {
@@ -68,6 +73,9 @@ export async function runBackup(): Promise<ServiceResult<BackupMeta>> {
       tables: {},
     };
 
+    const allRecords: Array<{ data: Record<string, unknown> }> = [];
+    const allFields: DataFieldItem[] = [];
+
     for (const table of tables) {
       const records = await db.dataRecord.findMany({
         where: { tableId: table.id },
@@ -91,14 +99,45 @@ export async function runBackup(): Promise<ServiceResult<BackupMeta>> {
           updatedAt: r.updatedAt.toISOString(),
         })),
       };
+
+      allRecords.push(
+        ...records.map((r) => ({ data: r.data as Record<string, unknown> }))
+      );
+      allFields.push(
+        ...table.fields.map(
+          (f) =>
+            ({
+              id: f.id,
+              key: f.key,
+              label: f.label,
+              type: f.type as DataFieldItem["type"],
+              required: f.required,
+              sortOrder: f.sortOrder,
+              options: f.options as unknown,
+              defaultValue: f.defaultValue,
+              relationTo: f.relationTo ?? undefined,
+              relationCardinality: f.relationCardinality,
+              displayField: f.displayField ?? undefined,
+              isSystemManagedInverse: f.isSystemManagedInverse,
+              relationSchema: f.relationSchema as unknown,
+              inverseRelationCardinality: f.relationCardinality,
+            } as DataFieldItem)
+        )
+      );
     }
+
+    const zipBuffer = await createZipWithAttachments(
+      backupData,
+      allRecords,
+      allFields
+    );
 
     const now = new Date();
     const timestamp = now.toISOString().replace(/[:.]/g, "-").slice(0, 19);
-    const filename = `backup_${timestamp}.json`;
+    const filename = `backup_${timestamp}.zip`;
     const filepath = join(getBackupDir(), filename);
 
-    await writeFile(filepath, JSON.stringify(backupData, null, 2), "utf-8");
+    await writeFile(filepath, zipBuffer);
     const fileStat = await stat(filepath);
 
     // Update lastBackupAt
@@ -138,7 +177,8 @@ export async function listBackups(): Promise<ServiceResult<BackupMeta[]>> {
     const backups: BackupMeta[] = [];
 
     for (const file of files) {
-      if (!file.startsWith("backup_") || !file.endsWith(".json")) continue;
+      if (!file.startsWith("backup_")) continue;
+      if (!file.endsWith(".json") && !file.endsWith(".zip")) continue;
       const filepath = join(backupDir, file);
       const fileStat = await stat(filepath);
       backups.push({
@@ -168,8 +208,8 @@ export async function readBackup(
   filename: string
 ): Promise<ServiceResult<{ data: Buffer; size: number }>> {
   try {
-    // Sanitize filename - only allow backup_*.json without path separators
-    if (!filename.startsWith("backup_") || !filename.endsWith(".json") || filename.includes("/") || filename.includes("..")) {
+    // Sanitize filename - only allow backup_*.json or backup_*.zip without path separators
+    if (!filename.startsWith("backup_") || (!filename.endsWith(".json") && !filename.endsWith(".zip")) || filename.includes("/") || filename.includes("..")) {
       return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
     }
     const filepath = join(getBackupDir(), filename);
@@ -188,7 +228,7 @@ export async function deleteBackup(
   filename: string
 ): Promise<ServiceResult<{ filename: string }>> {
   try {
-    if (!filename.startsWith("backup_") || !filename.endsWith(".json") || filename.includes("/") || filename.includes("..")) {
+    if (!filename.startsWith("backup_") || (!filename.endsWith(".json") && !filename.endsWith(".zip")) || filename.includes("/") || filename.includes("..")) {
       return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
     }
     const { unlink } = await import("fs/promises");
@@ -211,26 +251,39 @@ export async function restoreBackup(
     tablesProcessed: number;
     recordsRestored: number;
     skippedTables: string[];
+    filesRestored: number;
   }>
 > {
   try {
-    if (!filename.startsWith("backup_") || !filename.endsWith(".json") || filename.includes("/") || filename.includes("..")) {
+    if (!filename.startsWith("backup_") || (!filename.endsWith(".json") && !filename.endsWith(".zip")) || filename.includes("/") || filename.includes("..")) {
       return { success: false, error: { code: "INVALID_FILE", message: "无效的备份文件名" } };
     }
 
     const filepath = join(getBackupDir(), filename);
-    const content = await readFile(filepath, "utf-8");
-    const backup = JSON.parse(content) as {
+
+    let backup: {
       version: string;
       exportedAt: string;
       tables: Record<
         string,
         {
           id: string;
+          fields: Array<{ key: string; label: string; type: string; required: boolean; options: unknown }>;
           records: Array<{ id: string; data: unknown; createdAt: string; updatedAt: string }>;
         }
       >;
+      attachments?: { pathMapping: Record<string, string>; originalUploadDir: string };
     };
+
+    if (filename.endsWith(".zip")) {
+      const zipBuffer = await readFile(filepath);
+      const { data, meta } = await extractZipAndRestoreAttachments(zipBuffer);
+      backup = data as typeof backup;
+      backup.attachments = meta;
+    } else {
+      const content = await readFile(filepath, "utf-8");
+      backup = JSON.parse(content);
+    }
 
     if (!backup.tables || typeof backup.tables !== "object") {
       return { success: false, error: { code: "INVALID_FORMAT", message: "备份文件格式无效" } };
@@ -240,7 +293,29 @@ export async function restoreBackup(
       tablesProcessed: 0,
       recordsRestored: 0,
       skippedTables: [] as string[],
+      filesRestored: 0,
     };
+
+    const originalUploadDir = backup.attachments?.originalUploadDir;
+    if (originalUploadDir) {
+      for (const [, tableData] of Object.entries(backup.tables)) {
+        const fields: DataFieldItem[] = tableData.fields.map((f) => ({
+          id: "",
+          key: f.key,
+          label: f.label,
+          type: f.type as DataFieldItem["type"],
+          required: f.required ?? false,
+          sortOrder: 0,
+          options: f.options as unknown,
+        }));
+        const records = tableData.records.map((r) => ({ data: r.data as Record<string, unknown> }));
+        rewriteRecordFilePaths(records, fields, originalUploadDir);
+        for (let i = 0; i < tableData.records.length; i++) {
+          tableData.records[i].data = records[i].data;
+        }
+      }
+      result.filesRestored = Object.keys(backup.attachments?.pathMapping ?? {}).length;
+    }
 
     await db.$transaction(async (tx) => {
       for (const [tableName, tableData] of Object.entries(backup.tables)) {

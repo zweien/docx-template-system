@@ -23,9 +23,11 @@ export async function GET(
     return NextResponse.json({ error: result.error }, { status: 404 });
   }
 
+  const contentType = decodedFilename.endsWith(".zip") ? "application/zip" : "application/json";
+
   return new NextResponse(new Uint8Array(result.data.data), {
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": contentType,
       "Content-Disposition": `attachment; filename="${decodedFilename}"`,
       "Content-Length": String(result.data.size),
     },

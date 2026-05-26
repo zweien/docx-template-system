@@ -1,5 +1,5 @@
 import JSZip from "jszip";
-import { join, dirname } from "path";
+import { dirname } from "path";
 import { existsSync } from "fs";
 import { mkdir, writeFile, readFile } from "fs/promises";
 import { UPLOAD_DIR } from "@/lib/constants/upload";
@@ -176,7 +176,6 @@ export async function extractZipAndRestoreAttachments(
   }
 
   const currentUploadDir = options?.currentUploadDir ?? UPLOAD_DIR;
-  const currentBase = getUrlBase(currentUploadDir);
 
   // Restore each attachment file
   for (const [originalPath, zipPath] of Object.entries(meta.pathMapping)) {

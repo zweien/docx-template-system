@@ -113,14 +113,6 @@ export async function runBackup(): Promise<ServiceResult<BackupMeta>> {
               type: f.type as DataFieldItem["type"],
               required: f.required,
               sortOrder: f.sortOrder,
-              options: f.options as unknown,
-              defaultValue: f.defaultValue,
-              relationTo: f.relationTo ?? undefined,
-              relationCardinality: f.relationCardinality,
-              displayField: f.displayField ?? undefined,
-              isSystemManagedInverse: f.isSystemManagedInverse,
-              relationSchema: f.relationSchema as unknown,
-              inverseRelationCardinality: f.relationCardinality,
             } as DataFieldItem)
         )
       );

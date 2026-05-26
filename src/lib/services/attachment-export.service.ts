@@ -14,10 +14,6 @@ export interface AttachmentMeta {
   originalUploadDir: string;
 }
 
-export interface ZipExportOptions {
-  originalUploadDir?: string;
-}
-
 export interface ZipRestoreOptions {
   currentUploadDir?: string;
 }
@@ -112,17 +108,13 @@ export function rewriteRecordFilePaths(
 export async function createZipWithAttachments(
   data: unknown,
   allRecords: Array<{ data: Record<string, unknown> }>,
-  allFields: DataFieldItem[],
-  options?: ZipExportOptions
+  allFields: DataFieldItem[]
 ): Promise<Buffer> {
   const zip = new JSZip();
 
-  // Add data.json
-  zip.file("data.json", JSON.stringify(data, null, 2));
-
   // Collect file attachments
   const filePaths = scanFileAttachments(allRecords, allFields);
-  const originalUploadDir = options?.originalUploadDir ?? UPLOAD_DIR;
+  const originalUploadDir = UPLOAD_DIR;
   const pathMapping: Record<string, string> = {};
 
   for (const filePath of filePaths) {
@@ -139,12 +131,15 @@ export async function createZipWithAttachments(
     pathMapping[filePath] = zipPath;
   }
 
-  // Add attachment meta
-  const meta: AttachmentMeta = {
-    pathMapping,
-    originalUploadDir,
+  // Inject attachment metadata into data.json
+  const dataWithMeta = {
+    ...(data as Record<string, unknown>),
+    attachments: {
+      pathMapping,
+      originalUploadDir,
+    } satisfies AttachmentMeta,
   };
-  zip.file("attachments/meta.json", JSON.stringify(meta, null, 2));
+  zip.file("data.json", JSON.stringify(dataWithMeta, null, 2));
 
   const buffer = await zip.generateAsync({ type: "nodebuffer" });
   return Buffer.from(buffer);
@@ -163,19 +158,22 @@ export async function extractZipAndRestoreAttachments(
 }> {
   const zip = await JSZip.loadAsync(zipBuffer);
 
-  // Extract data.json
+  // Extract data.json (contains embedded attachment metadata)
   const dataFile = zip.file("data.json");
   if (!dataFile) {
     throw new Error("ZIP archive missing data.json");
   }
   const data = JSON.parse(await dataFile.async("string"));
 
-  // Extract attachment meta
-  const metaFile = zip.file("attachments/meta.json");
-  if (!metaFile) {
-    throw new Error("ZIP archive missing attachments/meta.json");
+  const meta = (data.attachments ?? {
+    pathMapping: {},
+    originalUploadDir: "public/uploads",
+  }) as AttachmentMeta;
+
+  // Remove the data.attachments from the returned data so consumers don't see it
+  if (data.attachments) {
+    delete (data as Record<string, unknown>).attachments;
   }
-  const meta: AttachmentMeta = JSON.parse(await metaFile.async("string"));
 
   const currentUploadDir = options?.currentUploadDir ?? UPLOAD_DIR;
   const currentBase = getUrlBase(currentUploadDir);

@@ -177,10 +177,15 @@ describe("createZipWithAttachments", () => {
     const zip = await JSZip.loadAsync(zipBuffer);
     expect(zip.file("data.json")).toBeTruthy();
     expect(zip.file("attachments/uploads/files/abc.pdf")).toBeTruthy();
-    expect(zip.file("attachments/meta.json")).toBeTruthy();
+    expect(zip.file("attachments/meta.json")).toBeFalsy();
 
-    const dataContent = await zip.file("data.json")!.async("string");
-    expect(JSON.parse(dataContent)).toEqual(data);
+    const dataContent = JSON.parse(await zip.file("data.json")!.async("string"));
+    expect(dataContent.version).toBe("1.0");
+    expect(dataContent.records).toEqual([{ id: "r1" }]);
+    expect(dataContent.attachments).toEqual({
+      pathMapping: { "/uploads/files/abc.pdf": "attachments/uploads/files/abc.pdf" },
+      originalUploadDir: "public/uploads",
+    });
   });
 });
 
@@ -191,12 +196,14 @@ describe("extractZipAndRestoreAttachments", () => {
 
   it("extracts ZIP and restores attachments", async () => {
     const zip = new JSZip();
-    zip.file("data.json", JSON.stringify({ version: "1.0" }));
-    zip.file("attachments/uploads/files/abc.pdf", Buffer.from("pdf-content"));
-    zip.file("attachments/meta.json", JSON.stringify({
-      pathMapping: { "/uploads/files/abc.pdf": "attachments/uploads/files/abc.pdf" },
-      originalUploadDir: "public/uploads",
+    zip.file("data.json", JSON.stringify({
+      version: "1.0",
+      attachments: {
+        pathMapping: { "/uploads/files/abc.pdf": "attachments/uploads/files/abc.pdf" },
+        originalUploadDir: "public/uploads",
+      },
     }));
+    zip.file("attachments/uploads/files/abc.pdf", Buffer.from("pdf-content"));
 
     const zipBuffer = Buffer.from(await zip.generateAsync({ type: "arraybuffer" }));
 

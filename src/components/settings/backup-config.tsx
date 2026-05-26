@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Download, Loader2, Play, Trash2, RefreshCw, RotateCcw } from "lucide-react"
+import { Download, Loader2, Play, Trash2, RefreshCw, RotateCcw, Upload } from "lucide-react"
 
 interface BackupMeta {
   filename: string
@@ -23,6 +23,8 @@ export function BackupConfig() {
   const [running, setRunning] = useState(false)
   const [restoring, setRestoring] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const load = useCallback(async () => {
     try {
@@ -122,6 +124,52 @@ export function BackupConfig() {
     }
   }
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.name.endsWith(".zip")) {
+      alert("请上传 .zip 格式的备份文件")
+      return
+    }
+
+    if (!confirm(`确定从上传的文件 ${file.name} 恢复数据？\n\n这将删除当前所有数据表中的记录，并用备份数据替换。`)) {
+      return
+    }
+
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+
+      const res = await fetch("/api/admin/data-tables/backup", {
+        method: "PUT",
+        body: formData,
+      })
+      const data = await res.json()
+      if (data.success) {
+        const { tablesProcessed, recordsRestored, skippedTables, filesRestored } = data.data
+        let msg = `恢复成功：处理 ${tablesProcessed} 个表，恢复 ${recordsRestored} 条记录`
+        if (filesRestored > 0) {
+          msg += `，恢复 ${filesRestored} 个附件`
+        }
+        if (skippedTables.length > 0) {
+          msg += `\n跳过的表（不存在）：${skippedTables.join(", ")}`
+        }
+        alert(msg)
+      } else {
+        alert(data.error?.message || "恢复失败")
+      }
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "恢复失败")
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""
+      }
+    }
+  }
+
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -179,6 +227,22 @@ export function BackupConfig() {
           </Button>
           <Button variant="outline" onClick={load} size="sm">
             <RefreshCw className="size-3 mr-1" /> 刷新
+          </Button>
+          <input
+            type="file"
+            accept=".zip"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="size-3 mr-1 animate-spin" /> : <Upload className="size-3 mr-1" />}
+            上传恢复
           </Button>
         </div>
       </div>

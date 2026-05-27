@@ -31,11 +31,11 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     );
   }
 
-  const filename = `${tableResult.data.name}_bundle_${new Date().toISOString().split("T")[0]}.json`;
+  const filename = `${tableResult.data.name}_bundle_${new Date().toISOString().split("T")[0]}.zip`;
 
-  return new NextResponse(JSON.stringify(result.data, null, 2), {
+  return new NextResponse(result.data as unknown as BodyInit, {
     headers: {
-      "Content-Type": "application/json; charset=utf-8",
+      "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
     },
   });

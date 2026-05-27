@@ -4,6 +4,10 @@ import { getTable } from "./data-table.service";
 import { findByUniqueField, createRecord, updateRecord } from "./data-record.service";
 import { syncRelationSubtableValues } from "./data-relation.service";
 import { updateFields } from "./data-table.service";
+import {
+  extractZipAndRestoreAttachments,
+  rewriteRecordFilePaths,
+} from "./attachment-export.service";
 import type {
   ServiceResult,
   ImportPreview,
@@ -718,12 +722,51 @@ async function findUniqueTableName(baseName: string): Promise<string> {
 
 export async function importBundle(
   userId: string,
-  bundle: ExportBundle
+  bundleInput: ExportBundle | Buffer,
+  options?: { isZip?: boolean }
 ): Promise<ServiceResult<BundleImportResult>> {
   try {
+    let bundle: ExportBundle;
+    let originalUploadDir: string | undefined;
+
+    if (options?.isZip || Buffer.isBuffer(bundleInput)) {
+      const { data, meta } = await extractZipAndRestoreAttachments(bundleInput as Buffer);
+      bundle = data as unknown as ExportBundle;
+      originalUploadDir = meta.originalUploadDir;
+    } else {
+      bundle = bundleInput as ExportBundle;
+    }
+
     // Validate
     if (bundle.version !== "2.0" || !bundle.tables || typeof bundle.tables !== "object") {
       return { success: false, error: { code: "INVALID_BUNDLE", message: "无效的 bundle 格式" } };
+    }
+
+    // Rewrite FILE paths before processing
+    if (originalUploadDir) {
+      for (const [, tableData] of Object.entries(bundle.tables)) {
+        const fields: DataFieldItem[] = tableData.fields.map((f) => ({
+          id: "",
+          key: f.key,
+          label: f.label,
+          type: f.type as DataFieldItem["type"],
+          required: f.required ?? false,
+          sortOrder: f.sortOrder ?? 0,
+          options: f.options as unknown,
+          defaultValue: undefined,
+          relationTo: undefined,
+          relationCardinality: null,
+          displayField: undefined,
+          isSystemManagedInverse: false,
+          relationSchema: undefined,
+          inverseRelationCardinality: null,
+        }));
+        const records = tableData.records.map((r) => ({ data: r }));
+        rewriteRecordFilePaths(records, fields, originalUploadDir);
+        for (let i = 0; i < tableData.records.length; i++) {
+          tableData.records[i] = records[i].data;
+        }
+      }
     }
 
     const tableNames = Object.keys(bundle.tables);

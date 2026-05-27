@@ -42,6 +42,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
+  const [isZipFile, setIsZipFile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -52,6 +53,12 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
     setFile(selected);
     setError("");
     setSummary(null);
+    setIsZipFile(false);
+
+    if (selected.name.endsWith(".zip")) {
+      setIsZipFile(true);
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -98,7 +105,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
   };
 
   const handleImport = async () => {
-    if (!file || !summary) return;
+    if (!file || (!summary && !isZipFile)) return;
 
     setIsLoading(true);
     setError("");
@@ -122,8 +129,9 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
       setOpen(false);
       setFile(null);
       setSummary(null);
+      setIsZipFile(false);
 
-      if (summary.mode === "bundle") {
+      if (summary?.mode === "bundle" || isZipFile) {
         const tableNames = data.tables?.map((t: { tableName: string }) => t.tableName).join("、");
         toast.success(
           `成功导入 ${data.tables?.length ?? 0} 个数据表：${tableNames}，共建立 ${data.relationLinksCreated ?? 0} 个关联`
@@ -149,6 +157,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
   const reset = () => {
     setFile(null);
     setSummary(null);
+    setIsZipFile(false);
     setError("");
   };
 
@@ -189,7 +198,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
         <DialogHeader>
           <DialogTitle>导入数据表</DialogTitle>
           <DialogDescription>
-            上传 JSON 导出文件，创建包含字段和记录的完整数据表
+            上传 JSON 或 ZIP 导出文件，创建包含字段和记录的完整数据表
           </DialogDescription>
         </DialogHeader>
 
@@ -197,7 +206,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
           <div className="border-2 border-dashed border-zinc-200 rounded-lg p-6 text-center">
             <Input
               type="file"
-              accept=".json"
+              accept=".json,.zip"
               onChange={handleFileChange}
               className="hidden"
               id="table-import-file"
@@ -223,10 +232,19 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
                 <line x1="12" x2="12" y1="3" y2="15" />
               </svg>
               <span className="text-zinc-600 text-sm">
-                {file ? file.name : "点击上传 .json 文件"}
+                {file ? file.name : "点击上传 .json 或 .zip 文件"}
               </span>
             </label>
           </div>
+
+          {isZipFile && (
+            <div className="border rounded-lg p-4 bg-muted text-sm space-y-1">
+              <div className="font-medium">ZIP 压缩包（含附件）</div>
+              <div className="text-zinc-600 mt-2">
+                文件大小：{(file!.size / 1024).toFixed(1)} KB
+              </div>
+            </div>
+          )}
 
           {summary?.mode === "single" && (
             <div className="border rounded-lg p-4 bg-muted text-sm space-y-1">
@@ -271,7 +289,7 @@ export function ImportTableDialog({ trigger }: ImportTableDialogProps) {
           </Button>
           <Button
             onClick={handleImport}
-            disabled={!summary || isLoading}
+            disabled={(!summary && !isZipFile) || isLoading}
           >
             {isLoading ? "导入中..." : "导入"}
           </Button>

@@ -763,6 +763,9 @@ export async function importBundle(
         }));
         const records = tableData.records.map((r) => ({ data: r }));
         rewriteRecordFilePaths(records, fields, originalUploadDir);
+        for (let i = 0; i < tableData.records.length; i++) {
+          tableData.records[i] = records[i].data;
+        }
       }
     }
 

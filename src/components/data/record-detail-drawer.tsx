@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Pencil, Trash2, History, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
+import { Pencil, Trash2, History, ChevronLeft, ChevronRight, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -248,7 +248,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full overflow-y-auto border-border bg-card text-card-foreground sm:max-w-md">
+      <SheetContent side="right" showCloseButton={false} className="w-full overflow-y-auto border-border bg-card text-card-foreground sm:max-w-md">
         {loading ? (
           <div className="flex min-h-full items-center justify-center py-12">
             <Spinner className="size-6" />
@@ -264,31 +264,41 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                 <SheetTitle className="text-lg font-[510] text-foreground">
                   {mode === "edit" ? "编辑记录" : "记录详情"}
                 </SheetTitle>
-                {recordIds && recordIds.length > 0 && currentIndex >= 0 && (
-                  <div className="flex items-center gap-1 relative z-10">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      disabled={!hasPrev}
-                      onClick={() => handleNavigate(-1)}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <span className="min-w-[3rem] text-center text-xs tabular-nums text-muted-foreground">
-                      {currentIndex + 1} / {recordIds.length}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0"
-                      disabled={!hasNext}
-                      onClick={() => handleNavigate(1)}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                <div className="flex items-center gap-1">
+                  {recordIds && recordIds.length > 0 && currentIndex >= 0 && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        disabled={!hasPrev}
+                        onClick={() => handleNavigate(-1)}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="min-w-[3rem] text-center text-xs tabular-nums text-muted-foreground">
+                        {currentIndex + 1} / {recordIds.length}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        disabled={!hasNext}
+                        onClick={() => handleNavigate(1)}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={() => onOpenChange?.(false)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </SheetHeader>
 

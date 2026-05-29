@@ -14,7 +14,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    console.log("[import] userId:", session.user.id, "email:", session.user.email);
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -71,8 +70,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(result.data, { status: 201 });
-  } catch (err) {
-    console.error("[import] Error:", err);
+  } catch {
     return NextResponse.json({ error: "导入数据表失败" }, { status: 500 });
   }
 }

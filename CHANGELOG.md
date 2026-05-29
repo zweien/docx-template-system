@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.24](https://github.com/zweien/docx-template-system/compare/v0.10.23...v0.10.24) (2026-05-29)
+
+
+### Features
+
+* add floating scrollbar and frozen column hint to data table ([68a3864](https://github.com/zweien/docx-template-system/commit/68a3864e05b1f32a20667d98e2ff9f8e972baeaa))
+* add save current view button and fix hydration/dialog bugs ([0a1091a](https://github.com/zweien/docx-template-system/commit/0a1091a1da8490fc6b1157960258a4eb853acd61))
+* add Shift+wheel horizontal scrolling and floating scrollbar styles ([ca52795](https://github.com/zweien/docx-template-system/commit/ca52795c60c80256e3bea3a3fdb9e2bd888a4e31))
+
 ## [0.10.23](https://github.com/zweien/docx-template-system/compare/v0.10.22...v0.10.23) (2026-05-29)
 
 

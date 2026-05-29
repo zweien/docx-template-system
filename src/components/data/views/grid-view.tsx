@@ -439,6 +439,20 @@ export function GridView({
   );
   const tableRef = useRef<HTMLTableElement>(null);
 
+  // ── Frozen column hint dismiss state ─────────────────────────────────────
+  const [frozenHintDismissed, setFrozenHintDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("table-frozen-hint-dismissed") === "true";
+  });
+
+  // ── Floating scrollbar state ──────────────────────────────────────────────
+  const [scrollRatio, setScrollRatio] = useState(0);
+  const [thumbRatio, setThumbRatio] = useState(1);
+  const [hasHScroll, setHasHScroll] = useState(false);
+  const isDraggingThumb = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartScrollLeft = useRef(0);
+
   // ── Shift+wheel & header-area horizontal scrolling ───────────────────────
   const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
     const container = e.currentTarget;
@@ -678,6 +692,76 @@ export function GridView({
     : flatRecords;
   const effectiveTopPadding = shouldUseVirtualRows ? topPadding : 0;
   const effectiveBottomPadding = shouldUseVirtualRows ? bottomPadding : 0;
+
+  // ── Floating scrollbar sync ──────────────────────────────────────────────
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const { scrollLeft, scrollWidth, clientWidth } = el;
+      const maxScroll = scrollWidth - clientWidth;
+      setHasHScroll(maxScroll > 0);
+      if (maxScroll > 0) {
+        setScrollRatio(scrollLeft / maxScroll);
+        setThumbRatio(clientWidth / scrollWidth);
+      }
+    };
+
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+
+    return () => {
+      el.removeEventListener("scroll", update);
+      ro.disconnect();
+    };
+  }, [scrollRef]);
+
+  const handleThumbMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingThumb.current = true;
+    dragStartX.current = e.clientX;
+    const container = scrollRef.current;
+    if (container) {
+      dragStartScrollLeft.current = container.scrollLeft;
+    }
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDraggingThumb.current) return;
+      const container = scrollRef.current;
+      if (!container) return;
+      const maxScroll = container.scrollWidth - container.clientWidth;
+      const trackWidth = container.clientWidth - 16;
+      const dx = ev.clientX - dragStartX.current;
+      const scrollDelta = (dx / (trackWidth * thumbRatio)) * maxScroll;
+      container.scrollLeft = dragStartScrollLeft.current + scrollDelta;
+    };
+
+    const handleMouseUp = () => {
+      isDraggingThumb.current = false;
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  }, [scrollRef, thumbRatio]);
+
+  const handleTrackClick = useCallback((e: React.MouseEvent) => {
+    if (isDraggingThumb.current) return;
+    const container = scrollRef.current;
+    if (!container) return;
+    const trackEl = e.currentTarget as HTMLDivElement;
+    const rect = trackEl.getBoundingClientRect();
+    const clickRatio = (e.clientX - rect.left) / rect.width;
+    const maxScroll = container.scrollWidth - container.clientWidth;
+    container.scrollLeft = clickRatio * maxScroll;
+  }, [scrollRef]);
+
   const findReplaceRows = useMemo(
     () =>
       flatRecords.map((entry) =>
@@ -2137,7 +2221,7 @@ export function GridView({
           <Redo2 className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto relative" ref={scrollRef} style={{ WebkitOverflowScrolling: "touch" }} onWheel={handleWheel}>
+      <div className="flex-1 min-h-0 overflow-auto relative hide-horizontal-scrollbar" ref={scrollRef} style={{ WebkitOverflowScrolling: "touch" }} onWheel={handleWheel}>
         <FindReplaceBar
           open={findBarOpen}
           onClose={() => setFindBarOpen(false)}
@@ -2147,6 +2231,24 @@ export function GridView({
           onNavigateTo={(flatRowIndex, colIndex) => setActiveCell({ rowIndex: flatRowIndex, colIndex })}
           onReplace={(recordId, fieldKey, newValue) => handleCommit(recordId, fieldKey, newValue)}
         />
+        {orderedVisibleFields.length >= 6 && frozenFieldCountValue === 0 && !frozenHintDismissed && (
+          <div
+            className="absolute top-10 right-4 z-20 px-3 py-1.5 rounded-md bg-muted/80 text-xs text-muted-foreground"
+            style={{ pointerEvents: "none" }}
+          >
+            右键列头可冻结列，固定关键列方便查看
+            <span
+              className="ml-2 cursor-pointer hover:text-foreground"
+              style={{ pointerEvents: "auto" }}
+              onClick={() => {
+                setFrozenHintDismissed(true);
+                localStorage.setItem("table-frozen-hint-dismissed", "true");
+              }}
+            >
+              ✕
+            </span>
+          </div>
+        )}
         <table
           className="w-full caption-bottom text-sm outline-none select-none"
           style={{ tableLayout: "fixed" }}
@@ -2338,6 +2440,21 @@ export function GridView({
           </tfoot>
         )}
         </table>
+        {hasHScroll && (
+          <div
+            className="floating-scrollbar-track"
+            onClick={handleTrackClick}
+          >
+            <div
+              className="floating-scrollbar-thumb"
+              style={{
+                width: `${thumbRatio * 100}%`,
+                marginLeft: `calc(${scrollRatio} * (100% - ${thumbRatio * 100}%))`,
+              }}
+              onMouseDown={handleThumbMouseDown}
+            />
+          </div>
+        )}
       </div>
       </CellContextMenu>
 

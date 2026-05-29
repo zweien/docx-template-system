@@ -439,6 +439,21 @@ export function GridView({
   );
   const tableRef = useRef<HTMLTableElement>(null);
 
+  // ── Shift+wheel & header-area horizontal scrolling ───────────────────────
+  const handleWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const hasHorizontalOverflow = container.scrollWidth > container.clientWidth;
+    if (!hasHorizontalOverflow) return;
+
+    const isShiftScroll = e.shiftKey;
+    const isInThead = (e.target as HTMLElement).closest("thead") !== null;
+
+    if (isShiftScroll || isInThead) {
+      e.preventDefault();
+      container.scrollBy({ left: e.deltaY || e.deltaX });
+    }
+  }, []);
+
   // ── Keyboard nav: active cell state (for rendering) ──────────────────────
   const [activeCell, setActiveCellState] = useState<ActiveCell | null>(null);
   const stableActiveCell = activeCell;
@@ -2122,7 +2137,7 @@ export function GridView({
           <Redo2 className="h-3.5 w-3.5" />
         </Button>
       </div>
-      <div className="flex-1 min-h-0 overflow-auto relative" ref={scrollRef} style={{ WebkitOverflowScrolling: "touch" }}>
+      <div className="flex-1 min-h-0 overflow-auto relative" ref={scrollRef} style={{ WebkitOverflowScrolling: "touch" }} onWheel={handleWheel}>
         <FindReplaceBar
           open={findBarOpen}
           onClose={() => setFindBarOpen(false)}

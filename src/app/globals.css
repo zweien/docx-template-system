@@ -20,3 +20,38 @@
   box-shadow: inset -4px 0 4px -4px rgba(0, 0, 0, 0.1);
   pointer-events: none;
 }
+
+/* Floating horizontal scrollbar for grid views */
+.hide-horizontal-scrollbar {
+  scrollbar-width: none;
+}
+.hide-horizontal-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.floating-scrollbar-track {
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+  margin: 0 8px 4px;
+  z-index: 6;
+  cursor: pointer;
+  transition: height 0.15s ease;
+}
+.floating-scrollbar-track:hover {
+  height: 12px;
+}
+.floating-scrollbar-thumb {
+  height: 100%;
+  min-width: 30px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+.floating-scrollbar-track:hover .floating-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.35);
+}

@@ -2,6 +2,8 @@
 
 本文档用于办公内网环境（无公网）下，将本系统与**已部署的 Authentik**联调并上线。
 
+> **完整的内网部署指南（含源码构建方式、Docker 网络配置、排障指南）请参阅 [deploy.md](deploy.md) 的「内网部署」章节。**
+
 ## 1. 前置条件
 
 - 内网服务器已安装 Docker + Docker Compose 插件
@@ -24,12 +26,14 @@
 http://<应用地址>:8060/api/auth/callback/authentik
 ```
 
+> **重要**：回调地址中的 `http://<应用地址>:8060` 必须与 `.env.production` 中 `NEXTAUTH_URL` 完全一致。如果不一致会导致 OAuth 回调失败。
+
 建议 Scope 至少包含：`openid profile email`。
 
 ## 3. 生成离线环境配置
 
 ```bash
-cp .env.offline.example .env.offline
+cp .env.offline.example .env.production
 ```
 
 重点检查并修改以下变量：
@@ -41,6 +45,7 @@ cp .env.offline.example .env.offline
 - `AUTHENTIK_CLIENT_ID`
 - `AUTHENTIK_CLIENT_SECRET`
 - `AUTHENTIK_LOGOUT_REDIRECT_URL`
+- `AUTHENTIK_ADMIN_EMAILS` — 管理员邮箱列表，逗号分隔。匹配的 Authentik 用户首次登录将获得 ADMIN 角色
 
 如需临时绕过统一登录（仅排障）：
 
@@ -48,6 +53,8 @@ cp .env.offline.example .env.offline
 DEV_BYPASS_AUTH=true
 NEXT_PUBLIC_DEV_BYPASS_AUTH=true
 ```
+
+> **注意**：`DEV_BYPASS_AUTH` 在 `NODE_ENV=production` 时会被代码硬拦截，设为 `true` 会导致服务无法启动。仅用于本地开发调试。
 
 ## 4. 一键部署
 
@@ -86,9 +93,13 @@ chmod +x scripts/deploy-offline.sh
 
 ### 6.3 登录成功但权限不对
 
-本项目使用本地 RBAC，统一登录只负责身份认证。  
+本项目使用本地 RBAC，统一登录只负责身份认证。
 检查 `AUTHENTIK_ADMIN_EMAILS` 是否包含对应邮箱。
 
 ### 6.4 HTTPS 自签名证书问题
 
 若 Authentik 使用自签名证书，请确保运行容器信任该 CA，或先在内网使用受信任证书/HTTP 进行联调。
+
+### 6.5 数据库重置后操作失败（Foreign Key Constraint）
+
+数据库被重新 seed 或重置后，已有 JWT session 中的用户 ID 与数据库不匹配。需要清除浏览器 session 重新登录，或将数据库用户 ID 对齐为 JWT 中的值。详见 [deploy.md](deploy.md) 的排障指南。

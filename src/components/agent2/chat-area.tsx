@@ -97,8 +97,8 @@ function PromptInputAttachmentButton({ disabled = false }: { disabled?: boolean 
 }
 
 export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, onMobileMenuOpen, defaultModel, tableId }: ChatAreaProps) {
-  const [modelName, setModelName] = useState("MiniMax-M2.5")
-  const [model, setModel] = useState(defaultModel || "MiniMax-M2.5")
+  const [modelName, setModelName] = useState("")
+  const [model, setModel] = useState(defaultModel || "")
   const [models, setModels] = useState<{ id: string; name: string; providerId: string; modelId: string }[]>([])
   const [inputError, setInputError] = useState<string | null>(null)
   const [loadedConversationId, setLoadedConversationId] = useState<string | null>(null)
@@ -158,11 +158,16 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
         const modelsData = await modelsRes.json()
         if (!active || !modelsData?.success) return
 
-        setModels(modelsData.data)
-        const resolvedModel = savedModel || defaultModel || "MiniMax-M2.5"
-        const current = modelsData.data.find((m: { id: string }) => m.id === resolvedModel)
+        const availableModels = modelsData.data as { id: string; name: string; providerId: string; modelId: string }[]
+        setModels(availableModels)
+        const resolvedModel = savedModel || defaultModel
+        const current = availableModels.find((m) => m.id === resolvedModel)
         if (current) {
           setModelName(current.name)
+        } else if (availableModels.length > 0) {
+          // Fallback to first available model when saved/default doesn't exist
+          setModel(availableModels[0].id)
+          setModelName(availableModels[0].name)
         }
       } catch {
         // fallback
@@ -178,8 +183,14 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
       .then(res => res.json())
       .then(data => {
         if (!active || !data?.success) return
-        const current = data.data.find((m: { id: string }) => m.id === model)
-        if (current) setModelName(current.name)
+        const available = data.data as { id: string; name: string }[]
+        const current = available.find((m) => m.id === model)
+        if (current) {
+          setModelName(current.name)
+        } else if (available.length > 0 && model) {
+          setModel(available[0].id)
+          setModelName(available[0].name)
+        }
       })
       .catch(() => {})
     return () => { active = false }

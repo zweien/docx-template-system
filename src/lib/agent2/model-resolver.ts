@@ -78,9 +78,13 @@ export async function resolveModel(
 
   if (!config) {
     // Fallback to env-configured model
+    const baseURL = process.env.AI_BASE_URL;
+    if (!baseURL) {
+      throw new Error("未找到模型配置。请在设置中选择可用模型，或配置 AI_BASE_URL 环境变量。");
+    }
     const openai = createOpenAI({
       apiKey: process.env.AI_API_KEY,
-      baseURL: process.env.AI_BASE_URL,
+      baseURL,
     });
     return { model: openai.chat(process.env.AI_MODEL || "gpt-4o"), providerName: "openai" };
   }

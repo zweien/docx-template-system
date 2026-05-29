@@ -2443,22 +2443,22 @@ export function GridView({
           </tfoot>
         )}
         </table>
-        {hasHScroll && (
-          <div
-            className="floating-scrollbar-track"
-            onClick={handleTrackClick}
-          >
-            <div
-              className="floating-scrollbar-thumb"
-              style={{
-                width: `${thumbRatio * 100}%`,
-                marginLeft: `calc(${scrollRatio} * (100% - ${thumbRatio * 100}%))`,
-              }}
-              onMouseDown={handleThumbMouseDown}
-            />
-          </div>
-        )}
       </div>
+      {hasHScroll && (
+        <div
+          className="floating-scrollbar-track"
+          onClick={handleTrackClick}
+        >
+          <div
+            className="floating-scrollbar-thumb"
+            style={{
+              width: `${thumbRatio * 100}%`,
+              marginLeft: `calc(${scrollRatio} * (100% - ${thumbRatio * 100}%))`,
+            }}
+            onMouseDown={handleThumbMouseDown}
+          />
+        </div>
+      )}
       </CellContextMenu>
 
       {/* Cell comment popover */}

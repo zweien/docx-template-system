@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.23](https://github.com/zweien/docx-template-system/compare/v0.10.22...v0.10.23) (2026-05-29)
+
+
+### Bug Fixes
+
+* resolve close button overlapping navigation arrows in record detail drawer ([4c9ff70](https://github.com/zweien/docx-template-system/commit/4c9ff709c0fb0a805a233eda51978c894105c973))
+* use X-Forwarded-Proto + Host headers for OAuth callback URL behind reverse proxy ([adc8fe6](https://github.com/zweien/docx-template-system/commit/adc8fe64bcfb5061872194bff2d74392f0642aa0))
+
 ## [0.10.22](https://github.com/zweien/docx-template-system/compare/v0.10.21...v0.10.22) (2026-05-14)
 
 

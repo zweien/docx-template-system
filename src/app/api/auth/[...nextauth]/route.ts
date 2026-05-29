@@ -4,17 +4,26 @@ import { authOptions } from "@/lib/auth-options";
 const nextAuthHandler = NextAuth(authOptions);
 
 function resolveNextAuthUrl(req: Request): string {
-  const url = new URL(req.url);
-  // When dev server binds to 0.0.0.0, the host in request URL is "0.0.0.0:port"
-  // which browsers cannot access. Replace with localhost.
-  let host = url.host;
-  if (host.startsWith("0.0.0.0")) {
-    host = host.replace("0.0.0.0", "localhost");
-  }
   // Prefer the Origin header when available — it reflects the browser's address.
   const origin = req.headers.get("origin");
   if (origin) return origin;
-  return `${url.protocol}//${host}`;
+
+  // Use proxy headers (X-Forwarded-Proto + Host) set by Nginx/Caddy.
+  // Without this, req.url behind a reverse proxy may contain internal addresses
+  // like localhost:8060, causing OAuth redirect_uri mismatch.
+  const proto = req.headers.get("x-forwarded-proto");
+  const host = req.headers.get("host");
+  if (proto && host) {
+    return `${proto}://${host}`;
+  }
+
+  // Fallback: parse request URL (works in direct-access / dev scenarios)
+  const url = new URL(req.url);
+  let urlHost = url.host;
+  if (urlHost.startsWith("0.0.0.0")) {
+    urlHost = urlHost.replace("0.0.0.0", "localhost");
+  }
+  return `${url.protocol}//${urlHost}`;
 }
 
 function withDynamicUrl(req: Request) {

@@ -30,28 +30,25 @@
 }
 
 .floating-scrollbar-track {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 8px;
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
-  margin: 0 8px 4px;
+  position: fixed;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
   z-index: 6;
   cursor: pointer;
-  transition: height 0.15s ease;
+  transition: height 0.15s ease, background 0.15s ease;
 }
 .floating-scrollbar-track:hover {
-  height: 12px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.15);
 }
 .floating-scrollbar-thumb {
   height: 100%;
   min-width: 30px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.35);
+  border-radius: 5px;
   transition: background 0.15s ease;
 }
 .floating-scrollbar-track:hover .floating-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(255, 255, 255, 0.55);
 }

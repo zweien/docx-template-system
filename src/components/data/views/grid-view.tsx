@@ -452,6 +452,7 @@ export function GridView({
   const [scrollRatio, setScrollRatio] = useState(0);
   const [thumbRatio, setThumbRatio] = useState(1);
   const [hasHScroll, setHasHScroll] = useState(false);
+  const [scrollbarTrackStyle, setScrollbarTrackStyle] = useState<React.CSSProperties>({ position: "absolute", bottom: 0, left: 0, right: 0 });
   const isDraggingThumb = useRef(false);
   const dragStartX = useRef(0);
   const dragStartScrollLeft = useRef(0);
@@ -709,16 +710,30 @@ export function GridView({
         setScrollRatio(scrollLeft / maxScroll);
         setThumbRatio(clientWidth / scrollWidth);
       }
+
+      const rect = el.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const visibleBottom = Math.min(rect.bottom, vh);
+      if (rect.top < vh && visibleBottom > rect.top) {
+        setScrollbarTrackStyle({
+          position: "fixed",
+          left: rect.left + 8,
+          width: clientWidth - 16,
+          top: visibleBottom - 12,
+        });
+      }
     };
 
     update();
     el.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update, { passive: true });
 
     const ro = new ResizeObserver(update);
     ro.observe(el);
 
     return () => {
       el.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
       ro.disconnect();
     };
   }, [scrollRef]);
@@ -2443,22 +2458,23 @@ export function GridView({
           </tfoot>
         )}
         </table>
-      </div>
-      {hasHScroll && (
-        <div
-          className="floating-scrollbar-track"
-          onClick={handleTrackClick}
-        >
+        {hasHScroll && (
           <div
-            className="floating-scrollbar-thumb"
-            style={{
-              width: `${thumbRatio * 100}%`,
-              marginLeft: `calc(${scrollRatio} * (100% - ${thumbRatio * 100}%))`,
-            }}
-            onMouseDown={handleThumbMouseDown}
-          />
-        </div>
-      )}
+            className="floating-scrollbar-track"
+            style={scrollbarTrackStyle}
+            onClick={handleTrackClick}
+          >
+            <div
+              className="floating-scrollbar-thumb"
+              style={{
+                width: `${thumbRatio * 100}%`,
+                marginLeft: `calc(${scrollRatio} * (100% - ${thumbRatio * 100}%))`,
+              }}
+              onMouseDown={handleThumbMouseDown}
+            />
+          </div>
+        )}
+      </div>
       </CellContextMenu>
 
       {/* Cell comment popover */}

@@ -536,6 +536,7 @@ export function RecordTable({
           <ViewSelector
             tableId={tableId}
             currentViewId={viewId}
+            currentConfig={currentConfig}
             onViewChange={switchView}
             onSaveNewView={() => setSaveDialogOpen(true)}
           />

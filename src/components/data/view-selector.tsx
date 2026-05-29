@@ -9,12 +9,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { Bookmark, ChevronDown, Filter, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
-import type { DataViewItem } from "@/types/data-table";
+import { Bookmark, ChevronDown, Filter, ArrowUp, ArrowDown, Trash2, Save } from "lucide-react";
+import type { DataViewConfig, DataViewItem } from "@/types/data-table";
 
 interface ViewSelectorProps {
   tableId: string;
   currentViewId: string | null;
+  currentConfig: DataViewConfig;
   onViewChange: (viewId: string | null) => void;
   onSaveNewView: () => void;
 }
@@ -22,6 +23,7 @@ interface ViewSelectorProps {
 export function ViewSelector({
   tableId,
   currentViewId,
+  currentConfig,
   onViewChange,
   onSaveNewView,
 }: ViewSelectorProps) {
@@ -65,6 +67,33 @@ export function ViewSelector({
   const handleSaveNew = () => {
     onSaveNewView();
     setOpen(false);
+  };
+
+  const handleSaveCurrentView = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!currentViewId) return;
+    try {
+      const res = await fetch(`/api/data-tables/${tableId}/views/${currentViewId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          filters: currentConfig.filters,
+          sortBy: currentConfig.sortBy,
+          visibleFields: currentConfig.visibleFields,
+          fieldOrder: currentConfig.fieldOrder,
+          groupBy: currentConfig.groupBy,
+          viewOptions: currentConfig.viewOptions,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        toast.error(data.error?.message ?? "保存视图失败");
+        return;
+      }
+      toast.success("视图已更新");
+    } catch {
+      toast.error("保存视图失败");
+    }
   };
 
   const handleDeleteView = async (e: React.MouseEvent, viewId: string, viewName: string) => {
@@ -141,6 +170,15 @@ export function ViewSelector({
                     ) : (
                       <ArrowDown className="h-3 w-3 text-[#8a8f98]" />
                     )
+                  )}
+                  {view.id === currentViewId && (
+                    <button
+                      className="shrink-0 rounded p-0.5 text-[#8a8f98] hover:text-[#7170ff]"
+                      onClick={handleSaveCurrentView}
+                      title="保存当前配置到视图"
+                    >
+                      <Save className="h-3 w-3" />
+                    </button>
                   )}
                 </span>
                 <button

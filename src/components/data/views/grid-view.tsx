@@ -440,10 +440,13 @@ export function GridView({
   const tableRef = useRef<HTMLTableElement>(null);
 
   // ── Frozen column hint dismiss state ─────────────────────────────────────
-  const [frozenHintDismissed, setFrozenHintDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("table-frozen-hint-dismissed") === "true";
-  });
+  const [frozenHintDismissed, setFrozenHintDismissed] = useState(false);
+
+  useEffect(() => {
+    if (localStorage.getItem("table-frozen-hint-dismissed") === "true") {
+      setFrozenHintDismissed(true);
+    }
+  }, []);
 
   // ── Floating scrollbar state ──────────────────────────────────────────────
   const [scrollRatio, setScrollRatio] = useState(0);

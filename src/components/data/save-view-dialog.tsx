@@ -101,7 +101,7 @@ export function SaveViewDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-border bg-card text-card-foreground">
+      <DialogContent className="border-border">
         <DialogHeader>
           <DialogTitle className="font-[510] tracking-[-0.13px] text-foreground">保存视图</DialogTitle>
         </DialogHeader>

@@ -183,7 +183,7 @@ export function RichTextCellEditor({
             <RichTextToolbar editor={editor} />
             <EditorContent
               editor={editor}
-              className="prose prose-sm max-w-none p-3 min-h-[160px] focus:outline-none"
+              className="prose prose-sm max-w-none p-3 min-h-[160px] focus:outline-none dark:prose-invert"
             />
           </div>
           )}

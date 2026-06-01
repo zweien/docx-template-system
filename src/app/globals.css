@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "streamdown/styles.css";
 @import "frappe-gantt";
+@plugin "@tailwindcss/typography";
 @import "./tokens.css";
 @import "./idrl-ui-globals.css";
 

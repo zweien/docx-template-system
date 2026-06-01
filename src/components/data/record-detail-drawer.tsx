@@ -359,7 +359,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
                       <div className="break-words text-sm text-foreground">
                         {field.type === FieldType.RICH_TEXT
                           ? <RichTextPreview value={record.data[field.key]} />
-                          : formatCellValue(field, record.data[field.key])}
+                          : formatCellValue(field, record.data[field.key], Infinity)}
                       </div>
                     </div>
                   ))}

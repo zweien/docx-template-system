@@ -62,7 +62,8 @@ function getFileName(path: string): string {
 
 export function formatCellValue(
   field: DataFieldItem,
-  value: unknown
+  value: unknown,
+  maxItems?: number,
 ): ReactNode {
   if (isEmptyCell(value)) {
     return <span className="text-zinc-400">-</span>;
@@ -134,7 +135,8 @@ export function formatCellValue(
           (v): v is Record<string, unknown> => v != null && typeof v === "object"
         );
         if (items.length === 0) return <span className="text-zinc-400">-</span>;
-        const visibleItems = items.slice(0, 3);
+        const limit = maxItems ?? 3;
+        const visibleItems = items.slice(0, limit);
         const hiddenCount = items.length - visibleItems.length;
         return (
           <div className="flex flex-wrap gap-1">
@@ -161,7 +163,8 @@ export function formatCellValue(
         return <span className="text-zinc-400">-</span>;
       }
 
-      const visibleItems = items.slice(0, 3);
+      const limit = maxItems ?? 3;
+      const visibleItems = items.slice(0, limit);
       const hiddenCount = items.length - visibleItems.length;
 
       return (

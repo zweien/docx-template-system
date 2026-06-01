@@ -13,6 +13,7 @@ export function useTour() {
   const pathname = usePathname();
   const { isActive, start: storeStart, stop: storeStop, setStep } = useOnboardingStore();
   const driverRef = useRef<ReturnType<typeof driver> | null>(null);
+  const navigatingRef = useRef(false);
 
   const markCompleted = useCallback(async () => {
     try {
@@ -43,6 +44,7 @@ export function useTour() {
         const nextIndex = (state.activeIndex ?? 0) + 1;
         const requiredPage = PAGE_STEP_MAP[nextIndex];
         if (requiredPage && !pathname.startsWith(requiredPage)) {
+          navigatingRef.current = true;
           setStep(nextIndex);
           d.destroy();
           driverRef.current = null;
@@ -52,6 +54,11 @@ export function useTour() {
         d.moveNext();
       },
       onDestroyed: () => {
+        if (navigatingRef.current) {
+          navigatingRef.current = false;
+          driverRef.current = null;
+          return;
+        }
         storeStop();
         driverRef.current = null;
         markCompleted();

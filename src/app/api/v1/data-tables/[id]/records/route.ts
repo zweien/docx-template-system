@@ -5,6 +5,7 @@ import {
   createRecord,
 } from "@/lib/services/data-record.service";
 import { createRecordSchema } from "@/validators/data-table";
+import type { FieldFilters } from "@/lib/services/data-record.service";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,11 +22,31 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = Math.min(
     parseInt(searchParams.get("pageSize") || "20", 10),
-    100
+    200
   );
   const search = searchParams.get("search") || undefined;
 
-  const result = await listRecords(id, { page, pageSize, search });
+  // Parse field filters: filters[fieldKey]=value or filters[fieldKey][op]=value
+  const fieldFilters: FieldFilters = {};
+  searchParams.forEach((value, key) => {
+    const match = key.match(/^filters\[([^\]]+)\](?:\[([^\]]+)\])?$/);
+    if (match) {
+      const fieldKey = match[1];
+      const op = match[2];
+      if (op) {
+        fieldFilters[fieldKey] = { op: op as FieldFilters[string]["op"], value };
+      } else {
+        fieldFilters[fieldKey] = { value };
+      }
+    }
+  });
+
+  const result = await listRecords(id, {
+    page,
+    pageSize,
+    search,
+    fieldFilters: Object.keys(fieldFilters).length > 0 ? fieldFilters : undefined,
+  });
 
   if (!result.success) {
     if (result.error.code === "NOT_FOUND") {

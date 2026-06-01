@@ -69,3 +69,7 @@ yarn-error.log*
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
+
+# MCP config (contains API tokens)
+.mcp.json
+.superpowers/

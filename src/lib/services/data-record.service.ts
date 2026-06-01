@@ -145,11 +145,23 @@ function buildFieldFilterConditions(
 
     // 根据操作符构建 Prisma JSONB 查询
     switch (op) {
-      case 'eq':
-        conditions.push({
-          data: { path: [fieldKey], equals: value }
-        });
+      case 'eq': {
+        // Match both string and numeric forms to handle type inconsistencies
+        const num = Number(value);
+        if (!isNaN(num) && String(num) === value) {
+          conditions.push({
+            OR: [
+              { data: { path: [fieldKey], equals: value } },
+              { data: { path: [fieldKey], equals: num } },
+            ],
+          });
+        } else {
+          conditions.push({
+            data: { path: [fieldKey], equals: value },
+          });
+        }
         break;
+      }
       case 'ne':
         conditions.push({
           NOT: { data: { path: [fieldKey], equals: value } }

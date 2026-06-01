@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, Shield } from "lucide-react";
+import { useTour } from "@/components/onboarding/use-tour";
 import type { Role } from "@/generated/prisma/enums";
 import { AppLogo } from "@/components/layout/app-logo";
 import { isRouteActive } from "@/components/layout/navigation/matcher";
@@ -60,6 +61,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { collapsed, toggleCollapsed } = useNavigationState();
+  const { start: startTour, isActive: tourActive } = useTour();
   const role = session?.user?.role as Role | undefined;
   const [adminExpanded, setAdminExpanded] = useState(false);
 
@@ -169,9 +171,28 @@ export function Sidebar() {
         </div>
         {footerItems.length > 0 && (
           <div className="mt-1 space-y-1">
-            {footerItems.map((item) => (
-              <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
-            ))}
+            {footerItems.map((item) =>
+              item.id === "onboarding" ? (
+                <button
+                  key={item.id}
+                  onClick={tourActive ? undefined : startTour}
+                  disabled={tourActive}
+                  className={cn(
+                    "flex items-center rounded-md text-sm font-[510] transition-colors w-full text-left",
+                    collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
+                    "border border-transparent text-muted-foreground hover:border-border hover:bg-white/[0.03] hover:text-foreground",
+                    tourActive && "opacity-50 pointer-events-none"
+                  )}
+                >
+                  <item.icon className="h-4 w-4 shrink-0" />
+                  <span className={cn("whitespace-nowrap", collapsed && "w-0 overflow-hidden opacity-0")}>
+                    {item.label}
+                  </span>
+                </button>
+              ) : (
+                <SidebarNavLink key={item.id} item={item} pathname={pathname} collapsed={collapsed} />
+              )
+            )}
           </div>
         )}
       </div>

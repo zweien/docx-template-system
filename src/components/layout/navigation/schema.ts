@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { Bot, Calculator, Database, FilePenLine, FileText, FolderHeart, GitBranch, House, Info, LayoutGrid, Settings2, ShieldCheck, Users, WandSparkles } from "lucide-react";
+import { Bot, Calculator, Database, FilePenLine, FileText, FolderHeart, GitBranch, GraduationCap, House, Info, LayoutGrid, Settings2, ShieldCheck, Users, WandSparkles } from "lucide-react";
 import type { Role } from "@/generated/prisma/enums";
 
 export type NavSection = "main" | "reports" | "admin" | "footer";
@@ -166,6 +166,7 @@ export const ADMIN_NAV_ITEMS: readonly NavItem[] = [
 // ---------------------------------------------------------------------------
 
 export const FOOTER_NAV_ITEMS: readonly NavItem[] = [
+  { id: "onboarding", icon: GraduationCap, href: "#onboarding", label: "新手引导", section: "footer" as const, order: 98 },
   { id: "about", icon: Info, href: "/about", label: "关于", section: "footer", order: 99 },
 ] as const satisfies readonly NavItem[];
 

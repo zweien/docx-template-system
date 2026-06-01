@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { HelpCircle, Search } from "lucide-react";
+import { useTour } from "@/components/onboarding/use-tour";
+import { cn } from "@/lib/utils";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { isRouteActive } from "@/components/layout/navigation/matcher";
 import { NAV_ITEMS } from "@/components/layout/navigation/schema";
@@ -37,6 +39,24 @@ function isTypingElement(target: EventTarget | null): boolean {
 
   const tagName = target.tagName.toLowerCase();
   return tagName === "input" || tagName === "textarea" || tagName === "select";
+}
+
+function OnboardingTrigger() {
+  const { start, isActive } = useTour();
+  return (
+    <button
+      onClick={isActive ? undefined : start}
+      disabled={isActive}
+      className={cn(
+        "flex h-8 w-8 items-center justify-center rounded-md transition-colors",
+        "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+        isActive && "opacity-50 pointer-events-none"
+      )}
+      title="新手引导"
+    >
+      <HelpCircle className="h-4 w-4" />
+    </button>
+  );
 }
 
 export function Header() {
@@ -108,6 +128,7 @@ export function Header() {
           </kbd>
         </button>
 
+        <OnboardingTrigger />
         <div id="user-nav" className="flex items-center gap-2">
           <ThemeToggle />
           <NotificationBell />

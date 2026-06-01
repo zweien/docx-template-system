@@ -171,6 +171,7 @@ export const authOptions: NextAuthOptions = {
         token.name = localUser.name;
         token.email = localUser.email;
         token.oidcSubject = localUser.oidcSubject ?? undefined;
+        token.onboardingCompleted = localUser.onboardingCompleted;
 
         logAudit({
           userId: localUser.id,

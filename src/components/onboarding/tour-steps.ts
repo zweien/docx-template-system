@@ -107,7 +107,7 @@ export const PAGE_STEP_MAP: Record<number, string | (() => Promise<string>)> = {
     try {
       const res = await fetch("/api/templates?status=PUBLISHED&pageSize=1");
       const json = await res.json();
-      const templates = json.data ?? json;
+      const templates = json.data?.items ?? json.data ?? json;
       if (templates.length > 0) {
         return `/templates/${templates[0].id}/fill`;
       }

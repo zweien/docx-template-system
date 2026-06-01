@@ -99,7 +99,22 @@ export const tourSteps: DriveStep[] = [
   },
 ];
 
-export const PAGE_STEP_MAP: Record<number, string> = {
+// 跨页面步骤的索引：这些步骤需要先导航到对应页面
+// 值为静态路由前缀或获取动态路由的函数
+export const PAGE_STEP_MAP: Record<number, string | (() => Promise<string>)> = {
   5: "/generate",
+  6: async () => {
+    try {
+      const res = await fetch("/api/templates?status=PUBLISHED&pageSize=1");
+      const json = await res.json();
+      const templates = json.data ?? json;
+      if (templates.length > 0) {
+        return `/templates/${templates[0].id}/fill`;
+      }
+    } catch {
+      // fallback: 跳过步骤 7、8，直接到步骤 9
+    }
+    return "/records";
+  },
   8: "/records",
 };

@@ -40,16 +40,19 @@ export function useTour() {
       overlayOpacity: 0.5,
       smoothScroll: true,
       steps: tourSteps,
-      onNextClick: (_element, _step, { state, driver: d }) => {
+      onNextClick: async (_element, _step, { state, driver: d }) => {
         const nextIndex = (state.activeIndex ?? 0) + 1;
-        const requiredPage = PAGE_STEP_MAP[nextIndex];
-        if (requiredPage && !pathname.startsWith(requiredPage)) {
-          navigatingRef.current = true;
-          setStep(nextIndex);
-          d.destroy();
-          driverRef.current = null;
-          router.push(requiredPage);
-          return;
+        const pageEntry = PAGE_STEP_MAP[nextIndex];
+        if (pageEntry) {
+          const requiredPage = typeof pageEntry === "function" ? await pageEntry() : pageEntry;
+          if (!pathname.startsWith(requiredPage)) {
+            navigatingRef.current = true;
+            setStep(nextIndex);
+            d.destroy();
+            driverRef.current = null;
+            router.push(requiredPage);
+            return;
+          }
         }
         d.moveNext();
       },

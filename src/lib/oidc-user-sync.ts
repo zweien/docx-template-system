@@ -12,6 +12,7 @@ export interface LocalUserRecord {
   name: string;
   role: Role;
   oidcSubject?: string | null;
+  onboardingCompleted?: boolean;
 }
 
 export interface UserRepository {

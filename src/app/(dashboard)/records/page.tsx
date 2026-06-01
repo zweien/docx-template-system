@@ -104,9 +104,11 @@ export default async function RecordsPage({
         })}
       </div>
 
-      <ContentCard id="records-page" className="!p-0">
-        <RecordTableWithBatch records={serializedRecords} isAdmin={isAdmin} />
-      </ContentCard>
+      <div id="records-page">
+        <ContentCard className="!p-0">
+          <RecordTableWithBatch records={serializedRecords} isAdmin={isAdmin} />
+        </ContentCard>
+      </div>
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between">

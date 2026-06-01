@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { SessionProvider } from "@/components/providers/session-provider";
+import { TourProvider } from "@/components/onboarding/tour-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -19,15 +20,17 @@ export default async function DashboardLayout({
 
   return (
     <SessionProvider session={session}>
-      <div className="flex h-screen bg-background text-foreground">
-        <Sidebar />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header />
-          <main className="flex-1 flex flex-col overflow-y-auto bg-transparent p-4 sm:p-6">
-            {children}
-          </main>
+      <TourProvider>
+        <div className="flex h-screen bg-background text-foreground">
+          <Sidebar />
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <Header />
+            <main className="flex-1 flex flex-col overflow-y-auto bg-transparent p-4 sm:p-6">
+              {children}
+            </main>
+          </div>
         </div>
-      </div>
+      </TourProvider>
     </SessionProvider>
   );
 }

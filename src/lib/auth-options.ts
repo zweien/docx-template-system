@@ -117,6 +117,7 @@ export const authOptions: NextAuthOptions = {
         token.role = (user as { role: Role }).role;
         token.name = user.name;
         token.email = user.email;
+        token.onboardingCompleted = (user as any).onboardingCompleted;
 
         logAudit({
           userId: user.id,
@@ -191,6 +192,7 @@ export const authOptions: NextAuthOptions = {
         session.user.role = token.role as Role;
         session.user.name = token.name as string;
         session.user.email = token.email as string;
+        (session.user as any).onboardingCompleted = token.onboardingCompleted as boolean;
       }
       return session;
     },

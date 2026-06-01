@@ -179,7 +179,7 @@ export default async function WorkspacePage() {
       <PageHeader title="工作台" description={headerDescription} />
 
       {/* ---- Row 1: Quick Actions ---- */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div id="quick-actions" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <QuickActionCard
           href="/generate"
           icon={FileText}

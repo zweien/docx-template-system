@@ -104,7 +104,7 @@ export default async function RecordsPage({
         })}
       </div>
 
-      <ContentCard className="!p-0">
+      <ContentCard id="records-page" className="!p-0">
         <RecordTableWithBatch records={serializedRecords} isAdmin={isAdmin} />
       </ContentCard>
 

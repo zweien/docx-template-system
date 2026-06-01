@@ -97,6 +97,7 @@ export function Header() {
         </div>
 
         <button
+          id="header-search"
           onClick={() => setSearchOpen(true)}
           className="hidden h-8 items-center gap-2 rounded-md border border-border bg-muted/20 px-3 text-sm font-[510] text-muted-foreground transition-all hover:border-border hover:bg-accent/60 hover:text-foreground sm:flex"
         >
@@ -107,9 +108,11 @@ export function Header() {
           </kbd>
         </button>
 
-        <ThemeToggle />
-        <NotificationBell />
-        <UserNav />
+        <div id="user-nav" className="flex items-center gap-2">
+          <ThemeToggle />
+          <NotificationBell />
+          <UserNav />
+        </div>
       </header>
       <CommandPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>

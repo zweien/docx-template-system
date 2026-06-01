@@ -140,7 +140,7 @@ export function GeneratePageClient({ templates, categories, allTags }: GenerateP
           }
         />
       ) : filtered.length === 0 ? null : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div id="template-list" className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((t) => (
             <Link key={t.id} href={`/templates/${t.id}/fill`}>
               <Card className="transition-colors hover:bg-accent cursor-pointer">

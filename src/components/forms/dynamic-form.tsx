@@ -265,7 +265,7 @@ export function DynamicForm({
   };
 
   return (
-    <div className="space-y-6">
+    <div id="form-area" className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>表单字段</CardTitle>
@@ -376,6 +376,7 @@ export function DynamicForm({
           {saving ? "保存中..." : "保存草稿"}
         </Button>
         <Button
+          id="submit-btn"
           onClick={handleGenerate}
           disabled={saving || generating}
           className="w-full sm:w-auto"

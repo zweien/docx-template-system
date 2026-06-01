@@ -92,12 +92,12 @@ export function FilterPanel({ fields, filters, onChange }: FilterPanelProps) {
         <ListFilter className="h-4 w-4 mr-1" />
         筛选 {hasFilters && `(${filters.reduce((acc, g) => acc + g.conditions.length, 0)})`}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[520px] max-h-[400px] overflow-y-auto space-y-3 border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] p-3 text-[#d0d6e0]">
+      <PopoverContent align="start" className="w-[520px] max-h-[400px] overflow-y-auto space-y-3 p-3">
         {filters.map((group, gi) => (
-          <div key={gi} className="space-y-2 rounded-md border border-[rgb(255_255_255_/_0.06)] bg-[rgb(255_255_255_/_0.02)] p-2">
+          <div key={gi} className="space-y-2 rounded-md border bg-muted/30 p-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
-                <span className="text-xs text-[#8a8f98]">条件组 {gi + 1}</span>
+                <span className="text-xs text-muted-foreground">条件组 {gi + 1}</span>
                 <Select
                   value={group.operator}
                   onValueChange={(v) => updateGroup(gi, (g) => ({ ...g, operator: (v ?? "AND") as "AND" | "OR" }))}

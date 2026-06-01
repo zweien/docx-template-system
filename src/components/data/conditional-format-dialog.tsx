@@ -91,7 +91,7 @@ export function ConditionalFormatDialog({
         <Paintbrush className="h-4 w-4 mr-1" />
         条件格式 {rules.length > 0 && `(${rules.length})`}
       </DialogTrigger>
-      <DialogContent className="max-h-[80vh] max-w-[600px] overflow-y-auto border-[rgb(255_255_255_/_0.08)] bg-[#191a1b] text-[#f7f8f8]">
+      <DialogContent className="max-h-[80vh] max-w-[600px] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-[510] tracking-[-0.13px]">条件格式规则</DialogTitle>
         </DialogHeader>
@@ -99,7 +99,7 @@ export function ConditionalFormatDialog({
           {rules.map((rule) => (
             <div
               key={rule.id}
-              className="space-y-2 rounded-md border border-[rgb(255_255_255_/_0.08)] bg-[rgb(255_255_255_/_0.02)] p-3"
+              className="space-y-2 rounded-md border bg-muted/30 p-3"
               style={{ borderLeftColor: rule.backgroundColor, borderLeftWidth: 4 }}
             >
               <div className="flex items-center justify-between">
@@ -185,7 +185,7 @@ export function ConditionalFormatDialog({
             </div>
           ))}
           {rules.length === 0 && (
-            <p className="py-4 text-center text-sm text-[#8a8f98]">
+            <p className="py-4 text-center text-sm text-muted-foreground">
               暂无条件格式规则
             </p>
           )}

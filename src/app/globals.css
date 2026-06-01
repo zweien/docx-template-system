@@ -32,7 +32,7 @@
 .floating-scrollbar-track {
   position: fixed;
   height: 10px;
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--color-foreground) 10%, transparent);
   border-radius: 5px;
   z-index: 6;
   cursor: pointer;
@@ -40,15 +40,15 @@
 }
 .floating-scrollbar-track:hover {
   height: 14px;
-  background: rgba(255, 255, 255, 0.15);
+  background: color-mix(in srgb, var(--color-foreground) 15%, transparent);
 }
 .floating-scrollbar-thumb {
   height: 100%;
   min-width: 30px;
-  background: rgba(255, 255, 255, 0.35);
+  background: color-mix(in srgb, var(--color-foreground) 35%, transparent);
   border-radius: 5px;
   transition: background 0.15s ease;
 }
 .floating-scrollbar-track:hover .floating-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.55);
+  background: color-mix(in srgb, var(--color-foreground) 55%, transparent);
 }

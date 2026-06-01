@@ -766,7 +766,7 @@ model Agent2UserSettings {
   id               String   @id @default(cuid())
   userId           String   @unique
   autoConfirmTools Json     @default("{}")
-  defaultModel     String   @default("gpt-4o")
+  defaultModel     String   @default("")
   showReasoning    Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

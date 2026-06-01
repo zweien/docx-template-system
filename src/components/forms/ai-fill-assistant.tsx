@@ -102,12 +102,12 @@ export function AiFillAssistant({
           .then((settings) => {
             if (!active) return;
             const saved = settings.success ? settings.data.defaultModel : null;
-            if (saved) {
+            if (saved && data.data.some((m: ModelItem) => m.id === saved)) {
               setSelectedModel(saved);
               const found = data.data.find((m: ModelItem) => m.id === saved);
               setModelName(found ? found.name : saved);
             } else if (data.data.length > 0) {
-              // Default to first model (usually env-configured default)
+              // Fall back to first model (env-configured system default)
               setSelectedModel(data.data[0].id);
               setModelName(data.data[0].name);
             }

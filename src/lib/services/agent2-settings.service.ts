@@ -22,7 +22,7 @@ function mapSettings(row: {
   };
 }
 
-const envDefaultModel = process.env.AI_MODEL || "gpt-4o";
+const envDefaultModel = process.env.AI_MODEL || "";
 
 export async function getSettings(
   userId: string

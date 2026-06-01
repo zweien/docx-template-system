@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = fillAssistSchema.parse(body);
 
-    const modelId = validated.model || process.env.AI_MODEL || "gpt-4o";
+    const modelId = validated.model || process.env.AI_MODEL || "";
     const { model, providerName, extraParams } = await resolveModel(modelId, session.user.id);
 
     // Build context-aware system prompt

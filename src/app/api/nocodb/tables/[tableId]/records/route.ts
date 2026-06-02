@@ -40,6 +40,12 @@ export async function POST(
   if (!session?.user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (session.user.role !== "ADMIN") {
+    return NextResponse.json(
+      { error: "权限不足，仅管理员可执行此操作" },
+      { status: 403 }
+    );
+  }
 
   const { tableId } = await params;
   const body = await request.json();

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getPlaceholderById } from "@/lib/services/placeholder.service";
-import { listRecords } from "@/lib/services/data-record.service";
+import { listRecords, getTableFields } from "@/lib/nocodb";
 import { recordQuerySchema } from "@/validators/data-table";
 import { ZodError } from "zod";
 
@@ -23,6 +23,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: "占位符未绑定数据表" }, { status: 400 });
   }
 
+  const sourceTableId = placeholder.sourceTableId;
+
   // 解析查询参数
   const { searchParams } = new URL(request.url);
   try {
@@ -32,21 +34,27 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       pageSize: searchParams.get("pageSize") || "10",
     });
 
-    const result = await listRecords(placeholder.sourceTableId, {
-      page: query.page,
-      pageSize: query.pageSize,
-      search: query.search,
-    });
-
-    if (!result.success) {
-      return NextResponse.json({ error: result.error.message }, { status: 500 });
-    }
+    // 并行获取记录和字段信息
+    const [recordsResult, fields] = await Promise.all([
+      listRecords(sourceTableId, {
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+      }),
+      getTableFields(sourceTableId),
+    ]);
 
     return NextResponse.json({
-      records: result.data.records,
-      total: result.data.total,
-      page: result.data.page,
-      pageSize: result.data.pageSize,
+      fields: fields.map((f) => ({
+        id: f.nocodbColumnId,
+        key: f.key,
+        label: f.label,
+        type: f.type,
+      })),
+      records: recordsResult.records,
+      total: recordsResult.total,
+      page: recordsResult.page,
+      pageSize: recordsResult.pageSize,
     });
   } catch (error) {
     if (error instanceof ZodError) {

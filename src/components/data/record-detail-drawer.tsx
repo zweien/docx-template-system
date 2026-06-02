@@ -248,7 +248,7 @@ export function RecordDetailDrawer(props: RecordDetailDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" showCloseButton={false} className="w-full overflow-y-auto border-border bg-card text-card-foreground sm:max-w-md">
+      <SheetContent side="right" showCloseButton={false} className="w-full overflow-y-auto border-border bg-popover text-popover-foreground data-[side=right]:sm:max-w-2xl">
         {loading ? (
           <div className="flex min-h-full items-center justify-center py-12">
             <Spinner className="size-6" />

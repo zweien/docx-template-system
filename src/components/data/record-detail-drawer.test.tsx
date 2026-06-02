@@ -137,7 +137,7 @@ describe("RecordDetailDrawer", () => {
     const title = await screen.findByRole("heading", { name: "编辑记录" });
     const sheet = title.closest("section");
 
-    expect(sheet).toHaveClass("bg-card", "text-card-foreground");
+    expect(sheet).toHaveClass("bg-popover", "text-popover-foreground");
     expect(sheet?.className).not.toContain("bg-[#191a1b]");
     expect(title).toHaveClass("text-foreground");
     expect(title.className).not.toContain("text-[#f7f8f8]");

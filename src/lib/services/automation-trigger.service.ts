@@ -156,19 +156,13 @@ export async function triggerAutomationManually(params: {
 
     let record: Record<string, unknown> | null = null;
     if (params.recordId) {
-      const recordRow = await db.dataRecord.findFirst({
-        where: {
-          id: params.recordId,
-          tableId: automation.tableId,
-        },
-        select: {
-          data: true,
-        },
-      });
-      if (!recordRow) {
+      try {
+        const nocodb = require("@/lib/nocodb") as typeof import("@/lib/nocodb");
+        const recordData = await nocodb.getRecord(automation.tableId, params.recordId);
+        record = recordData.data as Record<string, unknown>;
+      } catch {
         return { success: false, error: { code: "NOT_FOUND", message: "记录不存在" } };
       }
-      record = recordRow.data as Record<string, unknown>;
     }
 
     const result = await enqueueAutomationRun({

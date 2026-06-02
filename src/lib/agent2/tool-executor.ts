@@ -3,7 +3,7 @@ import * as helpers from "./tool-helpers";
 import { importPaper } from "./paper-import-executor";
 import { invalidateSchemaCache } from "./tool-helpers";
 import { invalidateSyspromptCache } from "./context-builder";
-import * as recordService from "@/lib/services/data-record.service";
+import * as nocodb from "@/lib/nocodb";
 import { db } from "@/lib/db";
 
 type ExecuteResult = {
@@ -20,46 +20,51 @@ export async function executeToolAction(
 ): Promise<ExecuteResult> {
   switch (toolName) {
     case "createRecord": {
-      const result = await recordService.createRecord(
-        userId,
-        toolInput.tableId as string,
-        toolInput.data as Record<string, unknown>
-      );
-      if (!result.success)
-        return { success: false, error: result.error.message, errorDetails: result.error };
-      invalidateSchemaCache(toolInput.tableId as string);
-      invalidateSyspromptCache();
-      return { success: true, data: result.data };
+      const tableId = toolInput.tableId as string;
+      try {
+        const record = await nocodb.createRecord(
+          tableId,
+          toolInput.data as Record<string, unknown>
+        );
+        invalidateSchemaCache(tableId);
+        invalidateSyspromptCache();
+        return { success: true, data: { id: String(record.id), ...record.data } };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "创建记录失败";
+        return { success: false, error: msg, errorDetails: { code: "CREATE_FAILED", message: msg } };
+      }
     }
 
     case "updateRecord": {
-      const result = await recordService.updateRecord(
-        toolInput.recordId as string,
-        toolInput.data as Record<string, unknown>,
-        userId
-      );
-      if (!result.success)
-        return { success: false, error: result.error.message, errorDetails: result.error };
-      invalidateSchemaCache((result.data as { tableId: string }).tableId);
-      invalidateSyspromptCache();
-      return { success: true, data: result.data };
+      const recordId = toolInput.recordId as string;
+      const tableId = toolInput.tableId as string;
+      try {
+        const record = await nocodb.updateRecord(
+          tableId,
+          recordId,
+          toolInput.data as Record<string, unknown>
+        );
+        invalidateSchemaCache(tableId);
+        invalidateSyspromptCache();
+        return { success: true, data: { id: String(record.id), tableId, ...record.data } };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "更新记录失败";
+        return { success: false, error: msg, errorDetails: { code: "UPDATE_FAILED", message: msg } };
+      }
     }
 
     case "deleteRecord": {
-      // Get tableId before deletion for cache invalidation
-      const existingResult = await helpers.getRecord(toolInput.recordId as string);
-      const result = await recordService.deleteRecord(
-        toolInput.recordId as string,
-        userId
-      );
-      if (!result.success)
-        return { success: false, error: result.error.message, errorDetails: result.error };
-      if (existingResult.success) {
-        invalidateSchemaCache(existingResult.data.tableId as string);
+      const delRecordId = toolInput.recordId as string;
+      const tableId = toolInput.tableId as string;
+      try {
+        await nocodb.deleteRecord(tableId, delRecordId);
+        invalidateSchemaCache(tableId);
+        invalidateSyspromptCache();
+        return { success: true, data: { id: delRecordId } };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "删除记录失败";
+        return { success: false, error: msg, errorDetails: { code: "DELETE_FAILED", message: msg } };
       }
-      invalidateSyspromptCache();
-      // data-record.service.deleteRecord 返回 null，但下游期望 { id } 格式
-      return { success: true, data: { id: toolInput.recordId as string } };
     }
 
     case "generateDocument": {
@@ -104,41 +109,51 @@ export async function executeToolAction(
     }
 
     case "batchCreateRecords": {
-      const result = await recordService.batchCreate(
-        toolInput.tableId as string,
-        userId,
-        toolInput.records as Record<string, unknown>[]
-      );
-      if (!result.success)
-        return { success: false, error: result.error.message, errorDetails: result.error };
-      invalidateSchemaCache(toolInput.tableId as string);
-      invalidateSyspromptCache();
-      return { success: true, data: result.data };
+      const btTableId = toolInput.tableId as string;
+      try {
+        const records = await nocodb.batchCreateRecords(
+          btTableId,
+          toolInput.records as Record<string, unknown>[]
+        );
+        invalidateSchemaCache(btTableId);
+        invalidateSyspromptCache();
+        return { success: true, data: records };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "批量创建失败";
+        return { success: false, error: msg, errorDetails: { code: "BATCH_CREATE_FAILED", message: msg } };
+      }
     }
 
     case "batchUpdateRecords": {
-      const result = await recordService.batchUpdate(
-        toolInput.tableId as string,
-        toolInput.updates as Array<{ id: string; data: Record<string, unknown> }>,
-        userId
-      );
-      if (!result.success)
-        return { success: false, error: result.error.message, errorDetails: result.error };
-      invalidateSchemaCache(toolInput.tableId as string);
-      invalidateSyspromptCache();
-      return { success: true, data: result.data };
+      const buTableId = toolInput.tableId as string;
+      const updates = toolInput.updates as Array<{ id: string; data: Record<string, unknown> }>;
+      try {
+        const results = await Promise.all(
+          updates.map((u) => nocodb.updateRecord(buTableId, u.id, u.data))
+        );
+        invalidateSchemaCache(buTableId);
+        invalidateSyspromptCache();
+        return { success: true, data: results.map((r) => ({ id: String(r.id) })) };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "批量更新失败";
+        return { success: false, error: msg, errorDetails: { code: "BATCH_UPDATE_FAILED", message: msg } };
+      }
     }
 
     case "batchDeleteRecords": {
-      const result = await recordService.batchDelete(
-        toolInput.tableId as string,
-        toolInput.recordIds as string[]
-      );
-      if (!result.success)
-        return { success: false, error: result.error.message, errorDetails: result.error };
-      invalidateSchemaCache(toolInput.tableId as string);
-      invalidateSyspromptCache();
-      return { success: true, data: result.data };
+      const bdTableId = toolInput.tableId as string;
+      const recordIds = toolInput.recordIds as string[];
+      try {
+        await Promise.all(
+          recordIds.map((id) => nocodb.deleteRecord(bdTableId, id))
+        );
+        invalidateSchemaCache(bdTableId);
+        invalidateSyspromptCache();
+        return { success: true, data: { deletedCount: recordIds.length } };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : "批量删除失败";
+        return { success: false, error: msg, errorDetails: { code: "BATCH_DELETE_FAILED", message: msg } };
+      }
     }
 
     case "importPaper": {

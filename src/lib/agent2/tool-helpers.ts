@@ -1,10 +1,14 @@
 // src/lib/agent2/tool-helpers.ts
 import { db } from "@/lib/db";
-import type { Prisma } from "@/generated/prisma/client";
-import type { ServiceResult } from "@/types/data-table";
+import * as nocodb from "@/lib/nocodb";
+import { mapColumns } from "@/lib/nocodb/field-mapper";
+import * as nocodbClient from "@/lib/nocodb/client";
+
+type ServiceResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: { code: string; message: string } };
 
 // ── TTL 缓存（进程内、单实例、best-effort）──
-// 局限性：Serverless 冷启动/开发模式热重载会清空；TTL 仅 30 秒
 const TTL_MS = 30_000;
 const cacheMap = new Map<string, { data: unknown; expiresAt: number }>();
 
@@ -26,146 +30,6 @@ export function invalidateSchemaCache(tableId: string): void {
   cacheMap.delete(`schema:${tableId}`);
 }
 
-// ── SQL helpers ──
-
-// 字段名白名单校验：防止 SQL 注入
-function isSafeIdentifier(name: string): boolean {
-  // 允许 Unicode 字母（含中文）、数字、下划线；阻止 SQL 注入字符（引号、分号、空格等）
-  return /^[\p{L}_][\p{L}\p{N}_]*$/u.test(name);
-}
-
-// 将 filter.field 解析为实际的字段 key（支持 key 和 label 两种输入）
-function resolveFieldKey(
-  filterField: string,
-  fields: Array<{ key: string; label?: string }>
-): string | null {
-  // 优先精确匹配 key
-  if (fields.some(f => f.key === filterField)) return filterField;
-  // 回退匹配 label
-  const byLabel = fields.find(f => f.label === filterField);
-  return byLabel ? byLabel.key : null;
-}
-
-// 将 FilterCondition[] 转换为原生 SQL WHERE 子句
-function buildSqlWhereClause(
-  tableId: string,
-  filters: Array<{ field: string; operator: string; value: unknown }>,
-  fields: Array<{ key: string; type: string; label?: string }>
-): { sql: string; params: unknown[]; warnings: string[] } {
-  const warnings: string[] = [];
-  const params: unknown[] = [];
-  const conditions: string[] = [`"tableId" = $${params.push(tableId)}`];
-
-  for (const filter of filters) {
-    const resolvedKey = resolveFieldKey(filter.field, fields);
-    if (!resolvedKey) {
-      warnings.push(`过滤字段 '${filter.field}' 在表中不存在，已跳过`);
-      continue;
-    }
-    const field = fields.find(f => f.key === resolvedKey)!;
-    if (!isSafeIdentifier(resolvedKey)) {
-      warnings.push(`过滤字段 '${filter.field}' 不是有效的标识符，已跳过`);
-      continue;
-    }
-
-    const paramIdx = params.push(filter.value);
-    const jsonPath = `data->>'${resolvedKey}'`;
-
-    switch (filter.operator) {
-      case "eq":
-        conditions.push(`${jsonPath} = $${paramIdx}`);
-        break;
-      case "ne":
-        conditions.push(`${jsonPath} != $${paramIdx}`);
-        break;
-      case "contains":
-        conditions.push(`${jsonPath} LIKE '%' || $${paramIdx} || '%'`);
-        break;
-      case "gt":
-      case "gte":
-      case "lt":
-      case "lte": {
-        if (field.type === "NUMBER") {
-          const op = { gt: ">", gte: ">=", lt: "<", lte: "<=" }[filter.operator];
-          conditions.push(`CAST(${jsonPath} AS NUMERIC) ${op} $${paramIdx}`);
-        } else if (field.type === "DATE") {
-          const op = { gt: ">", gte: ">=", lt: "<", lte: "<=" }[filter.operator];
-          conditions.push(`CAST(${jsonPath} AS DATE) ${op} CAST($${paramIdx} AS DATE)`);
-        }
-        break;
-      }
-      case "in":
-        if (Array.isArray(filter.value)) {
-          const placeholders: string[] = [];
-          for (const v of filter.value) {
-            placeholders.push(`$${params.push(v)}`);
-          }
-          conditions.push(`${jsonPath} IN (${placeholders.join(", ")})`);
-        }
-        break;
-      case "isempty":
-        conditions.push(`(${jsonPath} IS NULL OR ${jsonPath} = '')`);
-        break;
-      case "isnotempty":
-        conditions.push(`(${jsonPath} IS NOT NULL AND ${jsonPath} != '')`);
-        break;
-    }
-  }
-
-  return { sql: conditions.join(" AND "), params, warnings };
-}
-
-// 解析关系字段：批量查询关联记录并替换为 display 值
-async function resolveRelationFields(
-  table: { fields: Array<{ key: string; type: string; relationTo: string | null; displayField: string | null }> },
-  resultRecords: Array<Record<string, unknown>>
-): Promise<void> {
-  const relationFields = table.fields.filter(
-    (f) => f.type === "RELATION" && f.relationTo && f.displayField
-  );
-
-  if (relationFields.length === 0 || resultRecords.length === 0) return;
-
-  // 收集关联 ID
-  const relationIdsByTable = new Map<string, Set<string>>();
-  for (const field of relationFields) {
-    if (!relationIdsByTable.has(field.relationTo!)) {
-      relationIdsByTable.set(field.relationTo!, new Set());
-    }
-    const ids = relationIdsByTable.get(field.relationTo!)!;
-    for (const record of resultRecords) {
-      const relId = record[field.key];
-      if (typeof relId === "string" && relId) ids.add(relId);
-    }
-  }
-
-  // 批量查询
-  const relatedMap = new Map<string, Record<string, unknown>>();
-  for (const [, ids] of relationIdsByTable) {
-    if (ids.size > 0) {
-      const related = await db.dataRecord.findMany({
-        where: { id: { in: Array.from(ids) } },
-      });
-      for (const r of related) {
-        relatedMap.set(r.id, r.data as Record<string, unknown>);
-      }
-    }
-  }
-
-  // 替换为 display 值
-  for (const record of resultRecords) {
-    for (const field of relationFields) {
-      const relId = record[field.key];
-      if (typeof relId === "string" && relId) {
-        const data = relatedMap.get(relId);
-        if (data && field.displayField) {
-          record[field.key] = { id: relId, display: data[field.displayField] ?? relId };
-        }
-      }
-    }
-  }
-}
-
 // ── List all data tables ──
 
 export async function listTables(): Promise<
@@ -181,24 +45,17 @@ export async function listTables(): Promise<
   >
 > {
   try {
-    const tables = await db.dataTable.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: {
-          select: { fields: true, records: true },
-        },
-      },
-    });
+    const tables = await nocodb.listTables();
 
     return {
       success: true,
       data: tables.map((t) => ({
         id: t.id,
         name: t.name,
-        description: t.description,
-        icon: t.icon,
-        fieldCount: t._count.fields,
-        recordCount: t._count.records,
+        description: null,
+        icon: null,
+        fieldCount: t.fieldCount,
+        recordCount: t.recordCount,
       })),
     };
   } catch (error) {
@@ -232,38 +89,26 @@ export async function getTableSchema(tableId: string): Promise<
   if (cached) return cached;
 
   try {
-    const table = await db.dataTable.findUnique({
-      where: { id: tableId },
-      include: {
-        fields: { orderBy: { sortOrder: "asc" } },
-      },
-    });
-
-    if (!table) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "数据表不存在" },
-      };
-    }
+    const detail = await nocodb.getTableDetail(tableId);
 
     const result = {
-      success: true,
+      success: true as const,
       data: {
-        id: table.id,
-        name: table.name,
-        description: table.description,
-        fields: table.fields.map((f) => ({
+        id: detail.id,
+        name: detail.name,
+        description: null,
+        fields: detail.fields.map((f) => ({
           key: f.key,
           label: f.label,
           type: f.type,
           required: f.required,
           options: f.options as string[] | undefined,
-          relationTo: f.relationTo ?? undefined,
-          displayField: f.displayField ?? undefined,
-          cardinality: f.relationCardinality ?? undefined,
+          relationTo: f.relationTargetTableId ?? undefined,
+          displayField: undefined,
+          cardinality: f.relationType ?? undefined,
         })),
       },
-    } as const;
+    };
 
     cacheSet(cacheKey, result);
     return result;
@@ -282,71 +127,68 @@ interface FilterCondition {
   value: unknown;
 }
 
-function buildFilterConditions(
+function buildNocoDBWhere(
   filters: FilterCondition[],
   fields: Array<{ key: string; type: string; label?: string }>
-): Record<string, unknown>[] {
-  const conditions: Record<string, unknown>[] = [];
+): { where: string; warnings: string[] } {
+  const warnings: string[] = [];
+  const conditions: string[] = [];
 
   for (const filter of filters) {
     const resolvedKey = resolveFieldKey(filter.field, fields);
-    if (!resolvedKey) continue;
+    if (!resolvedKey) {
+      warnings.push(`过滤字段 '${filter.field}' 在表中不存在，已跳过`);
+      continue;
+    }
 
     switch (filter.operator) {
       case "eq":
-        conditions.push({
-          data: { path: [resolvedKey], equals: filter.value },
-        });
+        conditions.push(`(${resolvedKey},eq,${filter.value})`);
         break;
       case "ne":
-        conditions.push({
-          NOT: { data: { path: [resolvedKey], equals: filter.value } },
-        });
+        conditions.push(`(${resolvedKey},neq,${filter.value})`);
         break;
       case "contains":
-        conditions.push({
-          data: {
-            path: [resolvedKey],
-            string_contains: String(filter.value),
-          },
-        });
+        conditions.push(`(${resolvedKey},like,%${filter.value}%)`);
         break;
       case "gt":
+        conditions.push(`(${resolvedKey},gt,${filter.value})`);
+        break;
       case "gte":
+        conditions.push(`(${resolvedKey},ge,${filter.value})`);
+        break;
       case "lt":
+        conditions.push(`(${resolvedKey},lt,${filter.value})`);
+        break;
       case "lte":
-        // JSON field numeric comparison requires application-level filtering.
-        // We do not push a Prisma condition here; filtering happens post-query.
+        conditions.push(`(${resolvedKey},le,${filter.value})`);
+        break;
+      case "isempty":
+        conditions.push(`(${resolvedKey},eq,)`);
+        break;
+      case "isnotempty":
+        conditions.push(`(${resolvedKey},neq,)`);
         break;
       case "in":
         if (Array.isArray(filter.value)) {
-          conditions.push({
-            data: { path: [resolvedKey], equals: filter.value },
-          });
+          // NocoDB doesn't have a native IN operator, use multiple OR conditions
+          const inConditions = filter.value.map((v) => `(${resolvedKey},eq,${v})`);
+          conditions.push(`(${inConditions.join("~or")})`);
         }
-        break;
-      case "isempty":
-        conditions.push({
-          OR: [
-            { data: { path: [resolvedKey], equals: null } },
-            { data: { path: [resolvedKey], equals: "" } },
-          ],
-        });
-        break;
-      case "isnotempty":
-        conditions.push({
-          NOT: {
-            OR: [
-              { data: { path: [resolvedKey], equals: null } },
-              { data: { path: [resolvedKey], equals: "" } },
-            ],
-          },
-        });
         break;
     }
   }
 
-  return conditions;
+  return { where: conditions.join("~and"), warnings };
+}
+
+function resolveFieldKey(
+  filterField: string,
+  fields: Array<{ key: string; label?: string }>
+): string | null {
+  if (fields.some(f => f.key === filterField)) return filterField;
+  const byLabel = fields.find(f => f.label === filterField);
+  return byLabel ? byLabel.key : null;
 }
 
 export async function searchRecords(params: {
@@ -360,9 +202,10 @@ export async function searchRecords(params: {
   pageSize?: number;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  search?: string;
 }): Promise<
   ServiceResult<{
-    records: Array<{ id: string; [key: string]: unknown }>;
+    records: Array<{ id: string; tableId?: string; [key: string]: unknown }>;
     total: number;
     page: number;
     pageSize: number;
@@ -371,19 +214,8 @@ export async function searchRecords(params: {
   try {
     const { tableId, filters = [], page = 1, pageSize = 10, sortBy, sortOrder = "desc" } = params;
 
-    const table = await db.dataTable.findUnique({
-      where: { id: tableId },
-      include: { fields: { orderBy: { sortOrder: "asc" } } },
-    });
-
-    if (!table) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "数据表不存在" },
-      };
-    }
-
-    const where: Record<string, unknown> = { tableId };
+    const schema = await getTableSchema(tableId);
+    if (!schema.success) return schema as ServiceResult<never>;
 
     const typedFilters: FilterCondition[] = filters.map((f) => ({
       field: f.field,
@@ -391,127 +223,48 @@ export async function searchRecords(params: {
       value: f.value,
     }));
 
-    const hasAdvancedFilters = typedFilters.some((f) =>
-      ["gt", "gte", "lt", "lte"].includes(f.operator)
-    );
+    const options: Parameters<typeof nocodb.listRecords>[1] = {
+      page,
+      pageSize,
+    };
 
-    if (hasAdvancedFilters) {
-      // 高级过滤：所有条件统一走原生 SQL
-      const { sql: whereSql, params: whereParams, warnings } = buildSqlWhereClause(
-        tableId, typedFilters, table.fields.map((f) => ({ key: f.key, type: f.type, label: f.label }))
-      );
-
-      // 获取总数
-      const countResult = await db.$queryRawUnsafe<Array<{ count: bigint }>>(
-        `SELECT COUNT(*) as count FROM "DataRecord" WHERE ${whereSql}`,
-        ...whereParams
-      );
-      const total = Number(countResult[0].count);
-
-      // 排序
-      const safeSortBy = sortBy && table.fields.find((f) => f.key === sortBy) && isSafeIdentifier(sortBy)
-        ? sortBy : null;
-      const direction = sortOrder === "asc" ? "ASC" : "DESC";
-      const orderClause = safeSortBy
-        ? `ORDER BY data->>'${safeSortBy}' ${direction}`
-        : `ORDER BY "createdAt" DESC`;
-
-      // 参数化 LIMIT/OFFSET
-      const limitIdx = whereParams.push(pageSize);
-      const offsetIdx = whereParams.push((page - 1) * pageSize);
-
-      const rawRecords = await db.$queryRawUnsafe<Array<{ id: string; data: unknown }>>(
-        `SELECT id, data FROM "DataRecord" WHERE ${whereSql} ${orderClause} LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
-        ...whereParams
-      );
-
-      const resultRecords = rawRecords.map((r) => ({ id: r.id, ...(r.data as Record<string, unknown>) }));
-
-      // 解析关系字段
-      await resolveRelationFields(table, resultRecords);
-
-      return {
-        success: true,
-        data: {
-          records: resultRecords as Array<{ id: string; [key: string]: unknown }>,
-          total,
-          page,
-          pageSize,
-          ...(warnings.length > 0 ? { _warnings: warnings } : {}),
-        },
-      };
-    }
-
-    // 普通过滤：使用 Prisma
-    if (filters.length > 0) {
-      const filterConditions = buildFilterConditions(
+    if (typedFilters.length > 0) {
+      const { where, warnings } = buildNocoDBWhere(
         typedFilters,
-        table.fields.map((f) => ({ key: f.key, type: f.type, label: f.label }))
+        schema.data.fields
       );
-      if (filterConditions.length > 0) {
-        where.AND = filterConditions;
+      if (where) {
+        options.where = where;
+      }
+      if (warnings.length > 0) {
+        console.warn("Filter warnings:", warnings);
       }
     }
 
-    const skip = (page - 1) * pageSize;
-
-    const isDataField = sortBy && table.fields.some((f) => f.key === sortBy);
-
-    let resultRecords: Array<{ id: string; [key: string]: unknown }>;
-    let total: number;
-
-    if (isDataField) {
-      // Custom data field: fetch all matching, sort in memory, then paginate
-      const [allRecords, count] = await Promise.all([
-        db.dataRecord.findMany({ where }),
-        db.dataRecord.count({ where }),
-      ]);
-      total = count;
-
-      allRecords.sort((a, b) => {
-        const aVal = (a.data as Record<string, unknown>)?.[sortBy!];
-        const bVal = (b.data as Record<string, unknown>)?.[sortBy!];
-        const aStr = String(aVal ?? "");
-        const bStr = String(bVal ?? "");
-        const cmp = aStr < bStr ? -1 : aStr > bStr ? 1 : 0;
-        return sortOrder === "desc" ? -cmp : cmp;
-      });
-
-      resultRecords = allRecords.slice(skip, skip + pageSize).map((r) => ({
-        id: r.id,
-        ...(r.data as Record<string, unknown>),
-      }));
-    } else {
-      // Prisma column or no sort: use DB-level sort
-      const [records, count] = await Promise.all([
-        db.dataRecord.findMany({
-          where,
-          skip,
-          take: pageSize,
-          orderBy: sortBy
-            ? { [sortBy]: sortOrder }
-            : { createdAt: "desc" },
-        }),
-        db.dataRecord.count({ where }),
-      ]);
-      total = count;
-
-      resultRecords = records.map((r) => ({
-        id: r.id,
-        ...(r.data as Record<string, unknown>),
-      }));
+    if (sortBy) {
+      const resolvedKey = resolveFieldKey(sortBy, schema.data.fields);
+      if (resolvedKey) {
+        options.sort = sortOrder === "desc" ? `-${resolvedKey}` : resolvedKey;
+      }
     }
 
-    // 解析关系字段
-    await resolveRelationFields(table, resultRecords);
+    if (params.search) {
+      options.search = params.search;
+    }
+
+    const result = await nocodb.listRecords(tableId, options);
 
     return {
       success: true,
       data: {
-        records: resultRecords as Array<{ id: string; [key: string]: unknown }>,
-        total,
-        page,
-        pageSize,
+        records: result.records.map((r) => ({
+          id: String(r.id),
+          tableId,
+          ...r.data,
+        })),
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
       },
     };
   } catch (error) {
@@ -542,111 +295,64 @@ export async function aggregateRecords(params: {
   try {
     const { tableId, field, operation, filters = [] } = params;
 
-    const table = await db.dataTable.findUnique({
-      where: { id: tableId },
-    });
+    // For NocoDB, we do client-side aggregation for now
+    // Fetch all matching records and compute the aggregate
+    const schema = await getTableSchema(tableId);
+    if (!schema.success) return schema as ServiceResult<never>;
 
-    if (!table) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "数据表不存在" },
-      };
+    const options: Parameters<typeof nocodb.listRecords>[1] = {
+      page: 1,
+      pageSize: 1000, // Fetch enough for aggregation
+    };
+
+    if (filters.length > 0) {
+      const typedFilters: FilterCondition[] = filters.map((f) => ({
+        field: f.field,
+        operator: f.operator as FilterCondition["operator"],
+        value: f.value,
+      }));
+      const { where } = buildNocoDBWhere(typedFilters, schema.data.fields);
+      if (where) options.where = where;
     }
 
-    // count: 也走原生 SQL，避免 Prisma JSONB 类型匹配问题
-    if (operation === "count") {
-      const tableFields = await db.dataField.findMany({ where: { tableId } });
-      const { sql: whereSql, params: whereParams, warnings } = buildSqlWhereClause(
-        tableId, filters, tableFields
-      );
-      const countResult = await db.$queryRawUnsafe<Array<{ count: bigint }>>(
-        `SELECT COUNT(*) as count FROM "DataRecord" WHERE ${whereSql}`,
-        ...whereParams
-      );
-      return {
-        success: true,
-        data: {
-          value: Number(countResult[0].count),
-          field,
-          operation,
-          ...(warnings.length > 0 ? { _warnings: warnings } : {}),
-        },
-      };
+    const result = await nocodb.listRecords(tableId, options);
+    const records = result.records;
+
+    let value = 0;
+    switch (operation) {
+      case "count":
+        value = result.total;
+        break;
+      case "sum": {
+        value = records.reduce((sum, r) => {
+          const v = Number(r.data[field]);
+          return sum + (isNaN(v) ? 0 : v);
+        }, 0);
+        break;
+      }
+      case "avg": {
+        const nums = records.map((r) => Number(r.data[field])).filter((n) => !isNaN(n));
+        value = nums.length > 0 ? nums.reduce((a, b) => a + b, 0) / nums.length : 0;
+        break;
+      }
+      case "min": {
+        const nums = records.map((r) => Number(r.data[field])).filter((n) => !isNaN(n));
+        value = nums.length > 0 ? Math.min(...nums) : 0;
+        break;
+      }
+      case "max": {
+        const nums = records.map((r) => Number(r.data[field])).filter((n) => !isNaN(n));
+        value = nums.length > 0 ? Math.max(...nums) : 0;
+        break;
+      }
     }
-
-    // sum/avg/min/max: 原生 SQL
-    if (!isSafeIdentifier(field)) {
-      return {
-        success: false,
-        error: { code: "INVALID_FIELD", message: "无效字段名" },
-      };
-    }
-
-    const tableFields = await db.dataField.findMany({
-      where: { tableId },
-    });
-    const targetField = tableFields.find((f) => f.key === field);
-
-    if (!targetField) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "聚合字段不存在" },
-      };
-    }
-
-    // 校验字段类型是否支持该聚合操作
-    if (["sum", "avg"].includes(operation) && targetField.type !== "NUMBER") {
-      return {
-        success: false,
-        error: {
-          code: "INVALID_FIELD_TYPE",
-          message: `字段 '${field}' 类型为 ${targetField.type}，不支持 ${operation} 操作（仅支持 NUMBER 类型）`,
-        },
-      };
-    }
-    if (["min", "max"].includes(operation) && !["NUMBER", "DATE"].includes(targetField.type)) {
-      return {
-        success: false,
-        error: {
-          code: "INVALID_FIELD_TYPE",
-          message: `字段 '${field}' 类型为 ${targetField.type}，不支持 ${operation} 操作（支持 NUMBER 和 DATE 类型）`,
-        },
-      };
-    }
-
-    const castType = targetField.type === "DATE" ? "DATE" : "NUMERIC";
-    const sqlOperation = {
-      sum: "SUM",
-      avg: "AVG",
-      min: "MIN",
-      max: "MAX",
-    }[operation];
-
-    if (!sqlOperation) {
-      return {
-        success: false,
-        error: { code: "INVALID_OPERATION", message: "无效聚合操作" },
-      };
-    }
-
-    const { sql: whereSql, params: whereParams, warnings } = buildSqlWhereClause(
-      tableId, filters, tableFields
-    );
-
-    const result = await db.$queryRawUnsafe<Array<{ value: number }>>(
-      `SELECT COALESCE(${sqlOperation}(CAST(data->>'${field}' AS ${castType})), 0) as value
-       FROM "DataRecord"
-       WHERE ${whereSql}`,
-      ...whereParams
-    );
 
     return {
       success: true,
       data: {
-        value: Number(result[0].value),
+        value,
         field,
         operation,
-        ...(warnings.length > 0 ? { _warnings: warnings } : {}),
       },
     };
   } catch (error) {
@@ -758,28 +464,20 @@ export async function getTemplateDetail(templateId: string): Promise<
 // ── Get single record ──
 
 export async function getRecord(
+  tableId: string,
   recordId: string
 ): Promise<
   ServiceResult<{ id: string; tableId: string; [key: string]: unknown }>
 > {
   try {
-    const record = await db.dataRecord.findUnique({
-      where: { id: recordId },
-    });
-
-    if (!record) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "记录不存在" },
-      };
-    }
+    const record = await nocodb.getRecord(tableId, recordId);
 
     return {
       success: true,
       data: {
-        id: record.id,
-        tableId: record.tableId,
-        ...(record.data as Record<string, unknown>),
+        id: String(record.id),
+        tableId,
+        ...record.data,
       },
     };
   } catch (error) {
@@ -791,33 +489,14 @@ export async function getRecord(
 
 // ── Create record ──
 
-/** @deprecated 使用 data-record.service.createRecord 替代 */
 export async function createRecord(
   userId: string,
   tableId: string,
   data: Record<string, unknown>
-): Promise<ServiceResult<{ id: string }>> {
+): Promise<ServiceResult<{ id: string; tableId: string }>> {
   try {
-    const table = await db.dataTable.findUnique({
-      where: { id: tableId },
-    });
-
-    if (!table) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "数据表不存在" },
-      };
-    }
-
-    const record = await db.dataRecord.create({
-      data: {
-        tableId,
-        data: data as Prisma.InputJsonValue,
-        createdById: userId,
-      },
-    });
-
-    return { success: true, data: { id: record.id } };
+    const record = await nocodb.createRecord(tableId, data);
+    return { success: true, data: { id: String(record.id), tableId } };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "创建记录失败";
@@ -827,34 +506,14 @@ export async function createRecord(
 
 // ── Update record ──
 
-/** @deprecated 使用 data-record.service.updateRecord 替代 */
 export async function updateRecord(
+  tableId: string,
   recordId: string,
   data: Record<string, unknown>
-): Promise<ServiceResult<{ id: string }>> {
+): Promise<ServiceResult<{ id: string; tableId: string }>> {
   try {
-    const existing = await db.dataRecord.findUnique({
-      where: { id: recordId },
-    });
-
-    if (!existing) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "记录不存在" },
-      };
-    }
-
-    const merged = {
-      ...((existing.data as Record<string, unknown>) ?? {}),
-      ...data,
-    } as Prisma.InputJsonValue;
-
-    const record = await db.dataRecord.update({
-      where: { id: recordId },
-      data: { data: merged },
-    });
-
-    return { success: true, data: { id: record.id } };
+    const record = await nocodb.updateRecord(tableId, recordId, data);
+    return { success: true, data: { id: String(record.id), tableId } };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "更新记录失败";
@@ -864,26 +523,12 @@ export async function updateRecord(
 
 // ── Delete record ──
 
-/** @deprecated 使用 data-record.service.deleteRecord 替代 */
 export async function deleteRecord(
+  tableId: string,
   recordId: string
 ): Promise<ServiceResult<{ id: string }>> {
   try {
-    const existing = await db.dataRecord.findUnique({
-      where: { id: recordId },
-    });
-
-    if (!existing) {
-      return {
-        success: false,
-        error: { code: "NOT_FOUND", message: "记录不存在" },
-      };
-    }
-
-    await db.dataRecord.delete({
-      where: { id: recordId },
-    });
-
+    await nocodb.deleteRecord(tableId, recordId);
     return { success: true, data: { id: recordId } };
   } catch (error) {
     const message =

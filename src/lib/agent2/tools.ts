@@ -325,10 +325,11 @@ export function createTools(
     getRecord: tool({
       description: "获取单条记录详情",
       inputSchema: z.object({
+        tableId: z.string().describe("数据表 ID"),
         recordId: z.string().describe("记录 ID"),
       }),
       execute: async (args) => {
-        const result = await helpers.getRecord(args.recordId);
+        const result = await helpers.getRecord(args.tableId, args.recordId);
         if (!result.success) throw new Error(result.error.message);
         return result.data;
       },

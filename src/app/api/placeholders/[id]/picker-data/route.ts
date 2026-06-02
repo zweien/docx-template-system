@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getPlaceholderById } from "@/lib/services/placeholder.service";
 import { listRecords, getTableFields } from "@/lib/nocodb";
-import { recordQuerySchema } from "@/validators/data-table";
 import { ZodError } from "zod";
+import { z } from "zod";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -28,6 +28,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   // 解析查询参数
   const { searchParams } = new URL(request.url);
   try {
+    const recordQuerySchema = z.object({
+      search: z.string().optional(),
+      page: z.coerce.number().int().positive().default(1),
+      pageSize: z.coerce.number().int().positive().default(10),
+    });
     const query = recordQuerySchema.parse({
       search: searchParams.get("search") || undefined,
       page: searchParams.get("page") || "1",

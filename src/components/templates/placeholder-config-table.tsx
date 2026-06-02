@@ -132,16 +132,22 @@ export const PlaceholderConfigTable = forwardRef<PlaceholderConfigTableHandle, {
     const fetchTables = async () => {
       setLoadingTables(true);
       try {
-        const res = await fetch("/api/data-tables");
+        const res = await fetch("/api/nocodb/tables");
         if (!res.ok) throw new Error("获取数据表失败");
-        const tables = await res.json();
+        const result = await res.json();
+        const tables = result.data ?? result;
 
         // Fetch fields for each table
         const tablesWithFields = await Promise.all(
           tables.map(async (t: { id: string; name: string }) => {
-            const fieldsRes = await fetch(`/api/data-tables/${t.id}/fields`);
-            const fields = fieldsRes.ok ? await fieldsRes.json() : [];
-            return { id: t.id, name: t.name, fields };
+            try {
+              const fieldsRes = await fetch(`/api/nocodb/tables/${t.id}`);
+              const fieldsResult = fieldsRes.ok ? await fieldsRes.json() : { data: { fields: [] } };
+              const fields = fieldsResult.data?.fields ?? fieldsResult.fields ?? [];
+              return { id: t.id, name: t.name, fields };
+            } catch {
+              return { id: t.id, name: t.name, fields: [] };
+            }
           })
         );
 

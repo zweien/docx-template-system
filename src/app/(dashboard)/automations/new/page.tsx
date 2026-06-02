@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { createDefaultAutomationDefinition } from "@/lib/automation-defaults";
 import { AutomationEditor } from "@/components/automations/automation-editor";
-import { listTables } from "@/lib/services/data-table.service";
+import { listTables } from "@/lib/nocodb";
 import { PageHeader, Breadcrumbs } from "@/components/shared";
 
 export default async function NewAutomationPage() {
@@ -10,10 +10,15 @@ export default async function NewAutomationPage() {
     return null;
   }
 
-  const tablesResult = await listTables();
-  const tables = tablesResult.success
-    ? [...tablesResult.data].sort((left, right) => left.name.localeCompare(right.name, "zh-CN"))
-    : [];
+  let tables: Array<{ id: string; name: string }> = [];
+  try {
+    const result = await listTables();
+    tables = result
+      .map((t) => ({ id: t.id, name: t.name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "zh-CN"));
+  } catch (error) {
+    console.error("获取数据表列表失败:", error);
+  }
 
   return (
     <div className="space-y-6">

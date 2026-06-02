@@ -1,14 +1,16 @@
-import {
-  FieldType as PrismaFieldType,
-  RelationCardinality as PrismaRelationCardinality,
-  ViewType as PrismaViewType,
-} from "@/generated/prisma/enums";
-
 // ========== Field Types ==========
+// (Originally from Prisma enums, now migrated to NocoDB - defined as string unions)
 
-export type FieldType = PrismaFieldType;
-export type RelationCardinality = PrismaRelationCardinality;
-export type ViewType = PrismaViewType;
+export type FieldType =
+  | "TEXT" | "NUMBER" | "DATE" | "SELECT" | "MULTISELECT"
+  | "EMAIL" | "PHONE" | "FILE" | "RELATION" | "RELATION_SUBTABLE"
+  | "URL" | "BOOLEAN" | "AUTO_NUMBER" | "SYSTEM_TIMESTAMP" | "SYSTEM_USER"
+  | "FORMULA" | "COUNT" | "LOOKUP" | "ROLLUP" | "RICH_TEXT"
+  | "RATING" | "CURRENCY" | "PERCENTAGE" | "DURATION";
+
+export type RelationCardinality = "SINGLE" | "MULTIPLE";
+
+export type ViewType = "GRID" | "KANBAN" | "GALLERY" | "TIMELINE" | "FORM" | "CALENDAR";
 
 export interface RelationSchemaField {
   key: string;

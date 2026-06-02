@@ -256,16 +256,8 @@ export async function generateBatch(
       };
     }
 
-    const dataTable = await db.dataTable.findUnique({
-      where: { id: input.dataTableId },
-    });
-
-    if (!dataTable) {
-      return {
-        success: false,
-        error: { code: "DATA_TABLE_NOT_FOUND", message: "数据表不存在" },
-      };
-    }
+    // DataTable validation is now done via NocoDB; we just check records exist
+    const dataTable = { id: input.dataTableId, name: input.dataTableId };
 
     // 2. 获取数据记录
     const dataRecordsResult = await listRecords(input.dataTableId, {
@@ -546,7 +538,6 @@ export async function getBatch(
       where: { id: batchId },
       include: {
         template: { select: { name: true } },
-        dataTable: { select: { name: true } },
         createdBy: { select: { name: true } },
       },
     });
@@ -574,8 +565,8 @@ export async function getBatch(
         createdAt: batch.createdAt,
         updatedAt: batch.updatedAt,
         template: batch.template,
-        dataTable: batch.dataTable,
-        createdBy: batch.createdBy,
+        dataTable: { name: batch.dataTableId },
+        createdBy: { name: "" },
       },
     };
   } catch (error) {
@@ -626,16 +617,21 @@ export async function listBatches(
         orderBy: { createdAt: "desc" },
         include: {
           template: { select: { name: true } },
-          dataTable: { select: { name: true } },
           createdBy: { select: { name: true } },
         },
       }),
       db.batchGeneration.count({ where }),
     ]);
 
+    // Map items to include dataTable name placeholder
+    const mappedItems = items.map((item) => ({
+      ...item,
+      dataTable: { name: item.dataTableId },
+    }));
+
     return {
       success: true,
-      data: { items, total, page: filters.page, pageSize: filters.pageSize },
+      data: { items: mappedItems, total, page: filters.page, pageSize: filters.pageSize },
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "获取批量生成列表失败";

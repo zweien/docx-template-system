@@ -1,5 +1,32 @@
-import { FieldType } from "@/generated/prisma/enums";
 import type { DataFieldItem, RelationSubtableValueItem } from "@/types/data-table";
+
+// Field type constants (replacing Prisma FieldType enum, migrated to NocoDB)
+const FieldType = {
+  TEXT: "TEXT",
+  NUMBER: "NUMBER",
+  DATE: "DATE",
+  SELECT: "SELECT",
+  MULTISELECT: "MULTISELECT",
+  EMAIL: "EMAIL",
+  PHONE: "PHONE",
+  FILE: "FILE",
+  RELATION: "RELATION",
+  RELATION_SUBTABLE: "RELATION_SUBTABLE",
+  URL: "URL",
+  BOOLEAN: "BOOLEAN",
+  AUTO_NUMBER: "AUTO_NUMBER",
+  SYSTEM_TIMESTAMP: "SYSTEM_TIMESTAMP",
+  SYSTEM_USER: "SYSTEM_USER",
+  FORMULA: "FORMULA",
+  COUNT: "COUNT",
+  LOOKUP: "LOOKUP",
+  ROLLUP: "ROLLUP",
+  RICH_TEXT: "RICH_TEXT",
+  RATING: "RATING",
+  CURRENCY: "CURRENCY",
+  PERCENTAGE: "PERCENTAGE",
+  DURATION: "DURATION",
+} as const;
 
 function isEmptyCell(value: unknown): boolean {
   return value === null || value === undefined || value === "";
@@ -114,7 +141,7 @@ export function formatCellText(field: DataFieldItem, value: unknown): string {
       const code = (field.options as Record<string, unknown>)?.currencyCode as string ?? "CNY";
       const decimals =
         (field.options as Record<string, unknown>)?.currencyDecimals as number ?? 2;
-      const symbol = { CNY: "\u00a5", USD: "$", EUR: "\u20ac" }[code] ?? code;
+      const symbol = { CNY: "¥", USD: "$", EUR: "€" }[code] ?? code;
       return `${symbol}${Number(value).toLocaleString(undefined, {
         minimumFractionDigits: decimals,
         maximumFractionDigits: decimals,

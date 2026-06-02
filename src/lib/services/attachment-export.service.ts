@@ -4,7 +4,6 @@ import { existsSync } from "fs";
 import { mkdir, writeFile, readFile } from "fs/promises";
 import { UPLOAD_DIR } from "@/lib/constants/upload";
 import { resolveStoredFilePath } from "@/lib/file.service";
-import { FieldType } from "@/generated/prisma/enums";
 import type { DataFieldItem } from "@/types/data-table";
 
 // ── Types ──
@@ -40,7 +39,7 @@ export function scanFileAttachments(
   fields: DataFieldItem[]
 ): Set<string> {
   const fileFieldKeys = new Set(
-    fields.filter((f) => f.type === FieldType.FILE).map((f) => f.key)
+    fields.filter((f) => f.type === "FILE").map((f) => f.key)
   );
 
   const paths = new Set<string>();
@@ -89,7 +88,7 @@ export function rewriteRecordFilePaths(
   originalUploadDir: string
 ): void {
   const fileFieldKeys = new Set(
-    fields.filter((f) => f.type === FieldType.FILE).map((f) => f.key)
+    fields.filter((f) => f.type === "FILE").map((f) => f.key)
   );
 
   for (const record of records) {

@@ -1,6 +1,4 @@
-import { getTable } from "@/lib/services/data-table.service";
-import { updateRecord } from "@/lib/services/data-record.service";
-import type { RelationSubtableValueItem } from "@/types/data-table";
+import * as nocodb from "@/lib/nocodb";
 import type {
   AutomationExecutorParams,
   UpdateRelatedRecordsAction,
@@ -23,7 +21,7 @@ function collectRelatedRecordIds(
     recordIds = value
       .map((item) =>
         item && typeof item === "object"
-          ? (item as RelationSubtableValueItem).targetRecordId
+          ? (item as { targetRecordId?: unknown }).targetRecordId
           : null
       )
       .filter((item): item is string => typeof item === "string" && item.length > 0);
@@ -46,12 +44,18 @@ export async function executeUpdateRelatedRecordsAction(
     };
   }
 
-  const table = await getTable(params.context.tableId);
-  if (!table.success) {
-    return table;
+  // Get table schema from NocoDB
+  let tableDetail;
+  try {
+    tableDetail = await nocodb.getTableDetail(params.context.tableId);
+  } catch (error) {
+    return {
+      success: false as const,
+      error: { code: "TABLE_NOT_FOUND", message: "获取表结构失败" },
+    };
   }
 
-  const field = table.data.fields.find((item) => item.key === params.action.relationFieldKey);
+  const field = tableDetail.fields.find((item) => item.key === params.action.relationFieldKey);
   if (!field) {
     return {
       success: false as const,
@@ -62,7 +66,7 @@ export async function executeUpdateRelatedRecordsAction(
     };
   }
 
-  if (field.type !== "RELATION" && field.type !== "RELATION_SUBTABLE") {
+  if (field.type !== "RELATION" && field.type !== "LINK" && field.type !== "RELATION_SUBTABLE") {
     return {
       success: false as const,
       error: {
@@ -81,7 +85,7 @@ export async function executeUpdateRelatedRecordsAction(
     return {
       success: true as const,
       data: {
-        relatedTableId: field.relationTo ?? null,
+        relatedTableId: field.relationTargetTableId ?? null,
         updatedCount: 0,
         updatedRecordIds: [],
         noop: true,
@@ -89,21 +93,26 @@ export async function executeUpdateRelatedRecordsAction(
     };
   }
 
-  const actorId = params.context.actor?.id ?? "system";
+  const relatedTableId = field.relationTargetTableId ?? params.context.tableId;
   const updatedRecordIds: string[] = [];
 
   for (const recordId of relatedRecordIds) {
-    const result = await updateRecord(recordId, params.action.values, actorId);
-    if (!result.success) {
-      return result;
+    try {
+      await nocodb.updateRecord(relatedTableId, recordId, params.action.values);
+      updatedRecordIds.push(recordId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "更新关联记录失败";
+      return {
+        success: false as const,
+        error: { code: "UPDATE_RELATED_FAILED", message },
+      };
     }
-    updatedRecordIds.push(recordId);
   }
 
   return {
     success: true as const,
     data: {
-      relatedTableId: field.relationTo ?? null,
+      relatedTableId,
       updatedCount: updatedRecordIds.length,
       updatedRecordIds,
       noop: false,

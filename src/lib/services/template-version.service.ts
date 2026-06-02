@@ -193,7 +193,6 @@ export async function getVersionDetail(
       },
       include: {
         publishedBy: { select: { name: true } },
-        dataTable: { select: { id: true, name: true } },
       },
     });
 
@@ -217,7 +216,7 @@ export async function getVersionDetail(
         id: v.id,
         placeholderSnapshot: v.placeholderSnapshot as unknown as PlaceholderSnapshotItem[],
         dataTableId: v.dataTableId,
-        dataTable: v.dataTable ?? undefined,
+        dataTable: undefined,
         fieldMapping: v.fieldMapping as TemplateFieldMapping | null,
       },
     };

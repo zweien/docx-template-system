@@ -1,9 +1,20 @@
 import { Badge } from "@/components/ui/badge";
-import { FieldType } from "@/generated/prisma/enums";
 import type { ReactNode } from "react";
 import type { DataFieldItem, RelationSubtableValueItem } from "@/types/data-table";
 import { parseSelectOptions, SELECT_COLORS } from "@/types/data-table";
 import { FileIcon } from "lucide-react";
+
+// Field type constants (replacing Prisma FieldType enum, migrated to NocoDB)
+const FieldType = {
+  TEXT: "TEXT", NUMBER: "NUMBER", DATE: "DATE", SELECT: "SELECT",
+  MULTISELECT: "MULTISELECT", EMAIL: "EMAIL", PHONE: "PHONE", FILE: "FILE",
+  RELATION: "RELATION", RELATION_SUBTABLE: "RELATION_SUBTABLE", URL: "URL",
+  BOOLEAN: "BOOLEAN", AUTO_NUMBER: "AUTO_NUMBER", SYSTEM_TIMESTAMP: "SYSTEM_TIMESTAMP",
+  SYSTEM_USER: "SYSTEM_USER", FORMULA: "FORMULA", COUNT: "COUNT", LOOKUP: "LOOKUP",
+  ROLLUP: "ROLLUP", RICH_TEXT: "RICH_TEXT", RATING: "RATING", CURRENCY: "CURRENCY",
+  PERCENTAGE: "PERCENTAGE", DURATION: "DURATION",
+} as const;
+
 import {
   extractRichTextPlainText,
   formatCellText,

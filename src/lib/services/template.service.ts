@@ -137,8 +137,6 @@ export async function getTemplate(
       include: {
         placeholders: { orderBy: { sortOrder: "asc" } },
         createdBy: { select: { name: true } },
-        // P2: 包含关联的数据表信息
-        dataTable: { select: { id: true, name: true } },
         category: { select: { name: true } },
         tags: { include: { tag: { select: { id: true, name: true } } } },
         currentVersion: {
@@ -170,7 +168,7 @@ export async function getTemplate(
         placeholders: template.placeholders.map(mapPlaceholderItem),
         // P2: 返回关联信息
         dataTableId: template.dataTableId,
-        dataTable: template.dataTable ?? undefined,
+        dataTable: undefined,
         fieldMapping: template.fieldMapping as Record<string, string | null> | null,
         currentVersion: template.currentVersion
           ? {

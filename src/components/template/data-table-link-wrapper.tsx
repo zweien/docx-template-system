@@ -6,7 +6,6 @@ import type { TemplateFieldMapping } from "@/types/template";
 interface DataTableLinkWrapperProps {
   templateId: string;
   dataTableId: string | null;
-  dataTable: { id: string; name: string } | null;
   fieldMapping: TemplateFieldMapping | null;
   placeholders: Array<{ key: string; label: string; required: boolean }>;
 }
@@ -14,7 +13,6 @@ interface DataTableLinkWrapperProps {
 export function DataTableLinkWrapper({
   templateId,
   dataTableId,
-  dataTable,
   fieldMapping,
   placeholders,
 }: DataTableLinkWrapperProps) {
@@ -22,7 +20,7 @@ export function DataTableLinkWrapper({
     <DataTableLink
       templateId={templateId}
       dataTableId={dataTableId}
-      dataTable={dataTable}
+      dataTable={null}
       fieldMapping={fieldMapping}
       placeholders={placeholders}
       onUpdate={() => {

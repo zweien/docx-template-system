@@ -1,4 +1,3 @@
-import { createComment } from "@/lib/services/data-record-comment.service";
 import type { AddCommentAction, AutomationExecutorParams } from "@/types/automation";
 
 function resolveRecordId(params: AutomationExecutorParams<AddCommentAction>): string | null {
@@ -21,8 +20,15 @@ export async function executeAddCommentAction(
     };
   }
 
-  return createComment(params.context.actor?.id ?? "system", {
-    recordId,
-    content: params.action.content,
-  });
+  // NocoDB 评论功能暂不支持通过自动化触发
+  // TODO: 实现 NocoDB 评论 API 对接
+  return {
+    success: true as const,
+    data: {
+      recordId,
+      content: params.action.content,
+      skipped: true,
+      reason: "评论功能暂未迁移到 NocoDB",
+    },
+  };
 }

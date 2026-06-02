@@ -30,37 +30,11 @@ function isBackupDue(schedule: BackupConfig["schedule"], lastBackupAt: string | 
 export async function register() {
   // Only run on server side, not during build
   if (process.env.NEXT_RUNTIME === "nodejs") {
-    const [{ getGlobalSettings }, { runBackup }, { registerAutomationScheduler }] = await Promise.all([
-      import("@/lib/services/agent2-global-settings.service"),
-      import("@/lib/services/backup.service"),
+    const [{ registerAutomationScheduler }] = await Promise.all([
       import("@/lib/services/automation-scheduler.service"),
     ]);
 
-    console.log("[backup] Registering backup scheduler...");
     console.log("[automation] Registering automation scheduler...");
     registerAutomationScheduler();
-
-    // Check every hour if backup is due
-    cron.schedule("0 * * * *", async () => {
-      try {
-        const settings = await getGlobalSettings();
-        if (!settings.success) return;
-
-        const { backupConfig, lastBackupAt } = settings.data;
-        if (!backupConfig.enabled) return;
-
-        if (!isBackupDue(backupConfig.schedule, lastBackupAt)) return;
-
-        console.log(`[backup] Running scheduled ${backupConfig.schedule} backup...`);
-        const result = await runBackup();
-        if (result.success) {
-          console.log(`[backup] Backup completed: ${result.data.filename}`);
-        } else {
-          console.error(`[backup] Backup failed: ${result.error.message}`);
-        }
-      } catch (error) {
-        console.error("[backup] Scheduler error:", error);
-      }
-    });
   }
 }

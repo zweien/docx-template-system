@@ -40,10 +40,6 @@ model User {
   drafts        Draft[]
   records       Record[]
   templates     Template[]
-  dataTables    DataTable[]
-  dataRecords   DataRecord[]
-  updatedDataRecords DataRecord[]  @relation("UpdatedByUser")
-  changeHistories     DataRecordChangeHistory[]
   batchGenerations BatchGeneration[]
   publishedTemplateVersions TemplateVersion[]
   aiConversations AiConversation[]
@@ -56,7 +52,6 @@ model User {
   notifications                 Notification[]                       @relation("UserNotifications")
   apiTokens                     ApiToken[]
   formShareTokens               FormShareToken[]
-  dataRecordComments            DataRecordComment[] @relation("DataRecordComments")
   createdAutomations            Automation[]       @relation("AutomationCreatedBy")
   updatedAutomations            Automation[]       @relation("AutomationUpdatedBy")
   reportTemplates               ReportTemplate[]
@@ -189,8 +184,7 @@ model Template {
   createdBy     User            @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
-  dataTableId   String?
-  dataTable     DataTable?      @relation(fields: [dataTableId], references: [id], onDelete: SetNull)
+  dataTableId   String?  // NocoDB table ID
   categoryId    String?
   category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   tags          TagOnTemplate[]
@@ -247,8 +241,7 @@ model TemplateVersion {
   fileSize            Int
   publishedAt         DateTime        @default(now())
   placeholderSnapshot Json
-  dataTableId         String?
-  dataTable           DataTable?      @relation(fields: [dataTableId], references: [id], onDelete: SetNull)
+  dataTableId         String?  // NocoDB table ID
   fieldMapping        Json?
   publishedById       String
   publishedBy         User            @relation(fields: [publishedById], references: [id], onDelete: Cascade)
@@ -281,212 +274,11 @@ enum RecordStatus {
   FAILED
 }
 
-// ========== Master Data (Phase 2a) ==========
-
-enum FieldType {
-  TEXT
-  NUMBER
-  DATE
-  SELECT        // 单选
-  MULTISELECT   // 多选
-  EMAIL
-  PHONE
-  FILE          // 附件
-  RELATION      // 关联字段
-  RELATION_SUBTABLE
-  URL
-  BOOLEAN
-  AUTO_NUMBER
-  SYSTEM_TIMESTAMP
-  SYSTEM_USER
-  FORMULA
-  COUNT         // 自动计数关联记录
-  LOOKUP        // 从关联记录拉取指定字段值
-  ROLLUP        // 从关联记录聚合指定字段值
-  RICH_TEXT     // 富文本
-  RATING        // 评分
-  CURRENCY      // 货币
-  PERCENTAGE    // 百分比
-  DURATION      // 时长
-}
-
-enum ViewType {
-  GRID
-  KANBAN
-  GALLERY
-  TIMELINE
-  FORM
-  CALENDAR
-}
-
-enum RelationCardinality {
-  SINGLE
-  MULTIPLE
-}
-
-enum TaskDependencyType {
-  FS
-}
-
-model DataTable {
-  id               String            @id @default(cuid())
-  name             String            @unique
-  description      String?
-  icon             String?
-  /// JSON 结构约定: { version: 1, fieldKeys: string[] }
-  businessKeys     Json?
-  fields           DataField[]
-  records          DataRecord[]
-  templates        Template[]
-  batchGenerations BatchGeneration[]
-  templateVersions TemplateVersion[]
-  views            DataView[]
-  taskDependencies TaskDependency[]
-  automations      Automation[]
-  createdBy        User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdById      String
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  @@index([createdById])
-}
-
-model DataField {
-  id                     String                 @id @default(cuid())
-  tableId                String
-  table                  DataTable              @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  key                    String
-  label                  String
-  type                   FieldType              @default(TEXT)
-  required               Boolean                @default(false)
-  options                Json?
-  relationTo             String?
-  displayField           String?
-  relationCardinality    RelationCardinality?
-  inverseFieldId         String?                @unique
-  /// 反向字段删除采用 NoAction，避免 Prisma 对 SetNull 的 warning；解绑后再删由上层流程负责。
-  inverseField           DataField?             @relation("InverseRelationField", fields: [inverseFieldId], references: [id], onDelete: NoAction)
-  inverseOf              DataField?             @relation("InverseRelationField")
-  isSystemManagedInverse Boolean                @default(false)
-  /// JSON 结构约定: { version: 1, fields: RelationSchemaField[] }
-  relationSchema         Json?
-  defaultValue           String?
-  sortOrder              Int                    @default(0)
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
-  relationRows           DataRelationRow[]      @relation("RelationRowsByField")
-  @@unique([tableId, key])
-}
-
-model DataRecord {
-  id               String            @id @default(cuid())
-  tableId          String
-  table            DataTable         @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  data             Json
-  relationRowsFrom DataRelationRow[] @relation("RelationRowsAsSource")
-  relationRowsTo   DataRelationRow[] @relation("RelationRowsAsTarget")
-  successorDependencies   TaskDependency[] @relation("TaskDependencyAsSuccessor")
-  predecessorDependencies TaskDependency[] @relation("TaskDependencyAsPredecessor")
-  records          Record[]
-  createdBy        User              @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  createdById      String
-  updatedBy        User?             @relation("UpdatedByUser", fields: [updatedById], references: [id], onDelete: SetNull)
-  updatedById      String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
-  @@index([tableId])
-  @@index([createdById])
-  @@index([updatedById])
-  @@index([tableId, createdAt(sort: Desc)])  // 复合索引加速列表查询
-  @@index([tableId, createdById])             // 复合索引加速用户记录查询
-  changeHistories DataRecordChangeHistory[]
-  comments        DataRecordComment[]
-}
-
-model TaskDependency {
-  id                  String             @id @default(cuid())
-  tableId             String
-  table               DataTable          @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  successorRecordId   String
-  successorRecord     DataRecord         @relation("TaskDependencyAsSuccessor", fields: [successorRecordId], references: [id], onDelete: Cascade)
-  predecessorRecordId String
-  predecessorRecord   DataRecord         @relation("TaskDependencyAsPredecessor", fields: [predecessorRecordId], references: [id], onDelete: Cascade)
-  type                TaskDependencyType @default(FS)
-  lagDays             Int                @default(0)
-  required            Boolean            @default(true)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-
-  @@unique([successorRecordId, predecessorRecordId, type])
-  @@index([tableId, successorRecordId])
-  @@index([tableId, predecessorRecordId])
-}
-
-model DataRecordChangeHistory {
-  id          String    @id @default(cuid())
-  recordId    String
-  record      DataRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  tableId     String
-  fieldKey    String
-  fieldLabel  String
-  oldValue    Json?
-  newValue    Json?
-  changedById String?
-  changedBy   User?     @relation(fields: [changedById], references: [id], onDelete: SetNull)
-  changedAt   DateTime  @default(now())
-
-  @@index([recordId, changedAt(sort: Desc)])
-  @@index([tableId, changedAt(sort: Desc)])
-  @@index([changedById])
-  @@map("data_record_change_history")
-}
-
-model DataRelationRow {
-  id             String     @id @default(cuid())
-  fieldId        String
-  field          DataField  @relation("RelationRowsByField", fields: [fieldId], references: [id], onDelete: Cascade)
-  /// JSON 结构约定: { version: 1, values: Record<string, unknown> }
-  /// sourceRecordId/targetRecordId 的跨表不变量由 Task 4 的 relation service 在事务内校验，且 Task 4 需覆盖测试。
-  /// 应用层删除记录/字段必须经 relation service 刷新快照；schema 级 cascade 仅作最终兜底，Task 4/Task 8 需补删除路径测试/迁移校验。
-  sourceRecordId String
-  sourceRecord   DataRecord @relation("RelationRowsAsSource", fields: [sourceRecordId], references: [id], onDelete: Cascade)
-  targetRecordId String
-  targetRecord   DataRecord @relation("RelationRowsAsTarget", fields: [targetRecordId], references: [id], onDelete: Cascade)
-  attributes     Json?
-  sortOrder      Int        @default(0)
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-
-  /// SINGLE 基数的同源唯一性约束由 Task 4 的 relation service 在事务内校验，并需覆盖测试。
-  /// Prisma 无法在通用单表模型中表达基于字段元数据的条件唯一索引。
-  @@unique([fieldId, sourceRecordId, targetRecordId])
-  @@index([sourceRecordId, fieldId, sortOrder])
-  @@index([targetRecordId])
-}
-
-model DataView {
-  id            String   @id @default(cuid())
-  tableId       String
-  name          String
-  type          ViewType @default(GRID)
-  isDefault     Boolean  @default(false)
-  filters       Json?    // FilterCondition[]
-  sortBy        Json?    // SortConfig | null
-  visibleFields Json?    // string[]
-  fieldOrder    Json?    // string[]
-  groupBy       String?
-  viewOptions   Json?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  table         DataTable @relation(fields: [tableId], references: [id], onDelete: Cascade)
-  shareTokens   FormShareToken[]
-
-  @@unique([tableId, name])
-}
+// ========== Master Data (migrated to NocoDB) ==========
 
 model Automation {
   id                String          @id @default(cuid())
-  tableId           String
-  table             DataTable       @relation(fields: [tableId], references: [id], onDelete: Cascade)
+  tableId           String          // NocoDB table ID
   name              String
   description       String?
   enabled           Boolean         @default(true)
@@ -557,7 +349,6 @@ model Record {
   filePath     String?
   errorMessage String?
   dataRecordId String?
-  dataRecord   DataRecord?  @relation(fields: [dataRecordId], references: [id], onDelete: SetNull)
   templateVersionId   String?
   templateVersion     TemplateVersion?  @relation(fields: [templateVersionId], references: [id])
   createdAt    DateTime     @default(now())
@@ -585,8 +376,7 @@ model BatchGeneration {
   id              String       @id @default(cuid())
   templateId      String
   template        Template     @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  dataTableId     String
-  dataTable       DataTable    @relation(fields: [dataTableId], references: [id], onDelete: Cascade)
+  dataTableId     String          // NocoDB table ID
   totalCount      Int
   successCount    Int          @default(0)
   failedCount     Int          @default(0)
@@ -922,7 +712,6 @@ model FormShareToken {
   id             String    @id @default(cuid())
   token          String    @unique @default(cuid())
   viewId         String
-  view           DataView  @relation(fields: [viewId], references: [id], onDelete: Cascade)
   label          String?
   isActive       Boolean   @default(true)
   createdById    String
@@ -934,31 +723,6 @@ model FormShareToken {
   @@index([token])
   @@index([viewId])
   @@map("form_share_tokens")
-}
-
-// ========== Record Comments (Phase 3) ==========
-
-model DataRecordComment {
-  id         String   @id @default(cuid())
-  recordId   String
-  record     DataRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
-  fieldKey   String?
-  content    String
-  parentId   String?
-  parent     DataRecordComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies    DataRecordComment[] @relation("CommentReplies")
-  mentions   Json?
-  isResolved Boolean  @default(false)
-  createdById String
-  createdBy  User     @relation("DataRecordComments", fields: [createdById], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([recordId, createdAt(sort: Asc)])
-  @@index([recordId, fieldKey])
-  @@index([parentId])
-  @@index([createdById])
-  @@map("data_record_comments")
 }
 
 // ========== Report Writing Module ==========

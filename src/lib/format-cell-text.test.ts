@@ -1,4 +1,14 @@
-import { FieldType } from "@/generated/prisma/enums";
+import type { FieldType } from "@/types/data-table";
+const FieldTypeValues: Record<string, FieldType> = {
+  TEXT: "TEXT", NUMBER: "NUMBER", DATE: "DATE", SELECT: "SELECT",
+  MULTISELECT: "MULTISELECT", EMAIL: "EMAIL", PHONE: "PHONE", FILE: "FILE",
+  RELATION: "RELATION", RELATION_SUBTABLE: "RELATION_SUBTABLE", URL: "URL",
+  BOOLEAN: "BOOLEAN", AUTO_NUMBER: "AUTO_NUMBER", SYSTEM_TIMESTAMP: "SYSTEM_TIMESTAMP",
+  SYSTEM_USER: "SYSTEM_USER", FORMULA: "FORMULA", COUNT: "COUNT", LOOKUP: "LOOKUP",
+  ROLLUP: "ROLLUP", RICH_TEXT: "RICH_TEXT", RATING: "RATING", CURRENCY: "CURRENCY",
+  PERCENTAGE: "PERCENTAGE", DURATION: "DURATION",
+};
+const FieldType = FieldTypeValues;
 import { describe, expect, it } from "vitest";
 import { formatCellText } from "@/lib/format-cell-text";
 import type { DataFieldItem } from "@/types/data-table";

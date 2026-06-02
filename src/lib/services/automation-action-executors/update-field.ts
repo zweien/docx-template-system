@@ -1,4 +1,4 @@
-import { updateRecord } from "@/lib/services/data-record.service";
+import * as nocodb from "@/lib/nocodb";
 import type { UpdateFieldAction, AutomationExecutorParams } from "@/types/automation";
 
 function resolveRecordId(params: AutomationExecutorParams<UpdateFieldAction>): string | null {
@@ -21,11 +21,17 @@ export async function executeUpdateFieldAction(
     };
   }
 
-  return updateRecord(
-    recordId,
-    {
-      [params.action.fieldKey]: params.action.value,
-    },
-    params.context.actor?.id ?? "system"
-  );
+  try {
+    const result = await nocodb.updateRecord(
+      params.context.tableId,
+      recordId,
+      {
+        [params.action.fieldKey]: params.action.value,
+      }
+    );
+    return { success: true as const, data: { id: String(result.id) } };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "更新记录失败";
+    return { success: false as const, error: { code: "UPDATE_FAILED", message } };
+  }
 }

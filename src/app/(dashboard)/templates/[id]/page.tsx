@@ -69,10 +69,6 @@ export default async function TemplateDetailPage({
       createdBy: {
         select: { name: true },
       },
-      // P2: 包含关联的数据表
-      dataTable: {
-        select: { id: true, name: true },
-      },
       currentVersion: {
         select: {
           id: true,
@@ -207,7 +203,6 @@ export default async function TemplateDetailPage({
           <DataTableLinkWrapper
             templateId={template.id}
             dataTableId={template.dataTableId}
-            dataTable={template.dataTable}
             fieldMapping={template.fieldMapping as Record<string, string | null> | null}
             placeholders={template.placeholders.map((ph) => ({
               key: ph.key,

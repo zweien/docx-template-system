@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { createRecord } from "./data-record.service";
+import * as nocodb from "@/lib/nocodb";
 import { logAudit } from "./audit-log.service";
 import type { FormShareTokenItem, FormViewOptions, ServiceResult } from "@/types/data-table";
 
@@ -147,15 +147,6 @@ export async function resolvePublicForm(
 ): Promise<ServiceResult<PublicFormConfig>> {
   const shareToken = await db.formShareToken.findUnique({
     where: { token },
-    include: {
-      view: {
-        include: {
-          table: {
-            include: { fields: { orderBy: { sortOrder: "asc" } } },
-          },
-        },
-      },
-    },
   });
 
   if (!shareToken || !shareToken.isActive) {
@@ -166,46 +157,48 @@ export async function resolvePublicForm(
     return { success: false, error: { code: "EXPIRED", message: "表单链接已过期" } };
   }
 
-  const view = shareToken.view;
-  const table = view.table;
-  const opts = (view.viewOptions ?? {}) as Partial<FormViewOptions>;
+  // Resolve form config from NocoDB via viewId (now stores tableId)
+  try {
+    const tableDetail = await nocodb.getTableDetail(shareToken.viewId);
+    const fields = tableDetail.fields.filter(
+      (f) => !EXCLUDED_PUBLIC_FIELD_TYPES.has(f.type)
+    );
 
-  // Filter out fields not suitable for public forms
-  const publicFields = table.fields.filter(
-    (f) => !EXCLUDED_PUBLIC_FIELD_TYPES.has(f.type)
-  );
-
-  const defaultLayout: FormViewOptions["layout"] = {
-    version: 1,
-    groups: [
-      {
-        id: "default",
-        title: "",
-        fieldKeys: publicFields.map((f) => f.key),
+    return {
+      success: true,
+      data: {
+        formTitle: tableDetail.name,
+        formDescription: "",
+        submitButtonText: "提交",
+        successMessage: "提交成功！",
+        allowMultipleSubmissions: false,
+        tableId: tableDetail.id,
+        tableName: tableDetail.name,
+        fields: fields.map((f) => ({
+          key: f.key,
+          label: f.label,
+          type: f.type,
+          required: f.required,
+          options: f.options ? JSON.stringify(f.options) : undefined,
+        })),
+        layout: {
+          version: 1,
+          groups: [
+            {
+              id: "default",
+              title: "",
+              fieldKeys: fields.map((f) => f.key),
+            },
+          ],
+        },
       },
-    ],
-  };
-
-  return {
-    success: true,
-    data: {
-      formTitle: opts.formTitle ?? table.name,
-      formDescription: opts.formDescription ?? "",
-      submitButtonText: opts.submitButtonText ?? "提交",
-      successMessage: opts.successMessage ?? "提交成功！",
-      allowMultipleSubmissions: opts.allowMultipleSubmissions ?? false,
-      tableId: table.id,
-      tableName: table.name,
-      fields: publicFields.map((f) => ({
-        key: f.key,
-        label: f.label,
-        type: f.type,
-        required: f.required,
-        options: f.options,
-      })),
-      layout: opts.layout ?? defaultLayout,
-    },
-  };
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: { code: "TABLE_NOT_FOUND", message: "表单关联的数据表不存在" },
+    };
+  }
 }
 
 // System user for public form submissions
@@ -254,14 +247,13 @@ export async function submitPublicForm(
     }
   }
 
-  const result = await createRecord(userId, config.tableId, filteredData, {
-    skipRequiredValidation: false,
-  });
-
-  if (!result.success) {
+  try {
+    await nocodb.createRecord(config.tableId, filteredData);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "提交失败";
     return {
       success: false,
-      error: { code: "SUBMIT_FAILED", message: result.error.message },
+      error: { code: "SUBMIT_FAILED", message },
     };
   }
 

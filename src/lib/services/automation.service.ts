@@ -1,5 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
+import * as nocodb from "@/lib/nocodb";
 import type {
   AutomationDefinition,
   AutomationDetail,
@@ -30,7 +31,7 @@ function mapAutomationItem(row: {
   updatedById: string | null;
   createdAt: Date;
   updatedAt: Date;
-  table?: { name: string } | null;
+  tableName?: string | null;
   runs?: Array<{
     id: string;
     status: string;
@@ -46,7 +47,7 @@ function mapAutomationItem(row: {
   return {
     id: row.id,
     tableId: row.tableId,
-    tableName: row.table?.name ?? null,
+    tableName: row.tableName ?? null,
     name: row.name,
     description: row.description,
     enabled: row.enabled,
@@ -70,20 +71,8 @@ function mapAutomationItem(row: {
   };
 }
 
-function mapAutomationDetail(row: {
-  id: string;
-  tableId: string;
-  name: string;
-  description: string | null;
-  enabled: boolean;
-  triggerType: string;
-  definitionVersion: number;
+function mapAutomationDetail(row: Parameters<typeof mapAutomationItem>[0] & {
   definition: unknown;
-  createdById: string;
-  updatedById: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-  table?: { name: string } | null;
 }): AutomationDetail {
   return {
     ...mapAutomationItem(row),
@@ -118,14 +107,25 @@ function validateDefinitionTopology(definition: AutomationDefinition): string | 
   return null;
 }
 
+// Helper to resolve table names from NocoDB
+async function resolveTableNames(tableIds: string[]): Promise<Map<string, string>> {
+  const nameMap = new Map<string, string>();
+  try {
+    const tables = await nocodb.listTables();
+    for (const t of tables) {
+      nameMap.set(t.id, t.name);
+    }
+  } catch {
+    // If NocoDB is unavailable, fall back to showing IDs
+  }
+  return nameMap;
+}
+
 export async function listAutomations(userId: string): Promise<ServiceResult<AutomationItem[]>> {
   try {
     const rows = await db.automation.findMany({
       where: { createdById: userId },
       include: {
-        table: {
-          select: { name: true },
-        },
         runs: {
           orderBy: { createdAt: "desc" },
           take: 1,
@@ -142,7 +142,20 @@ export async function listAutomations(userId: string): Promise<ServiceResult<Aut
       },
       orderBy: [{ updatedAt: "desc" }, { createdAt: "desc" }],
     });
-    return { success: true, data: rows.map(mapAutomationItem) };
+
+    // Resolve table names from NocoDB
+    const tableIds = [...new Set(rows.map((r) => r.tableId))];
+    const tableNameMap = await resolveTableNames(tableIds);
+
+    return {
+      success: true,
+      data: rows.map((row) =>
+        mapAutomationItem({
+          ...row,
+          tableName: tableNameMap.get(row.tableId) ?? null,
+        })
+      ),
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "获取自动化列表失败";
     return { success: false, error: { code: "LIST_FAILED", message } };
@@ -156,16 +169,19 @@ export async function getAutomation(
   try {
     const row = await db.automation.findFirst({
       where: { id: automationId, createdById: userId },
-      include: {
-        table: {
-          select: { name: true },
-        },
-      },
     });
     if (!row) {
       return { success: false, error: { code: "NOT_FOUND", message: "自动化不存在" } };
     }
-    return { success: true, data: mapAutomationDetail(row) };
+
+    const tableNameMap = await resolveTableNames([row.tableId]);
+    return {
+      success: true,
+      data: mapAutomationDetail({
+        ...row,
+        tableName: tableNameMap.get(row.tableId) ?? null,
+      }),
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "获取自动化失败";
     return { success: false, error: { code: "GET_FAILED", message } };
@@ -195,14 +211,16 @@ export async function createAutomation(params: {
         createdById: params.userId,
         updatedById: params.userId,
       },
-      include: {
-        table: {
-          select: { name: true },
-        },
-      },
     });
 
-    return { success: true, data: mapAutomationDetail(created) };
+    const tableNameMap = await resolveTableNames([created.tableId]);
+    return {
+      success: true,
+      data: mapAutomationDetail({
+        ...created,
+        tableName: tableNameMap.get(created.tableId) ?? null,
+      }),
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "创建自动化失败";
     return { success: false, error: { code: "CREATE_FAILED", message } };
@@ -245,14 +263,16 @@ export async function updateAutomation(
           : {}),
         updatedById: userId,
       },
-      include: {
-        table: {
-          select: { name: true },
-        },
-      },
     });
 
-    return { success: true, data: mapAutomationDetail(updated) };
+    const tableNameMap = await resolveTableNames([updated.tableId]);
+    return {
+      success: true,
+      data: mapAutomationDetail({
+        ...updated,
+        tableName: tableNameMap.get(updated.tableId) ?? null,
+      }),
+    };
   } catch (error) {
     const message = error instanceof Error ? error.message : "更新自动化失败";
     return { success: false, error: { code: "UPDATE_FAILED", message } };

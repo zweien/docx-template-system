@@ -48,7 +48,9 @@ export async function fetchDetailPreview(
     switch (toolName) {
       case "deleteRecord":
       case "updateRecord": {
-        const result = await helpers.getRecord(input.recordId as string)
+        const tableId = input.tableId as string;
+        const recordId = input.recordId as string;
+        const result = await helpers.getRecord(tableId, recordId)
         if (!result.success) return null
         const data = result.data as Record<string, unknown>
         return {
@@ -97,6 +99,7 @@ export async function fetchDetailPreview(
 
       case "batchDeleteRecords":
       case "batchUpdateRecords": {
+        const tableId = input.tableId as string;
         const ids = (
           toolName === "batchDeleteRecords"
             ? input.recordIds
@@ -106,7 +109,7 @@ export async function fetchDetailPreview(
 
         const previews = await Promise.all(
           ids.slice(0, 10).map(async (id) => {
-            const result = await helpers.getRecord(id)
+            const result = await helpers.getRecord(tableId, id)
             return {
               id,
               label: result.success ? extractRecordTitle(result.data as Record<string, unknown>) : id,

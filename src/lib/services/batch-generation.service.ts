@@ -1,6 +1,7 @@
 // src/lib/services/batch-generation.service.ts
 
 import { db } from "@/lib/db";
+import { listTables, getTableFields, listRecords } from "@/lib/nocodb";
 import { BatchStatus, OutputMethod, RecordStatus } from "@/generated/prisma/enums";
 import { Prisma } from "@/generated/prisma/client";
 import { PYTHON_SERVICE_URL } from "@/lib/constants";
@@ -26,15 +27,12 @@ type ServiceResult<T> =
 interface DataTableInfo {
   id: string;
   name: string;
-  description: string | null;
-  icon: string | null;
   fieldCount: number;
   recordCount: number;
-  createdAt: Date;
 }
 
 interface DataFieldInfo {
-  id: string;
+  nocodbColumnId: string;
   key: string;
   label: string;
   type: string;
@@ -43,11 +41,8 @@ interface DataFieldInfo {
 }
 
 interface DataRecordInfo {
-  id: string;
-  tableId: string;
+  id: string | number;
   data: Record<string, unknown>;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 interface PlaceholderInfo {
@@ -79,25 +74,14 @@ interface GeneratedFileInfo {
  */
 export async function listDataTables(): Promise<ServiceResult<DataTableInfo[]>> {
   try {
-    const tables = await db.dataTable.findMany({
-      orderBy: { createdAt: "desc" },
-      include: {
-        _count: {
-          select: { fields: true, records: true },
-        },
-      },
-    });
-
+    const tables = await listTables();
     return {
       success: true,
       data: tables.map((t) => ({
         id: t.id,
         name: t.name,
-        description: t.description,
-        icon: t.icon,
-        fieldCount: t._count.fields,
-        recordCount: t._count.records,
-        createdAt: t.createdAt,
+        fieldCount: t.fieldCount,
+        recordCount: t.recordCount,
       })),
     };
   } catch (error) {
@@ -113,20 +97,16 @@ export async function getDataTableFields(
   dataTableId: string
 ): Promise<ServiceResult<DataFieldInfo[]>> {
   try {
-    const fields = await db.dataField.findMany({
-      where: { tableId: dataTableId },
-      orderBy: { sortOrder: "asc" },
-    });
-
+    const fields = await getTableFields(dataTableId);
     return {
       success: true,
-      data: fields.map((f) => ({
-        id: f.id,
+      data: fields.map((f, index) => ({
+        nocodbColumnId: f.nocodbColumnId,
         key: f.key,
         label: f.label,
         type: f.type,
         required: f.required,
-        sortOrder: f.sortOrder,
+        sortOrder: index,
       })),
     };
   } catch (error) {
@@ -150,36 +130,27 @@ export async function listDataRecords(
   }>
 > {
   try {
-    const where: Record<string, unknown> = { tableId: dataTableId };
-
-    // 如果提供了特定的记录ID列表，则只获取这些记录
+    let where: string | undefined;
     if (filters.recordIds && filters.recordIds.length > 0) {
-      where.id = { in: filters.recordIds };
+      where = `(${filters.recordIds.map((id) => `(Id,eq,${id})`).join(",or")})`;
     }
 
-    const [records, total] = await Promise.all([
-      db.dataRecord.findMany({
-        where,
-        skip: (filters.page - 1) * filters.pageSize,
-        take: filters.pageSize,
-        orderBy: { createdAt: "desc" },
-      }),
-      db.dataRecord.count({ where }),
-    ]);
+    const result = await listRecords(dataTableId, {
+      page: filters.page,
+      pageSize: filters.pageSize,
+      where,
+    });
 
     return {
       success: true,
       data: {
-        items: records.map((r) => ({
-          id: r.id,
-          tableId: r.tableId,
-          data: r.data as Record<string, unknown>,
-          createdAt: r.createdAt,
-          updatedAt: r.updatedAt,
+        items: result.records.map((r) => ({
+          id: String(r.id),
+          data: r.data,
         })),
-        total,
-        page: filters.page,
-        pageSize: filters.pageSize,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
       },
     };
   } catch (error) {
@@ -212,10 +183,7 @@ export async function getFieldMappingInfo(
     }
 
     // 获取数据表字段
-    const fields = await db.dataField.findMany({
-      where: { tableId: dataTableId },
-      orderBy: { sortOrder: "asc" },
-    });
+    const fields = await getTableFields(dataTableId);
 
     const placeholders: PlaceholderInfo[] = template.placeholders.map((p) => ({
       id: p.id,
@@ -227,13 +195,13 @@ export async function getFieldMappingInfo(
       sortOrder: p.sortOrder,
     }));
 
-    const dataFields: DataFieldInfo[] = fields.map((f) => ({
-      id: f.id,
+    const dataFields: DataFieldInfo[] = fields.map((f, index) => ({
+      nocodbColumnId: f.nocodbColumnId,
       key: f.key,
       label: f.label,
       type: f.type,
       required: f.required,
-      sortOrder: f.sortOrder,
+      sortOrder: index,
     }));
 
     // 自动匹配字段
@@ -300,12 +268,11 @@ export async function generateBatch(
     }
 
     // 2. 获取数据记录
-    const dataRecords = await db.dataRecord.findMany({
-      where: {
-        id: { in: input.recordIds },
-        tableId: input.dataTableId,
-      },
+    const dataRecordsResult = await listRecords(input.dataTableId, {
+      pageSize: input.recordIds.length,
+      where: `(${input.recordIds.map((id) => `(Id,eq,${id})`).join(",or")})`,
     });
+    const dataRecords = dataRecordsResult.records;
 
     if (dataRecords.length === 0) {
       return {
@@ -358,10 +325,11 @@ export async function generateBatch(
     for (let index = 0; index < dataRecords.length; index++) {
       const dataRecord = dataRecords[index];
       const recordIndex = index + 1;
+      const dataRecordId = String(dataRecord.id);
 
       try {
         // 构建表单数据
-        const recordData = dataRecord.data as Record<string, unknown>;
+        const recordData = dataRecord.data;
         const formData = buildFormData(input.fieldMapping, recordData);
 
         // 生成文件名
@@ -414,14 +382,14 @@ export async function generateBatch(
             status: RecordStatus.COMPLETED,
             fileName,
             filePath,
-            dataRecordId: dataRecord.id,
+            dataRecordId,
             templateVersionId: template.currentVersion?.id,
           });
 
           generatedFiles.push({
             fileName,
             filePath,
-            dataRecordId: dataRecord.id,
+            dataRecordId,
           });
         } catch (fetchError) {
           clearTimeout(timeoutId);
@@ -434,7 +402,7 @@ export async function generateBatch(
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "文档生成失败";
         errors.push({
-          recordId: dataRecord.id,
+          recordId: dataRecordId,
           error: errorMessage,
         });
 
@@ -442,10 +410,10 @@ export async function generateBatch(
         recordsToCreate.push({
           templateId: input.templateId,
           userId,
-          formData: buildFormData(input.fieldMapping, dataRecord.data as Record<string, unknown>),
+          formData: buildFormData(input.fieldMapping, dataRecord.data),
           status: RecordStatus.FAILED,
           errorMessage,
-          dataRecordId: dataRecord.id,
+          dataRecordId,
           templateVersionId: template.currentVersion?.id,
         });
       }

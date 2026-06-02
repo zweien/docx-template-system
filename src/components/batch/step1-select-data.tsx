@@ -21,8 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, Link2 } from "lucide-react";
 import { RecordFilter, type ActiveFilter } from "@/components/data/record-filter";
-import type { DataTableListItem, DataFieldItem, PaginatedRecords } from "@/types/data-table";
-import { FieldType } from "@/generated/prisma/enums";
+import type { MappedField } from "@/lib/nocodb";
 
 interface Step1SelectDataProps {
   templateId?: string;
@@ -34,6 +33,25 @@ interface Step1SelectDataProps {
   onNext: () => void;
 }
 
+interface NocoDBTableSummary {
+  id: string;
+  name: string;
+  fieldCount: number;
+  recordCount: number;
+}
+
+interface NocoDBRecord {
+  id: string | number;
+  data: Record<string, unknown>;
+}
+
+interface NocoDBPaginatedRecords {
+  records: NocoDBRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 export function Step1SelectData({
   templateId: _templateId,
   selectedTableId,
@@ -43,11 +61,11 @@ export function Step1SelectData({
   onRecordsSelect,
   onNext,
 }: Step1SelectDataProps) {
-  const [tables, setTables] = useState<DataTableListItem[]>([]);
+  const [tables, setTables] = useState<NocoDBTableSummary[]>([]);
   const [tablesLoading, setTablesLoading] = useState(true);
 
-  const [fields, setFields] = useState<DataFieldItem[]>([]);
-  const [records, setRecords] = useState<PaginatedRecords | null>(null);
+  const [fields, setFields] = useState<MappedField[]>([]);
+  const [records, setRecords] = useState<NocoDBPaginatedRecords | null>(null);
   const [recordsLoading, setRecordsLoading] = useState(false);
 
   const [page, setPage] = useState(1);
@@ -60,10 +78,10 @@ export function Step1SelectData({
   useEffect(() => {
     const fetchTables = async () => {
       try {
-        const response = await fetch("/api/data-tables");
+        const response = await fetch("/api/nocodb/tables");
         const result = await response.json();
         if (response.ok) {
-          setTables(result);
+          setTables(result.data);
         }
       } catch (error) {
         console.error("获取数据表列表失败:", error);
@@ -94,10 +112,10 @@ export function Step1SelectData({
 
     const fetchFields = async () => {
       try {
-        const response = await fetch(`/api/data-tables/${selectedTableId}/fields`);
+        const response = await fetch(`/api/nocodb/tables/${selectedTableId}`);
         const result = await response.json();
         if (response.ok) {
-          setFields(result);
+          setFields(result.data.fields);
         }
       } catch (error) {
         console.error("获取字段失败:", error);
@@ -130,10 +148,10 @@ export function Step1SelectData({
         }
       });
 
-      const response = await fetch(`/api/data-tables/${selectedTableId}/records?${params}`);
+      const response = await fetch(`/api/nocodb/tables/${selectedTableId}/records?${params}`);
       const result = await response.json();
       if (response.ok) {
-        setRecords(result);
+        setRecords(result.data);
       }
     } catch (error) {
       console.error("获取记录失败:", error);
@@ -157,7 +175,7 @@ export function Step1SelectData({
   const handleSelectAll = (checked: boolean) => {
     if (!records) return;
     if (checked) {
-      const allIds = records.records.map((r) => r.id);
+      const allIds = records.records.map((r) => String(r.id));
       onRecordsSelect(allIds);
     } else {
       onRecordsSelect([]);
@@ -177,24 +195,24 @@ export function Step1SelectData({
     setPage(1);
   };
 
-  const formatCellValue = (field: DataFieldItem, value: unknown): React.ReactNode => {
+  const formatCellValue = (field: MappedField, value: unknown): React.ReactNode => {
     if (value === null || value === undefined || value === "") {
       return <span className="text-zinc-400">-</span>;
     }
 
     switch (field.type) {
-      case FieldType.NUMBER:
+      case "NUMBER":
         return typeof value === "number" ? value.toLocaleString() : String(value);
-      case FieldType.DATE:
+      case "DATE":
         try {
           const date = new Date(value as string);
           return date.toLocaleDateString("zh-CN");
         } catch {
           return String(value);
         }
-      case FieldType.SELECT:
+      case "SELECT":
         return <Badge variant="secondary">{String(value)}</Badge>;
-      case FieldType.MULTISELECT:
+      case "MULTISELECT":
         if (Array.isArray(value)) {
           return (
             <div className="flex flex-wrap gap-1">
@@ -214,8 +232,8 @@ export function Step1SelectData({
 
   const displayFields = fields.slice(0, 5);
   const allSelected = records && records.records.length > 0 &&
-    records.records.every((r) => selectedRecordIds.includes(r.id));
-  const someSelected = records && records.records.some((r) => selectedRecordIds.includes(r.id));
+    records.records.every((r) => selectedRecordIds.includes(String(r.id)));
+  const someSelected = records && records.records.some((r) => selectedRecordIds.includes(String(r.id)));
 
   return (
     <div className="space-y-6">
@@ -303,7 +321,7 @@ export function Step1SelectData({
                     />
                   </TableHead>
                   {displayFields.map((field) => (
-                    <TableHead key={field.id}>{field.label}</TableHead>
+                    <TableHead key={field.nocodbColumnId}>{field.label}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -322,15 +340,15 @@ export function Step1SelectData({
                   </TableRow>
                 ) : (
                   records.records.map((record) => (
-                    <TableRow key={record.id}>
+                    <TableRow key={String(record.id)}>
                       <TableCell>
                         <Checkbox
-                          checked={selectedRecordIds.includes(record.id)}
-                          onCheckedChange={(checked) => handleSelectRecord(record.id, !!checked)}
+                          checked={selectedRecordIds.includes(String(record.id))}
+                          onCheckedChange={(checked) => handleSelectRecord(String(record.id), !!checked)}
                         />
                       </TableCell>
                       {displayFields.map((field) => (
-                        <TableCell key={field.id} className="max-w-[200px] truncate">
+                        <TableCell key={field.nocodbColumnId} className="max-w-[200px] truncate">
                           {formatCellValue(field, record.data[field.key])}
                         </TableCell>
                       ))}
@@ -342,7 +360,7 @@ export function Step1SelectData({
           </div>
 
           {/* 分页 */}
-          {records && records.totalPages > 1 && (
+          {records && records.total > records.pageSize && (
             <div className="flex items-center justify-between text-sm text-zinc-500">
               <span>共 {records.total} 条记录</span>
               <div className="flex gap-2">
@@ -355,13 +373,13 @@ export function Step1SelectData({
                   上一页
                 </Button>
                 <span className="flex items-center px-2">
-                  {page} / {records.totalPages}
+                  {page} / {Math.ceil(records.total / records.pageSize)}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setPage(page + 1)}
-                  disabled={page === records.totalPages}
+                  disabled={page === Math.ceil(records.total / records.pageSize)}
                 >
                   下一页
                 </Button>

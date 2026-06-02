@@ -12,8 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Plus, X, Filter } from "lucide-react";
-import type { DataFieldItem } from "@/types/data-table";
-import { FieldType } from "@/generated/prisma/enums";
+import type { MappedField } from "@/lib/nocodb";
 
 export type FilterOperator = 'eq' | 'ne' | 'gt' | 'lt' | 'gte' | 'lte' | 'contains';
 
@@ -24,7 +23,7 @@ export interface ActiveFilter {
 }
 
 interface RecordFilterProps {
-  fields: DataFieldItem[];
+  fields: MappedField[];
   filters: ActiveFilter[];
   onFiltersChange: (filters: ActiveFilter[]) => void;
   searchValue: string;
@@ -42,20 +41,20 @@ const OPERATOR_LABELS: Record<FilterOperator, string> = {
 };
 
 // 根据字段类型返回可用操作符
-function getOperatorsForType(type: FieldType): FilterOperator[] {
+function getOperatorsForType(type: string): FilterOperator[] {
   switch (type) {
-    case FieldType.NUMBER:
+    case "NUMBER":
       return ['eq', 'ne', 'gt', 'lt', 'gte', 'lte'];
-    case FieldType.DATE:
+    case "DATE":
       return ['eq', 'gt', 'lt', 'gte', 'lte'];
-    case FieldType.SELECT:
+    case "SELECT":
       return ['eq', 'ne'];
-    case FieldType.MULTISELECT:
+    case "MULTISELECT":
       return ['contains'];
-    case FieldType.EMAIL:
-    case FieldType.PHONE:
+    case "EMAIL":
+    case "PHONE":
       return ['eq', 'contains'];
-    case FieldType.TEXT:
+    case "TEXT":
     default:
       return ['eq', 'ne', 'contains'];
   }

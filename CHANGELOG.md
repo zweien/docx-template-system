@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.25](https://github.com/zweien/docx-template-system/compare/v0.10.24...v0.10.25) (2026-06-02)
+
+
+### Features
+
+* add element IDs for onboarding tour step targets ([06ef49e](https://github.com/zweien/docx-template-system/commit/06ef49e1e6ec8e6fa9208504ec8c9e21decdb343))
+* add manual re-entry points for onboarding tour in header and sidebar ([5a51910](https://github.com/zweien/docx-template-system/commit/5a5191059555109e14df6bca9c02cf369a740a08))
+* add MCP server for data table operations ([3168f92](https://github.com/zweien/docx-template-system/commit/3168f929cad6f11e3face7d0c5038c8616e49557))
+* add onboarding fields to User model ([9c28f3a](https://github.com/zweien/docx-template-system/commit/9c28f3a4da77476d40d431542c60944dfce3427e))
+* add onboarding service and PATCH /api/user/onboarding endpoint ([ce30977](https://github.com/zweien/docx-template-system/commit/ce30977578be112f9f3bbe3dcdd0661134085e50))
+* add onboarding store, tour steps definition, and driver.js theme ([ef5964d](https://github.com/zweien/docx-template-system/commit/ef5964dc0240363b3cd072cdaeabb6403dc35373))
+* add useTour hook, WelcomeDialog, and TourProvider components ([7eb72c1](https://github.com/zweien/docx-template-system/commit/7eb72c16976adfa4e5cc0f63e29834c0f67fd464))
+* integrate TourProvider into dashboard layout and extend session with onboarding state ([b3fca26](https://github.com/zweien/docx-template-system/commit/b3fca261cbba80e07ec258083d25908d107a4481))
+
+
+### Bug Fixes
+
+* 修复深色主题下数据详情抽屉透明且宽度不足的问题 ([4d04747](https://github.com/zweien/docx-template-system/commit/4d047474936b95ac246d49dbfe6664564f197d6e))
+* adapt scrollbar colors for light mode ([95e5181](https://github.com/zweien/docx-template-system/commit/95e5181c271126036e69ce1b28fd3f9a1d7682ef))
+* add onboardingCompleted to Authentik OIDC auth path ([2012004](https://github.com/zweien/docx-template-system/commit/201200425a641bdadebba7ce93c08821854d5384))
+* auto-navigate to template fill page for tour steps 7-8 ([7b00cad](https://github.com/zweien/docx-template-system/commit/7b00cad4eb3ef543a547551306ed686f8c9b8dca))
+* correct template API response parsing for tour step 6 ([4469c5c](https://github.com/zweien/docx-template-system/commit/4469c5c3417b57dafc50e981bc0c362a3d24b797))
+* enable rich text formatting in data table cell editor ([1da2bad](https://github.com/zweien/docx-template-system/commit/1da2bade1a3007bb84e4972851dc660097461a91))
+* floating scrollbar not visible in tall tables ([ce00a0e](https://github.com/zweien/docx-template-system/commit/ce00a0e669968666c6b9d6478cca943bf1f07cc2))
+* floating scrollbar visibility in tall data tables ([19cd0c7](https://github.com/zweien/docx-template-system/commit/19cd0c72c850e5a9cc13e3213ecc946dee00a827))
+* preserve tour state during cross-page navigation ([7834e9d](https://github.com/zweien/docx-template-system/commit/7834e9d4dba835cd4d579d9e6334c08d166d119a))
+* resolve type errors for onboarding tour integration ([1e72775](https://github.com/zweien/docx-template-system/commit/1e72775a5380e92d0cd923bbc62f57dadad008c4))
+* show all items in record detail drawer for multi-value fields ([bda0a05](https://github.com/zweien/docx-template-system/commit/bda0a051056ccfe159e348ee5861f338455fa2e1))
+* use semantic theme colors in filter panel and conditional format dialog ([c75f48c](https://github.com/zweien/docx-template-system/commit/c75f48c6611b15e6e563c1600b4f14e6f1a56bd2))
+* use system default model instead of hardcoded gpt-4o in AI fill assistant ([665aa3d](https://github.com/zweien/docx-template-system/commit/665aa3d16601550b40a088f63c28c104176fd0d1))
+
 ## [0.10.24](https://github.com/zweien/docx-template-system/compare/v0.10.23...v0.10.24) (2026-05-29)
 
 

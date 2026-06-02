@@ -85,10 +85,7 @@ export async function listTables(): Promise<{ list: NocoDBTable[] }> {
 export async function getTable(
   tableId: string
 ): Promise<NocoDBTable & { columns: NocoDBColumn[] }> {
-  return request(
-    "GET",
-    `/api/v2/meta/bases/${NOCODB_BASE_ID}/tables/${tableId}`
-  );
+  return request("GET", `/api/v2/meta/tables/${tableId}`);
 }
 
 // ---- Data API ----

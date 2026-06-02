@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, Unlink, Settings2 } from "lucide-react";
 import { FieldMappingDialog } from "./field-mapping-dialog";
 import type { TemplateFieldMapping } from "@/types/template";
-import type { DataTableListItem, DataFieldItem } from "@/types/data-table";
+import type { MappedField } from "@/lib/nocodb";
 
 interface DataTableLinkProps {
   templateId: string;
@@ -34,10 +34,10 @@ export function DataTableLink({
   onUpdate,
 }: DataTableLinkProps) {
   const router = useRouter();
-  const [tables, setTables] = useState<DataTableListItem[]>([]);
+  const [tables, setTables] = useState<{ id: string; name: string; fieldCount: number; recordCount: number }[]>([]);
   const [tablesLoading, setTablesLoading] = useState(false);
   const [selectedTableId, setSelectedTableId] = useState<string | null>(dataTableId);
-  const [fields, setFields] = useState<DataFieldItem[]>([]);
+  const [fields, setFields] = useState<MappedField[]>([]);
   const [fieldsLoading, setFieldsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [mappingDialogOpen, setMappingDialogOpen] = useState(false);
@@ -47,10 +47,10 @@ export function DataTableLink({
     const fetchTables = async () => {
       setTablesLoading(true);
       try {
-        const response = await fetch("/api/data-tables");
+        const response = await fetch("/api/nocodb/tables");
         const result = await response.json();
-        if (response.ok) {
-          setTables(result);
+        if (response.ok && result.data) {
+          setTables(result.data);
         }
       } catch (error) {
         console.error("获取数据表列表失败:", error);
@@ -71,10 +71,10 @@ export function DataTableLink({
     const fetchFields = async () => {
       setFieldsLoading(true);
       try {
-        const response = await fetch(`/api/data-tables/${selectedTableId}/fields`);
+        const response = await fetch(`/api/nocodb/tables/${selectedTableId}`);
         const result = await response.json();
-        if (response.ok) {
-          setFields(result);
+        if (response.ok && result.data) {
+          setFields(result.data.fields || []);
         }
       } catch (error) {
         console.error("获取字段失败:", error);

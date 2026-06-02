@@ -21,14 +21,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Check } from "lucide-react";
 import type { TemplateFieldMapping } from "@/types/template";
-import type { DataFieldItem } from "@/types/data-table";
+import type { MappedField } from "@/lib/nocodb";
 
 interface FieldMappingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   templateId: string;
   placeholders: Array<{ key: string; label: string; required: boolean }>;
-  fields: DataFieldItem[];
+  fields: MappedField[];
   currentMapping: TemplateFieldMapping | null;
   onUpdate: () => void;
 }

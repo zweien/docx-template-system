@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { api, ApiError, type RecordItem } from "./api-client.js";
+import { api, ApiError, type RecordItem, type DataTableDetail } from "./api-client.js";
 
 const server = new McpServer({
   name: "docx-data",
@@ -43,6 +43,18 @@ async function fetchAllRecords(
   } while (page <= totalPages);
 
   return allRecords;
+}
+
+/** Resolve a relation field key to its NocoDB column ID, needed for link API */
+async function resolveFieldId(
+  tableId: string,
+  fieldKey: string,
+): Promise<string> {
+  // Cache table schemas per tableId within this session
+  const table = await api.getTable(tableId);
+  const field = table.fields.find((f) => f.key === fieldKey);
+  if (!field) throw new ApiError(400, "FIELD_NOT_FOUND", `Field "${fieldKey}" not found in table ${tableId}`);
+  return field.id;
 }
 
 // ============================================================
@@ -133,7 +145,7 @@ server.tool(
     try {
       const result = await api.listRecords(tableId, {
         search,
-        filters: filters && Object.keys(filters).length > 0 ? filters : undefined,
+        filters: filters && Object.keys(filters).length > 0 ? filters as Record<string, string | { op: string; value: string }> : undefined,
         page,
         pageSize,
       });
@@ -320,18 +332,31 @@ server.tool(
     records: z.array(z.record(z.unknown())).describe("Array of field-value objects, one per record to create"),
   },
   async ({ tableId, records }) => {
+    // NocoDB supports batch POST with an array body — use it directly
+    // but still report individually for compatibility with the tool's contract
     const results: string[] = [];
     let created = 0;
     let failed = 0;
 
-    for (let i = 0; i < records.length; i++) {
-      try {
-        const record = await api.createRecord(tableId, records[i]);
-        results.push(`  [${i + 1}] Created ${record.id}`);
+    // Use batch API with fallback to sequential
+    try {
+      const createdRecords = await api.batchCreateRecords(tableId, records);
+      for (let i = 0; i < createdRecords.length; i++) {
+        results.push(`  [${i + 1}] Created ${createdRecords[i].id}`);
         created++;
-      } catch (err) {
-        results.push(`  [${i + 1}] FAILED: ${formatError(err)}`);
-        failed++;
+      }
+    } catch (batchErr) {
+      // If batch fails, fall back to sequential creation
+      results.push(`  Batch API failed, falling back to sequential: ${formatError(batchErr)}`);
+      for (let i = 0; i < records.length; i++) {
+        try {
+          const record = await api.createRecord(tableId, records[i]);
+          results.push(`  [${i + 1}] Created ${record.id}`);
+          created++;
+        } catch (err) {
+          results.push(`  [${i + 1}] FAILED: ${formatError(err)}`);
+          failed++;
+        }
       }
     }
 
@@ -358,24 +383,27 @@ server.tool(
   },
   async ({ tableId, recordId, fieldKey, targetRecordId, append }) => {
     try {
-      // If append is true, we need to fetch existing record first
-      let data: Record<string, unknown>;
+      // Resolve field key to NocoDB column ID (needed for link API)
+      const fieldId = await resolveFieldId(tableId, fieldKey);
+
       if (append) {
-        const existing = await fetchAllRecords(tableId);
-        const record = existing.find((r) => r.id === recordId);
-        const existingValue = record?.data[fieldKey];
-        if (Array.isArray(existingValue)) {
-          data = { [fieldKey]: [...existingValue, { targetRecordId }] };
-        } else if (existingValue && typeof existingValue === "object" && "id" in existingValue) {
-          data = { [fieldKey]: [{ targetRecordId: (existingValue as { id: string }).id }, { targetRecordId }] };
-        } else {
-          data = { [fieldKey]: [{ targetRecordId }] };
-        }
-      } else {
-        data = { [fieldKey]: targetRecordId };
+        // For append, use the NocoDB link API which adds to existing links
+        await api.linkRecords(tableId, fieldId, Number(recordId), [Number(targetRecordId)]);
+        return {
+          content: [
+            {
+              type: "text" as const,
+              text: `Appended link: record ${recordId} → ${targetRecordId} via field "${fieldKey}"`,
+            },
+          ],
+        };
       }
 
-      const result = await api.updateRecord(tableId, recordId, data);
+      // For non-append (replace), we need to set the relation via update API
+      // which replaces all existing links with the new one
+      const result = await api.updateRecord(tableId, recordId, {
+        [fieldKey]: targetRecordId,
+      });
       return {
         content: [
           {

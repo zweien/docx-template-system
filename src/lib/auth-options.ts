@@ -74,6 +74,7 @@ export const authOptions: NextAuthOptions = {
                   name: user.name,
                   email: user.email,
                   role: user.role,
+                  onboardingCompleted: user.onboardingCompleted,
                 };
               }
 
@@ -87,6 +88,7 @@ export const authOptions: NextAuthOptions = {
                 name: user.name,
                 email: user.email,
                 role: user.role,
+                onboardingCompleted: user.onboardingCompleted,
               };
             },
           }),
@@ -183,6 +185,17 @@ export const authOptions: NextAuthOptions = {
 
       if (account?.id_token) {
         token.idToken = account.id_token;
+      }
+
+      // Token 刷新时从数据库重新读取 onboarding 状态
+      if (!account && token.id) {
+        const dbUser = await db.user.findUnique({
+          where: { id: token.id as string },
+          select: { onboardingCompleted: true },
+        });
+        if (dbUser) {
+          token.onboardingCompleted = dbUser.onboardingCompleted;
+        }
       }
 
       return token;

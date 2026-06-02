@@ -1,70 +1,73 @@
-import { auth } from "@/lib/auth";
-import { listTables } from "@/lib/services/data-table.service";
-import { deleteTable } from "@/lib/services/data-table.service";
-import { TableCard } from "@/components/data/table-card";
-import { CreateTableDialog } from "@/components/data/create-table-dialog";
-import { ImportTableDialog } from "@/components/data/import-table-dialog";
+"use client";
+
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { PageHeader, EmptyState } from "@/components/shared";
-import { Table as TableIcon } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { ExternalLink, RefreshCw } from "lucide-react";
 
-export default async function DataPage() {
-  const session = await auth();
-  const isAdmin = session?.user?.role === "ADMIN";
+export default function DataPage() {
+  const [connected, setConnected] = useState<boolean | null>(null);
+  const nocodbUrl = "http://localhost:8040";
 
-  const result = await listTables();
-  const tables = result.success ? result.data : [];
+  useEffect(() => {
+    fetch("/api/nocodb/health")
+      .then((r) => r.json())
+      .then((data) => setConnected(data.connected))
+      .catch(() => setConnected(false));
+  }, []);
 
-  async function handleDeleteTable(id: string) {
-    "use server";
-    const result = await deleteTable(id);
-    if (!result.success) {
-      throw new Error(result.error.message);
-    }
+  if (connected === null) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!connected) {
+    return (
+      <div className="flex h-full items-center justify-center p-8">
+        <Card className="max-w-md">
+          <CardContent className="pt-6 text-center">
+            <h2 className="text-lg font-semibold">NocoDB 未连接</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              请确认 NocoDB 服务已启动，并在环境变量中正确配置
+              NOCODB_URL、NOCODB_API_TOKEN 和 NOCODB_BASE_ID。
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="主数据"
-        description="管理自定义数据表，支持多种字段类型和 Excel 导入"
-        actions={
-          isAdmin ? (
-            <div className="flex items-center gap-2">
-              <ImportTableDialog />
-              <CreateTableDialog />
-            </div>
-          ) : undefined
-        }
-      />
-
-      {tables.length === 0 ? (
-        <EmptyState
-          icon={TableIcon}
-          title="暂无数据表"
-          description={
-            isAdmin
-              ? "创建第一个数据表来开始管理您的业务数据"
-              : "管理员尚未创建任何数据表"
-          }
-          action={
-            isAdmin ? (
-              <CreateTableDialog trigger={<Button>新建数据表</Button>} />
-            ) : undefined
-          }
-        />
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {tables.map((table) => (
-            <TableCard
-              key={table.id}
-              table={table}
-              onDelete={handleDeleteTable}
-              isAdmin={isAdmin}
-            />
-          ))}
+    <div className="flex h-[calc(100vh-4rem)] flex-col">
+      <div className="flex items-center justify-between border-b px-4 py-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">主数据表</span>
+          <span className="text-xs text-muted-foreground">
+            Powered by NocoDB
+          </span>
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => window.open(nocodbUrl, "_blank")}
+          >
+            <ExternalLink className="mr-1 h-4 w-4" />
+            在新窗口打开
+          </Button>
+        </div>
+      </div>
+      <div className="flex-1">
+        <iframe
+          src={nocodbUrl}
+          className="h-full w-full border-0"
+          title="NocoDB 数据表"
+          allow="clipboard-read; clipboard-write"
+        />
+      </div>
     </div>
   );
 }

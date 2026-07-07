@@ -65,6 +65,8 @@ verify_*.py
 .yarn/*
 yarn-debug.log*
 yarn-error.log*
+# y-websocket 运行时持久化数据（LevelDB），由 y-websocket-server 生成
+y-websocket-db/
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases

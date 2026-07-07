@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { Eye } from "lucide-react";
 import { toast } from "sonner";
@@ -12,10 +12,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { officeRenderers } from "@file-viewer/preset-office";
 
-// file-viewer 依赖浏览器 API（Worker/DOM），仅在客户端按需加载
+// file-viewer 依赖浏览器 API（Worker/DOM），仅在客户端按需加载。
+// 用 preset-office（仅 word/pdf/spreadsheet/presentation/ofd），避免 preset-all
+// 中的 mindmap renderer 经由 @ljheee/xmind-parser 引入 fs/promises 污染浏览器 bundle。
 const FileViewer = dynamic(
-  () => import("@file-viewer/react-full").then((m) => m.FileViewer),
+  () => import("@file-viewer/react").then((m) => m.FileViewer),
   {
     ssr: false,
     loading: () => (
@@ -48,9 +51,14 @@ export function DocxPreviewDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
+  // 标记本次加载是否已渲染出内容；docx 流式渲染时 loading 会反复跳动，
+  // 一旦渲染过就不再重新显示遮罩，避免遮罩卡住盖住已渲染的内容。
+  const renderedRef = useRef(false);
 
   // 强制 docx 走主线程解析，规避 worker/WASM 静态资源与 Turbopack 打包问题
   const viewerOptions = {
+    preset: officeRenderers,
+    autoRenderers: true,
     docx: { worker: false },
   };
 
@@ -60,17 +68,20 @@ export function DocxPreviewDialog({
 
   const handleStateChange = useCallback(
     (state: { loading: boolean; ready: boolean; error: unknown | null }) => {
-      if (state.loading) {
-        setLoading(true);
-        setErrored(false);
-      } else if (state.error) {
+      // 失败优先处理
+      if (state.error) {
         setLoading(false);
         setErrored(true);
         toast.error("预览加载失败");
         setOpen(false);
-      } else if (state.ready) {
+        return;
+      }
+      if (state.ready) {
+        renderedRef.current = true;
         setLoading(false);
         setErrored(false);
+      } else if (state.loading && !renderedRef.current) {
+        setLoading(true);
       }
     },
     []
@@ -82,6 +93,7 @@ export function DocxPreviewDialog({
       onOpenChange={(v) => {
         setOpen(v);
         if (v) {
+          renderedRef.current = false;
           setLoading(true);
           setErrored(false);
         }

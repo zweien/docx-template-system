@@ -20,6 +20,7 @@ import { ChevronRight, ChevronDown, Loader2, Download } from "lucide-react";
 import type { TemplateVersionListItem, TemplateVersionDetail } from "@/types/template";
 import type { PlaceholderSnapshotItem } from "@/types/placeholder";
 import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
+import { DocxPreviewDialog } from "@/components/shared";
 
 interface VersionHistoryDialogProps {
   templateId: string;
@@ -161,14 +162,22 @@ export function VersionHistoryDialog({ templateId, open, onOpenChange }: Version
                             <p><span className="font-medium text-foreground">文件名:</span> {versionDetail.originalFileName}</p>
                             <p><span className="font-medium text-foreground">文件大小:</span> {formatFileSize(versionDetail.fileSize)}</p>
                           </div>
-                          <a
-                            href={`/api/templates/${templateId}/versions/${versionDetail.version}/download`}
-                            download
-                            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-muted transition-colors shrink-0"
-                          >
-                            <Download className="h-3.5 w-3.5" />
-                            下载
-                          </a>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <DocxPreviewDialog
+                              url={`/api/templates/${templateId}/versions/${versionDetail.version}/download`}
+                              filename={versionDetail.originalFileName || `v${versionDetail.version}.docx`}
+                              label="预览"
+                              size="xs"
+                            />
+                            <a
+                              href={`/api/templates/${templateId}/versions/${versionDetail.version}/download`}
+                              download
+                              className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-sm hover:bg-muted transition-colors shrink-0"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              下载
+                            </a>
+                          </div>
                         </div>
 
                         {/* Linked data table */}

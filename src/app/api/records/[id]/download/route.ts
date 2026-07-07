@@ -58,11 +58,14 @@ export async function GET(
   const buffer = await readFile(result.data.filePath);
   const fileName = basename(result.data.filePath);
 
+  // ?inline=1 时返回 inline，供在线预览使用（保留登录/权限校验，不带参数仍为下载）
+  const inline = request.nextUrl.searchParams.get("inline") === "1";
+
   return new NextResponse(buffer, {
     headers: {
       "Content-Type":
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(fileName)}`,
     },
   });
 }

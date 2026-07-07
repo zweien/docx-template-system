@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Download, FileSpreadsheet } from "lucide-react";
-import { Breadcrumbs, PageHeader, ContentCard } from "@/components/shared";
+import { Breadcrumbs, PageHeader, ContentCard, DocxPreviewDialog } from "@/components/shared";
 import type { Role, RecordStatus } from "@/generated/prisma/enums";
 import { RetryButton } from "./retry-button";
 import { CopyToDraftButton } from "./copy-to-draft-button";
@@ -190,13 +190,20 @@ export default async function RecordDetailPage({
         <h3 className="text-sm font-medium mb-3">操作</h3>
         <div className="space-y-3">
           {record.status === "COMPLETED" && record.fileName && (
-            <a
-              href={`/api/records/${record.id}/download`}
-              className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#828fff]"
-            >
-              <Download className="h-4 w-4" />
-              下载文档
-            </a>
+            <div className="flex flex-wrap items-center gap-2">
+              <a
+                href={`/api/records/${record.id}/download`}
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#828fff]"
+              >
+                <Download className="h-4 w-4" />
+                下载文档
+              </a>
+              <DocxPreviewDialog
+                url={`/api/records/${record.id}/download`}
+                filename={record.fileName || undefined}
+                label="预览文档"
+              />
+            </div>
           )}
 
           {record.status === "FAILED" && (

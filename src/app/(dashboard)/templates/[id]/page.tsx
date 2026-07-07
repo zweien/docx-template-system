@@ -29,6 +29,7 @@ import { VersionHistoryDialogWrapper } from "./version-history-wrapper";
 import { PlaceholderEditButton } from "./placeholder-edit-wrapper";
 import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
 import { ScreenshotViewer } from "@/components/templates/screenshot-viewer";
+import { DocxPreviewDialog } from "@/components/shared";
 import { FillAssistPromptEditor } from "@/components/templates/fill-assist-prompt-editor";
 
 const STATUS_LABELS: Record<TemplateStatus, string> = {
@@ -162,6 +163,11 @@ export default async function TemplateDetailPage({
               {formatFileSize(template.fileSize)}
             </p>
             <TemplateDownloadButton templateId={template.id} />
+            <DocxPreviewDialog
+              url={`/api/templates/${template.id}/download`}
+              filename={template.originalFileName || template.fileName || undefined}
+              label="预览模板"
+            />
           </div>
         </ContentCard>
 

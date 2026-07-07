@@ -117,6 +117,12 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
   // 使用 conversationId 作为 chatKey，切换模型时不重新创建会话
   const chatKey = conversationId
 
+  // transport 只配置端点，model/tableId 在每次 sendMessage 调用时通过 body 传入，
+  // 避免 transport 闭包捕获过期的 model 值（model 在挂载后异步加载，首次渲染时为空）。
+  const transport = useMemo(() => new DefaultChatTransport({
+    api: `/api/agent2/conversations/${conversationId}/chat`,
+  }), [conversationId])
+
   const {
     messages,
     status,
@@ -127,10 +133,7 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
     setMessages,
   } = useChat({
     id: chatKey,
-    transport: new DefaultChatTransport({
-      api: `/api/agent2/conversations/${conversationId}/chat`,
-      body: { model, ...(tableId ? { tableId } : {}) },
-    }),
+    transport,
   })
 
   // Sync defaultModel prop changes to local state
@@ -256,20 +259,23 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
       setInputError(null)
       if (!text.trim() && files.length === 0) return
 
+      // 每次发送时携带当前 model/tableId，避免 transport 闭包捕获过期值
+      const chatBody = { model, ...(tableId ? { tableId } : {}) }
+
       if (files.length === 0) {
-        void sendMessage({ text })
+        void sendMessage({ text }, { body: chatBody })
         return
       }
 
       void (async () => {
         const uploads = await uploadAgent2Files(files as FileUIPart[])
         const messageText = buildAttachmentMessageText(text, uploads)
-        await sendMessage({ text: messageText })
+        await sendMessage({ text: messageText }, { body: chatBody })
       })().catch((error) => {
         setInputError(error instanceof Error ? error.message : "附件上传失败")
       })
     },
-    [historyLoaded, sendMessage]
+    [historyLoaded, sendMessage, model, tableId]
   )
 
   const handleSuggestionClick = useCallback(
@@ -345,7 +351,7 @@ export function ChatArea({ conversationId, onToggleSidebar, sidebarCollapsed, on
                         output: result,
                       })
                       // Trigger AI continuation after user confirms tool execution
-                      void sendMessage({ text: "确认执行" })
+                      void sendMessage({ text: "确认执行" }, { body: { model, ...(tableId ? { tableId } : {}) } })
                     }}
                   />
                 </MessageContent>

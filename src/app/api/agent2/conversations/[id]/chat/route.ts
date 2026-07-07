@@ -147,6 +147,7 @@ export async function POST(
     }
 
     if (error instanceof ZodError) {
+      console.error("[chat] VALIDATION_ERROR:", JSON.stringify(error.flatten().fieldErrors));
       return NextResponse.json(
         { error: { code: "VALIDATION_ERROR", message: "参数校验失败" } },
         { status: 400 }

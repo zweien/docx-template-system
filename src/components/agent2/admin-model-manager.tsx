@@ -39,6 +39,8 @@ export function AdminModelManager() {
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState(defaultForm)
   const [extraParamsError, setExtraParamsError] = useState("")
+  const [addError, setAddError] = useState("")
+  const [submitting, setSubmitting] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [editingModel, setEditingModel] = useState<Model | null>(null)
   const [editForm, setEditForm] = useState(defaultForm)
@@ -53,21 +55,31 @@ export function AdminModelManager() {
 
   const handleAdd = async () => {
     setExtraParamsError("")
+    setAddError("")
     const extraParams = form.extraParams.trim() ? parseExtraParams(form.extraParams) : undefined
     if (form.extraParams.trim() && extraParams === undefined) {
       setExtraParamsError("JSON 格式无效")
       return
     }
-    const res = await fetch("/api/admin/agent2/models", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...form, extraParams }),
-    })
-    const data = await res.json()
-    if (data.success) {
-      setAddOpen(false)
-      setForm(defaultForm)
-      loadModels().then(setModels)
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/admin/agent2/models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, extraParams }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setAddOpen(false)
+        setForm(defaultForm)
+        loadModels().then(setModels)
+      } else {
+        setAddError(data.error?.message || "添加失败")
+      }
+    } catch (error) {
+      setAddError(error instanceof Error ? error.message : "添加失败")
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -173,7 +185,7 @@ export function AdminModelManager() {
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="text-sm font-medium">全局模型（所有用户可见）</p>
-          <Button variant="ghost" size="sm" onClick={() => setAddOpen(true)}>
+          <Button variant="ghost" size="sm" onClick={() => { setAddError(""); setAddOpen(true) }}>
             <Plus className="size-3 mr-1" /> 添加
           </Button>
         </div>
@@ -243,10 +255,13 @@ export function AdminModelManager() {
               />
               {extraParamsError && <p className="text-xs text-destructive mt-1">{extraParamsError}</p>}
             </div>
+            {addError && <p className="text-sm text-destructive">{addError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>取消</Button>
-            <Button onClick={handleAdd} disabled={!form.name || !form.modelId || !form.baseUrl}>添加</Button>
+            <Button onClick={handleAdd} disabled={!form.name || !form.modelId || !form.baseUrl || submitting}>
+              {submitting ? "添加中..." : "添加"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

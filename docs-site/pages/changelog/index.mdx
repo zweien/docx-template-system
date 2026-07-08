@@ -2,6 +2,24 @@
 
 本页记录 DOCX Template System 的主要版本更新。完整日志请查看 [CHANGELOG.md](https://github.com/zweien/docx-template-system/blob/master/CHANGELOG.md)。
 
+## v0.11.0 (2026-07-08)
+
+### Features
+- 新增**文件下载型模板** — 支持上传一套文件（复杂表格、材料包等）打包成 zip 供团队直接下载，与填表生成型并列
+- **文档在线预览** — 基于 file-viewer，模板、历史版本、生成后的文档均可在线预览，无需下载
+- 模板详情页统一**截图管理**，两种模板类型通用
+- 文件下载型模板编辑流程跳过占位符配置
+- AI 填充助手支持**工具调用**，可查询主数据表用真实数据填充表单
+
+### Improvements
+- 「AI 模型配置」从系统设置移至独立的「AI 配置」菜单
+
+### Bug Fixes
+- 修复文档预览 mindmap renderer 导致的 fs/promises 编译错误
+- 修复文档预览 loading 遮罩卡住的问题
+- 修复智能助手对话发送报 VALIDATION_ERROR（model 为空）
+- 修复完成导引后刷新页面仍重复弹出导引的问题
+
 ## v0.10.1 (2026-05-07)
 
 ### Features

@@ -42,7 +42,7 @@ const config: DocsThemeConfig = {
     content: (
       <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
         <span>MIT License</span>
-        <span>DOCX Template System v0.10.1</span>
+        <span>DOCX Template System v0.11.0</span>
       </div>
     ),
   },

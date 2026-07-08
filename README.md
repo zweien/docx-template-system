@@ -10,11 +10,12 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
 ![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)
 ![License](https://img.shields.io/badge/License-MIT-green)
+[![Version](https://img.shields.io/github/v/tag/zweien/docx-template-system?label=Version&color=blue)](https://github.com/zweien/docx-template-system/releases)
 [![文档站](https://img.shields.io/badge/文档站-在线阅读-blue)](https://zweien.github.io/docx-template-system/)
 
-> **v0.10.25** · [在线文档](https://zweien.github.io/docx-template-system/)
+> **v0.11.0** · [在线文档](https://zweien.github.io/docx-template-system/)
 
-模板驱动的办公自动化系统。用户上传带有 `{{ placeholder }}` 标记的 `.docx` 模板，配置占位符后通过动态表单填写数据，自动生成文档。同时提供报告撰写、文档收集、预算报告等功能模块。
+模板驱动的办公自动化系统。支持两种模板：**填表生成型**（上传带 `{{ placeholder }}` 标记的 `.docx`，配置占位符后通过动态表单填写数据自动生成文档）与**文件下载型**（上传一套文件打包供团队直接下载）。同时提供报告撰写、文档收集、预算报告等功能模块。
 
 ## 界面预览
 
@@ -27,6 +28,8 @@
 ### 模板与文档
 
 - **模板管理** — 上传、编辑、发布、归档 Word 模板，支持版本历史
+- **两种模板类型** — 填表生成型（在线填表生成 docx）与文件下载型（上传一套文件打包供团队下载），按需选择
+- **文档在线预览** — 基于 file-viewer，模板、历史版本、生成后的文档均可在线预览，无需下载
 - **智能解析** — 自动从 DOCX 文件中提取占位符，支持简单字段和动态表格块
 - **动态表单** — 根据模板占位符自动生成填写表单，支持文本、多行文本、明细表
 - **文档生成** — report-engine CLI 渲染引擎，支持富文本块（标题/列表/表格/公式/图片）、条件段落、子文档引用
@@ -95,7 +98,7 @@
 ### AI 智能助手
 
 - **多模型对话** — 动态模型选择，流式响应，支持附件上传和文本提取
-- **AI 填充助手** — 对话式表单填写，AI 智能推荐字段值
+- **AI 填充助手** — 对话式表单填写，AI 智能推荐字段值；支持工具调用查询主数据表，用真实数据自动填充而非编造
 - **MCP 工具调用** — Model Context Protocol 集成，支持工具确认工作流
 - **对话管理** — 历史记录、收藏、建议系统
 - **AI 动作管理** — 管理员可创建全局 AI 动作（写作/翻译/分析），用户可自建个人动作，支持变量模板
@@ -112,7 +115,8 @@
 
 - **审计日志** — 记录所有关键操作，覆盖模板管理、文档生成、数据表操作、用户管理、报告系统（模板/草稿/导出/协作）等
 - **用户管理** — 管理员/普通用户角色，邮箱身份映射
-- **系统设置** — AI 模型配置、MCP 服务器管理
+- **AI 配置** — 集中管理全局 AI 模型与编辑器 AI 操作模板
+- **系统设置** — 对话建议配置、数据表自动备份、API Token 管理、MCP 服务器管理
 
 ## 技术栈
 

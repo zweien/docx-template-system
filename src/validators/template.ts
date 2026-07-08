@@ -5,6 +5,7 @@ export const createTemplateSchema = z.object({
   description: z.string().max(500).optional(),
   categoryId: z.string().optional(),
   tagIds: z.array(z.string()).optional(),
+  deliveryMode: z.enum(["FILL", "DOWNLOAD"]).optional(),
 });
 
 // 字段映射验证：key -> string | null

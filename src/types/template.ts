@@ -7,6 +7,7 @@ export interface TemplateListItem {
   originalFileName: string;
   fileSize: number;
   status: string; // TemplateStatus enum value
+  deliveryMode: string; // DeliveryMode enum value: FILL | DOWNLOAD
   createdAt: string; // ISO date string
   screenshot: string | null; // 截图路径
   categoryName: string | null;

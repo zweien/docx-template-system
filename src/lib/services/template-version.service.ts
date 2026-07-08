@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { Prisma } from "@/generated/prisma/client";
-import { copyToVersion } from "@/lib/file.service";
+import { copyToVersion, packTemplateBundle } from "@/lib/file.service";
 import type { PlaceholderSnapshotItem } from "@/types/placeholder";
 import type {
   TemplateVersionListItem,
@@ -28,6 +28,7 @@ interface TemplateRowLocked {
   originalFileName: string;
   fileSize: number;
   status: string;
+  deliveryMode: string;
   dataTableId: string | null;
   fieldMapping: unknown;
 }
@@ -69,7 +70,7 @@ export async function publishTemplate(
     return await db.$transaction(async (tx) => {
       // 1. Lock the template row with SELECT ... FOR UPDATE
       const lockedRows = await tx.$queryRaw<TemplateRowLocked[]>`
-        SELECT id, name, "fileName", "originalFileName", "fileSize", status, "dataTableId", "fieldMapping"
+        SELECT id, name, "fileName", "originalFileName", "fileSize", status, "deliveryMode", "dataTableId", "fieldMapping"
         FROM "Template"
         WHERE id = ${templateId}
         FOR UPDATE
@@ -83,15 +84,19 @@ export async function publishTemplate(
         };
       }
 
-      // 2. Verify the template has placeholders (at least 1)
-      const placeholderCount = await tx.placeholder.count({
-        where: { templateId },
-      });
-      if (placeholderCount === 0) {
-        return {
-          success: false as const,
-          error: { code: "NO_PLACEHOLDERS", message: "模板没有占位符，无法发布" },
-        };
+      const isDownload = template.deliveryMode === "DOWNLOAD";
+
+      // 2. FILL 型需要占位符；DOWNLOAD 型跳过此校验
+      if (!isDownload) {
+        const placeholderCount = await tx.placeholder.count({
+          where: { templateId },
+        });
+        if (placeholderCount === 0) {
+          return {
+            success: false as const,
+            error: { code: "NO_PLACEHOLDERS", message: "模板没有占位符，无法发布" },
+          };
+        }
       }
 
       // 3. Calculate next version number
@@ -101,8 +106,26 @@ export async function publishTemplate(
       });
       const nextVersion = (maxVersion._max.version ?? 0) + 1;
 
-      // 4. Copy draft file to version file
-      const fileMeta = await copyToVersion(templateId, nextVersion);
+      // 4. 冻结文件快照：FILL 型复制 draft.docx；DOWNLOAD 型重新打包 bundle.zip 后复制
+      let fileMeta: { fileName: string; filePath: string };
+      if (isDownload) {
+        const bundle = await packTemplateBundle(templateId);
+        if (!bundle) {
+          return {
+            success: false as const,
+            error: { code: "NO_FILES", message: "文件下载型模板没有文件，无法发布" },
+          };
+        }
+        fileMeta = { fileName: bundle.fileName, filePath: bundle.filePath };
+        // 更新 Template 的 filePath 指向最新 bundle.zip
+        await tx.template.update({
+          where: { id: templateId },
+          data: { filePath: bundle.filePath },
+        });
+      } else {
+        const v = await copyToVersion(templateId, nextVersion);
+        fileMeta = { fileName: v.fileName, filePath: v.filePath };
+      }
 
       // 5. Serialize placeholders to JSON snapshot
       const placeholders = await tx.placeholder.findMany({

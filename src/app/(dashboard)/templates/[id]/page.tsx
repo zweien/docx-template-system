@@ -29,6 +29,7 @@ import { VersionHistoryDialogWrapper } from "./version-history-wrapper";
 import { PlaceholderEditButton } from "./placeholder-edit-wrapper";
 import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
 import { ScreenshotViewer } from "@/components/templates/screenshot-viewer";
+import { DownloadTemplateFiles } from "@/components/templates/download-template-files";
 import { DocxPreviewDialog } from "@/components/shared";
 import { FillAssistPromptEditor } from "@/components/templates/fill-assist-prompt-editor";
 
@@ -90,6 +91,7 @@ export default async function TemplateDetailPage({
   }
 
   const isAdmin = (session?.user?.role as Role) === "ADMIN";
+  const isDownload = template.deliveryMode === "DOWNLOAD";
 
   return (
     <div className="space-y-6">
@@ -105,6 +107,9 @@ export default async function TemplateDetailPage({
           <>
             <Badge variant={STATUS_VARIANTS[template.status]}>
               {STATUS_LABELS[template.status]}
+            </Badge>
+            <Badge variant="outline">
+              {isDownload ? "文件下载型" : "填表生成型"}
             </Badge>
             {template.currentVersion && (
               <Badge variant="outline">v{template.currentVersion.version}</Badge>
@@ -122,7 +127,7 @@ export default async function TemplateDetailPage({
                 <span className="hidden sm:inline">编辑</span>
               </LinkButton>
             )}
-            {template.status === "PUBLISHED" && (
+            {template.status === "PUBLISHED" && !isDownload && (
               <>
                 <LinkButton
                   variant="outline"
@@ -163,11 +168,13 @@ export default async function TemplateDetailPage({
               {formatFileSize(template.fileSize)}
             </p>
             <TemplateDownloadButton templateId={template.id} />
-            <DocxPreviewDialog
-              url={`/api/templates/${template.id}/download`}
-              filename={template.originalFileName || template.fileName || undefined}
-              label="预览模板"
-            />
+            {!isDownload && (
+              <DocxPreviewDialog
+                url={`/api/templates/${template.id}/download`}
+                filename={template.originalFileName || template.fileName || undefined}
+                label="预览模板"
+              />
+            )}
           </div>
         </ContentCard>
 
@@ -196,15 +203,27 @@ export default async function TemplateDetailPage({
         <ContentCard>
           <div className="flex items-center gap-2 mb-2">
             <HardDrive className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">占位符数量</span>
+            <span className="text-sm font-medium">{isDownload ? "文件类型" : "占位符数量"}</span>
           </div>
           <p className="text-sm font-medium text-foreground">
-            {template.placeholders.length} 个
+            {isDownload ? "文件下载型" : `${template.placeholders.length} 个`}
           </p>
         </ContentCard>
       </div>
 
-      {isAdmin && (
+      {/* DOWNLOAD 型：文件清单（替代占位符/数据表/AI 配置） */}
+      {isDownload && (
+        <ContentCard>
+          <DownloadTemplateFiles
+            templateId={template.id}
+            isAdmin={isAdmin}
+            isPublished={template.status === "PUBLISHED"}
+          />
+        </ContentCard>
+      )}
+
+      {/* FILL 型专属：主数据关联、AI 填充助手、占位符列表 */}
+      {!isDownload && isAdmin && (
         <ContentCard>
           <h3 className="text-sm font-medium mb-1">主数据关联</h3>
           <p className="text-sm text-muted-foreground mb-4">
@@ -224,7 +243,7 @@ export default async function TemplateDetailPage({
         </ContentCard>
       )}
 
-      {isAdmin && (
+      {!isDownload && isAdmin && (
         <ContentCard>
           <h3 className="text-sm font-medium mb-1">AI 填充助手配置</h3>
           <p className="text-sm text-muted-foreground mb-4">
@@ -237,6 +256,7 @@ export default async function TemplateDetailPage({
         </ContentCard>
       )}
 
+      {!isDownload && (
       <ContentCard>
         <h3 className="text-sm font-medium mb-1">占位符列表</h3>
         <p className="text-sm text-muted-foreground mb-4">
@@ -300,6 +320,7 @@ export default async function TemplateDetailPage({
             </div>
           )}
       </ContentCard>
+      )}
 
       {isAdmin && (
         <ContentCard className="border-destructive/45">

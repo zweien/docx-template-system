@@ -70,6 +70,12 @@ enum TemplateStatus {
   ARCHIVED
 }
 
+// 模板交付模式：FILL=在线填表生成 docx；DOWNLOAD=提供一套文件供团队下载
+enum DeliveryMode {
+  FILL
+  DOWNLOAD
+}
+
 model DocumentCollectionTask {
   id              String                         @id @default(cuid())
   title           String
@@ -185,6 +191,7 @@ model Template {
   filePath          String
   fileSize      Int
   status        TemplateStatus  @default(DRAFT)
+  deliveryMode  DeliveryMode    @default(FILL)
   createdById   String
   createdBy     User            @relation(fields: [createdById], references: [id], onDelete: Cascade)
   createdAt     DateTime        @default(now())

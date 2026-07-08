@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { saveTemplateDraft, deleteTemplateDir, deleteFile, type FilePathMeta } from "@/lib/file.service";
+import { UPLOAD_DIR } from "@/lib/constants/upload";
 import type { TemplateListItem, TemplateWithRelation } from "@/types/template";
 import type { PlaceholderItem } from "@/types/placeholder";
 import { join } from "path";
@@ -19,6 +20,7 @@ function mapTemplateToListItem(row: {
   originalFileName: string;
   fileSize: number;
   status: string;
+  deliveryMode: string;
   createdAt: Date;
   screenshot?: string | null;
   category?: { name: string } | null;
@@ -31,6 +33,7 @@ function mapTemplateToListItem(row: {
     originalFileName: row.originalFileName,
     fileSize: row.fileSize,
     status: row.status,
+    deliveryMode: row.deliveryMode,
     createdAt: row.createdAt.toISOString(),
     screenshot: row.screenshot ?? null,
     categoryName: row.category?.name ?? null,
@@ -189,13 +192,54 @@ export async function getTemplate(
 }
 
 export async function createTemplate(
-  data: { name: string; description?: string; createdById: string; categoryId?: string; tagIds?: string[] },
+  data: { name: string; description?: string; createdById: string; categoryId?: string; tagIds?: string[]; deliveryMode?: "FILL" | "DOWNLOAD" },
   fileBuffer: Buffer,
   originalName: string
 ): Promise<ServiceResult<TemplateListItem>> {
   try {
     const id = crypto.randomUUID();
+    const deliveryMode = data.deliveryMode ?? "FILL";
 
+    if (deliveryMode === "DOWNLOAD") {
+      // DOWNLOAD 型：不接收单文件，filePath/fileSize 占位，后续由 files API 填充 sources/ 并打包
+      const template = await db.template.create({
+        data: {
+          id,
+          name: data.name,
+          description: data.description ?? null,
+          fileName: "bundle.zip",
+          originalFileName: `${data.name}.zip`,
+          filePath: join(process.cwd(), UPLOAD_DIR, "templates", id, "bundle.zip"),
+          fileSize: 0,
+          status: "DRAFT",
+          deliveryMode: "DOWNLOAD",
+          createdById: data.createdById,
+          categoryId: data.categoryId ?? null,
+        },
+        include: {
+          category: { select: { name: true } },
+          tags: { include: { tag: { select: { id: true, name: true } } } },
+        },
+      });
+
+      if (data.tagIds && data.tagIds.length > 0) {
+        await db.tagOnTemplate.createMany({
+          data: data.tagIds.map((tagId) => ({ templateId: id, tagId })),
+        });
+        const templateWithTags = await db.template.findUnique({
+          where: { id },
+          include: {
+            category: { select: { name: true } },
+            tags: { include: { tag: { select: { id: true, name: true } } } },
+          },
+        });
+        return { success: true, data: mapTemplateToListItem(templateWithTags!) };
+      }
+
+      return { success: true, data: mapTemplateToListItem(template) };
+    }
+
+    // FILL 型：原有逻辑
     const fileMeta: FilePathMeta = await saveTemplateDraft(id, fileBuffer, originalName);
 
     const template = await db.template.create({
@@ -208,6 +252,7 @@ export async function createTemplate(
         filePath: fileMeta.filePath,
         fileSize: fileBuffer.length,
         status: "DRAFT",
+        deliveryMode: "FILL",
         createdById: data.createdById,
         categoryId: data.categoryId ?? null,
       },

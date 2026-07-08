@@ -2,9 +2,10 @@ import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Button, LinkButton } from "@/components/ui/button";
-import { Upload, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import type { Role, TemplateStatus } from "@/generated/prisma/enums";
 import { CategoryTagManagerButton } from "@/components/templates/category-tag-manager-button";
+import { CreateTemplateDialog } from "@/components/templates/create-template-dialog";
 import { TemplateTableWithBatch } from "@/components/templates/template-table-with-batch";
 import { PageHeader, ContentCard } from "@/components/shared";
 
@@ -102,10 +103,7 @@ export default async function TemplatesPage({
             {isAdmin && (
               <>
                 <CategoryTagManagerButton />
-                <LinkButton href="/templates/new">
-                  <Upload className="h-4 w-4" />
-                  上传模板
-                </LinkButton>
+                <CreateTemplateDialog />
               </>
             )}
           </div>

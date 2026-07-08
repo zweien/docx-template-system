@@ -22,7 +22,7 @@ export async function GET(
   const { id } = await params;
   const template = await db.template.findUnique({
     where: { id },
-    select: { filePath: true, fileName: true, originalFileName: true },
+    select: { filePath: true, fileName: true, originalFileName: true, name: true, deliveryMode: true },
   });
 
   if (!template) {
@@ -47,15 +47,22 @@ export async function GET(
   }
 
   const buffer = await readFile(template.filePath);
-  const downloadName = template.originalFileName || basename(template.filePath);
+  const isDownload = template.deliveryMode === "DOWNLOAD";
+
+  // DOWNLOAD 型下载 bundle.zip；FILL 型下载原始 docx
+  const downloadName = isDownload
+    ? `${template.name}.zip`
+    : template.originalFileName || basename(template.filePath);
+  const contentType = isDownload
+    ? "application/zip"
+    : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
   // ?inline=1 时返回 inline，供在线预览使用（保留登录校验，不带参数仍为下载）
   const inline = request.nextUrl.searchParams.get("inline") === "1";
 
   return new NextResponse(buffer, {
     headers: {
-      "Content-Type":
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "Content-Type": contentType,
       "Content-Disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(downloadName)}`,
     },
   });

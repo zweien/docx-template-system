@@ -67,29 +67,32 @@ export async function POST(request: NextRequest) {
     const categoryId = (formData.get("categoryId") as string) || undefined;
     const tagIdsStr = (formData.get("tagIds") as string) || undefined;
     const tagIds = tagIdsStr ? tagIdsStr.split(",").filter(Boolean) : undefined;
+    const deliveryMode = (formData.get("deliveryMode") as string) === "DOWNLOAD" ? "DOWNLOAD" : "FILL";
     const file = formData.get("file") as File | null;
 
-    if (!file) {
-      return NextResponse.json(
-        { error: { code: "VALIDATION_ERROR", message: "请上传文件" } },
-        { status: 400 }
-      );
+    const parsed = createTemplateSchema.parse({ name, description, deliveryMode });
+
+    // DOWNLOAD 型不需要上传文件（后续通过 files API 上传）；FILL 型必须有 docx
+    if (deliveryMode === "FILL") {
+      if (!file) {
+        return NextResponse.json(
+          { error: { code: "VALIDATION_ERROR", message: "请上传文件" } },
+          { status: 400 }
+        );
+      }
+      if (!file.name.endsWith(".docx")) {
+        return NextResponse.json(
+          { error: { code: "VALIDATION_ERROR", message: "仅支持 .docx 格式文件" } },
+          { status: 400 }
+        );
+      }
     }
 
-    if (!file.name.endsWith(".docx")) {
-      return NextResponse.json(
-        { error: { code: "VALIDATION_ERROR", message: "仅支持 .docx 格式文件" } },
-        { status: 400 }
-      );
-    }
-
-    const parsed = createTemplateSchema.parse({ name, description });
-
-    const arrayBuffer = await file.arrayBuffer();
+    const arrayBuffer = file ? await file.arrayBuffer() : new ArrayBuffer(0);
     const result = await templateService.createTemplate(
       { ...parsed, createdById: session.user.id, categoryId, tagIds },
       Buffer.from(arrayBuffer),
-      file.name
+      file?.name ?? ""
     );
 
     if (!result.success) {

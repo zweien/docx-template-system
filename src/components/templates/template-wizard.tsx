@@ -36,6 +36,7 @@ interface TemplateInfo {
   fileSize: number;
   description: string | null;
   status: string;
+  deliveryMode: string;
   screenshot: string | null;
   dataTableId: string | null;
   dataTable?: { id: string; name: string } | null;
@@ -84,6 +85,9 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
   // Drag & drop state
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // DOWNLOAD 型不配置占位符，编辑流程跳过「配置占位符」步骤
+  const [isDownload, setIsDownload] = useState(false);
+
   // Step 3 state
   const [templateInfo, setTemplateInfo] = useState<TemplateInfo | null>(null);
   const [loadingInfo, setLoadingInfo] = useState(false);
@@ -122,6 +126,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
         setTagIds(data.tags?.map((t: { id: string; name: string }) => t.id) ?? []);
         setCurrentFileName(data.originalFileName || data.fileName);
         setExistingScreenshot(data.screenshot);
+        setIsDownload(data.deliveryMode === "DOWNLOAD");
       }
       setLoadingTemplate(false);
     };
@@ -169,6 +174,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
         description: template.description,
         screenshot: template.screenshot,
         status: template.status,
+        deliveryMode: template.deliveryMode,
         dataTableId: template.dataTableId,
         dataTable: template.dataTable,
         placeholderCount: template.placeholders?.length ?? 0,
@@ -298,8 +304,8 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
           return;
         }
 
-        // Auto-parse placeholders only when a new file was uploaded
-        if (file) {
+        // Auto-parse placeholders only when a new file was uploaded (FILL 型)
+        if (file && !isDownload) {
           const parseRes = await fetch(
             `/api/templates/${workingTemplateId}/placeholders`,
             { method: "POST" }
@@ -370,7 +376,12 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
         toast.success("模板创建成功");
       }
 
-      setCurrentStep(2);
+      // DOWNLOAD 型无占位符步骤，直接进发布确认；FILL 型进配置占位符
+      setCurrentStep(isDownload ? 3 : 2);
+      // DOWNLOAD 型跳过占位符步骤，直接加载发布摘要
+      if (isDownload) {
+        loadSummaryInfo();
+      }
     } catch {
       toast.error("操作失败，请重试");
     } finally {
@@ -380,7 +391,9 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
 
   const handleNext = async () => {
     if (currentStep === 1) {
-      handleStep1Submit();
+      // handleStep1Submit 内部会按 isDownload 进入正确的下一步
+      // （DOWNLOAD → 发布确认 step 3；FILL → 配置占位符 step 2）
+      await handleStep1Submit();
     } else if (currentStep === 2) {
       // Save placeholder changes before proceeding
       if (configTableRef.current) {
@@ -394,7 +407,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
 
   const handlePrev = () => {
     if (currentStep === 2) setCurrentStep(1);
-    else if (currentStep === 3) setCurrentStep(2);
+    else if (currentStep === 3) setCurrentStep(isDownload ? 1 : 2);
   };
 
   const handlePublish = async () => {
@@ -439,10 +452,13 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
 
   return (
     <div className={`mx-auto space-y-6 ${currentStep === 2 ? 'max-w-6xl' : 'max-w-3xl'}`}>
-      {/* Step Indicator */}
+      {/* Step Indicator（DOWNLOAD 型隐藏「配置占位符」步骤） */}
       <div className="flex items-center justify-center gap-2">
-        {STEPS.map((step, index) => {
-          const stepNum = (index + 1) as 1 | 2 | 3;
+        {STEPS.filter((_, index) => !(isDownload && index === 1)).map((step, index) => {
+          // 过滤后重新编号：DOWNLOAD 型为 [上传文件, 确认发布]
+          const stepNum = (isDownload
+            ? (index === 0 ? 1 : 3)
+            : (index + 1)) as 1 | 2 | 3;
           const isActive = currentStep === stepNum;
           const isCompleted = currentStep > stepNum;
           const Icon = step.icon;
@@ -499,13 +515,16 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
                   {isEditMode ? "编辑模板信息" : "上传文件并填写基本信息"}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {isEditMode
-                    ? "修改模板名称、描述或替换文件"
-                    : "选择 .docx 模板文件并填写模板名称"}
+                  {isDownload
+                    ? "修改文件下载型模板的名称、描述等基本信息"
+                    : isEditMode
+                      ? "修改模板名称、描述或替换文件"
+                      : "选择 .docx 模板文件并填写模板名称"}
                 </p>
               </div>
 
-              {/* File Upload Area */}
+              {/* File Upload Area（DOWNLOAD 型不在此处管理文件，文件清单在详情页维护） */}
+              {!isDownload && (
               <div className="space-y-2">
                 <label className="text-sm font-medium">
                   模板文件 {isEditMode ? "(可选，留空则不替换)" : ""} <HelpTooltip text="上传包含 {{ 占位符 }} 标记的 .docx 文件，系统会自动识别其中的占位符" />
@@ -556,6 +575,13 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
                   />
                 </div>
               </div>
+              )}
+
+              {isDownload && (
+                <div className="rounded-lg border border-dashed border-muted-foreground/25 bg-muted/30 p-4 text-sm text-muted-foreground">
+                  文件下载型模板的文件在详情页「文件清单」处管理（上传/删除），此处仅编辑模板基本信息。
+                </div>
+              )}
 
               {/* Name */}
               <div className="space-y-2">
@@ -710,6 +736,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
                             {templateInfo.originalFileName}
                           </td>
                         </tr>
+                        {!isDownload && (
                         <tr className="border-b">
                           <td className="px-4 py-3 font-medium text-muted-foreground">
                             占位符数量
@@ -718,6 +745,7 @@ export function TemplateWizard({ templateId }: TemplateWizardProps) {
                             {templateInfo.placeholderCount} 个
                           </td>
                         </tr>
+                        )}
                         {templateInfo.dataTable && (
                           <tr className="border-b">
                             <td className="px-4 py-3 font-medium text-muted-foreground">

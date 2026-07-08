@@ -1,4 +1,3 @@
-import { AdminModelManager } from "@/components/agent2/admin-model-manager";
 import { SuggestionManager } from "@/components/agent2/suggestion-manager";
 import { BackupConfig } from "@/components/settings/backup-config";
 import { ApiTokensTab } from "@/components/settings/api-tokens-tab";
@@ -10,14 +9,6 @@ export default function AdminSettingsPage() {
       <Breadcrumbs items={[{ label: "管理后台", href: "/admin" }, { label: "系统设置" }]} />
       <PageHeader title="系统设置" />
       <div className="space-y-4">
-        <ContentCard>
-          <h2 className="text-lg font-[510] tracking-tight mb-1">AI 模型配置</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            在此处配置全局模型，这些模型将对所有用户可见。用户也可以添加自己的自定义模型。
-          </p>
-          <AdminModelManager />
-        </ContentCard>
-
         <ContentCard>
           <h2 className="text-lg font-[510] tracking-tight mb-1">对话建议配置</h2>
           <p className="text-sm text-muted-foreground mb-6">

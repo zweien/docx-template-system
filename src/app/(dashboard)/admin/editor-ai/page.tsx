@@ -41,7 +41,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { PageHeader, Breadcrumbs, EmptyState } from "@/components/shared";
+import { PageHeader, Breadcrumbs, EmptyState, ContentCard } from "@/components/shared";
+import { AdminModelManager } from "@/components/agent2/admin-model-manager";
 import { toast } from "sonner";
 import type { EditorAIActionItem } from "@/types/editor-ai";
 
@@ -262,8 +263,8 @@ export default function EditorAIAdminPage() {
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: "管理后台", href: "/admin" }, { label: "AI 配置" }]} />
       <PageHeader
-        title="编辑器 AI 操作管理"
-        description="管理全局 AI 操作模板，所有用户共享"
+        title="AI 配置"
+        description="管理全局 AI 模型与编辑器 AI 操作模板"
         actions={
           <Button onClick={openCreateDialog} className="w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" />
@@ -271,6 +272,23 @@ export default function EditorAIAdminPage() {
           </Button>
         }
       />
+
+      {/* AI 模型配置 */}
+      <ContentCard>
+        <h2 className="text-lg font-[510] tracking-tight mb-1">AI 模型配置</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          在此处配置全局模型，这些模型将对所有用户可见。用户也可以添加自己的自定义模型。
+        </p>
+        <AdminModelManager />
+      </ContentCard>
+
+      {/* 编辑器 AI 操作 */}
+      <ContentCard>
+        <h2 className="text-lg font-[510] tracking-tight mb-1">编辑器 AI 操作</h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          管理全局 AI 操作模板，所有用户共享
+        </p>
+      </ContentCard>
 
       {/* Actions Table */}
       <div className="border rounded-lg overflow-hidden">

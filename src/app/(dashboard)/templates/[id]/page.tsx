@@ -29,6 +29,7 @@ import { VersionHistoryDialogWrapper } from "./version-history-wrapper";
 import { PlaceholderEditButton } from "./placeholder-edit-wrapper";
 import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
 import { ScreenshotViewer } from "@/components/templates/screenshot-viewer";
+import { ScreenshotManager } from "@/components/templates/screenshot-manager";
 import { DownloadTemplateFiles } from "@/components/templates/download-template-files";
 import { PublishTemplateButton } from "@/components/templates/publish-template-button";
 import { DocxPreviewDialog } from "@/components/shared";
@@ -155,11 +156,21 @@ export default async function TemplateDetailPage({
         }
       />
 
-      {template.screenshot && (
+      {/* 截图：管理员可上传/删除，非管理员只读查看。两种模板类型通用。 */}
+      {isAdmin ? (
+        <div className="max-w-xs">
+          <p className="mb-2 text-xs text-muted-foreground">模板截图（列表预览图）</p>
+          <ScreenshotManager
+            templateId={template.id}
+            initialScreenshot={template.screenshot}
+            templateName={template.name}
+          />
+        </div>
+      ) : template.screenshot ? (
         <div className="max-w-xs">
           <ScreenshotViewer src={template.screenshot} alt={template.name} />
         </div>
-      )}
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <ContentCard>

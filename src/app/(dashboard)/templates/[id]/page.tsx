@@ -30,6 +30,7 @@ import { PlaceholderEditButton } from "./placeholder-edit-wrapper";
 import { getPlaceholderInputTypeLabel } from "@/lib/placeholder-input-type";
 import { ScreenshotViewer } from "@/components/templates/screenshot-viewer";
 import { DownloadTemplateFiles } from "@/components/templates/download-template-files";
+import { PublishTemplateButton } from "@/components/templates/publish-template-button";
 import { DocxPreviewDialog } from "@/components/shared";
 import { FillAssistPromptEditor } from "@/components/templates/fill-assist-prompt-editor";
 
@@ -126,6 +127,10 @@ export default async function TemplateDetailPage({
                 <Pencil className="h-4 w-4" />
                 <span className="hidden sm:inline">编辑</span>
               </LinkButton>
+            )}
+            {/* DOWNLOAD 型发布入口（不走 wizard，需在详情页发布） */}
+            {isAdmin && isDownload && template.status === "DRAFT" && (
+              <PublishTemplateButton templateId={template.id} />
             )}
             {template.status === "PUBLISHED" && !isDownload && (
               <>

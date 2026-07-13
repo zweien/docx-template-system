@@ -116,8 +116,8 @@ export function DocxPreviewDialog({
             : "flex h-[85vh] w-full max-w-5xl sm:max-w-5xl flex-col gap-2 p-4"
         }
       >
-        <DialogHeader className="flex-row items-center justify-between gap-2 space-y-0">
-          <DialogTitle className="truncate">
+        <DialogHeader className="flex-row items-center gap-2 space-y-0 pr-8">
+          <DialogTitle className="flex-1 truncate">
             {filename || "文档预览"}
           </DialogTitle>
           <Button

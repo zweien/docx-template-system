@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
-import { Eye } from "lucide-react";
+import { Eye, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +51,7 @@ export function DocxPreviewDialog({
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errored, setErrored] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   // 标记本次加载是否已渲染出内容；docx 流式渲染时 loading 会反复跳动，
   // 一旦渲染过就不再重新显示遮罩，避免遮罩卡住盖住已渲染的内容。
   const renderedRef = useRef(false);
@@ -96,6 +97,7 @@ export function DocxPreviewDialog({
           renderedRef.current = false;
           setLoading(true);
           setErrored(false);
+          setFullscreen(false);
         }
       }}
     >
@@ -107,11 +109,29 @@ export function DocxPreviewDialog({
           </Button>
         }
       />
-      <DialogContent className="flex h-[85vh] max-w-5xl flex-col gap-2 p-4">
+      <DialogContent
+        className={
+          fullscreen
+            ? "flex h-screen w-screen max-w-none sm:max-w-none !fixed !inset-0 !top-0 !left-0 !translate-x-0 !translate-y-0 rounded-none p-4"
+            : "flex h-[85vh] w-full max-w-5xl sm:max-w-5xl flex-col gap-2 p-4"
+        }
+      >
         <DialogHeader className="flex-row items-center justify-between gap-2 space-y-0">
           <DialogTitle className="truncate">
             {filename || "文档预览"}
           </DialogTitle>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setFullscreen((v) => !v)}
+            title={fullscreen ? "退出全屏" : "全屏"}
+          >
+            {fullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+          </Button>
         </DialogHeader>
         <div className="relative min-h-0 flex-1 overflow-hidden rounded-md border bg-white">
           {loading && (

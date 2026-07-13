@@ -42,8 +42,19 @@ export async function POST(
     );
   }
 
+  // Optional custom filename suffix from request body
+  let customSuffix: string | undefined;
+  try {
+    const body = await request.json();
+    if (typeof body?.customSuffix === "string") {
+      customSuffix = body.customSuffix;
+    }
+  } catch {
+    // body 可为空，忽略解析错误
+  }
+
   // Trigger generation
-  const result = await recordService.generateDocument(id);
+  const result = await recordService.generateDocument(id, { customSuffix });
 
   if (!result.success) {
     const status =

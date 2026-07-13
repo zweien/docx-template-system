@@ -78,6 +78,7 @@ export function DynamicForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [customSuffix, setCustomSuffix] = useState("");
 
   // Data picker state
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -247,6 +248,8 @@ export function DynamicForm({
       // Step 2: Trigger generation
       const genRes = await fetch(`/api/records/${recordId}/generate`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customSuffix: customSuffix.trim() || undefined }),
       });
 
       if (!genRes.ok) {
@@ -362,6 +365,19 @@ export function DynamicForm({
 
       {/* Action buttons - responsive layout */}
       <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 sm:justify-end pt-2">
+        <div className="flex items-center gap-2 sm:mr-auto w-full sm:w-auto">
+          <Label htmlFor="custom-suffix" className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+            文件名后缀
+          </Label>
+          <Input
+            id="custom-suffix"
+            value={customSuffix}
+            onChange={(e) => setCustomSuffix(e.target.value)}
+            placeholder="可选，如：版本A"
+            disabled={saving || generating}
+            className="h-8 max-w-[200px]"
+          />
+        </div>
         <Button
           variant="outline"
           onClick={handleSaveDraft}

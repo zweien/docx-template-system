@@ -133,7 +133,8 @@ export async function createRecord(
 }
 
 export async function generateDocument(
-  recordId: string
+  recordId: string,
+  options?: { customSuffix?: string }
 ): Promise<
   ServiceResult<{
     id: string;
@@ -186,7 +187,14 @@ export async function generateDocument(
     const HH = now.getHours().toString().padStart(2, "0");
     const mm = now.getMinutes().toString().padStart(2, "0");
     const ss = now.getSeconds().toString().padStart(2, "0");
-    const newFileName = `${record.template.name}_${yyyy}${MM}${dd}_${HH}${mm}${ss}.docx`;
+
+    // 可选自定义后缀（清理非法文件名字符）
+    const rawSuffix = options?.customSuffix?.trim();
+    const safeSuffix = rawSuffix
+      ? rawSuffix.replace(/[<>:"/\\|?*]/g, "_").slice(0, 80)
+      : "";
+    const suffixPart = safeSuffix ? `_${safeSuffix}` : "";
+    const newFileName = `${record.template.name}_${yyyy}${MM}${dd}_${HH}${mm}${ss}${suffixPart}.docx`;
 
     // d. Call Python service
     const formData = record.formData as Record<string, string | string[] | Record<string, string>[]>;

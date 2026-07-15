@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.11.1](https://github.com/zweien/docx-template-system/compare/v0.11.0...v0.11.1) (2026-07-15)
+
+
+### Features
+
+* 单个生成文档支持可选自定义文件名后缀 ([4b8a566](https://github.com/zweien/docx-template-system/commit/4b8a5663ff20e183561f8ad0ac8d95318f42c2ab))
+* 文档预览弹窗增加全屏切换 ([442eae3](https://github.com/zweien/docx-template-system/commit/442eae34f0cc2705948d10056c31c9ec125dead5))
+
+
+### Bug Fixes
+
+* 文档预览弹窗全屏按钮与关闭按钮不再重叠 ([92b3e9c](https://github.com/zweien/docx-template-system/commit/92b3e9c56232677c1dc5be5cffdd5fb31404d0a6))
+
 ## [0.11.0](https://github.com/zweien/docx-template-system/compare/v0.10.24...v0.11.0) (2026-07-08)
 
 
